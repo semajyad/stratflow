@@ -1,0 +1,9 @@
+vendor/
+.env
+public/uploads/*
+!public/uploads/.gitkeep
+node_modules/
+.idea/
+.vscode/
+*.log
+docker/mysql-data/
