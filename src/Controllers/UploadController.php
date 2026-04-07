@@ -19,6 +19,8 @@ use StratFlow\Core\Response;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
 use StratFlow\Services\FileProcessor;
+use StratFlow\Services\GeminiService;
+use StratFlow\Services\Prompts\SummaryPrompt;
 
 class UploadController
 {
@@ -144,6 +146,57 @@ class UploadController
         ]);
 
         $_SESSION['flash_message'] = 'Document uploaded and text extracted successfully.';
+        $this->response->redirect('/app/upload?project_id=' . $projectId);
+    }
+
+    /**
+     * Generate an AI summary for an uploaded document via Gemini.
+     *
+     * Loads the document by POST document_id, verifies org access through its
+     * project, then calls GeminiService with the extracted text. On success the
+     * ai_summary column is updated and the user is redirected back to the upload
+     * page with a success flash. Redirects with an error flash if the document is
+     * missing, inaccessible, or has no extracted text to summarise.
+     */
+    public function generateSummary(): void
+    {
+        $user       = $this->auth->user();
+        $orgId      = (int) $user['org_id'];
+        $documentId = (int) $this->request->post('document_id', 0);
+        $projectId  = (int) $this->request->post('project_id', 0);
+
+        // Verify the project belongs to this org
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $document = Document::findById($this->db, $documentId);
+        if ($document === null || (int) $document['project_id'] !== $projectId) {
+            $_SESSION['flash_error'] = 'Document not found.';
+            $this->response->redirect('/app/upload?project_id=' . $projectId);
+            return;
+        }
+
+        if (empty($document['extracted_text'])) {
+            $_SESSION['flash_error'] = 'Cannot summarise a document with no extracted text.';
+            $this->response->redirect('/app/upload?project_id=' . $projectId);
+            return;
+        }
+
+        try {
+            $gemini    = new GeminiService($this->config);
+            $aiSummary = $gemini->generate(SummaryPrompt::PROMPT, $document['extracted_text']);
+        } catch (\RuntimeException $e) {
+            $_SESSION['flash_error'] = 'AI summary generation failed: ' . $e->getMessage();
+            $this->response->redirect('/app/upload?project_id=' . $projectId);
+            return;
+        }
+
+        Document::update($this->db, $documentId, ['ai_summary' => $aiSummary]);
+
+        $_SESSION['flash_message'] = 'AI summary generated successfully.';
         $this->response->redirect('/app/upload?project_id=' . $projectId);
     }
 }

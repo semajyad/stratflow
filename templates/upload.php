@@ -113,15 +113,22 @@
                             >Proceed to Strategy Diagram</a>
                         </div>
                     <?php else: ?>
-                        <!-- No summary yet — show generate button (wired in Task 10) -->
+                        <!-- No summary yet — show generate button when extracted text is available -->
                         <div class="document-actions">
-                            <button
-                                class="btn btn-secondary btn-sm"
-                                data-doc-id="<?= (int) $doc['id'] ?>"
-                                data-action="generate-summary"
-                                disabled
-                                title="AI summary generation coming soon"
-                            >Generate AI Summary</button>
+                            <?php if (!empty($doc['extracted_text'])): ?>
+                                <form method="POST" action="/app/upload/summarise">
+                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                    <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
+                                    <input type="hidden" name="project_id"  value="<?= (int) $project['id'] ?>">
+                                    <button type="submit" class="btn btn-primary btn-sm">Generate AI Summary</button>
+                                </form>
+                            <?php else: ?>
+                                <button
+                                    class="btn btn-secondary btn-sm"
+                                    disabled
+                                    title="No extracted text available to summarise"
+                                >Generate AI Summary</button>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 

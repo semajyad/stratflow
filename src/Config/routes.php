@@ -30,6 +30,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'csrf']);
 
     // Document upload
-    $router->add('GET',  '/app/upload', 'UploadController@index', ['auth']);
-    $router->add('POST', '/app/upload', 'UploadController@store', ['auth', 'csrf']);
+    $router->add('GET',  '/app/upload',           'UploadController@index',           ['auth']);
+    $router->add('POST', '/app/upload',           'UploadController@store',           ['auth', 'csrf']);
+    $router->add('POST', '/app/upload/summarise', 'UploadController@generateSummary', ['auth', 'csrf']);
 };
