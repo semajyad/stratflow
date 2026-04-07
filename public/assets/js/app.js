@@ -282,6 +282,108 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===========================
+    // Risks: AI Mitigation Generation (AJAX)
+    // ===========================
+    document.querySelectorAll('.generate-mitigation-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var riskId = btn.getAttribute('data-id');
+            btn.disabled    = true;
+            btn.textContent = 'Generating...';
+
+            fetch('/app/risks/' + riskId + '/mitigation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.status === 'ok' && data.mitigation) {
+                    var container = btn.parentElement;
+                    container.innerHTML = '<p class="mitigation-text">' + escapeHtml(data.mitigation) + '</p>';
+                } else {
+                    btn.textContent = 'Error: ' + (data.message || 'Unknown');
+                    setTimeout(function() {
+                        btn.textContent = 'Generate Mitigation (AI)';
+                        btn.disabled    = false;
+                    }, 2500);
+                }
+            })
+            .catch(function() {
+                btn.textContent = 'Error';
+                setTimeout(function() {
+                    btn.textContent = 'Generate Mitigation (AI)';
+                    btn.disabled    = false;
+                }, 2500);
+            });
+        });
+    });
+
+    // ===========================
+    // Risks: Edit Modal Population
+    // ===========================
+    document.querySelectorAll('.edit-risk-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var row = btn.closest('.risk-row');
+            var riskId = row.dataset.id;
+
+            document.getElementById('risk-modal-title').textContent = 'Edit Risk';
+            document.getElementById('risk-title').value       = row.dataset.title || '';
+            document.getElementById('risk-description').value = row.dataset.description || '';
+            document.getElementById('risk-likelihood').value  = row.dataset.likelihood || '3';
+            document.getElementById('risk-impact').value      = row.dataset.impact || '3';
+            document.getElementById('risk-form').action       = '/app/risks/' + riskId;
+
+            // Update RPN preview
+            updateRpnPreview();
+
+            // Check linked work items
+            var linkedIds = [];
+            try { linkedIds = JSON.parse(row.dataset.linkedIds || '[]'); } catch(e) {}
+            document.querySelectorAll('.work-item-checkbox').forEach(function(cb) {
+                cb.checked = linkedIds.indexOf(parseInt(cb.value)) !== -1;
+            });
+
+            document.getElementById('risk-modal').classList.remove('hidden');
+        });
+    });
+
+    // ===========================
+    // Risks: RPN Preview on Likelihood/Impact Change
+    // ===========================
+    var riskLikelihood = document.getElementById('risk-likelihood');
+    var riskImpact     = document.getElementById('risk-impact');
+    if (riskLikelihood && riskImpact) {
+        riskLikelihood.addEventListener('change', updateRpnPreview);
+        riskImpact.addEventListener('change', updateRpnPreview);
+    }
+
+    // ===========================
+    // Risks: Heatmap Cell Click Highlighting
+    // ===========================
+    document.querySelectorAll('.heatmap-cell.has-risks').forEach(function(cell) {
+        cell.addEventListener('click', function() {
+            var l = cell.dataset.likelihood;
+            var i = cell.dataset.impact;
+
+            // Remove previous highlights
+            document.querySelectorAll('.risk-row').forEach(function(row) {
+                row.classList.remove('risk-highlighted');
+            });
+
+            // Highlight matching risks
+            document.querySelectorAll('.risk-row').forEach(function(row) {
+                if (row.dataset.likelihood === l && row.dataset.impact === i) {
+                    row.classList.add('risk-highlighted');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        });
+    });
+
+    // ===========================
     // Upload: Extracted Text Toggle
     // ===========================
     document.querySelectorAll('.toggle-text').forEach(function(btn) {
@@ -445,4 +547,57 @@ function closeEditModal() {
     if (modal) {
         modal.classList.add('hidden');
     }
+}
+
+// ===========================
+// Global: Risk Modal Toggle
+// ===========================
+
+/**
+ * Toggle the risk add/edit modal. Resets to "Add" mode when opening fresh.
+ */
+function toggleRiskModal() {
+    var modal = document.getElementById('risk-modal');
+    if (!modal) { return; }
+
+    if (modal.classList.contains('hidden')) {
+        // Reset to "Add" mode
+        document.getElementById('risk-modal-title').textContent = 'Add Risk';
+        document.getElementById('risk-form').action = '/app/risks';
+        document.getElementById('risk-title').value = '';
+        document.getElementById('risk-description').value = '';
+        document.getElementById('risk-likelihood').value = '3';
+        document.getElementById('risk-impact').value = '3';
+        updateRpnPreview();
+        document.querySelectorAll('.work-item-checkbox').forEach(function(cb) {
+            cb.checked = false;
+        });
+        modal.classList.remove('hidden');
+    } else {
+        modal.classList.add('hidden');
+    }
+}
+
+/**
+ * Update the RPN preview value from current likelihood and impact selections.
+ */
+function updateRpnPreview() {
+    var l = parseInt(document.getElementById('risk-likelihood').value) || 3;
+    var i = parseInt(document.getElementById('risk-impact').value) || 3;
+    var preview = document.getElementById('rpn-preview');
+    if (preview) {
+        preview.textContent = l * i;
+    }
+}
+
+/**
+ * Escape HTML entities for safe insertion into the DOM.
+ *
+ * @param {string} text Raw text to escape
+ * @return {string}     HTML-safe text
+ */
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
 }

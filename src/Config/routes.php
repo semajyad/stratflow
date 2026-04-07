@@ -55,4 +55,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/work-items/{id}',                   'WorkItemController@update',              ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/delete',            'WorkItemController@delete',              ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
+
+    // Risk modelling — static routes MUST come before {id} routes
+    $router->add('GET',  '/app/risks',                'RiskController@index',              ['auth']);
+    $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'csrf']);
+    $router->add('POST', '/app/risks',                'RiskController@store',              ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
 };

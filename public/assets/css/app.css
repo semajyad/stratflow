@@ -1389,3 +1389,267 @@ tbody tr:hover {
         margin: 0 0 1rem 0;
     }
 }
+
+/* === Risk Modelling ========================================================= */
+
+.risk-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.risk-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s ease;
+}
+
+.risk-row:last-child {
+    border-bottom: none;
+}
+
+.risk-row:hover {
+    background: var(--bg);
+}
+
+.risk-row.risk-highlighted {
+    background: var(--primary-light);
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.risk-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.risk-info strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.risk-desc-preview {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.risk-linked-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.risk-linked-items .badge {
+    font-size: 0.6875rem;
+}
+
+.risk-scores {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.risk-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Likelihood colours */
+.likelihood-1 { background: #dcfce7; color: #166534; }
+.likelihood-2 { background: #fef9c3; color: #854d0e; }
+.likelihood-3 { background: #fed7aa; color: #9a3412; }
+.likelihood-4 { background: #fecaca; color: #991b1b; }
+.likelihood-5 { background: #fca5a5; color: #7f1d1d; }
+
+/* Impact colours */
+.impact-1 { background: #dcfce7; color: #166534; }
+.impact-2 { background: #fef9c3; color: #854d0e; }
+.impact-3 { background: #fed7aa; color: #9a3412; }
+.impact-4 { background: #fecaca; color: #991b1b; }
+.impact-5 { background: #fca5a5; color: #7f1d1d; }
+
+.risk-rpn {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.risk-mitigation {
+    flex: 1;
+    min-width: 0;
+}
+
+.mitigation-text {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.risk-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* === Checkbox Group (for risk work-item linking) ============================ */
+
+.checkbox-group {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* === Heatmap ================================================================ */
+
+.heatmap-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.heatmap-y-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-light);
+}
+
+.heatmap-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: 32px repeat(5, 56px);
+    grid-template-rows: repeat(5, 56px) 24px;
+    gap: 3px;
+}
+
+.heatmap-row-label,
+.heatmap-col-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.heatmap-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.7);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.heatmap-cell.has-risks {
+    cursor: pointer;
+}
+
+.heatmap-cell.has-risks:hover {
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.heatmap-cell.low      { background: #bbf7d0; }
+.heatmap-cell.medium   { background: #fef08a; }
+.heatmap-cell.high     { background: #fed7aa; }
+.heatmap-cell.critical { background: #fca5a5; }
+
+.heatmap-x-label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+.heatmap-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+.legend-swatch.low      { background: #bbf7d0; }
+.legend-swatch.medium   { background: #fef08a; }
+.legend-swatch.high     { background: #fed7aa; }
+.legend-swatch.critical { background: #fca5a5; }
+
+/* === Risk Responsive ======================================================== */
+
+@media (max-width: 768px) {
+    .risk-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .risk-info {
+        flex-basis: 100%;
+    }
+
+    .risk-mitigation {
+        flex-basis: 100%;
+    }
+
+    .risk-actions {
+        flex-basis: 100%;
+        justify-content: flex-end;
+    }
+
+    .heatmap-grid {
+        grid-template-columns: 24px repeat(5, 44px);
+        grid-template-rows: repeat(5, 44px) 20px;
+    }
+}

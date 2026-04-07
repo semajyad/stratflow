@@ -167,7 +167,7 @@ $formula = $isRice
             Re-rank by Score
         </button>
     </form>
-    <a href="#" class="btn btn-secondary disabled" title="Coming Soon">
+    <a href="/app/risks?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
         Proceed to Risk Modelling
     </a>
 </div>
