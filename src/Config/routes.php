@@ -28,4 +28,8 @@ return function (\StratFlow\Core\Router $router) {
     // App — authenticated pages
     $router->add('GET',  '/app/home',     'HomeController@index',         ['auth']);
     $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'csrf']);
+
+    // Document upload
+    $router->add('GET',  '/app/upload', 'UploadController@index', ['auth']);
+    $router->add('POST', '/app/upload', 'UploadController@store', ['auth', 'csrf']);
 };
