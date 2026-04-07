@@ -138,8 +138,8 @@
      Next Step
      =========================== -->
 <div class="flex justify-between items-center">
-    <a href="/app/work-items/generate?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-lg">
-        Generate Work Items
+    <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-lg">
+        Work Items
     </a>
 </div>
 <?php endif; ?>

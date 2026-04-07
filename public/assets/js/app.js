@@ -169,6 +169,103 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ===========================
+    // Work Items: SortableJS Drag & Drop
+    // ===========================
+    var workItemsList = document.getElementById('work-items-list');
+    if (workItemsList && typeof Sortable !== 'undefined') {
+        Sortable.create(workItemsList, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                var items = workItemsList.querySelectorAll('.work-item-row');
+                var order = [];
+                items.forEach(function(el, index) {
+                    order.push({ id: parseInt(el.dataset.id), position: index + 1 });
+                    el.querySelector('.priority-number').textContent = index + 1;
+                });
+
+                var csrfToken = document.querySelector('input[name="_csrf_token"]');
+                fetch('/app/work-items/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        order: order,
+                        _csrf_token: csrfToken ? csrfToken.value : ''
+                    })
+                });
+            }
+        });
+    }
+
+    // ===========================
+    // Work Items: Edit Modal
+    // ===========================
+    var currentEditId = null;
+
+    document.querySelectorAll('.edit-item-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var row = btn.closest('.work-item-row');
+            currentEditId = row.dataset.id;
+
+            document.getElementById('modal-priority').value      = row.querySelector('.priority-number').textContent;
+            document.getElementById('modal-title').value         = row.dataset.title || '';
+            document.getElementById('modal-description').value   = row.dataset.description || '';
+            document.getElementById('modal-okr-title').value     = row.dataset.okrTitle || '';
+            document.getElementById('modal-okr-desc').value      = row.dataset.okrDesc || '';
+            document.getElementById('modal-owner').value         = row.dataset.owner || '';
+
+            document.getElementById('edit-form').action = '/app/work-items/' + currentEditId;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        });
+    });
+
+    // ===========================
+    // Work Items: AI Description Generation
+    // ===========================
+    var descBtn = document.getElementById('generate-desc-btn');
+    if (descBtn) {
+        descBtn.addEventListener('click', function() {
+            if (!currentEditId) { return; }
+
+            descBtn.disabled    = true;
+            descBtn.textContent = 'Generating...';
+
+            fetch('/app/work-items/' + currentEditId + '/generate-description', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.status === 'ok' && data.description) {
+                    document.getElementById('modal-description').value = data.description;
+                    descBtn.textContent = 'Generated!';
+                } else {
+                    descBtn.textContent = 'Error: ' + (data.message || 'Unknown');
+                }
+                setTimeout(function() {
+                    descBtn.textContent = 'Generate Description (AI)';
+                    descBtn.disabled    = false;
+                }, 2000);
+            })
+            .catch(function() {
+                descBtn.textContent = 'Error';
+                setTimeout(function() {
+                    descBtn.textContent = 'Generate Description (AI)';
+                    descBtn.disabled    = false;
+                }, 2000);
+            });
+        });
+    }
+
+    // ===========================
     // Upload: Extracted Text Toggle
     // ===========================
     document.querySelectorAll('.toggle-text').forEach(function(btn) {
@@ -185,3 +282,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ===========================
+// Global: Close Edit Modal
+// ===========================
+
+/**
+ * Close the work item edit modal overlay.
+ * Declared globally so the inline onclick handlers can call it.
+ */
+function closeEditModal() {
+    var modal = document.getElementById('edit-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}

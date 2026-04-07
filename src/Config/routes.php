@@ -39,4 +39,13 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/diagram/generate', 'DiagramController@generate', ['auth', 'csrf']);
     $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'csrf']);
     $router->add('POST', '/app/diagram/save-okr', 'DiagramController@saveOkr', ['auth', 'csrf']);
+
+    // Work items — static routes MUST come before {id} routes
+    $router->add('GET',  '/app/work-items',                        'WorkItemController@index',               ['auth']);
+    $router->add('POST', '/app/work-items/generate',               'WorkItemController@generate',            ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/reorder',                'WorkItemController@reorder',             ['auth']);
+    $router->add('GET',  '/app/work-items/export',                 'WorkItemController@export',              ['auth']);
+    $router->add('POST', '/app/work-items/{id}',                   'WorkItemController@update',              ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/delete',            'WorkItemController@delete',              ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
 };
