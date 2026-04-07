@@ -19,4 +19,9 @@ return function (\StratFlow\Core\Router $router) {
 
     // Post-payment success page
     $router->add('GET', '/success', 'SuccessController@index');
+
+    // Authentication
+    $router->add('GET',  '/login',  'AuthController@showLogin');
+    $router->add('POST', '/login',  'AuthController@login',  ['csrf']);
+    $router->add('POST', '/logout', 'AuthController@logout', ['csrf', 'auth']);
 };

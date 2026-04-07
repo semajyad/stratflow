@@ -56,7 +56,7 @@ class Auth
         $this->session->set('user', [
             'id' => $user['id'],
             'org_id' => $user['org_id'],
-            'name' => $user['name'],
+            'name' => $user['full_name'],
             'email' => $user['email'],
             'role' => $user['role'],
         ]);
