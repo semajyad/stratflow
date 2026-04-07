@@ -266,6 +266,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===========================
+    // Prioritisation: Score Calculation + AJAX Save
+    // ===========================
+    var prioTable = document.getElementById('prioritisation-table');
+    if (prioTable) {
+        var framework = prioTable.dataset.framework;
+
+        prioTable.querySelectorAll('.score-dropdown').forEach(function(dropdown) {
+            dropdown.addEventListener('change', function() {
+                var row    = this.closest('.prio-row');
+                var itemId = row.dataset.id;
+                calculateAndSaveScore(row, itemId, framework);
+            });
+        });
+    }
+
+    // ===========================
     // Upload: Extracted Text Toggle
     // ===========================
     document.querySelectorAll('.toggle-text').forEach(function(btn) {
@@ -282,6 +298,139 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ===========================
+// Global: Prioritisation Score Calculation
+// ===========================
+
+/**
+ * Calculate the score from a prioritisation row's dropdowns, update
+ * the display, and AJAX-save to the server.
+ *
+ * @param {HTMLElement} row       The .prio-row table row
+ * @param {string}      itemId   Work item ID
+ * @param {string}      framework 'rice' or 'wsjf'
+ */
+function calculateAndSaveScore(row, itemId, framework) {
+    var dropdowns = row.querySelectorAll('.score-dropdown');
+    var values    = Array.from(dropdowns).map(function(d) { return parseInt(d.value) || 0; });
+
+    var score;
+    if (framework === 'rice') {
+        score = values[3] > 0 ? (values[0] * values[1] * values[2]) / values[3] : 0;
+    } else {
+        score = values[3] > 0 ? (values[0] + values[1] + values[2]) / values[3] : 0;
+    }
+
+    row.querySelector('.final-score').textContent = score.toFixed(1);
+
+    var scoreFields = framework === 'rice'
+        ? ['rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort']
+        : ['wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size'];
+
+    var scores = {};
+    scoreFields.forEach(function(field, i) { scores[field] = values[i]; });
+
+    var csrfToken = document.querySelector('input[name="_csrf_token"]');
+    fetch('/app/prioritisation/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+            item_id: parseInt(itemId),
+            scores: scores,
+            _csrf_token: csrfToken ? csrfToken.value : ''
+        })
+    });
+}
+
+/**
+ * Toggle the framework info modal visibility.
+ */
+function toggleFrameworkInfo() {
+    var modal = document.getElementById('framework-info-modal');
+    if (modal) {
+        modal.classList.toggle('hidden');
+    }
+}
+
+/**
+ * Request AI baseline scores from the server and populate dropdowns.
+ */
+function requestAiBaseline() {
+    var btn       = document.getElementById('ai-suggest-btn');
+    var prioTable = document.getElementById('prioritisation-table');
+    if (!btn || !prioTable) { return; }
+
+    var framework  = prioTable.dataset.framework;
+    var csrfToken  = document.querySelector('input[name="_csrf_token"]');
+
+    // Extract project_id from the page's hidden form
+    var projectInput = document.querySelector('input[name="project_id"]');
+    var projectId    = projectInput ? parseInt(projectInput.value) : 0;
+
+    btn.disabled    = true;
+    btn.textContent = 'Generating...';
+
+    fetch('/app/prioritisation/ai-baseline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+            project_id: projectId,
+            _csrf_token: csrfToken ? csrfToken.value : ''
+        })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.status === 'ok' && data.suggestions) {
+            applyAiSuggestions(data.suggestions, framework);
+            btn.textContent = 'Applied!';
+        } else {
+            btn.textContent = 'Error: ' + (data.message || 'Unknown');
+        }
+        setTimeout(function() {
+            btn.textContent = 'AI Suggest Scores';
+            btn.disabled    = false;
+        }, 2500);
+    })
+    .catch(function() {
+        btn.textContent = 'Error';
+        setTimeout(function() {
+            btn.textContent = 'AI Suggest Scores';
+            btn.disabled    = false;
+        }, 2500);
+    });
+}
+
+/**
+ * Apply AI-suggested scores to the prioritisation table dropdowns.
+ *
+ * @param {Array}  suggestions Array of {id, ...score_fields}
+ * @param {string} framework   'rice' or 'wsjf'
+ */
+function applyAiSuggestions(suggestions, framework) {
+    var scoreFields = framework === 'rice'
+        ? ['reach', 'impact', 'confidence', 'effort']
+        : ['business_value', 'time_criticality', 'risk_reduction', 'job_size'];
+
+    var dbFields = framework === 'rice'
+        ? ['rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort']
+        : ['wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size'];
+
+    suggestions.forEach(function(suggestion) {
+        var row = document.querySelector('.prio-row[data-id="' + suggestion.id + '"]');
+        if (!row) { return; }
+
+        var dropdowns = row.querySelectorAll('.score-dropdown');
+        scoreFields.forEach(function(field, i) {
+            var val = parseInt(suggestion[field]) || 0;
+            if (val >= 1 && val <= 10 && dropdowns[i]) {
+                dropdowns[i].value = val;
+            }
+        });
+
+        calculateAndSaveScore(row, String(suggestion.id), framework);
+    });
+}
 
 // ===========================
 // Global: Close Edit Modal

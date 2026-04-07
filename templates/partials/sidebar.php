@@ -15,7 +15,9 @@
         <a href="/app/work-items" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
             High-Level Work Items
         </a>
-        <a href="#" class="nav-link disabled" title="Coming Soon">Prioritisation</a>
+        <a href="/app/prioritisation" class="nav-link <?= ($active_page ?? '') === 'prioritisation' ? 'active' : '' ?>">
+            Prioritisation
+        </a>
         <a href="#" class="nav-link disabled" title="Coming Soon">Risk Modelling</a>
         <a href="#" class="nav-link disabled" title="Coming Soon">Technical Translation</a>
         <a href="#" class="nav-link disabled" title="Coming Soon">AI Execution</a>

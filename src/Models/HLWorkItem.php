@@ -156,6 +156,77 @@ class HLWorkItem
     }
 
     // ===========================
+    // SCORING
+    // ===========================
+
+    /**
+     * Update RICE/WSJF score columns and final_score for a single work item.
+     *
+     * @param Database $db     Database instance
+     * @param int      $id     Work item primary key
+     * @param array    $scores Scoring columns to update (e.g. rice_reach, final_score)
+     */
+    public static function updateScores(Database $db, int $id, array $scores): void
+    {
+        // Only allow known scoring columns
+        $allowed = [
+            'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
+            'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
+            'final_score',
+        ];
+
+        $filtered = array_intersect_key($scores, array_flip($allowed));
+        if (empty($filtered)) {
+            return;
+        }
+
+        self::update($db, $id, $filtered);
+    }
+
+    /**
+     * Return all work items for a project, ordered by final_score descending.
+     *
+     * Items with NULL or zero final_score appear last.
+     *
+     * @param Database $db        Database instance
+     * @param int      $projectId Project ID to scope the query
+     * @return array              Array of work item rows as associative arrays
+     */
+    public static function findByProjectIdRankedByScore(Database $db, int $projectId): array
+    {
+        $stmt = $db->query(
+            "SELECT * FROM hl_work_items
+             WHERE project_id = :project_id
+             ORDER BY COALESCE(final_score, 0) DESC, priority_number ASC",
+            [':project_id' => $projectId]
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Batch-update scores for multiple work items in a transaction.
+     *
+     * @param Database $db    Database instance
+     * @param array    $items Array of arrays with keys: id, scores (assoc array)
+     */
+    public static function batchUpdateScores(Database $db, array $items): void
+    {
+        $pdo = $db->getPdo();
+        $pdo->beginTransaction();
+
+        try {
+            foreach ($items as $item) {
+                self::updateScores($db, (int) $item['id'], $item['scores']);
+            }
+            $pdo->commit();
+        } catch (\Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    // ===========================
     // DELETE
     // ===========================
 

@@ -40,6 +40,13 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'csrf']);
     $router->add('POST', '/app/diagram/save-okr', 'DiagramController@saveOkr', ['auth', 'csrf']);
 
+    // Prioritisation — static routes MUST come before {id} routes
+    $router->add('GET',  '/app/prioritisation',             'PrioritisationController@index',           ['auth']);
+    $router->add('POST', '/app/prioritisation/framework',   'PrioritisationController@selectFramework', ['auth', 'csrf']);
+    $router->add('POST', '/app/prioritisation/scores',      'PrioritisationController@saveScores',      ['auth']);
+    $router->add('POST', '/app/prioritisation/rerank',      'PrioritisationController@rerank',          ['auth', 'csrf']);
+    $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth']);
+
     // Work items — static routes MUST come before {id} routes
     $router->add('GET',  '/app/work-items',                        'WorkItemController@index',               ['auth']);
     $router->add('POST', '/app/work-items/generate',               'WorkItemController@generate',            ['auth', 'csrf']);

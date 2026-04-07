@@ -1309,6 +1309,57 @@ tbody tr:hover {
     flex-direction: column;
 }
 
+/* === Prioritisation Page ==================================================== */
+
+.prio-row td {
+    vertical-align: middle;
+}
+
+.score-dropdown {
+    width: 64px;
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.875rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.score-dropdown:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.score-select {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9375rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+}
+
+.final-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: var(--primary-light);
+    border-radius: var(--radius);
+}
+
+.ai-suggest-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
 @media (max-width: 768px) {
     .work-item-row {
         flex-wrap: wrap;
