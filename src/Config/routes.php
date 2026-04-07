@@ -24,4 +24,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/login',  'AuthController@showLogin');
     $router->add('POST', '/login',  'AuthController@login',  ['csrf']);
     $router->add('POST', '/logout', 'AuthController@logout', ['csrf', 'auth']);
+
+    // App — authenticated pages
+    $router->add('GET',  '/app/home',     'HomeController@index',         ['auth']);
+    $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'csrf']);
 };
