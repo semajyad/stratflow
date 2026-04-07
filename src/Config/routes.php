@@ -33,4 +33,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/upload',           'UploadController@index',           ['auth']);
     $router->add('POST', '/app/upload',           'UploadController@store',           ['auth', 'csrf']);
     $router->add('POST', '/app/upload/summarise', 'UploadController@generateSummary', ['auth', 'csrf']);
+
+    // Strategy diagram
+    $router->add('GET',  '/app/diagram',          'DiagramController@index',    ['auth']);
+    $router->add('POST', '/app/diagram/generate', 'DiagramController@generate', ['auth', 'csrf']);
+    $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'csrf']);
+    $router->add('POST', '/app/diagram/save-okr', 'DiagramController@saveOkr', ['auth', 'csrf']);
 };

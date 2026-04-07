@@ -92,6 +92,83 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===========================
+    // Mermaid Diagram Rendering
+    // ===========================
+    if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+    }
+
+    /**
+     * Render the Mermaid diagram from the code textarea into the output div.
+     * Clears previous SVG, generates a new one, and displays syntax errors.
+     */
+    function renderDiagram() {
+        var codeEl   = document.getElementById('mermaid-code');
+        var outputEl = document.getElementById('mermaid-output');
+        if (!codeEl || !outputEl || typeof mermaid === 'undefined') { return; }
+
+        var code = codeEl.value.trim();
+        if (!code) {
+            outputEl.innerHTML = '<p class="text-muted">No diagram code yet.</p>';
+            return;
+        }
+
+        outputEl.innerHTML = '';
+        var id = 'mermaid-' + Date.now();
+        mermaid.render(id, code).then(function(result) {
+            outputEl.innerHTML = result.svg;
+        }).catch(function(err) {
+            outputEl.innerHTML = '<p class="error">Invalid Mermaid syntax: ' + err.message + '</p>';
+        });
+    }
+
+    // Auto-render diagram on page load and debounce on textarea input
+    var codeEl = document.getElementById('mermaid-code');
+    if (codeEl) {
+        renderDiagram();
+        var diagramTimeout;
+        codeEl.addEventListener('input', function() {
+            clearTimeout(diagramTimeout);
+            diagramTimeout = setTimeout(renderDiagram, 500);
+        });
+    }
+
+    // ===========================
+    // OKR Save (AJAX)
+    // ===========================
+    document.querySelectorAll('.save-okr-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var item        = btn.closest('.node-okr-item');
+            var nodeId      = item.getAttribute('data-node-id');
+            var okrTitle    = item.querySelector('.okr-title').value;
+            var okrDesc     = item.querySelector('.okr-description').value;
+            var csrfToken   = document.querySelector('input[name="_csrf_token"]').value;
+
+            var formData = new FormData();
+            formData.append('_csrf_token', csrfToken);
+            formData.append('node_id', nodeId);
+            formData.append('okr_title', okrTitle);
+            formData.append('okr_description', okrDesc);
+
+            fetch('/app/diagram/save-okr', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.status === 'ok') {
+                    btn.textContent = 'Saved!';
+                    setTimeout(function() { btn.textContent = 'Save OKR'; }, 1500);
+                }
+            })
+            .catch(function() {
+                btn.textContent = 'Error';
+                setTimeout(function() { btn.textContent = 'Save OKR'; }, 1500);
+            });
+        });
+    });
+
+    // ===========================
     // Upload: Extracted Text Toggle
     // ===========================
     document.querySelectorAll('.toggle-text').forEach(function(btn) {

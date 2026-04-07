@@ -1099,3 +1099,101 @@ tbody tr:hover {
     color: var(--text);
     font-size: 0.9rem;
 }
+
+/* === Diagram Page =========================================================== */
+
+.diagram-container {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.diagram-render {
+    flex: 3;
+    min-width: 0;
+}
+
+.diagram-render .card-body {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#mermaid-output {
+    width: 100%;
+    overflow-x: auto;
+}
+
+#mermaid-output svg {
+    max-width: 100%;
+    height: auto;
+}
+
+#mermaid-output .error {
+    color: var(--danger);
+    font-size: 0.9rem;
+    padding: 1rem;
+    background: #fee2e2;
+    border-radius: var(--radius);
+}
+
+.diagram-editor {
+    flex: 2;
+    min-width: 0;
+}
+
+.diagram-editor textarea {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    min-height: 280px;
+    resize: vertical;
+}
+
+/* Node OKR List */
+.node-okr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.node-okr-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    background: var(--bg);
+}
+
+.node-okr-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+}
+
+.node-okr-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.node-okr-fields .form-group {
+    margin-bottom: 0.5rem;
+}
+
+.node-okr-fields .form-group:last-of-type {
+    margin-bottom: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .diagram-container {
+        flex-direction: column;
+    }
+
+    .diagram-render,
+    .diagram-editor {
+        flex: none;
+        width: 100%;
+    }
+}
