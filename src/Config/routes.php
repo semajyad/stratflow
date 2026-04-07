@@ -10,4 +10,13 @@ return function (\StratFlow\Core\Router $router) {
     // Public routes
     $router->add('GET', '/', 'PricingController@index');
     $router->add('GET', '/pricing', 'PricingController@index');
+
+    // Checkout — CSRF required (form submission from pricing page)
+    $router->add('POST', '/checkout', 'CheckoutController@create', ['csrf']);
+
+    // Stripe webhook — NO CSRF (Stripe sends raw signed POST, not a browser form)
+    $router->add('POST', '/webhook/stripe', 'WebhookController@handle');
+
+    // Post-payment success page
+    $router->add('GET', '/success', 'SuccessController@index');
 };
