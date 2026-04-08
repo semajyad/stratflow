@@ -62,9 +62,13 @@ class StripeService
             ],
             'success_url' => $successUrl,
             'cancel_url'  => $cancelUrl,
-            // Always collect email so we can create the user account
-            'customer_creation' => ($mode === 'subscription') ? 'always' : 'if_required',
         ];
+
+        // For one-time payments, ensure a customer is always created
+        // (subscriptions always create a customer automatically)
+        if ($mode === 'payment') {
+            $params['customer_creation'] = 'always';
+        }
 
         if ($customerEmail !== null) {
             $params['customer_email'] = $customerEmail;
