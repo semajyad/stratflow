@@ -126,6 +126,11 @@ class UploadController
         $mimeType      = 'text/plain';
         $fileSize      = 0;
 
+        // Ensure uploads directory exists
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
         if ($hasFile) {
             $validation = $processor->validateFile($uploadedFile, $this->config);
             if (!$validation['valid']) {
@@ -134,11 +139,18 @@ class UploadController
                 return;
             }
 
-            $filename      = $processor->storeFile($uploadedFile, $uploadDir);
-            $originalName  = $uploadedFile['name'];
-            $mimeType      = $uploadedFile['type'];
-            $fileSize      = (int) $uploadedFile['size'];
-            $extractedText = $processor->extractText($uploadDir . $filename, $mimeType);
+            try {
+                $filename      = $processor->storeFile($uploadedFile, $uploadDir);
+                $originalName  = $uploadedFile['name'];
+                $mimeType      = $uploadedFile['type'];
+                $fileSize      = (int) $uploadedFile['size'];
+                $extractedText = $processor->extractText($uploadDir . $filename, $mimeType);
+            } catch (\Throwable $e) {
+                error_log("[StratFlow] Upload processing error: " . $e->getMessage());
+                $_SESSION['flash_error'] = 'Failed to process uploaded file. Please try a different file or paste the text directly.';
+                $this->response->redirect('/app/upload?project_id=' . $projectId);
+                return;
+            }
         } else {
             // Text paste — treat as a virtual plain-text document
             $extractedText = $pasteText;

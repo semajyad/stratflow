@@ -47,6 +47,7 @@
         id="upload-form"
     >
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+        <input type="hidden" name="MAX_FILE_SIZE" value="52428800">
         <input type="hidden" name="project_id"  value="<?= (int) $project['id'] ?>">
 
         <!-- Drag-and-drop zone -->
