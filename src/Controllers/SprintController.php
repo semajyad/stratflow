@@ -459,8 +459,9 @@ class SprintController
             return;
         }
 
+        // Build a queue of unallocated stories (by priority order)
+        $storyQueue = $unallocated;
         $assigned = 0;
-        $storyIndex = 0;
 
         foreach ($sprints as $sprint) {
             $sprintId    = (int) $sprint['id'];
@@ -468,24 +469,33 @@ class SprintController
             $currentLoad = SprintStory::getSprintLoad($this->db, $sprintId);
             $remaining   = $capacity - $currentLoad;
 
-            while ($storyIndex < count($unallocated) && $remaining > 0) {
-                $story = $unallocated[$storyIndex];
-                $size  = (int) ($story['size'] ?? 1);
+            if ($remaining <= 0) continue;
 
-                if ($size > $remaining) {
-                    // Story too big for remaining capacity — try next story or skip
-                    $storyIndex++;
-                    continue;
+            // Try to fit stories into this sprint, keeping priority order
+            $leftover = [];
+            foreach ($storyQueue as $story) {
+                $size = (int) ($story['size'] ?? 1);
+
+                if ($size <= $remaining) {
+                    SprintStory::assign($this->db, $sprintId, (int) $story['id']);
+                    $remaining -= $size;
+                    $assigned++;
+                } else {
+                    // Doesn't fit — carry to next sprint
+                    $leftover[] = $story;
                 }
-
-                SprintStory::assign($this->db, $sprintId, (int) $story['id']);
-                $remaining -= $size;
-                $assigned++;
-                $storyIndex++;
             }
+            $storyQueue = $leftover;
+
+            if (empty($storyQueue)) break;
         }
 
-        $_SESSION['flash_message'] = "{$assigned} stories auto-filled into sprints by priority.";
+        $skipped = count($storyQueue);
+        $msg = "{$assigned} stories allocated across sprints by priority.";
+        if ($skipped > 0) {
+            $msg .= " {$skipped} stories didn't fit — consider adding more sprints or increasing capacity.";
+        }
+        $_SESSION['flash_message'] = $msg;
         $this->response->redirect('/app/sprints?project_id=' . $projectId);
     }
 }
