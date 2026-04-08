@@ -46,6 +46,9 @@ return [
         'api_key' => $_ENV['GEMINI_API_KEY'] ?? '',
         'model' => $_ENV['GEMINI_MODEL'] ?? 'gemini-2.5-flash',
     ],
+    'openai' => [
+        'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
+    ],
     'stripe' => [
         'publishable_key' => $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
         'secret_key' => $_ENV['STRIPE_SECRET_KEY'] ?? '',

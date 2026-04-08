@@ -24,6 +24,7 @@ class GeminiService
 
     private string $apiKey;
     private string $model;
+    private string $openaiKey;
 
     private const API_BASE    = 'https://generativelanguage.googleapis.com/v1beta/models';
     private const MAX_RETRIES = 2;
@@ -31,8 +32,9 @@ class GeminiService
 
     public function __construct(array $config)
     {
-        $this->apiKey = $config['gemini']['api_key'];
-        $this->model  = $config['gemini']['model'];
+        $this->apiKey    = $config['gemini']['api_key'];
+        $this->model     = $config['gemini']['model'];
+        $this->openaiKey = $config['openai']['api_key'] ?? '';
     }
 
     // ===========================
@@ -49,13 +51,20 @@ class GeminiService
      */
     public function generate(string $prompt, string $input): string
     {
-        $url  = $this->buildUrl('generateContent');
-        $body = $this->buildBody($prompt, $input);
-
-        $response = $this->makeRequest($url, $body);
-
-        return $response['candidates'][0]['content']['parts'][0]['text']
-            ?? throw new \RuntimeException('Unexpected Gemini response format');
+        // Try Gemini first, fall back to OpenAI on rate limit
+        try {
+            $url  = $this->buildUrl('generateContent');
+            $body = $this->buildBody($prompt, $input);
+            $response = $this->makeRequest($url, $body);
+            return $response['candidates'][0]['content']['parts'][0]['text']
+                ?? throw new \RuntimeException('Unexpected Gemini response format');
+        } catch (\RuntimeException $e) {
+            if ($this->openaiKey !== '' && str_contains($e->getMessage(), 'quota')) {
+                error_log('[StratFlow] Gemini quota hit, falling back to OpenAI');
+                return $this->openaiGenerate($prompt, $input);
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -68,17 +77,30 @@ class GeminiService
      */
     public function generateJson(string $prompt, string $input): array
     {
-        $url  = $this->buildUrl('generateContent');
-        $body = $this->buildBody($prompt, $input, responseMimeType: 'application/json');
+        try {
+            $url  = $this->buildUrl('generateContent');
+            $body = $this->buildBody($prompt, $input, responseMimeType: 'application/json');
+            $response = $this->makeRequest($url, $body);
+            $text = $response['candidates'][0]['content']['parts'][0]['text']
+                ?? throw new \RuntimeException('Unexpected Gemini response format');
+        } catch (\RuntimeException $e) {
+            if ($this->openaiKey !== '' && (str_contains($e->getMessage(), 'quota') || str_contains($e->getMessage(), '429'))) {
+                error_log('[StratFlow] Gemini quota hit, falling back to OpenAI for JSON');
+                $text = $this->openaiGenerate($prompt . "\n\nRespond with valid JSON only. No markdown fences.", $input);
+            } else {
+                throw $e;
+            }
+        }
 
-        $response = $this->makeRequest($url, $body);
-
-        $text = $response['candidates'][0]['content']['parts'][0]['text']
-            ?? throw new \RuntimeException('Unexpected Gemini response format');
+        $text = trim($text);
+        if (str_starts_with($text, '```')) {
+            $text = preg_replace('/^```(?:json)?\s*/', '', $text);
+            $text = preg_replace('/\s*```$/', '', $text);
+        }
 
         $decoded = json_decode($text, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException('Gemini returned invalid JSON: ' . json_last_error_msg());
+            throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
         }
 
         return $decoded;
@@ -174,5 +196,57 @@ class GeminiService
         }
 
         throw new \RuntimeException('Gemini API: max retries exceeded');
+    }
+
+    // ===========================
+    // OPENAI FALLBACK
+    // ===========================
+
+    /**
+     * Generate text via OpenAI Chat Completions API (GPT-4o-mini).
+     * Used as automatic fallback when Gemini rate-limits.
+     */
+    private function openaiGenerate(string $prompt, string $input): string
+    {
+        $payload = json_encode([
+            'model' => 'gpt-4o-mini',
+            'messages' => [
+                ['role' => 'system', 'content' => $prompt],
+                ['role' => 'user', 'content' => $input],
+            ],
+            'temperature' => 0.7,
+            'max_tokens' => 4096,
+        ]);
+
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $this->openaiKey,
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 60,
+        ]);
+
+        $responseStr = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            throw new \RuntimeException('OpenAI cURL error: ' . $curlError);
+        }
+
+        $response = json_decode($responseStr, true);
+
+        if ($httpCode !== 200) {
+            $errorMsg = $response['error']['message'] ?? "HTTP {$httpCode}";
+            throw new \RuntimeException('OpenAI API error: ' . $errorMsg);
+        }
+
+        return $response['choices'][0]['message']['content']
+            ?? throw new \RuntimeException('Unexpected OpenAI response format');
     }
 }
