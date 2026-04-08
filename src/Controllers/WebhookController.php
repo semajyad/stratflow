@@ -153,7 +153,9 @@ class WebhookController
                 $setPasswordUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
 
                 $emailService = new EmailService($this->config);
-                $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
+                $sent = $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
+                error_log("[StratFlow] Welcome email to {$customerEmail}: " . ($sent ? 'SENT' : 'FAILED'));
+                error_log("[StratFlow] Set password URL: {$setPasswordUrl}");
             }
         }
     }
