@@ -7,10 +7,13 @@
  */
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$filePath = __DIR__ . $uri;
+
+// __DIR__ is the public/ directory since this file lives there
+$docRoot = __DIR__;
+$filePath = $docRoot . $uri;
 
 // Serve existing static files directly
-if ($uri !== '/' && file_exists($filePath) && is_file($filePath)) {
+if ($uri !== '/' && is_file($filePath)) {
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
     $mimeTypes = [
         'css'   => 'text/css',
@@ -28,14 +31,18 @@ if ($uri !== '/' && file_exists($filePath) && is_file($filePath)) {
         'json'  => 'application/json',
         'xml'   => 'application/xml',
         'txt'   => 'text/plain',
+        'map'   => 'application/json',
     ];
 
-    $contentType = $mimeTypes[$ext] ?? mime_content_type($filePath) ?: 'application/octet-stream';
+    $contentType = $mimeTypes[$ext] ?? (function_exists('mime_content_type') ? mime_content_type($filePath) : 'application/octet-stream');
+
+    http_response_code(200);
     header('Content-Type: ' . $contentType);
     header('Content-Length: ' . filesize($filePath));
+    header('Cache-Control: public, max-age=86400');
     readfile($filePath);
-    return;
+    exit;
 }
 
 // Route everything else through the front controller
-require __DIR__ . '/index.php';
+require $docRoot . '/index.php';
