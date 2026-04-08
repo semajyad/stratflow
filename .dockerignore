@@ -1,0 +1,11 @@
+.git
+.gitignore
+.gitattributes
+docker/
+docker-compose.yml
+tests/
+docs/
+*.md
+.env
+.env.example
+docker/mysql-data/
