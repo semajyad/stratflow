@@ -100,11 +100,22 @@ class Project
      * @param array    $data  Columns to update as key => value pairs
      * @param int|null $orgId Organisation ID for scoping (recommended)
      */
+    /** @var string[] Columns allowed in dynamic update calls */
+    private const UPDATABLE_COLUMNS = [
+        'name', 'status', 'selected_framework',
+    ];
+
     public static function update(Database $db, int $id, array $data, ?int $orgId = null): void
     {
+        // Filter to allowed columns only to prevent SQL injection via column names
+        $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
+        if (empty($data)) {
+            return;
+        }
+
         $setClauses = implode(
             ', ',
-            array_map(fn($col) => "{$col} = :{$col}", array_keys($data))
+            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
         );
 
         $bound = [];

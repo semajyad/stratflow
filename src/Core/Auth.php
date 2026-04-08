@@ -53,6 +53,9 @@ class Auth
      */
     public function login(array $user): void
     {
+        // Regenerate session ID to prevent session fixation attacks
+        session_regenerate_id(true);
+
         $this->session->set('user', [
             'id' => $user['id'],
             'org_id' => $user['org_id'],

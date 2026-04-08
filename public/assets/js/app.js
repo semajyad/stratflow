@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mermaid Diagram Rendering
     // ===========================
     if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
     }
 
     /**
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mermaid.render(id, code).then(function(result) {
             outputEl.innerHTML = result.svg;
         }).catch(function(err) {
-            outputEl.innerHTML = '<p class="error">Invalid Mermaid syntax: ' + err.message + '</p>';
+            outputEl.innerHTML = '<p class="error">Invalid Mermaid syntax: ' + escapeHtml(err.message) + '</p>';
         });
     }
 

@@ -11,7 +11,7 @@
 <?php if (($has_evaluation_board ?? false)): ?>
 <button class="btn btn-secondary sounding-board-trigger"
         data-screen="<?= htmlspecialchars($active_page ?? '') ?>"
-        data-project-id="<?= $project['id'] ?? '' ?>">
+        data-project-id="<?= (int) ($project['id'] ?? 0) ?>">
     &#127919; Sounding Board
 </button>
 <?php endif; ?>

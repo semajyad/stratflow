@@ -491,9 +491,31 @@ class AdminController
      */
     public function downloadInvoice(string $id): void
     {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        // Verify the invoice belongs to this org's Stripe customer
+        $org = Organisation::findById($this->db, $orgId);
+        if (!$org || empty($org['stripe_customer_id'])) {
+            $_SESSION['flash_error'] = 'No billing account configured.';
+            $this->response->redirect('/app/admin/invoices');
+            return;
+        }
+
         try {
             $stripe  = new StripeService($this->config['stripe']);
-            $pdfUrl  = $stripe->getInvoicePdfUrl($id);
+
+            // Verify the invoice belongs to this org's customer before redirecting
+            \Stripe\Stripe::setApiKey($this->config['stripe']['secret_key']);
+            $invoice = \Stripe\Invoice::retrieve($id);
+
+            if ($invoice->customer !== $org['stripe_customer_id']) {
+                $_SESSION['flash_error'] = 'Invoice not found.';
+                $this->response->redirect('/app/admin/invoices');
+                return;
+            }
+
+            $pdfUrl = $invoice->invoice_pdf;
         } catch (\Exception $e) {
             $_SESSION['flash_error'] = 'Could not retrieve invoice PDF.';
             $this->response->redirect('/app/admin/invoices');

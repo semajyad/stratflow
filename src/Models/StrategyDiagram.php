@@ -100,19 +100,21 @@ class StrategyDiagram
      * @param int      $id   Diagram primary key
      * @param array    $data Columns to update as key => value pairs
      */
+    /** @var string[] Columns allowed in dynamic update calls */
+    private const UPDATABLE_COLUMNS = [
+        'mermaid_code',
+    ];
+
     public static function update(Database $db, int $id, array $data): void
     {
-        $data['version'] = new \stdClass(); // placeholder — handled via raw SQL below
+        // Filter to allowed columns only to prevent SQL injection via column names
+        $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
 
-        $setClauses = [];
+        $setClauses = ['version = version + 1'];
         $bound      = [];
         foreach ($data as $col => $val) {
-            if ($col === 'version') {
-                $setClauses[] = 'version = version + 1';
-            } else {
-                $setClauses[] = "{$col} = :{$col}";
-                $bound[":{$col}"] = $val;
-            }
+            $setClauses[] = "`{$col}` = :{$col}";
+            $bound[":{$col}"] = $val;
         }
 
         $bound[':id'] = $id;

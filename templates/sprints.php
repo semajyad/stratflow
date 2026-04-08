@@ -76,7 +76,7 @@
                 <p class="text-muted text-center" style="padding: 1rem; font-size: 0.875rem;">All stories allocated</p>
             <?php endif; ?>
             <?php foreach ($unallocated as $story): ?>
-                <div class="sprint-story-item" data-story-id="<?= $story['id'] ?>">
+                <div class="sprint-story-item" data-story-id="<?= (int) $story['id'] ?>">
                     <span class="story-title-text"><?= htmlspecialchars(mb_strimwidth($story['title'], 0, 60, '...')) ?></span>
                     <span class="badge"><?= $story['size'] ?? '-' ?> pts</span>
                     <?php if (!empty($story['parent_title'])): ?>

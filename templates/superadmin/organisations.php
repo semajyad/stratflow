@@ -82,7 +82,7 @@
                                 <td class="org-actions">
                                     <!-- Suspend/Enable toggle -->
                                     <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                         <?php if ($isActive): ?>
                                             <input type="hidden" name="action" value="suspend">
                                             <button type="submit" class="btn btn-sm btn-warning">Suspend</button>
@@ -98,7 +98,7 @@
                                     <!-- Delete -->
                                     <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;"
                                           onsubmit="return confirm('Are you sure you want to delete this organisation? This cannot be undone.');">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                     </form>
@@ -122,7 +122,7 @@
     <div class="card-body">
         <p class="text-muted mb-4">Promote a user to superadmin. This grants full system-wide access.</p>
         <form method="POST" action="/superadmin/assign-superadmin" class="admin-inline-form">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <div class="form-row">
                 <div class="form-group" style="flex: 1;">
                     <select name="user_id" class="form-control" required>

@@ -74,11 +74,22 @@ class PersonaMember
      * @param int      $id   Primary key of the member to update
      * @param array    $data Columns to update as key => value pairs
      */
+    /** @var string[] Columns allowed in dynamic update calls */
+    private const UPDATABLE_COLUMNS = [
+        'role_title', 'prompt_description',
+    ];
+
     public static function update(Database $db, int $id, array $data): void
     {
+        // Filter to allowed columns only to prevent SQL injection via column names
+        $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
+        if (empty($data)) {
+            return;
+        }
+
         $setClauses = implode(
             ', ',
-            array_map(fn($col) => "{$col} = :{$col}", array_keys($data))
+            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
         );
 
         $bound = [];

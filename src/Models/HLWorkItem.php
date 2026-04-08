@@ -111,11 +111,26 @@ class HLWorkItem
      * @param int      $id   Work item primary key
      * @param array    $data Columns to update as key => value pairs
      */
+    /** @var string[] Columns allowed in dynamic update calls */
+    private const UPDATABLE_COLUMNS = [
+        'priority_number', 'title', 'description', 'strategic_context',
+        'okr_title', 'okr_description', 'owner', 'estimated_sprints',
+        'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
+        'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
+        'final_score', 'requires_review',
+    ];
+
     public static function update(Database $db, int $id, array $data): void
     {
+        // Filter to allowed columns only to prevent SQL injection via column names
+        $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
+        if (empty($data)) {
+            return;
+        }
+
         $setClauses = implode(
             ', ',
-            array_map(fn($col) => "{$col} = :{$col}", array_keys($data))
+            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
         );
 
         $bound = [];

@@ -235,18 +235,33 @@ class DiagramController
      */
     public function saveOkr(): void
     {
+        $user           = $this->auth->user();
+        $orgId          = (int) $user['org_id'];
         $nodeId         = (int) $this->request->post('node_id', 0);
         $okrTitle       = trim((string) $this->request->post('okr_title', ''));
         $okrDescription = trim((string) $this->request->post('okr_description', ''));
+
+        // Verify node belongs to a diagram in a project owned by the user's org
+        $stmt = $this->db->query(
+            "SELECT dn.id FROM diagram_nodes dn
+             JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
+             JOIN projects p ON sd.project_id = p.id
+             WHERE dn.id = :node_id AND p.org_id = :org_id
+             LIMIT 1",
+            [':node_id' => $nodeId, ':org_id' => $orgId]
+        );
+
+        if (!$stmt->fetch()) {
+            $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
+            return;
+        }
 
         DiagramNode::update($this->db, $nodeId, [
             'okr_title'       => $okrTitle,
             'okr_description' => $okrDescription,
         ]);
 
-        header('Content-Type: application/json');
-        echo json_encode(['status' => 'ok']);
-        exit;
+        $this->response->json(['status' => 'ok']);
     }
 
     // ===========================

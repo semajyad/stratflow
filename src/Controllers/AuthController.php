@@ -123,6 +123,15 @@ class AuthController
     public function sendResetEmail(): void
     {
         $email = trim((string) $this->request->post('email', ''));
+        $ip    = $this->request->ip();
+
+        // Rate limit password reset requests (reuse login rate limiter)
+        if ($this->auth->isRateLimited($ip)) {
+            $this->response->render('forgot-password', [
+                'success' => true, // Show generic success to prevent enumeration
+            ]);
+            return;
+        }
 
         // Always show success to prevent user enumeration
         $user = User::findByEmail($this->db, $email);
@@ -134,6 +143,9 @@ class AuthController
             $emailService = new EmailService($this->config);
             $emailService->sendPasswordReset($email, $user['full_name'], $resetUrl);
         }
+
+        // Record attempt to enforce rate limiting on password resets
+        $this->auth->recordFailedAttempt($ip);
 
         $this->response->render('forgot-password', [
             'success' => true,

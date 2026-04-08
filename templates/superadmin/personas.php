@@ -31,7 +31,7 @@
      Persona Editor Form
      =========================== -->
 <form method="POST" action="/superadmin/personas">
-    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
     <?php foreach ($panels as $panel): ?>
         <section class="card mt-6 persona-editor-panel">
