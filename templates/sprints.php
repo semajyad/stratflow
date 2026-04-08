@@ -92,7 +92,9 @@
         <div class="panel-header">
             <h3>Sprints</h3>
             <?php if (!empty($sprints) && !empty($unallocated)): ?>
-                <form method="POST" action="/app/sprints/ai-allocate" class="inline-form">
+                <form method="POST" action="/app/sprints/ai-allocate" class="inline-form"
+                      data-loading="Allocating stories..."
+                      data-overlay="AI is allocating stories to sprints based on capacity and dependencies.">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                     <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Auto-allocate unallocated stories into sprints using AI?')">AI Auto-Allocate</button>

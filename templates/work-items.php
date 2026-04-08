@@ -55,7 +55,9 @@
             </p>
         </div>
         <div class="flex items-center gap-2" style="flex-wrap: wrap;">
-            <form method="POST" action="/app/work-items/generate">
+            <form method="POST" action="/app/work-items/generate"
+                  data-loading="Generating work items..."
+                  data-overlay="Generating work items from diagram. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-primary"
@@ -66,7 +68,9 @@
                 </button>
             </form>
             <?php if (!empty($work_items)): ?>
-            <form method="POST" action="/app/work-items/regenerate-sizing">
+            <form method="POST" action="/app/work-items/regenerate-sizing"
+                  data-loading="Regenerating sizing estimates..."
+                  data-overlay="Re-estimating sprint sizing for all work items using AI.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-secondary"

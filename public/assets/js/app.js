@@ -1121,3 +1121,59 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', openSoundingBoard);
     });
 });
+
+// ===========================
+// Enterprise Loading States
+// ===========================
+
+/**
+ * Show a full-page processing overlay with a spinner and message.
+ *
+ * @param {string} message Text to display below the spinner
+ */
+function showProcessingOverlay(message) {
+    var overlay = document.createElement('div');
+    overlay.className = 'processing-overlay';
+    overlay.id = 'processing-overlay';
+    overlay.innerHTML =
+        '<div class="processing-card">' +
+            '<div class="loading-spinner"></div>' +
+            '<p>' + message + '</p>' +
+            '<p style="color: #94a3b8; font-size: 0.8125rem; margin-top: 0.5rem;">Please don\'t close this page</p>' +
+        '</div>';
+    document.body.appendChild(overlay);
+}
+
+/**
+ * Remove the full-page processing overlay if present.
+ */
+function hideProcessingOverlay() {
+    var overlay = document.getElementById('processing-overlay');
+    if (overlay) { overlay.remove(); }
+}
+
+/**
+ * Attach loading states to all forms with data-loading and/or data-overlay attributes.
+ * - data-loading: disables the submit button and shows inline spinner text.
+ * - data-overlay: shows a full-page processing overlay with the given message.
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('form[data-loading]').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var btn = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (btn && !btn.disabled) {
+                var loadingText = form.getAttribute('data-loading') || 'Processing...';
+                btn.disabled = true;
+                btn.dataset.originalText = btn.textContent || btn.innerText;
+                btn.innerHTML = '<span class="loading-spinner-inline"></span> ' + loadingText;
+                btn.classList.add('btn-loading');
+            }
+        });
+    });
+
+    document.querySelectorAll('form[data-overlay]').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            showProcessingOverlay(form.getAttribute('data-overlay'));
+        });
+    });
+});

@@ -45,6 +45,8 @@
         enctype="multipart/form-data"
         class="upload-form"
         id="upload-form"
+        data-loading="Uploading &amp; extracting text..."
+        data-overlay="Uploading and extracting text from your document. This may take a moment."
     >
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <input type="hidden" name="MAX_FILE_SIZE" value="52428800">
@@ -124,7 +126,9 @@
                         <!-- No summary yet — show generate button when extracted text is available -->
                         <div class="document-actions">
                             <?php if (!empty($doc['extracted_text'])): ?>
-                                <form method="POST" action="/app/upload/summarise">
+                                <form method="POST" action="/app/upload/summarise"
+                                      data-loading="Generating AI summary..."
+                                      data-overlay="Generating AI summary from your document. This typically takes 15-30 seconds.">
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
                                     <input type="hidden" name="project_id"  value="<?= (int) $project['id'] ?>">

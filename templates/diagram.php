@@ -60,7 +60,8 @@
         </div>
         <div class="card-body">
             <!-- Save Code Form -->
-            <form method="POST" action="/app/diagram/save">
+            <form method="POST" action="/app/diagram/save"
+                  data-loading="Saving diagram...">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
 
@@ -81,7 +82,9 @@
             </form>
 
             <!-- Regenerate Form -->
-            <form method="POST" action="/app/diagram/generate" class="mt-4">
+            <form method="POST" action="/app/diagram/generate" class="mt-4"
+                  data-loading="Generating strategy diagram..."
+                  data-overlay="Generating strategy diagram from your summary. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-secondary btn-block">

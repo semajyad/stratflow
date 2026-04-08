@@ -2915,3 +2915,56 @@ tbody tr:hover {
     animation: spin 0.6s linear infinite;
     margin: 0 auto;
 }
+
+/* === Loading States ======================================================== */
+
+.btn-loading {
+    position: relative;
+    cursor: wait !important;
+    opacity: 0.85;
+}
+
+.btn-loading:hover {
+    transform: none !important;
+}
+
+.loading-spinner-inline {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+
+/* Processing overlay for full-page operations */
+.processing-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.processing-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem 3rem;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+.processing-card .loading-spinner {
+    margin: 0 auto 1rem;
+}
+
+.processing-card p {
+    color: #475569;
+    font-size: 0.9375rem;
+    margin: 0;
+}

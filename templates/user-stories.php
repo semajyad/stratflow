@@ -44,7 +44,9 @@
         <h3>Split Work Items to User Stories (AI)</h3>
     </div>
     <div class="card-body">
-        <form method="POST" action="/app/user-stories/generate">
+        <form method="POST" action="/app/user-stories/generate"
+              data-loading="Decomposing into user stories..."
+              data-overlay="Decomposing work items into user stories. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="hl-selector">
@@ -100,7 +102,9 @@
                     </a>
                 </div>
             </div>
-            <form method="POST" action="/app/user-stories/regenerate-sizing">
+            <form method="POST" action="/app/user-stories/regenerate-sizing"
+                  data-loading="Re-estimating story sizes..."
+                  data-overlay="Re-estimating story point sizes for all user stories using AI.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-secondary btn-sm"

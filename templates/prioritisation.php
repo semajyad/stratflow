@@ -170,7 +170,8 @@ $formula = $isRice
      Actions
      =========================== -->
 <div class="flex items-center justify-between mb-6" style="flex-wrap: wrap; gap: 1rem;">
-    <form method="POST" action="/app/prioritisation/rerank">
+    <form method="POST" action="/app/prioritisation/rerank"
+          data-loading="Re-ranking by score...">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
         <button type="submit" class="btn btn-primary" onclick="return confirm('Re-rank all items by their calculated score?')">
