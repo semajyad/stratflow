@@ -1,0 +1,59 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Wait for MySQL
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h 127.0.0.1 -u stratflow -pstratflow_secret 2>/dev/null && break
+            sleep 2
+          done
+
+      - name: Create .env
+        run: |
+          cp .env.example .env
+          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
+
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+
+      - name: Run tests
+        run: composer test
