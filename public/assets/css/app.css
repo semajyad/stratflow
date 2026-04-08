@@ -1962,3 +1962,190 @@ tbody tr:hover {
         align-items: stretch;
     }
 }
+
+/* === Admin Area ============================================================ */
+
+.admin-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    transition: box-shadow 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.admin-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+    text-decoration: none;
+}
+
+.admin-card-icon {
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.admin-card-count {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.admin-card-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.admin-card-hint {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+}
+
+/* Seat counter badge */
+.seat-counter {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.9375rem;
+    white-space: nowrap;
+}
+
+/* Admin tables */
+.user-table,
+.team-table {
+    width: 100%;
+}
+
+.user-table th,
+.team-table th {
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+}
+
+/* Admin inline edit form rows */
+.admin-inline-form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    padding: 0.75rem 0;
+}
+
+.admin-inline-form .form-group {
+    flex: 1;
+    min-width: 140px;
+}
+
+/* Team member list */
+.team-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.team-member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+.team-member-row:last-child {
+    border-bottom: none;
+}
+
+/* Persona textarea group */
+.persona-editor textarea {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+/* Settings section spacing */
+.settings-section .card-body {
+    padding: 1.5rem;
+}
+
+/* Sidebar divider */
+.sidebar-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin: 0.75rem 1rem;
+}
+
+/* Table responsive wrapper */
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Badge variants */
+.badge-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.badge-success {
+    background: var(--success);
+    color: #fff;
+}
+
+.badge-warning {
+    background: var(--warning);
+    color: #fff;
+}
+
+.badge-secondary {
+    background: var(--secondary);
+    color: #fff;
+}
+
+.badge-muted {
+    background: #94a3b8;
+    color: #fff;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+@media (max-width: 768px) {
+    .admin-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-inline-form .form-row {
+        flex-direction: column;
+    }
+
+    .admin-inline-form .form-group {
+        min-width: 100%;
+    }
+}

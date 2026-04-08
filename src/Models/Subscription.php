@@ -92,4 +92,26 @@ class Subscription
             ]
         );
     }
+
+    /**
+     * Get the user seat limit for an organisation's active subscription.
+     *
+     * Falls back to 5 if no active subscription exists or if the column is null.
+     *
+     * @param Database $db    Database instance
+     * @param int      $orgId Organisation primary key
+     * @return int            Maximum number of user seats allowed
+     */
+    public static function getSeatLimit(Database $db, int $orgId): int
+    {
+        $stmt = $db->query(
+            "SELECT user_seat_limit FROM subscriptions
+             WHERE organisation_id = :org_id AND status = 'active'
+             ORDER BY id DESC LIMIT 1",
+            [':org_id' => $orgId]
+        );
+
+        $row = $stmt->fetch();
+        return ($row && $row['user_seat_limit']) ? (int) $row['user_seat_limit'] : 5;
+    }
 }

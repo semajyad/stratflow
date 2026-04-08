@@ -82,4 +82,19 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/ai-allocate',  'SprintController@aiAllocate',    ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}',         'SprintController@update',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
+
+    // Admin — static routes MUST come before {id} routes
+    $router->add('GET',  '/app/admin',                       'AdminController@index',            ['auth', 'admin']);
+    $router->add('GET',  '/app/admin/users',                 'AdminController@users',            ['auth', 'admin']);
+    $router->add('POST', '/app/admin/users',                 'AdminController@createUser',       ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/teams',                 'AdminController@teams',            ['auth', 'admin']);
+    $router->add('POST', '/app/admin/teams',                 'AdminController@createTeam',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/teams/add-member',      'AdminController@addTeamMember',    ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/teams/remove-member',   'AdminController@removeTeamMember', ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/settings',              'AdminController@settings',         ['auth', 'admin']);
+    $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);
 };

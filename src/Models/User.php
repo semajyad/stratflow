@@ -101,4 +101,55 @@ class User
             $bound
         );
     }
+
+    /**
+     * Find all users belonging to an organisation.
+     *
+     * @param Database $db    Database instance
+     * @param int      $orgId Organisation primary key
+     * @return array          Array of user rows
+     */
+    public static function findByOrgId(Database $db, int $orgId): array
+    {
+        $stmt = $db->query(
+            "SELECT * FROM users WHERE org_id = :org_id ORDER BY full_name ASC",
+            [':org_id' => $orgId]
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Count active users belonging to an organisation.
+     *
+     * @param Database $db    Database instance
+     * @param int      $orgId Organisation primary key
+     * @return int            Number of active users
+     */
+    public static function countByOrgId(Database $db, int $orgId): int
+    {
+        $stmt = $db->query(
+            "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :org_id AND is_active = 1",
+            [':org_id' => $orgId]
+        );
+
+        $row = $stmt->fetch();
+        return (int) ($row['cnt'] ?? 0);
+    }
+
+    /**
+     * Deactivate a user by setting is_active = 0.
+     *
+     * Preserves the row for foreign key integrity rather than deleting.
+     *
+     * @param Database $db Database instance
+     * @param int      $id Primary key of the user to deactivate
+     */
+    public static function deactivate(Database $db, int $id): void
+    {
+        $db->query(
+            "UPDATE users SET is_active = 0 WHERE id = :id",
+            [':id' => $id]
+        );
+    }
 }
