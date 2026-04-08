@@ -281,6 +281,18 @@ class DiagramController
         $code = preg_replace('/^```(?:mermaid)?\s*/i', '', $code);
         $code = preg_replace('/\s*```\s*$/', '', $code);
 
+        // Fix parentheses inside square bracket labels — Mermaid can't parse them
+        // e.g., A[Market Expansion (AU Focus)] → A[Market Expansion - AU Focus]
+        $code = preg_replace_callback('/\[([^\]]*)\]/', function($m) {
+            return '[' . str_replace(['(', ')'], [' - ', ''], $m[1]) . ']';
+        }, $code);
+
+        // Fix special chars that break Mermaid: & → and, < > → removed
+        $code = preg_replace_callback('/\[([^\]]*)\]/', function($m) {
+            $label = str_replace(['&', '<', '>'], ['and', '', ''], $m[1]);
+            return '[' . trim($label) . ']';
+        }, $code);
+
         return trim($code);
     }
 
