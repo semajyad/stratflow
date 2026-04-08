@@ -109,7 +109,7 @@ class Router
 
         // No route matched
         http_response_code(404);
-        echo '<h1>404 - Page Not Found</h1>';
+        include __DIR__ . '/../../templates/errors/404.php';
     }
 
     /**

@@ -14,10 +14,12 @@ namespace StratFlow\Controllers;
 
 use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
+use StratFlow\Core\RateLimiter;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
+use StratFlow\Services\AuditLogger;
 use StratFlow\Services\FileProcessor;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\SummaryPrompt;
@@ -96,6 +98,14 @@ class UploadController
             return;
         }
 
+        // Rate limit file uploads: 10 per hour per user
+        $userId = (string) $user['id'];
+        if (!RateLimiter::check($this->db, RateLimiter::FILE_UPLOAD, $userId, 10, 3600)) {
+            $_SESSION['flash_error'] = 'Upload rate limit reached. Please try again later.';
+            $this->response->redirect('/app/upload?project_id=' . $projectId);
+            return;
+        }
+
         $pasteText = trim((string) $this->request->post('paste_text', ''));
         $uploadedFile = $this->request->file('document');
 
@@ -143,6 +153,15 @@ class UploadController
             'file_size'      => $fileSize,
             'extracted_text' => $extractedText !== '' ? $extractedText : null,
             'uploaded_by'    => (int) $user['id'],
+        ]);
+
+        RateLimiter::record($this->db, RateLimiter::FILE_UPLOAD, $userId);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DOCUMENT_UPLOADED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'project_id'    => $projectId,
+            'original_name' => $originalName,
+            'mime_type'     => $mimeType,
+            'file_size'     => $fileSize,
         ]);
 
         $_SESSION['flash_message'] = 'Document uploaded and text extracted successfully.';

@@ -16,11 +16,13 @@ use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Models\AuditLog;
 use StratFlow\Models\Organisation;
 use StratFlow\Models\PersonaMember;
 use StratFlow\Models\PersonaPanel;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\User;
+use StratFlow\Services\AuditLogger;
 
 class SuperadminController
 {
@@ -120,19 +122,32 @@ class SuperadminController
             return;
         }
 
+        $user = $this->auth->user();
+        $ip   = $this->request->ip();
+        $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
         switch ($action) {
             case 'suspend':
                 Organisation::suspend($this->db, $orgId);
+                AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                    'action' => 'org_suspended', 'org_id' => $orgId, 'org_name' => $org['name'],
+                ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" suspended.';
                 break;
 
             case 'enable':
                 Organisation::enable($this->db, $orgId);
+                AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                    'action' => 'org_enabled', 'org_id' => $orgId, 'org_name' => $org['name'],
+                ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" enabled.';
                 break;
 
             case 'delete':
                 Organisation::delete($this->db, $orgId);
+                AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                    'action' => 'org_deleted', 'org_id' => $orgId, 'org_name' => $org['name'],
+                ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" deleted.';
                 break;
 
@@ -158,6 +173,12 @@ class SuperadminController
             $this->response->redirect('/superadmin/organisations');
             return;
         }
+
+        $user = $this->auth->user();
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'org_id' => $orgId,
+            'type'   => 'org_export',
+        ]);
 
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $filename = 'org_' . $orgId . '_export_' . date('Y-m-d') . '.json';
@@ -257,10 +278,66 @@ class SuperadminController
             return;
         }
 
+        $oldRole = $target['role'];
         User::update($this->db, $userId, ['role' => 'superadmin']);
+
+        $user = $this->auth->user();
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'target_user_id' => $userId,
+            'old_role'       => $oldRole,
+            'new_role'       => 'superadmin',
+        ]);
 
         $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" is now a superadmin.';
         $this->response->redirect('/superadmin/organisations');
+    }
+
+    // =========================================================================
+    // AUDIT LOGS
+    // =========================================================================
+
+    /**
+     * Display the audit log viewer with filtering by event type.
+     *
+     * GET /superadmin/audit-logs — shows recent security events for
+     * HIPAA, SOC 2, and PCI-DSS compliance review.
+     */
+    public function auditLogs(): void
+    {
+        $user       = $this->auth->user();
+        $filterType = $this->request->get('type', '');
+        $filterType = is_string($filterType) && $filterType !== '' ? $filterType : null;
+
+        if ($filterType !== null) {
+            $logs = AuditLog::findByEventType($this->db, $filterType, 200);
+        } else {
+            $logs = AuditLog::findRecent($this->db, 200);
+        }
+
+        // Build distinct event types for the filter dropdown
+        $eventTypes = [
+            AuditLogger::LOGIN_SUCCESS,
+            AuditLogger::LOGIN_FAILURE,
+            AuditLogger::LOGOUT,
+            AuditLogger::PASSWORD_CHANGE,
+            AuditLogger::PASSWORD_RESET_REQUEST,
+            AuditLogger::USER_CREATED,
+            AuditLogger::USER_DELETED,
+            AuditLogger::USER_ROLE_CHANGED,
+            AuditLogger::DATA_EXPORT,
+            AuditLogger::ADMIN_ACTION,
+            AuditLogger::SETTINGS_CHANGED,
+            AuditLogger::PROJECT_CREATED,
+            AuditLogger::DOCUMENT_UPLOADED,
+        ];
+
+        $this->response->render('superadmin/audit-logs', [
+            'user'        => $user,
+            'logs'        => $logs,
+            'event_types' => $eventTypes,
+            'filter_type' => $filterType,
+            'active_page' => 'superadmin',
+        ], 'app');
     }
 
     // =========================================================================

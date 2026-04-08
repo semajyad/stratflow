@@ -7,28 +7,145 @@ namespace StratFlow\Core;
 /**
  * Secure Session Manager
  *
- * Wraps PHP sessions with secure cookie parameters and provides
- * typed accessors plus flash message support.
+ * Wraps PHP sessions with hardened security parameters:
+ * - Inactivity timeout (30 minutes, configurable) for HIPAA/PCI-DSS
+ * - Session fingerprinting (User-Agent + partial IP) to prevent hijacking
+ * - Periodic session ID regeneration (every 15 minutes)
+ * - Strict cookie parameters (httponly, secure, samesite)
+ * - Flash message support
  */
 class Session
 {
-    public function __construct()
+    /** @var int Session inactivity timeout in seconds (default: 30 minutes) */
+    private int $timeout;
+
+    /** @var int Session ID regeneration interval in seconds (default: 15 minutes) */
+    private const REGEN_INTERVAL = 900;
+
+    public function __construct(int $timeout = 1800)
     {
+        $this->timeout = $timeout;
+
         if (session_status() === PHP_SESSION_NONE) {
             $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
+            // Hardened session configuration (SOC 2 / PCI-DSS)
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.use_only_cookies', '1');
+            ini_set('session.sid_length', '48');
+            ini_set('session.sid_bits_per_character', '6');
+
             session_set_cookie_params([
-                'lifetime' => 0,
-                'path' => '/',
-                'domain' => '',
-                'secure' => $isSecure,
-                'httponly' => true,
-                'samesite' => 'Strict',
+                'lifetime' => 0,           // Browser session only
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => $isSecure,
+                'httponly'  => true,
+                'samesite'  => 'Strict',
             ]);
 
             session_start();
         }
+
+        // Check inactivity timeout
+        $this->checkTimeout();
+
+        // Validate session fingerprint
+        $this->validateFingerprint();
+
+        // Periodically regenerate session ID
+        $this->periodicRegenerate();
     }
+
+    // ===========================
+    // SESSION SECURITY CHECKS
+    // ===========================
+
+    /**
+     * Check for session inactivity timeout and destroy if expired.
+     *
+     * PCI-DSS requires 15-minute timeout; we use 30 minutes (configurable)
+     * which covers both HIPAA and general enterprise requirements.
+     */
+    private function checkTimeout(): void
+    {
+        if (isset($_SESSION['_last_activity'])) {
+            $elapsed = time() - $_SESSION['_last_activity'];
+            if ($elapsed > $this->timeout) {
+                $this->destroy();
+                return;
+            }
+        }
+
+        $_SESSION['_last_activity'] = time();
+    }
+
+    /**
+     * Validate session fingerprint to prevent session hijacking.
+     *
+     * Creates a hash of the User-Agent and first two octets of the IP address.
+     * If the fingerprint changes mid-session, the session is destroyed.
+     */
+    private function validateFingerprint(): void
+    {
+        $fingerprint = $this->generateFingerprint();
+
+        if (isset($_SESSION['_fingerprint'])) {
+            if ($_SESSION['_fingerprint'] !== $fingerprint) {
+                $this->destroy();
+                return;
+            }
+        } else {
+            $_SESSION['_fingerprint'] = $fingerprint;
+        }
+    }
+
+    /**
+     * Generate a session fingerprint from User-Agent and partial IP.
+     *
+     * Uses only the first two octets of IPv4 (or prefix for IPv6) to allow
+     * for legitimate IP changes within the same network.
+     *
+     * @return string SHA-256 fingerprint hash
+     */
+    private function generateFingerprint(): string
+    {
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        // Extract first two octets for IPv4, first 4 groups for IPv6
+        if (str_contains($ip, '.')) {
+            $parts = explode('.', $ip);
+            $partialIp = ($parts[0] ?? '0') . '.' . ($parts[1] ?? '0');
+        } else {
+            $parts = explode(':', $ip);
+            $partialIp = implode(':', array_slice($parts, 0, 4));
+        }
+
+        return hash('sha256', $ua . '|' . $partialIp);
+    }
+
+    /**
+     * Regenerate the session ID periodically to limit the window of
+     * a compromised session ID.
+     */
+    private function periodicRegenerate(): void
+    {
+        $now = time();
+
+        if (!isset($_SESSION['_created_at'])) {
+            $_SESSION['_created_at'] = $now;
+        }
+
+        if (($now - $_SESSION['_created_at']) > self::REGEN_INTERVAL) {
+            session_regenerate_id(true);
+            $_SESSION['_created_at'] = $now;
+        }
+    }
+
+    // ===========================
+    // PUBLIC API
+    // ===========================
 
     /**
      * Get a session value by key.

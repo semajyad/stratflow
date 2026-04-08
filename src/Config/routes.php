@@ -129,5 +129,6 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/superadmin/organisations/{id}/export', 'SuperadminController@exportOrg',       ['auth', 'superadmin']);
     $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
+    $router->add('GET',  '/superadmin/audit-logs',                'SuperadminController@auditLogs',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);
 };

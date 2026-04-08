@@ -15,6 +15,7 @@ namespace StratFlow\Controllers;
 
 use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
+use StratFlow\Core\PasswordPolicy;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Organisation;
@@ -23,6 +24,7 @@ use StratFlow\Models\Subscription;
 use StratFlow\Models\Team;
 use StratFlow\Models\TeamMember;
 use StratFlow\Models\User;
+use StratFlow\Services\AuditLogger;
 use StratFlow\Services\EmailService;
 use StratFlow\Services\StripeService;
 
@@ -168,6 +170,12 @@ class AdminController
         $emailService = new EmailService($this->config);
         $emailService->sendWelcome($email, $fullName, $setPasswordUrl);
 
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_CREATED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'new_user_id' => $newUserId,
+            'email'       => $email,
+            'role'        => $role,
+        ]);
+
         $_SESSION['flash_message'] = 'User created. A welcome email has been sent to ' . $email . '.';
         $this->response->redirect('/app/admin/users');
     }
@@ -221,11 +229,39 @@ class AdminController
             'role'      => $role,
         ];
 
-        if ($password !== '' && strlen($password) >= 8) {
+        // Enforce password policy if a new password is provided
+        if ($password !== '') {
+            $policyErrors = PasswordPolicy::validate($password);
+            if (!empty($policyErrors)) {
+                $_SESSION['flash_error'] = implode(' ', $policyErrors);
+                $this->response->redirect('/app/admin/users');
+                return;
+            }
             $data['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $data['password_changed_at'] = date('Y-m-d H:i:s');
         }
 
+        // Track role changes for audit
+        $oldRole = $target['role'];
+
         User::update($this->db, $userId, $data);
+
+        // Audit log: role change
+        if ($role !== $oldRole) {
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+                'target_user_id' => $userId,
+                'old_role'       => $oldRole,
+                'new_role'       => $role,
+            ]);
+        }
+
+        // Audit log: password change by admin
+        if ($password !== '') {
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::PASSWORD_CHANGE, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+                'target_user_id' => $userId,
+                'method'         => 'admin_reset',
+            ]);
+        }
 
         $_SESSION['flash_message'] = 'User "' . $fullName . '" updated successfully.';
         $this->response->redirect('/app/admin/users');
@@ -259,6 +295,11 @@ class AdminController
         }
 
         User::deactivate($this->db, $userId);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_DELETED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'target_user_id' => $userId,
+            'email'          => $target['email'],
+        ]);
 
         $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" has been deactivated.';
         $this->response->redirect('/app/admin/users');
@@ -618,6 +659,10 @@ class AdminController
 
         Organisation::update($this->db, $orgId, [
             'settings_json' => json_encode($settings),
+        ]);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'org_id' => $orgId,
         ]);
 
         $_SESSION['flash_message'] = 'Settings saved successfully.';

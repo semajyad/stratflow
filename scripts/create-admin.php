@@ -18,6 +18,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use StratFlow\Core\Database;
+use StratFlow\Core\PasswordPolicy;
 use StratFlow\Models\Organisation;
 use StratFlow\Models\User;
 
@@ -88,14 +89,14 @@ function validateEmail(string $email): bool
 }
 
 /**
- * Validate that a password meets the minimum length requirement.
+ * Validate that a password meets the enterprise security policy.
  *
  * @param string $password Password to validate
- * @return bool            True if at least 8 characters
+ * @return bool            True if the password satisfies all requirements
  */
 function validatePassword(string $password): bool
 {
-    return strlen($password) >= 8;
+    return PasswordPolicy::isValid($password);
 }
 
 // === ORGANISATION HELPERS ===
@@ -151,11 +152,12 @@ if (!validateEmail($email)) {
 if (isset($args['password'])) {
     $password = $args['password'];
 } else {
-    $password = prompt("Password (min 8 chars): ", secret: true);
+    $password = prompt("Password (" . PasswordPolicy::requirements() . "): ", secret: true);
 }
 
 if (!validatePassword($password)) {
-    fwrite(STDERR, "Error: Password must be at least 8 characters.\n");
+    $errors = PasswordPolicy::validate($password);
+    fwrite(STDERR, "Error: " . implode(' ', $errors) . "\n");
     exit(1);
 }
 

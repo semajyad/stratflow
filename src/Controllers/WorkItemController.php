@@ -15,6 +15,7 @@ use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Services\AuditLogger;
 use StratFlow\Models\DiagramNode;
 use StratFlow\Models\Document;
 use StratFlow\Models\HLItemDependency;
@@ -521,6 +522,12 @@ class WorkItemController
 
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $safeName  = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project['name']);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'project_id' => $projectId,
+            'format'     => $format,
+            'type'       => 'work_items_export',
+        ]);
 
         if ($format === 'json') {
             $exportData = array_map(function ($item) {

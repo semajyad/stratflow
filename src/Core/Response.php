@@ -84,13 +84,23 @@ class Response
     }
 
     /**
-     * Set standard security headers.
+     * Set comprehensive security headers.
+     *
+     * Covers OWASP A05 (Security Misconfiguration), HIPAA transport
+     * security, PCI-DSS strong cryptography, and SOC 2 access controls.
      */
     private function setSecurityHeaders(): void
     {
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
+        header('X-XSS-Protection: 1; mode=block');
         header('Referrer-Policy: strict-origin-when-cross-origin');
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'");
+        header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com");
+        header('Cross-Origin-Opener-Policy: same-origin');
+        header('Cross-Origin-Resource-Policy: same-origin');
+        header('Cache-Control: no-store, no-cache, must-revalidate, private');
+        header('Pragma: no-cache');
     }
 }
