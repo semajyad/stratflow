@@ -40,15 +40,27 @@ try {
     ]);
     echo "Subscription created.\n";
 
-    // Create admin user
-    $userId = \StratFlow\Models\User::create($db, [
-        'org_id' => $orgId,
-        'full_name' => 'James Day',
-        'email' => 'james@threepointssolutions.com',
-        'password_hash' => password_hash('StratFlow2026!', PASSWORD_BCRYPT),
-        'role' => 'superadmin',
-    ]);
-    echo "User created: ID $userId\n";
+    // Create or update admin user
+    $existingUser = \StratFlow\Models\User::findByEmail($db, 'james@threepointssolutions.com');
+    if ($existingUser) {
+        // Update existing user to point to new org and reset password
+        \StratFlow\Models\User::update($db, (int)$existingUser['id'], [
+            'org_id' => $orgId,
+            'password_hash' => password_hash('StratFlow2026!', PASSWORD_BCRYPT),
+            'role' => 'superadmin',
+            'is_active' => 1,
+        ]);
+        echo "User updated: ID {$existingUser['id']}\n";
+    } else {
+        $userId = \StratFlow\Models\User::create($db, [
+            'org_id' => $orgId,
+            'full_name' => 'James Day',
+            'email' => 'james@threepointssolutions.com',
+            'password_hash' => password_hash('StratFlow2026!', PASSWORD_BCRYPT),
+            'role' => 'superadmin',
+        ]);
+        echo "User created: ID $userId\n";
+    }
     echo "\nLogin: james@threepointssolutions.com / StratFlow2026!\n";
     echo "\n** DELETE THIS FILE NOW: rm public/setup-admin.php **\n";
 } catch (\Throwable $e) {
