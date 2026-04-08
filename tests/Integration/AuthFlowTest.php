@@ -38,13 +38,7 @@ class AuthFlowTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->db = new Database([
-            'host'     => 'mysql',
-            'port'     => '3306',
-            'database' => 'stratflow',
-            'username' => 'stratflow',
-            'password' => 'stratflow_secret',
-        ]);
+        $this->db = new Database(getTestDbConfig());
 
         // Clean up any leftover data from a previous failed run
         $this->db->query(

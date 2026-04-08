@@ -20,17 +20,16 @@ class DatabaseTest extends TestCase
     // CONFIG
     // ===========================
 
-    private static array $config = [
-        'host'     => 'mysql',
-        'port'     => '3306',
-        'database' => 'stratflow',
-        'username' => 'stratflow',
-        'password' => 'stratflow_secret',
-    ];
+    private static array $config;
 
     // ===========================
     // CONNECTION
     // ===========================
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$config = getTestDbConfig();
+    }
 
     #[Test]
     public function testConnectionSucceeds(): void

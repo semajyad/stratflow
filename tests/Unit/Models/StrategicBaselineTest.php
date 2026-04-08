@@ -29,13 +29,7 @@ class StrategicBaselineTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::$db = new Database([
-            'host'     => 'mysql',
-            'port'     => '3306',
-            'database' => 'stratflow',
-            'username' => 'stratflow',
-            'password' => 'stratflow_secret',
-        ]);
+        self::$db = new Database(getTestDbConfig());
 
         // Clean up any leftover data from a previous failed run
         self::$db->query(
