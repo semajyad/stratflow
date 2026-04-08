@@ -6,8 +6,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.getElementById('sidebar');
 
     if (toggle && sidebar) {
-        toggle.addEventListener('click', function() {
-            sidebar.classList.toggle('collapsed');
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sidebar.classList.toggle('open');
+            // Add/remove overlay
+            let overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('open')) {
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'sidebar-overlay';
+                    overlay.className = 'sidebar-overlay';
+                    overlay.addEventListener('click', function() {
+                        sidebar.classList.remove('open');
+                        overlay.remove();
+                    });
+                    document.body.appendChild(overlay);
+                }
+            } else if (overlay) {
+                overlay.remove();
+            }
         });
     }
 
