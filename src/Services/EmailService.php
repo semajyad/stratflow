@@ -2,9 +2,8 @@
 /**
  * EmailService
  *
- * Sends transactional emails using PHP's built-in mail() function.
- * Provides convenience methods for welcome emails, password resets,
- * and consultancy alerts with StratFlow-branded HTML templates.
+ * Sends transactional emails via Gmail SMTP (using fsockopen).
+ * No external dependencies — pure PHP socket-based SMTP.
  */
 
 declare(strict_types=1);
@@ -15,9 +14,6 @@ class EmailService
 {
     private array $config;
 
-    /**
-     * @param array $config Application config array (expects 'mail' key with from_name and from_email)
-     */
     public function __construct(array $config)
     {
         $this->config = $config;
@@ -28,49 +24,114 @@ class EmailService
     // =========================================================================
 
     /**
-     * Send an HTML email via PHP's mail() function.
-     *
-     * @param string $to       Recipient email address
-     * @param string $subject  Email subject line
-     * @param string $htmlBody Full HTML body content
-     * @return bool            True if mail() accepted the message for delivery
+     * Send an HTML email via SMTP.
      */
     public function send(string $to, string $subject, string $htmlBody): bool
     {
-        $fromName  = $this->config['mail']['from_name'] ?? 'StratFlow';
-        $fromEmail = $this->config['mail']['from_email'] ?? 'noreply@stratflow.app';
+        $smtpHost = $this->config['mail']['smtp_host'] ?? 'smtp.gmail.com';
+        $smtpPort = (int)($this->config['mail']['smtp_port'] ?? 587);
+        $smtpUser = $this->config['mail']['smtp_user'] ?? '';
+        $smtpPass = $this->config['mail']['smtp_pass'] ?? '';
+        $fromName = $this->config['mail']['from_name'] ?? 'StratFlow';
+        $fromEmail = $this->config['mail']['from_email'] ?? $smtpUser;
 
-        $headers = [
-            'From'         => "{$fromName} <{$fromEmail}>",
-            'Reply-To'     => $fromEmail,
-            'MIME-Version'  => '1.0',
-            'Content-Type' => 'text/html; charset=UTF-8',
-            'X-Mailer'     => 'StratFlow/1.0',
-        ];
-
-        $headerStr = '';
-        foreach ($headers as $key => $value) {
-            $headerStr .= "{$key}: {$value}\r\n";
+        if ($smtpUser === '' || $smtpPass === '') {
+            error_log('[StratFlow] Email not sent — SMTP credentials not configured');
+            return false;
         }
 
-        return mail($to, $subject, $htmlBody, $headerStr);
+        // Build the email message
+        $boundary = md5(uniqid((string)time()));
+        $headers = "From: {$fromName} <{$fromEmail}>\r\n";
+        $headers .= "To: {$to}\r\n";
+        $headers .= "Subject: {$subject}\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "X-Mailer: StratFlow/1.0\r\n";
+
+        $message = $headers . "\r\n" . $htmlBody;
+
+        try {
+            return $this->sendViaSMTP($smtpHost, $smtpPort, $smtpUser, $smtpPass, $fromEmail, $to, $message);
+        } catch (\Throwable $e) {
+            error_log('[StratFlow] Email send failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send email via SMTP with STARTTLS.
+     */
+    private function sendViaSMTP(string $host, int $port, string $user, string $pass, string $from, string $to, string $message): bool
+    {
+        $socket = @fsockopen($host, $port, $errno, $errstr, 10);
+        if (!$socket) {
+            throw new \RuntimeException("SMTP connect failed: $errstr ($errno)");
+        }
+
+        $this->smtpRead($socket); // 220 greeting
+
+        $this->smtpCommand($socket, "EHLO stratflow.app", 250);
+
+        // STARTTLS
+        $this->smtpCommand($socket, "STARTTLS", 220);
+        if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
+            throw new \RuntimeException("STARTTLS negotiation failed");
+        }
+
+        $this->smtpCommand($socket, "EHLO stratflow.app", 250);
+
+        // AUTH LOGIN
+        $this->smtpCommand($socket, "AUTH LOGIN", 334);
+        $this->smtpCommand($socket, base64_encode($user), 334);
+        $this->smtpCommand($socket, base64_encode($pass), 235);
+
+        // MAIL FROM / RCPT TO
+        $this->smtpCommand($socket, "MAIL FROM:<{$from}>", 250);
+        $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
+
+        // DATA
+        $this->smtpCommand($socket, "DATA", 354);
+        fwrite($socket, $message . "\r\n.\r\n");
+        $this->smtpRead($socket); // 250 OK
+
+        $this->smtpCommand($socket, "QUIT", 221);
+        fclose($socket);
+
+        return true;
+    }
+
+    private function smtpCommand($socket, string $command, int $expectedCode): string
+    {
+        fwrite($socket, $command . "\r\n");
+        $response = $this->smtpRead($socket);
+        $code = (int)substr($response, 0, 3);
+        if ($code !== $expectedCode) {
+            throw new \RuntimeException("SMTP error: expected $expectedCode, got: $response");
+        }
+        return $response;
+    }
+
+    private function smtpRead($socket): string
+    {
+        $response = '';
+        while ($line = fgets($socket, 512)) {
+            $response .= $line;
+            // Multi-line responses have '-' after code, last line has space
+            if (isset($line[3]) && $line[3] === ' ') {
+                break;
+            }
+        }
+        return $response;
     }
 
     // =========================================================================
     // CONVENIENCE METHODS
     // =========================================================================
 
-    /**
-     * Send a welcome email with a "Set Your Password" link.
-     *
-     * @param string $to             Recipient email address
-     * @param string $name           Recipient's display name
-     * @param string $setPasswordUrl Full URL to the set-password page (includes token)
-     * @return bool                  True if mail() accepted the message
-     */
     public function sendWelcome(string $to, string $name, string $setPasswordUrl): bool
     {
-        $subject  = 'Welcome to StratFlow — Set Your Password';
+        $subject = 'Welcome to StratFlow — Set Your Password';
         $htmlBody = $this->buildEmailHtml(
             "Welcome to StratFlow, {$name}!",
             '<p>Your account has been created. Click the button below to set your password and get started.</p>',
@@ -78,21 +139,12 @@ class EmailService
             $setPasswordUrl,
             'This link expires in 24 hours. If you didn\'t expect this email, you can safely ignore it.'
         );
-
         return $this->send($to, $subject, $htmlBody);
     }
 
-    /**
-     * Send a password reset email with a reset link.
-     *
-     * @param string $to       Recipient email address
-     * @param string $name     Recipient's display name
-     * @param string $resetUrl Full URL to the password reset page (includes token)
-     * @return bool            True if mail() accepted the message
-     */
     public function sendPasswordReset(string $to, string $name, string $resetUrl): bool
     {
-        $subject  = 'StratFlow — Reset Your Password';
+        $subject = 'StratFlow — Reset Your Password';
         $htmlBody = $this->buildEmailHtml(
             "Reset Your Password",
             "<p>Hi {$name}, we received a request to reset your password. Click the button below to choose a new one.</p>",
@@ -100,20 +152,12 @@ class EmailService
             $resetUrl,
             'This link expires in 24 hours. If you didn\'t request a password reset, you can safely ignore this email.'
         );
-
         return $this->send($to, $subject, $htmlBody);
     }
 
-    /**
-     * Send a consultancy plan alert email.
-     *
-     * @param string $to      Recipient email address
-     * @param string $orgName Organisation name
-     * @return bool           True if mail() accepted the message
-     */
     public function sendConsultancyAlert(string $to, string $orgName): bool
     {
-        $subject  = 'StratFlow — New Consultancy Subscription';
+        $subject = 'StratFlow — New Consultancy Subscription';
         $htmlBody = $this->buildEmailHtml(
             "Consultancy Plan Activated",
             "<p>A new consultancy subscription has been created for <strong>{$orgName}</strong>. "
@@ -122,7 +166,6 @@ class EmailService
             '',
             'This is an automated notification from StratFlow.'
         );
-
         return $this->send($to, $subject, $htmlBody);
     }
 
@@ -130,23 +173,8 @@ class EmailService
     // HTML BUILDER
     // =========================================================================
 
-    /**
-     * Build a branded HTML email body with inline CSS.
-     *
-     * @param string $heading    Main heading text
-     * @param string $bodyHtml   HTML content for the body paragraph(s)
-     * @param string $buttonText CTA button label (empty string to omit button)
-     * @param string $buttonUrl  CTA button URL
-     * @param string $footerText Small-print footer text
-     * @return string            Complete HTML email body
-     */
-    private function buildEmailHtml(
-        string $heading,
-        string $bodyHtml,
-        string $buttonText,
-        string $buttonUrl,
-        string $footerText
-    ): string {
+    private function buildEmailHtml(string $heading, string $bodyHtml, string $buttonText, string $buttonUrl, string $footerText): string
+    {
         $buttonBlock = '';
         if ($buttonText !== '' && $buttonUrl !== '') {
             $safeUrl = htmlspecialchars($buttonUrl, ENT_QUOTES, 'UTF-8');
@@ -160,14 +188,14 @@ class EmailService
         }
 
         $safeHeading = htmlspecialchars($heading, ENT_QUOTES, 'UTF-8');
-        $safeFooter  = htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8');
+        $safeFooter = htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
         <!DOCTYPE html>
         <html lang="en">
         <head><meta charset="UTF-8"></head>
         <body style="margin: 0; padding: 0; background: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-            <div style="max-width: 560px; margin: 40px auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div style="max-width: 560px; margin: 40px auto;">
                 <div style="background: #2563eb; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
                     <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700;">StratFlow</h1>
                 </div>

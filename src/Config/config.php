@@ -57,7 +57,11 @@ return [
     ],
     'mail' => [
         'from_name'  => $_ENV['MAIL_FROM_NAME'] ?? 'StratFlow',
-        'from_email' => $_ENV['MAIL_FROM_EMAIL'] ?? 'noreply@stratflow.app',
+        'from_email' => $_ENV['MAIL_FROM_EMAIL'] ?? '',
+        'smtp_host'  => $_ENV['MAIL_SMTP_HOST'] ?? 'smtp.gmail.com',
+        'smtp_port'  => $_ENV['MAIL_SMTP_PORT'] ?? '587',
+        'smtp_user'  => $_ENV['MAIL_SMTP_USER'] ?? '',
+        'smtp_pass'  => $_ENV['MAIL_SMTP_PASS'] ?? '',
     ],
     'upload' => [
         'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 52428800),
