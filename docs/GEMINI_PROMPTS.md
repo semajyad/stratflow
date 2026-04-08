@@ -447,6 +447,70 @@ Only allocate stories that fit within sprint capacity. Leave stories unallocated
 
 ---
 
+## 9. Persona Prompt
+
+**File:** `src/Services/Prompts/PersonaPrompt.php`
+**Class:** `PersonaPrompt`
+**Used by:** `SoundingBoardService` (called once per panel member per evaluation)
+
+### Purpose
+
+Builds a complete LLM evaluation prompt for a single AI persona. The prompt combines the persona's role identity, their perspective description, a criticism-level instruction, and the screen content to evaluate. Used by `SoundingBoardService` to generate per-persona assessments of StratFlow screen content (work items, risks, user stories, etc.).
+
+### Evaluation levels
+
+`PersonaPrompt::EVALUATION_LEVELS` defines three named criticism levels:
+
+| Key | Persona instruction |
+|-----|---------------------|
+| `devils_advocate` | Challenge the content by pointing out flaws, counterarguments, missing evidence, and unintended consequences to create constructive doubt |
+| `red_teaming` | Hunt for and expose flaws, loopholes, and weaknesses in an adversarial and thorough manner |
+| `gordon_ramsay` | Surgical, pulls-no-punches critique — identify what's wrong and what needs to be completely redone with specific, actionable feedback |
+
+### Dynamic prompt building
+
+`PersonaPrompt::buildPrompt()` takes four parameters:
+
+| Parameter | Description |
+|-----------|-------------|
+| `$roleTitle` | The persona's role (e.g. `CEO`, `Senior Developer`) |
+| `$promptDescription` | Additional context about the persona's professional perspective |
+| `$evaluationLevel` | One of the three level keys above; falls back to `devils_advocate` if invalid |
+| `$screenContent` | The page content string to evaluate |
+
+The returned prompt uses PHP heredoc syntax and inlines all four values. No placeholder tokens — everything is interpolated at call time.
+
+### Expected output
+
+Structured plain text with four sections, in this order:
+
+1. **Overall Assessment** (2–3 sentences)
+2. **Key Concerns** (bullet points)
+3. **Recommendations** (bullet points)
+4. **Risk Rating** (`Low`, `Medium`, `High`, or `Critical`)
+
+### Prompt template
+
+```
+You are a {roleTitle}. {promptDescription}
+
+{levelInstruction}
+
+Evaluate the following content and provide your professional assessment. Be specific, reference concrete items from the content, and provide actionable recommendations.
+
+Structure your response as:
+1. **Overall Assessment** (2-3 sentences)
+2. **Key Concerns** (bullet points)
+3. **Recommendations** (bullet points)
+4. **Risk Rating** (Low/Medium/High/Critical)
+
+Content to evaluate:
+---
+{screenContent}
+```
+
+---
+
 ## Tuning Notes
 
 | Setting | Value | Notes |

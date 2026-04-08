@@ -9,6 +9,7 @@ All routes are defined in `src/Config/routes.php`. The application uses a custom
 | `auth` | `AuthMiddleware` | Requires an active session; redirects to `/login` if unauthenticated |
 | `csrf` | `CSRFMiddleware` | Validates the `_csrf_token` field in POST requests; aborts with 403 on mismatch |
 | `admin` | `AdminMiddleware` | Requires `org_admin` or `superadmin` role; redirects to `/app/home` if unauthorised |
+| `superadmin` | `SuperadminMiddleware` | Requires the `superadmin` role; redirects to `/app/home` if unauthorised |
 
 Middleware is run in the order listed in the route definition.
 
@@ -81,6 +82,17 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/admin/teams/remove-member` | `AdminController@removeTeamMember` | auth, admin, csrf | Remove a user from a team |
 | GET | `/app/admin/settings` | `AdminController@settings` | auth, admin | Organisation settings page (personas, defaults, tripwires) |
 | POST | `/app/admin/settings` | `AdminController@saveSettings` | auth, admin, csrf | Save organisation settings to `organisations.settings_json` |
+| POST | `/app/sounding-board/evaluate` | `SoundingBoardController@evaluate` | auth | Run an AI evaluation; expects JSON body: `project_id`, `panel_type`, `evaluation_level`, `screen_context`, `screen_content`. Returns `{id, results}` |
+| GET | `/app/sounding-board/results/{id}` | `SoundingBoardController@results` | auth | Load a single evaluation result by ID; returns decoded evaluation data |
+| POST | `/app/sounding-board/results/{id}/respond` | `SoundingBoardController@respond` | auth | Accept or reject an individual persona response; expects JSON body: `member_index`, `action` (`accept`\|`reject`) |
+| GET | `/app/sounding-board/history` | `SoundingBoardController@history` | auth | Return evaluation history for a project; expects query param `project_id` |
+| GET | `/superadmin` | `SuperadminController@index` | auth, superadmin | Superadmin dashboard — org count, active user count, active subscription count |
+| GET | `/superadmin/organisations` | `SuperadminController@organisations` | auth, superadmin | List all organisations with status, user count, and subscription info |
+| POST | `/superadmin/organisations/{id}` | `SuperadminController@updateOrg` | auth, superadmin, csrf | Suspend, enable, or delete an organisation; expects POST param `action` |
+| GET | `/superadmin/organisations/{id}/export` | `SuperadminController@exportOrg` | auth, superadmin | Download all organisation data as a JSON file |
+| GET | `/superadmin/personas` | `SuperadminController@personas` | auth, superadmin | View and manage system-default persona panels; seeds defaults if none exist |
+| POST | `/superadmin/personas` | `SuperadminController@savePersona` | auth, superadmin, csrf | Save updated prompt descriptions for default persona members |
+| POST | `/superadmin/assign-superadmin` | `SuperadminController@assignSuperadmin` | auth, superadmin, csrf | Promote a user to the superadmin role; expects POST param `user_id` |
 
 ---
 

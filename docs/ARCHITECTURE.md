@@ -57,6 +57,7 @@ External services:
    - `AuthMiddleware`: checks `$_SESSION['user_id']`; redirects to `/login` if absent
    - `CSRFMiddleware`: compares `$_POST['_csrf_token']` against the session token; returns 403 on mismatch
    - `AdminMiddleware`: checks that `$_SESSION['user']['role']` is `org_admin` or `superadmin`; redirects to `/app/home` if not
+   - `SuperadminMiddleware`: checks that `$_SESSION['user']['role']` is `superadmin`; redirects to `/app/home` if not
 
 5. **Controller** contains the HTTP handler logic:
    - Reads input from the `Request` object
@@ -92,7 +93,9 @@ stratflow/
 │   │   ├── UserStoryController.php       ← Phase 1: User story decomposition
 │   │   ├── WebhookController.php
 │   │   ├── WorkItemController.php
-│   │   └── AdminController.php           ← Phase 2: User/team management + org settings
+│   │   ├── AdminController.php           ← Phase 2: User/team management + org settings
+│   │   ├── SoundingBoardController.php   ← Phase 3: AI persona evaluation; seeds default panels on first use
+│   │   └── SuperadminController.php      ← Phase 3: Cross-org management, persona defaults, role assignment
 │   ├── Core/
 │   │   ├── Auth.php            Session-based authentication
 │   │   ├── CSRF.php            Token generation and validation
@@ -104,12 +107,16 @@ stratflow/
 │   ├── Middleware/
 │   │   ├── AuthMiddleware.php
 │   │   ├── CSRFMiddleware.php
-│   │   └── AdminMiddleware.php           ← Phase 2: Restricts routes to org_admin/superadmin role
+│   │   ├── AdminMiddleware.php           ← Phase 2: Restricts routes to org_admin/superadmin role
+│   │   └── SuperadminMiddleware.php      ← Phase 3: Restricts routes to superadmin role only
 │   ├── Models/                 Thin data-access objects; each wraps PDO queries for one table
 │   │   ├── DiagramNode.php
 │   │   ├── Document.php
+│   │   ├── EvaluationResult.php    ← Phase 3: Sounding board results; updateStatus for accept/reject flow
 │   │   ├── HLWorkItem.php
 │   │   ├── Organisation.php
+│   │   ├── PersonaMember.php       ← Phase 3: Individual AI personas within a panel
+│   │   ├── PersonaPanel.php        ← Phase 3: Panel of personas; org_id NULL = system default
 │   │   ├── Project.php
 │   │   ├── Risk.php                ← Phase 1
 │   │   ├── RiskItemLink.php        ← Phase 1
@@ -124,10 +131,12 @@ stratflow/
 │   └── Services/
 │       ├── FileProcessor.php   PDF text extraction (smalot/pdfparser)
 │       ├── GeminiService.php   Gemini API HTTP client
+│       ├── SoundingBoardService.php  ← Phase 3: Iterates panel members, calls Gemini per persona, returns results array
 │       ├── StripeService.php   Stripe SDK wrapper
 │       └── Prompts/
 │           ├── SummaryPrompt.php
 │           ├── DiagramPrompt.php
+│           ├── PersonaPrompt.php         ← Phase 3: Builds per-persona evaluation prompts with 3 criticism levels
 │           ├── WorkItemPrompt.php
 │           ├── PrioritisationPrompt.php  ← Phase 1: RICE_PROMPT and WSJF_PROMPT
 │           ├── RiskPrompt.php            ← Phase 1: GENERATE_PROMPT and MITIGATION_PROMPT

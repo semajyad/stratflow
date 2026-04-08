@@ -14,6 +14,9 @@ organisations
   ├── subscriptions (org_id → organisations.id)
   ├── teams (org_id → organisations.id)
   │     └── team_members (team_id → teams.id, user_id → users.id)
+  ├── persona_panels (org_id → organisations.id [nullable — NULL = system default])
+  │     ├── persona_members (panel_id → persona_panels.id)
+  │     └── evaluation_results (panel_id → persona_panels.id)
   └── projects (org_id → organisations.id)
         ├── documents (project_id → projects.id)
         ├── strategy_diagrams (project_id → projects.id)
@@ -26,9 +29,10 @@ organisations
         ├── user_stories (project_id → projects.id,
         │                 parent_hl_item_id → hl_work_items.id [nullable],
         │                 blocked_by → user_stories.id [nullable])
-        └── sprints (project_id → projects.id)
-              └── sprint_stories (sprint_id → sprints.id,
-                                  user_story_id → user_stories.id)
+        ├── sprints (project_id → projects.id)
+        │     └── sprint_stories (sprint_id → sprints.id,
+        │                         user_story_id → user_stories.id)
+        └── evaluation_results (project_id → projects.id)
 
 login_attempts (standalone — tracks IP-based brute force attempts)
 ```
@@ -88,6 +92,7 @@ Tracks Stripe subscription state per organisation.
 | `started_at` | DATETIME | NOT NULL | |
 | `expires_at` | DATETIME | NULL | NULL = ongoing subscription |
 | `user_seat_limit` | INT UNSIGNED | NOT NULL, DEFAULT 5 | Maximum number of user accounts allowed for this subscription tier |
+| `has_evaluation_board` | TINYINT(1) | NOT NULL, DEFAULT 0 | 1 = org has access to the Sounding Board AI evaluation feature |
 
 **Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE
 
@@ -348,6 +353,59 @@ Added in Phase 2 (Admin Features).
 **Foreign keys:** `team_id` → `teams.id` ON DELETE CASCADE; `user_id` → `users.id` ON DELETE CASCADE
 
 **Unique constraint:** `uq_team_user (team_id, user_id)` — a user can only appear once per team
+
+---
+
+### `persona_panels`
+
+A named group of AI personas used to evaluate project screens via the Sounding Board feature. Panels may be system-wide defaults (`org_id IS NULL`) or org-specific overrides.
+Added in Phase 3 (Sounding Board).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NULL, FK → organisations | NULL = system-default panel visible to all orgs |
+| `panel_type` | ENUM | NOT NULL | `executive`, `product_management` |
+| `name` | VARCHAR(255) | NOT NULL | Panel display name |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE
+
+---
+
+### `persona_members`
+
+Individual AI personas within a panel. Each member has a role title and a natural-language prompt description used when building the Gemini evaluation prompt.
+Added in Phase 3 (Sounding Board).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `panel_id` | INT UNSIGNED | NOT NULL, FK → persona_panels | |
+| `role_title` | VARCHAR(255) | NOT NULL | e.g. `CEO`, `Senior Developer` |
+| `prompt_description` | TEXT | NOT NULL | Description of the persona's perspective and focus areas |
+
+**Foreign keys:** `panel_id` → `persona_panels.id` ON DELETE CASCADE
+
+---
+
+### `evaluation_results`
+
+Stores the structured JSON output from a sounding board evaluation run. Each row represents one evaluation of a project screen by a panel at a specific criticism level.
+Added in Phase 3 (Sounding Board).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `panel_id` | INT UNSIGNED | NOT NULL, FK → persona_panels | |
+| `evaluation_level` | ENUM | NOT NULL | `devils_advocate`, `red_teaming`, `gordon_ramsay` |
+| `screen_context` | VARCHAR(100) | NOT NULL | Identifier for which screen was evaluated (e.g. `prioritisation`, `strategy`) |
+| `results_json` | JSON | NOT NULL | Array of per-persona evaluation objects (role, feedback, status) |
+| `status` | ENUM | NOT NULL, DEFAULT `pending` | `pending`, `accepted`, `rejected`, `partial` |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `panel_id` → `persona_panels.id` ON DELETE CASCADE
 
 ---
 
