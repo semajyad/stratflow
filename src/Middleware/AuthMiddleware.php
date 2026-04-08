@@ -22,6 +22,9 @@ class AuthMiddleware
     public function handle(Auth $auth, Response $response): bool
     {
         if (!$auth->check()) {
+            // Save the intended URL so we can redirect back after login
+            $intendedUrl = $_SERVER['REQUEST_URI'] ?? '/app/home';
+            $_SESSION['_intended_url'] = $intendedUrl;
             $response->redirect('/login');
             return false;
         }

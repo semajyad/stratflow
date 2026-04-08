@@ -92,7 +92,10 @@ class AuthController
                 'email' => $email,
             ]);
 
-            $this->response->redirect('/app/home');
+            // Redirect to where the user was before session expired, or home
+            $intendedUrl = $_SESSION['_intended_url'] ?? '/app/home';
+            unset($_SESSION['_intended_url']);
+            $this->response->redirect($intendedUrl);
         }
 
         AuditLogger::log($this->db, null, AuditLogger::LOGIN_FAILURE, $ip, $ua, [
