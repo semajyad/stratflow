@@ -70,14 +70,14 @@
     </div>
     <div class="card-body">
         <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
-            Automatically create sprints and fill them with stories based on priority. Stories are allocated highest priority first until each sprint reaches capacity.
+            Create multiple sprints at once with a default capacity. You can then adjust individual sprint capacities before using Auto-Fill to allocate stories.
         </p>
         <form method="POST" action="/app/sprints/auto-generate"
-              data-loading="Generating sprints..."
-              data-overlay="Generating sprints and allocating stories by priority. This may take a moment.">
+              data-loading="Creating sprints...">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="sprint-creation-form">
+                <input type="number" name="num_sprints" placeholder="Number of sprints" class="form-control" min="1" max="20" required style="width: 170px;" value="5">
                 <input type="date" name="start_date" class="form-control" required title="Start date of first sprint">
                 <select name="sprint_length" class="form-control" style="width: 160px;" required>
                     <option value="7">1 week</option>
@@ -85,8 +85,8 @@
                     <option value="21">3 weeks</option>
                     <option value="28">4 weeks</option>
                 </select>
-                <input type="number" name="capacity" placeholder="Capacity per sprint (pts)" class="form-control" min="1" required style="width: 200px;">
-                <button type="submit" class="btn btn-primary">Generate &amp; Fill Sprints</button>
+                <input type="number" name="capacity" placeholder="Default capacity (pts)" class="form-control" min="1" required style="width: 190px;">
+                <button type="submit" class="btn btn-primary">Generate Sprints</button>
             </div>
         </form>
     </div>

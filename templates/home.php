@@ -71,10 +71,10 @@ if ($lastProjectId && !empty($projects)) {
                             Created <?= date('j M Y', strtotime($project['created_at'])) ?>
                         </span>
                     </div>
-                    <div class="project-actions">
+                    <div class="project-actions" style="display: flex; gap: 0.5rem;">
                         <a href="/app/upload?project_id=<?= (int) $project['id'] ?>"
                            class="btn btn-primary btn-sm">
-                            Start: Document Upload
+                            Open Project
                         </a>
                     </div>
                 </div>

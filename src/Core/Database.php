@@ -63,6 +63,17 @@ class Database
     }
 
     /**
+     * Get the singleton Database instance.
+     */
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            throw new \RuntimeException('Database not initialised');
+        }
+        return self::$instance;
+    }
+
+    /**
      * Execute a prepared query with optional parameters.
      *
      * Logs queries that exceed the slow query threshold to error_log.

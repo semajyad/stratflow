@@ -394,63 +394,35 @@ class SprintController
         $sprintLength = (int) $this->request->post('sprint_length', 14);
         $capacity     = (int) $this->request->post('capacity', 0);
 
-        if ($startDate === '' || $capacity <= 0) {
-            $_SESSION['flash_error'] = 'Please provide a start date and capacity.';
+        $numSprints   = (int) $this->request->post('num_sprints', 0);
+
+        if ($startDate === '' || $capacity <= 0 || $numSprints <= 0) {
+            $_SESSION['flash_error'] = 'Please provide a start date, number of sprints, and default capacity.';
             $this->response->redirect('/app/sprints?project_id=' . $projectId);
             return;
         }
 
-        // Get unallocated stories ordered by parent work item priority, then story priority
-        $unallocated = UserStory::findUnallocated($this->db, $projectId);
-        if (empty($unallocated)) {
-            $_SESSION['flash_error'] = 'No unallocated stories to assign.';
-            $this->response->redirect('/app/sprints?project_id=' . $projectId);
-            return;
-        }
+        // Count existing sprints to continue numbering
+        $existingSprints = Sprint::findByProjectId($this->db, $projectId);
+        $nextNum = count($existingSprints) + 1;
 
-        $sprintNum     = 1;
-        $currentDate   = new \DateTime($startDate);
+        $currentDate = new \DateTime($startDate);
         $sprintsCreated = 0;
-        $storiesAssigned = 0;
-        $storyIndex    = 0;
 
-        while ($storyIndex < count($unallocated)) {
-            // Create sprint
+        for ($i = 0; $i < $numSprints && $i < 20; $i++) {
             $endDate = (clone $currentDate)->modify("+{$sprintLength} days");
-            $sprintId = Sprint::create($this->db, [
+            Sprint::create($this->db, [
                 'project_id'    => $projectId,
-                'name'          => 'Sprint ' . ($sprintNum),
+                'name'          => 'Sprint ' . ($nextNum + $i),
                 'start_date'    => $currentDate->format('Y-m-d'),
                 'end_date'      => $endDate->format('Y-m-d'),
                 'team_capacity' => $capacity,
             ]);
             $sprintsCreated++;
-
-            // Fill sprint up to capacity
-            $used = 0;
-            while ($storyIndex < count($unallocated)) {
-                $story = $unallocated[$storyIndex];
-                $size  = (int) ($story['size'] ?? 1);
-
-                if ($used + $size > $capacity && $used > 0) {
-                    break; // Sprint full, move to next
-                }
-
-                SprintStory::assign($this->db, $sprintId, (int) $story['id']);
-                $used += $size;
-                $storiesAssigned++;
-                $storyIndex++;
-            }
-
-            // Next sprint starts after current ends
             $currentDate = $endDate;
-            $sprintNum++;
-
-            // Safety: max 20 sprints
-            if ($sprintsCreated >= 20) break;
         }
 
-        $_SESSION['flash_message'] = "{$sprintsCreated} sprints created, {$storiesAssigned} stories allocated by priority.";
+        $_SESSION['flash_message'] = "{$sprintsCreated} sprints created. Adjust capacity per sprint, then use Auto-Fill to allocate stories.";
         $this->response->redirect('/app/sprints?project_id=' . $projectId);
     }
 

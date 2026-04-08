@@ -34,6 +34,22 @@ class Response
         $this->setSecurityHeaders();
 
         $data['csrf_token'] = $this->csrf->getToken();
+
+        // Inject project list for sidebar project switcher (app layout only)
+        if ($layout === 'app' && !isset($data['all_projects']) && isset($data['user'])) {
+            try {
+                $orgId = (int) ($data['user']['org_id'] ?? 0);
+                if ($orgId > 0) {
+                    $data['all_projects'] = \StratFlow\Models\Project::findByOrgId(
+                        \StratFlow\Core\Database::getInstance(),
+                        $orgId
+                    );
+                }
+            } catch (\Throwable $e) {
+                $data['all_projects'] = [];
+            }
+        }
+
         extract($data);
 
         ob_start();

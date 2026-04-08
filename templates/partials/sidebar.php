@@ -9,12 +9,23 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
     <div class="sidebar-brand">
         <a href="/app/home">StratFlow</a>
     </div>
-    <?php if ($pid && isset($project)): ?>
     <div class="sidebar-project">
         <span class="sidebar-project-label">Current Project</span>
+        <?php if (!empty($all_projects)): ?>
+        <select class="sidebar-project-select" onchange="if(this.value) window.location='/app/upload?project_id='+this.value">
+            <option value="">Select a project...</option>
+            <?php foreach ($all_projects as $ap): ?>
+                <option value="<?= (int) $ap['id'] ?>" <?= $pid === (int) $ap['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($ap['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php elseif ($pid && isset($project)): ?>
         <span class="sidebar-project-name"><?= htmlspecialchars($project['name']) ?></span>
+        <?php else: ?>
+        <span class="sidebar-project-name" style="color: #64748b; font-style: italic;">No project selected</span>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
     <nav class="sidebar-nav">
         <a href="/app/home" class="nav-link <?= ($active_page ?? '') === 'home' ? 'active' : '' ?>">
             Home
