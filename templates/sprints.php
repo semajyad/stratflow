@@ -78,7 +78,10 @@
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="sprint-creation-form">
                 <input type="number" name="num_sprints" placeholder="Number of sprints" class="form-control" min="1" max="20" required style="width: 170px;" value="5">
-                <input type="date" name="start_date" class="form-control" required title="Start date of first sprint">
+                <div style="display:flex;flex-direction:column;gap:0.25rem;">
+                    <label style="font-size:0.75rem;color:var(--text-muted);">First sprint starts</label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
                 <select name="sprint_length" class="form-control" style="width: 160px;" required>
                     <option value="7">1 week</option>
                     <option value="14" selected>2 weeks</option>

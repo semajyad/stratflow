@@ -82,9 +82,8 @@ class Router
             $regex = $this->patternToRegex($route['pattern']);
 
             if (preg_match($regex, $uri, $matches)) {
-                // Extract named parameters only, cast numeric values to int
+                // Extract named parameters only
                 $params = array_filter($matches, fn($key) => is_string($key), ARRAY_FILTER_USE_KEY);
-                $params = array_map(fn($v) => ctype_digit((string) $v) ? (int) $v : $v, $params);
 
                 // Run middleware
                 if (!$this->runMiddleware($route['middleware'])) {

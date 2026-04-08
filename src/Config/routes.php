@@ -120,17 +120,17 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/admin/settings',              'AdminController@settings',         ['auth', 'admin']);
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/invoices',              'AdminController@invoices',         ['auth', 'admin']);
-    $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
-    $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/invoices/{id}/download', 'AdminController@downloadInvoice', ['auth', 'admin']);
 
     // Superadmin — system-wide management (superadmin role only)
     $router->add('GET',  '/superadmin',                           'SuperadminController@index',           ['auth', 'superadmin']);
     $router->add('GET',  '/superadmin/organisations',             'SuperadminController@organisations',   ['auth', 'superadmin']);
-    $router->add('POST', '/superadmin/organisations/{id}',        'SuperadminController@updateOrg',       ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/organisations/{id}/export', 'SuperadminController@exportOrg',       ['auth', 'superadmin']);
+    $router->add('POST', '/superadmin/organisations/{id}',        'SuperadminController@updateOrg',       ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/audit-logs',                'SuperadminController@auditLogs',        ['auth', 'superadmin']);

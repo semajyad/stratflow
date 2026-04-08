@@ -110,7 +110,7 @@ class SuperadminController
      *
      * @param string $id Organisation primary key (from route param)
      */
-    public function updateOrg(string $id): void
+    public function updateOrg($id): void
     {
         $orgId  = (int) $id;
         $action = (string) $this->request->post('action', '');
@@ -163,7 +163,7 @@ class SuperadminController
      *
      * @param string $id Organisation primary key (from route param)
      */
-    public function exportOrg(string $id): void
+    public function exportOrg($id): void
     {
         $orgId = (int) $id;
         $data  = Organisation::exportData($this->db, $orgId);

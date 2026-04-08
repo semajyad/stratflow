@@ -191,7 +191,7 @@ class AdminController
      *
      * @param string $id User primary key (from route param)
      */
-    public function updateUser(string $id): void
+    public function updateUser($id): void
     {
         $user    = $this->auth->user();
         $orgId   = (int) $user['org_id'];
@@ -282,7 +282,7 @@ class AdminController
      *
      * @param string $id User primary key (from route param)
      */
-    public function deleteUser(string $id): void
+    public function deleteUser($id): void
     {
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
@@ -381,7 +381,7 @@ class AdminController
      *
      * @param string $id Team primary key (from route param)
      */
-    public function updateTeam(string $id): void
+    public function updateTeam($id): void
     {
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
@@ -419,7 +419,7 @@ class AdminController
      *
      * @param string $id Team primary key (from route param)
      */
-    public function deleteTeam(string $id): void
+    public function deleteTeam($id): void
     {
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
@@ -538,7 +538,7 @@ class AdminController
      *
      * @param string $id Stripe invoice ID (in_xxx)
      */
-    public function downloadInvoice(string $id): void
+    public function downloadInvoice($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];

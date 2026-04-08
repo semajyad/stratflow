@@ -263,12 +263,12 @@ class RiskController
      *
      * @param int $id Risk ID from the URL
      */
-    public function update(int $id): void
+    public function update($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $risk = Risk::findById($this->db, $id);
+        $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->redirect('/app/home');
             return;
@@ -316,12 +316,12 @@ class RiskController
      *
      * @param int $id Risk ID from the URL
      */
-    public function delete(int $id): void
+    public function delete($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $risk = Risk::findById($this->db, $id);
+        $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->redirect('/app/home');
             return;
@@ -334,7 +334,7 @@ class RiskController
             return;
         }
 
-        Risk::delete($this->db, $id);
+        Risk::delete($this->db, (int) $id);
 
         $_SESSION['flash_message'] = 'Risk deleted.';
         $this->response->redirect('/app/risks?project_id=' . $projectId);
@@ -348,12 +348,12 @@ class RiskController
      *
      * @param int $id Risk ID from the URL
      */
-    public function generateMitigation(int $id): void
+    public function generateMitigation($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $risk = Risk::findById($this->db, $id);
+        $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->json(['status' => 'error', 'message' => 'Risk not found'], 404);
             return;

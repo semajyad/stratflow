@@ -133,12 +133,12 @@ class SprintController
      *
      * @param int $id Sprint primary key (from route parameter)
      */
-    public function update(int $id): void
+    public function update($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $sprint = Sprint::findById($this->db, $id);
+        $sprint = Sprint::findById($this->db, (int) $id);
         if ($sprint === null) {
             $this->response->redirect('/app/home');
             return;
@@ -170,12 +170,12 @@ class SprintController
      *
      * @param int $id Sprint primary key (from route parameter)
      */
-    public function delete(int $id): void
+    public function delete($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $sprint = Sprint::findById($this->db, $id);
+        $sprint = Sprint::findById($this->db, (int) $id);
         if ($sprint === null) {
             $this->response->redirect('/app/home');
             return;
@@ -190,8 +190,8 @@ class SprintController
 
         try {
             // Delete sprint stories first, then sprint
-            SprintStory::deleteBySprintId($this->db, $id);
-            Sprint::delete($this->db, $id);
+            SprintStory::deleteBySprintId($this->db, (int) $id);
+            Sprint::delete($this->db, (int) $id);
             $_SESSION['flash_message'] = 'Sprint deleted. Stories returned to backlog.';
         } catch (\Throwable $e) {
             error_log('[StratFlow] Sprint delete error: ' . $e->getMessage());

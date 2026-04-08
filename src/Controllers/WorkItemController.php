@@ -316,12 +316,12 @@ class WorkItemController
      *
      * @param int $id Work item primary key (from route parameter)
      */
-    public function update(int $id): void
+    public function update($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $item = HLWorkItem::findById($this->db, $id);
+        $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
             return;
@@ -366,12 +366,12 @@ class WorkItemController
      *
      * @param int $id Work item primary key (from route parameter)
      */
-    public function delete(int $id): void
+    public function delete($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $item = HLWorkItem::findById($this->db, $id);
+        $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
             return;
@@ -384,7 +384,7 @@ class WorkItemController
             return;
         }
 
-        HLWorkItem::delete($this->db, $id);
+        HLWorkItem::delete($this->db, (int) $id);
 
         // Re-number remaining items
         $remaining = HLWorkItem::findByProjectId($this->db, $projectId);
@@ -453,12 +453,12 @@ class WorkItemController
      *
      * @param int $id Work item primary key (from route parameter)
      */
-    public function generateDescription(int $id): void
+    public function generateDescription($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $item = HLWorkItem::findById($this->db, $id);
+        $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->json(['status' => 'error', 'message' => 'Item not found'], 404);
             return;

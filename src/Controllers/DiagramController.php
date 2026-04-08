@@ -256,7 +256,7 @@ class DiagramController
             return;
         }
 
-        DiagramNode::update($this->db, $nodeId, [
+        DiagramNode::update($this->db, (int) $nodeId, [
             'okr_title'       => $okrTitle,
             'okr_description' => $okrDescription,
         ]);
@@ -371,7 +371,7 @@ class DiagramController
             $nodeId = (int) ($nodeData['id'] ?? 0);
             if ($nodeId <= 0) continue;
 
-            DiagramNode::update($this->db, $nodeId, [
+            DiagramNode::update($this->db, (int) $nodeId, [
                 'okr_title'       => trim((string) ($nodeData['okr_title'] ?? '')),
                 'okr_description' => trim((string) ($nodeData['okr_description'] ?? '')),
             ]);

@@ -228,12 +228,12 @@ class UserStoryController
      *
      * @param int $id User story primary key (from route parameter)
      */
-    public function update(int $id): void
+    public function update($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $story = UserStory::findById($this->db, $id);
+        $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
             return;
@@ -275,12 +275,12 @@ class UserStoryController
      *
      * @param int $id User story primary key (from route parameter)
      */
-    public function delete(int $id): void
+    public function delete($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $story = UserStory::findById($this->db, $id);
+        $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
             return;
@@ -293,7 +293,7 @@ class UserStoryController
             return;
         }
 
-        UserStory::delete($this->db, $id);
+        UserStory::delete($this->db, (int) $id);
 
         // Re-number remaining stories
         $remaining = UserStory::findByProjectId($this->db, $projectId);
@@ -362,12 +362,12 @@ class UserStoryController
      *
      * @param int $id User story primary key (from route parameter)
      */
-    public function suggestSize(int $id): void
+    public function suggestSize($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $story = UserStory::findById($this->db, $id);
+        $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->json(['status' => 'error', 'message' => 'Story not found'], 404);
             return;

@@ -164,12 +164,12 @@ class SoundingBoardController
      *
      * @param int $id Evaluation result primary key
      */
-    public function results(int $id): void
+    public function results($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $eval = EvaluationResult::findById($this->db, $id);
+        $eval = EvaluationResult::findById($this->db, (int) $id);
         if ($eval === null) {
             $this->response->json(['error' => 'Evaluation not found'], 404);
             return;
@@ -196,7 +196,7 @@ class SoundingBoardController
      *
      * @param int $id Evaluation result primary key
      */
-    public function respond(int $id): void
+    public function respond($id): void
     {
         $body = json_decode($this->request->body(), true);
         if (!$body) {
@@ -207,7 +207,7 @@ class SoundingBoardController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $eval = EvaluationResult::findById($this->db, $id);
+        $eval = EvaluationResult::findById($this->db, (int) $id);
         if ($eval === null) {
             $this->response->json(['error' => 'Evaluation not found'], 404);
             return;

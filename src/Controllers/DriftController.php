@@ -176,12 +176,12 @@ class DriftController
      *
      * @param int $id Alert primary key from route parameter
      */
-    public function acknowledgeAlert(int $id): void
+    public function acknowledgeAlert($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $alert = DriftAlert::findById($this->db, $id);
+        $alert = DriftAlert::findById($this->db, (int) $id);
         if ($alert === null) {
             $this->response->redirect('/app/home');
             return;
@@ -210,12 +210,12 @@ class DriftController
      *
      * @param int $id Governance item primary key from route parameter
      */
-    public function reviewChange(int $id): void
+    public function reviewChange($id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $item = GovernanceItem::findById($this->db, $id);
+        $item = GovernanceItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
             return;
