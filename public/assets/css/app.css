@@ -1100,6 +1100,62 @@ tbody tr:hover {
     color: var(--primary);
 }
 
+/* === Auth Pages (Login, Forgot Password, Set Password) ===================== */
+
+.auth-section {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+
+.auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) * 1.5);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem 2rem;
+    max-width: 420px;
+    width: 100%;
+}
+
+.auth-card-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.auth-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.auth-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-footer-link {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+.auth-footer-link a {
+    color: var(--text-light);
+    text-decoration: none;
+}
+
+.auth-footer-link a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .auth-card {
+        padding: 2rem 1.25rem;
+    }
+}
+
 /* === Utility Helpers ======================================================== */
 
 .text-muted  { color: var(--text-light); }

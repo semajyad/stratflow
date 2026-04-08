@@ -11,12 +11,11 @@
     <div class="auth-card">
 
         <div class="auth-card-header">
-            <h1 class="auth-logo">StratFlow</h1>
-            <p class="auth-subtitle">Sign in to your account</p>
+            <h2 class="auth-heading">Sign in to your account</h2>
         </div>
 
         <?php if (!empty($flash_message)): ?>
-            <div class="flash-message flash-message--success" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
+            <div class="flash-message flash-message--success">
                 <?= htmlspecialchars($flash_message) ?>
             </div>
         <?php endif; ?>
@@ -57,14 +56,10 @@
 
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
 
-            <div style="text-align: center; margin-top: 12px;">
-                <a href="/forgot-password" style="font-size: 14px; color: #64748b;">Forgot your password?</a>
+            <div class="auth-footer-link">
+                <a href="/forgot-password">Forgot your password?</a>
             </div>
         </form>
-
-        <div class="auth-card-footer">
-            <a href="/pricing">&larr; Back to Pricing</a>
-        </div>
 
     </div>
 </section>

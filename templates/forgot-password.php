@@ -13,12 +13,11 @@
     <div class="auth-card">
 
         <div class="auth-card-header">
-            <h1 class="auth-logo">StratFlow</h1>
-            <p class="auth-subtitle">Reset your password</p>
+            <h2 class="auth-heading">Reset your password</h2>
         </div>
 
         <?php if (!empty($success)): ?>
-            <div class="flash-message flash-message--success" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
+            <div class="flash-message flash-message--success">
                 If an account exists with that email, a password reset link has been sent. Please check your inbox.
             </div>
         <?php endif; ?>
@@ -48,7 +47,7 @@
             <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
         </form>
 
-        <div class="auth-card-footer">
+        <div class="auth-footer-link">
             <a href="/login">&larr; Back to Login</a>
         </div>
 

@@ -14,15 +14,14 @@
     <div class="auth-card">
 
         <div class="auth-card-header">
-            <h1 class="auth-logo">StratFlow</h1>
-            <p class="auth-subtitle">Set your password</p>
+            <h2 class="auth-heading">Set your password</h2>
         </div>
 
         <?php if (!($token_valid ?? true)): ?>
             <div class="flash-message flash-message--error">
                 This link has expired or is invalid. Please request a new one.
             </div>
-            <div class="auth-card-footer">
+            <div class="auth-footer-link">
                 <a href="/forgot-password">Request a new reset link</a>
                 &nbsp;&middot;&nbsp;
                 <a href="/login">Back to Login</a>
@@ -68,7 +67,7 @@
                 <button type="submit" class="btn btn-primary btn-block">Set Password</button>
             </form>
 
-            <div class="auth-card-footer">
+            <div class="auth-footer-link">
                 <a href="/login">&larr; Back to Login</a>
             </div>
 
