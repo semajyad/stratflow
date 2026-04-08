@@ -88,8 +88,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/store',        'SprintController@store',         ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth']);
     $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth']);
-    $router->add('POST', '/app/sprints/ai-allocate',  'SprintController@aiAllocate',    ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/{id}',         'SprintController@update',        ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/auto-generate', 'SprintController@autoGenerate',  ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/auto-fill',     'SprintController@autoFill',      ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
 
     // Governance — drift detection and change control

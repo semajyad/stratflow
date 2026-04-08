@@ -371,4 +371,143 @@ class SprintController
         $_SESSION['flash_message'] = "{$assignedCount} stories auto-allocated across sprints.";
         $this->response->redirect('/app/sprints?project_id=' . $projectId);
     }
+
+    /**
+     * Auto-generate sprints and fill with stories by priority.
+     *
+     * Creates as many sprints as needed to fit all unallocated stories,
+     * filling each sprint up to capacity in priority order.
+     */
+    public function autoGenerate(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $startDate    = $this->request->post('start_date', '');
+        $sprintLength = (int) $this->request->post('sprint_length', 14);
+        $capacity     = (int) $this->request->post('capacity', 0);
+
+        if ($startDate === '' || $capacity <= 0) {
+            $_SESSION['flash_error'] = 'Please provide a start date and capacity.';
+            $this->response->redirect('/app/sprints?project_id=' . $projectId);
+            return;
+        }
+
+        // Get unallocated stories ordered by parent work item priority, then story priority
+        $unallocated = UserStory::findUnallocated($this->db, $projectId);
+        if (empty($unallocated)) {
+            $_SESSION['flash_error'] = 'No unallocated stories to assign.';
+            $this->response->redirect('/app/sprints?project_id=' . $projectId);
+            return;
+        }
+
+        $sprintNum     = 1;
+        $currentDate   = new \DateTime($startDate);
+        $sprintsCreated = 0;
+        $storiesAssigned = 0;
+        $storyIndex    = 0;
+
+        while ($storyIndex < count($unallocated)) {
+            // Create sprint
+            $endDate = (clone $currentDate)->modify("+{$sprintLength} days");
+            $sprintId = Sprint::create($this->db, [
+                'project_id'    => $projectId,
+                'name'          => 'Sprint ' . ($sprintNum),
+                'start_date'    => $currentDate->format('Y-m-d'),
+                'end_date'      => $endDate->format('Y-m-d'),
+                'team_capacity' => $capacity,
+            ]);
+            $sprintsCreated++;
+
+            // Fill sprint up to capacity
+            $used = 0;
+            while ($storyIndex < count($unallocated)) {
+                $story = $unallocated[$storyIndex];
+                $size  = (int) ($story['size'] ?? 1);
+
+                if ($used + $size > $capacity && $used > 0) {
+                    break; // Sprint full, move to next
+                }
+
+                SprintStory::assign($this->db, $sprintId, (int) $story['id']);
+                $used += $size;
+                $storiesAssigned++;
+                $storyIndex++;
+            }
+
+            // Next sprint starts after current ends
+            $currentDate = $endDate;
+            $sprintNum++;
+
+            // Safety: max 20 sprints
+            if ($sprintsCreated >= 20) break;
+        }
+
+        $_SESSION['flash_message'] = "{$sprintsCreated} sprints created, {$storiesAssigned} stories allocated by priority.";
+        $this->response->redirect('/app/sprints?project_id=' . $projectId);
+    }
+
+    /**
+     * Auto-fill existing sprints with unallocated stories by priority.
+     *
+     * Fills each sprint (in order) up to its remaining capacity with the
+     * highest-priority unallocated stories.
+     */
+    public function autoFill(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $sprints     = Sprint::findByProjectId($this->db, $projectId);
+        $unallocated = UserStory::findUnallocated($this->db, $projectId);
+
+        if (empty($sprints) || empty($unallocated)) {
+            $_SESSION['flash_error'] = 'Need both sprints and unallocated stories to auto-fill.';
+            $this->response->redirect('/app/sprints?project_id=' . $projectId);
+            return;
+        }
+
+        $assigned = 0;
+        $storyIndex = 0;
+
+        foreach ($sprints as $sprint) {
+            $sprintId    = (int) $sprint['id'];
+            $capacity    = (int) ($sprint['team_capacity'] ?? 0);
+            $currentLoad = SprintStory::getSprintLoad($this->db, $sprintId);
+            $remaining   = $capacity - $currentLoad;
+
+            while ($storyIndex < count($unallocated) && $remaining > 0) {
+                $story = $unallocated[$storyIndex];
+                $size  = (int) ($story['size'] ?? 1);
+
+                if ($size > $remaining) {
+                    // Story too big for remaining capacity — try next story or skip
+                    $storyIndex++;
+                    continue;
+                }
+
+                SprintStory::assign($this->db, $sprintId, (int) $story['id']);
+                $remaining -= $size;
+                $assigned++;
+                $storyIndex++;
+            }
+        }
+
+        $_SESSION['flash_message'] = "{$assigned} stories auto-filled into sprints by priority.";
+        $this->response->redirect('/app/sprints?project_id=' . $projectId);
+    }
 }

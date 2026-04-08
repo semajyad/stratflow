@@ -61,6 +61,53 @@
 </div>
 
 <!-- ===========================
+     Auto-Generate Sprints
+     =========================== -->
+<?php if (!empty($unallocated)): ?>
+<div class="card mb-6">
+    <div class="card-header">
+        <h3>Auto-Generate Sprints</h3>
+    </div>
+    <div class="card-body">
+        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+            Automatically create sprints and fill them with stories based on priority. Stories are allocated highest priority first until each sprint reaches capacity.
+        </p>
+        <form method="POST" action="/app/sprints/auto-generate"
+              data-loading="Generating sprints..."
+              data-overlay="Generating sprints and allocating stories by priority. This may take a moment.">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <div class="sprint-creation-form">
+                <input type="date" name="start_date" class="form-control" required title="Start date of first sprint">
+                <select name="sprint_length" class="form-control" style="width: 160px;" required>
+                    <option value="7">1 week</option>
+                    <option value="14" selected>2 weeks</option>
+                    <option value="21">3 weeks</option>
+                    <option value="28">4 weeks</option>
+                </select>
+                <input type="number" name="capacity" placeholder="Capacity per sprint (pts)" class="form-control" min="1" required style="width: 200px;">
+                <button type="submit" class="btn btn-primary">Generate &amp; Fill Sprints</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($sprints) && !empty($unallocated)): ?>
+<div style="margin-bottom: 1.5rem;">
+    <form method="POST" action="/app/sprints/auto-fill" class="inline-form"
+          data-loading="Filling sprints..."
+          data-overlay="Filling sprints with stories by priority order up to capacity.">
+        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+        <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+        <button type="submit" class="btn btn-secondary" onclick="return confirm('Auto-fill existing sprints with unallocated stories by priority?')">
+            Auto-Fill Sprints by Priority
+        </button>
+    </form>
+</div>
+<?php endif; ?>
+
+<!-- ===========================
      Split View: Backlog + Sprints
      =========================== -->
 <div class="sprint-layout">
