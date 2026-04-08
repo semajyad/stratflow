@@ -32,13 +32,8 @@ if ($uri === '/_debug') {
     exit;
 }
 
-// Serve setup-admin directly (bypasses front controller)
-if ($uri === "/create-martin.php" && is_file($filePath)) { require $filePath; exit; }
-if ($uri === '/setup-admin.php' && is_file($filePath)) {
-if ($uri === "/create-martin.php" && is_file($filePath)) { require $filePath; exit; }
-    require $filePath;
-    exit;
-}
+// Serve setup scripts directly (bypasses front controller)
+if ($uri === '/create-martin.php' && is_file($filePath)) { require $filePath; exit; }
 
 // Serve static files (not PHP files)
 if ($uri !== '/' && $ext !== '' && $ext !== 'php' && is_file($filePath)) {
