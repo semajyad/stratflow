@@ -2,38 +2,39 @@
 /**
  * Router for PHP Built-in Server
  *
- * PHP's built-in server doesn't support .htaccess, so this script
- * handles routing: serve static files directly, route everything
- * else through index.php.
+ * Serves static files with correct MIME types, routes
+ * everything else through index.php (front controller).
  */
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-// Serve existing static files directly (CSS, JS, images, uploads)
 $filePath = __DIR__ . $uri;
+
+// Serve existing static files directly
 if ($uri !== '/' && file_exists($filePath) && is_file($filePath)) {
-    // Set correct content type for known extensions
-    $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+    $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
     $mimeTypes = [
-        'css'  => 'text/css',
-        'js'   => 'application/javascript',
-        'png'  => 'image/png',
-        'jpg'  => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'gif'  => 'image/gif',
-        'svg'  => 'image/svg+xml',
-        'ico'  => 'image/x-icon',
-        'woff' => 'font/woff',
+        'css'   => 'text/css',
+        'js'    => 'application/javascript',
+        'png'   => 'image/png',
+        'jpg'   => 'image/jpeg',
+        'jpeg'  => 'image/jpeg',
+        'gif'   => 'image/gif',
+        'svg'   => 'image/svg+xml',
+        'ico'   => 'image/x-icon',
+        'woff'  => 'font/woff',
         'woff2' => 'font/woff2',
-        'ttf'  => 'font/ttf',
-        'pdf'  => 'application/pdf',
+        'ttf'   => 'font/ttf',
+        'pdf'   => 'application/pdf',
+        'json'  => 'application/json',
+        'xml'   => 'application/xml',
+        'txt'   => 'text/plain',
     ];
 
-    if (isset($mimeTypes[$ext])) {
-        header('Content-Type: ' . $mimeTypes[$ext]);
-    }
-
-    return false; // Let PHP built-in server handle the file
+    $contentType = $mimeTypes[$ext] ?? mime_content_type($filePath) ?: 'application/octet-stream';
+    header('Content-Type: ' . $contentType);
+    header('Content-Length: ' . filesize($filePath));
+    readfile($filePath);
+    return;
 }
 
 // Route everything else through the front controller
