@@ -22,7 +22,20 @@ if ($config['app']['debug']) {
 }
 
 // === Bootstrap Core Services ===
-$db = new \StratFlow\Core\Database($config['db']);
+try {
+    $db = new \StratFlow\Core\Database($config['db']);
+} catch (\PDOException $e) {
+    // If DB is unavailable, show a maintenance page (allows health checks to detect issues)
+    if (!$config['app']['debug']) {
+        http_response_code(503);
+        echo '<h1>StratFlow is starting up...</h1><p>Please try again in a moment.</p>';
+    } else {
+        http_response_code(503);
+        echo '<h1>Database connection failed</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre>';
+    }
+    exit;
+}
+
 $session = new \StratFlow\Core\Session();
 $csrf = new \StratFlow\Core\CSRF($session);
 $auth = new \StratFlow\Core\Auth($session, $db);

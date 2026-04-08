@@ -37,5 +37,8 @@ RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
 
-# Railway sets PORT env var — configure Apache to listen on it
-CMD sed -i "s/80/${PORT:-80}/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && apache2-foreground
+# Startup script: configure port, init DB, start Apache
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
