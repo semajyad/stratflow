@@ -1,21 +1,20 @@
 FROM php:8.4-apache
+ARG CACHEBUST=1
 
-# Install PHP extensions
+# Install PHP extensions + enable rewrite
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    unzip \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
+    libzip-dev unzip libpng-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-install pdo pdo_mysql zip gd \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Fix Apache MPM - ensure only prefork is loaded
-RUN a2dismod mpm_event 2>/dev/null; \
-    a2dismod mpm_worker 2>/dev/null; \
-    a2enmod mpm_prefork; \
-    true
+# Fix Apache MPM conflict — disable all then enable only prefork
+RUN ls /etc/apache2/mods-enabled/mpm_* 2>/dev/null; \
+    rm -f /etc/apache2/mods-enabled/mpm_event.* 2>/dev/null; \
+    rm -f /etc/apache2/mods-enabled/mpm_worker.* 2>/dev/null; \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf 2>/dev/null; \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load 2>/dev/null; \
+    ls /etc/apache2/mods-enabled/mpm_*
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -32,7 +31,7 @@ RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/Allo
 WORKDIR /var/www/html
 COPY . .
 
-# Fix CRLF on shell scripts
+# Fix CRLF line endings
 RUN sed -i 's/\r$//' scripts/*.sh 2>/dev/null || true
 
 # Install production deps
@@ -44,6 +43,4 @@ RUN mkdir -p public/uploads \
     && chmod +x scripts/docker-entrypoint.sh
 
 EXPOSE 80
-
-# Entrypoint: configure port, start Apache (DB init runs in background)
 CMD ["bash", "scripts/docker-entrypoint.sh"]
