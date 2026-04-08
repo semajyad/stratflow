@@ -134,11 +134,11 @@
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 
 <!-- Mermaid.js CDN for thumbnail -->
 <?php if (!empty($diagram)): ?>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof mermaid !== 'undefined') {

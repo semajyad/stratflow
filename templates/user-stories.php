@@ -130,4 +130,4 @@
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>

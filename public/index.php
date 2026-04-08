@@ -12,6 +12,11 @@
 
 declare(strict_types=1);
 
+// Enable gzip compression
+if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
+    ob_start('ob_gzhandler');
+}
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../src/Config/config.php';
