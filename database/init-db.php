@@ -45,12 +45,11 @@ if (empty($dbname)) {
 // ---------------------------------------------------------------------------
 // 2. Connect via PDO
 // ---------------------------------------------------------------------------
-$dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+$dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4;auth_plugin=mysql_native_password";
 
 try {
     $pdo = new PDO($dsn, $username, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::MYSQL_ATTR_AUTH_PLUGIN => 'mysql_native_password',
     ]);
 } catch (PDOException $e) {
     echo "ERROR: Could not connect to database: " . $e->getMessage() . "\n";
