@@ -8,7 +8,7 @@
  *
  * Usage:
  *   $errors = PasswordPolicy::validate($password);
- *   if (!empty($errors)) { /* show errors */ }
+ *   if (!empty($errors)) { // show errors }
  */
 
 declare(strict_types=1);

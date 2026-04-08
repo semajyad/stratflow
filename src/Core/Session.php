@@ -32,8 +32,8 @@ class Session
             // Hardened session configuration (SOC 2 / PCI-DSS)
             ini_set('session.use_strict_mode', '1');
             ini_set('session.use_only_cookies', '1');
-            ini_set('session.sid_length', '48');
-            ini_set('session.sid_bits_per_character', '6');
+            // sid_length and sid_bits_per_character deprecated in PHP 8.4
+            // Defaults (48 length, 6 bits/char) are already secure
 
             session_set_cookie_params([
                 'lifetime' => 0,           // Browser session only

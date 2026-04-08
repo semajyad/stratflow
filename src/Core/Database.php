@@ -42,8 +42,12 @@ class Database
                 PDO::ATTR_TIMEOUT            => 5,  // Connection timeout (seconds)
             ]);
 
-            // Set MySQL-level query execution timeout (30 seconds)
-            $this->pdo->exec('SET SESSION max_execution_time = 30000');
+            // Set query execution timeout (MySQL only — MariaDB doesn't support this)
+            try {
+                $this->pdo->exec('SET SESSION max_execution_time = 30000');
+            } catch (\PDOException $e) {
+                // Silently ignore — MariaDB doesn't have max_execution_time
+            }
         } catch (\Throwable $e) {
             // Re-throw as RuntimeException so callers always receive a consistent,
             // catchable Throwable regardless of the underlying driver error type
