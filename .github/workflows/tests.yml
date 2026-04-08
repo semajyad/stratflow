@@ -18,13 +18,14 @@ jobs:
           MYSQL_DATABASE: stratflow
           MYSQL_USER: stratflow
           MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=15
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, zip, gd, mbstring, curl
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
           coverage: none
 
       - name: Install dependencies
@@ -41,46 +42,40 @@ jobs:
 
       - name: Create .env
         run: |
-          cat > .env << 'ENVEOF'
-          APP_ENV=testing
-          APP_URL=http://localhost
-          APP_DEBUG=true
-          DB_HOST=127.0.0.1
-          DB_PORT=3306
-          DB_DATABASE=stratflow
-          DB_USERNAME=stratflow
-          DB_PASSWORD=stratflow_secret
-          GEMINI_API_KEY=test-key
-          GEMINI_MODEL=gemini-2.5-flash
-          STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-          STRIPE_SECRET_KEY=sk_test_xxx
-          STRIPE_WEBHOOK_SECRET=whsec_xxx
-          STRIPE_PRICE_PRODUCT=price_xxx
-          STRIPE_PRICE_CONSULTANCY=price_xxx
-          STRIPE_PRICE_USER_PACK=price_xxx
-          STRIPE_PRICE_EVAL_BOARD=price_xxx
-          MAIL_FROM_NAME=StratFlow
-          MAIL_FROM_EMAIL=test@example.com
-          MAIL_SMTP_HOST=localhost
-          MAIL_SMTP_PORT=587
-          MAIL_SMTP_USER=
-          MAIL_SMTP_PASS=
-          UPLOAD_MAX_SIZE=52428800
-          ENVEOF
-          # Remove leading whitespace from heredoc
-          sed -i 's/^          //' .env
-
-      - name: Wait for MySQL
-        run: |
-          for i in $(seq 1 30); do
-            mysqladmin ping -h 127.0.0.1 -u stratflow -pstratflow_secret 2>/dev/null && exit 0
-            sleep 2
-          done
-          echo "MySQL did not start"
-          exit 1
+          echo "APP_ENV=testing" > .env
+          echo "APP_URL=http://localhost" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+          echo "GEMINI_MODEL=gemini-2.5-flash" >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
+          echo "STRIPE_PRICE_PRODUCT=price_xxx" >> .env
+          echo "STRIPE_PRICE_CONSULTANCY=price_xxx" >> .env
+          echo "STRIPE_PRICE_USER_PACK=price_xxx" >> .env
+          echo "STRIPE_PRICE_EVAL_BOARD=price_xxx" >> .env
+          echo "MAIL_FROM_NAME=StratFlow" >> .env
+          echo "MAIL_FROM_EMAIL=test@example.com" >> .env
+          echo "MAIL_SMTP_HOST=localhost" >> .env
+          echo "MAIL_SMTP_PORT=587" >> .env
+          echo "MAIL_SMTP_USER=" >> .env
+          echo "MAIL_SMTP_PASS=" >> .env
+          echo "UPLOAD_MAX_SIZE=52428800" >> .env
 
       - name: Initialize database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
 
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            echo "Running $f..."
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
       - name: Run tests
-        run: composer test
+        run: vendor/bin/phpunit --configuration tests/phpunit.xml
