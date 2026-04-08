@@ -2,13 +2,14 @@
 /**
  * StripeService
  *
- * Thin wrapper around the Stripe PHP SDK. Handles checkout session creation
- * and webhook signature verification. Reads API keys from the application
- * config array passed at construction time.
+ * Thin wrapper around the Stripe PHP SDK. Handles checkout session creation,
+ * webhook signature verification, and invoice retrieval. Reads API keys from
+ * the application config array passed at construction time.
  *
  * Usage:
  *   $stripe = new StripeService($config['stripe']);
- *   $session = $stripe->createCheckoutSession($priceId, $successUrl, $cancelUrl);
+ *   $session = $stripe->createCheckoutSession($priceId, $successUrl, $cancelUrl, null, 'payment');
+ *   $invoices = $stripe->listInvoices($customerId);
  */
 
 declare(strict_types=1);
@@ -35,22 +36,24 @@ class StripeService
     }
 
     /**
-     * Create a Stripe Checkout Session in subscription mode.
+     * Create a Stripe Checkout Session.
      *
      * @param string      $priceId       Stripe price ID for the line item
      * @param string      $successUrl    URL Stripe redirects to on payment success
      * @param string      $cancelUrl     URL Stripe redirects to on cancellation
      * @param string|null $customerEmail Pre-fill the customer email field (optional)
+     * @param string      $mode          Checkout mode: 'subscription' or 'payment' (default: 'subscription')
      * @return Session                   The created Checkout Session
      */
     public function createCheckoutSession(
         string $priceId,
         string $successUrl,
         string $cancelUrl,
-        ?string $customerEmail = null
+        ?string $customerEmail = null,
+        string $mode = 'subscription'
     ): Session {
         $params = [
-            'mode'        => 'subscription',
+            'mode'        => $mode,
             'line_items'  => [
                 [
                     'price'    => $priceId,
@@ -82,7 +85,7 @@ class StripeService
     }
 
     /**
-     * Return the configured valid price IDs as an array.
+     * Return the configured valid price IDs as an array (all product types).
      *
      * @return string[]
      */
@@ -91,11 +94,13 @@ class StripeService
         return array_filter([
             $this->config['price_product'],
             $this->config['price_consultancy'],
+            $this->config['price_user_pack'] ?? '',
+            $this->config['price_evaluation_board'] ?? '',
         ]);
     }
 
     /**
-     * Determine the plan type string ('product' or 'consultancy') for a given price ID.
+     * Determine the plan type string for a given price ID.
      *
      * @param string $priceId Stripe price ID
      * @return string         Plan type label, or 'unknown' if no match
@@ -110,6 +115,63 @@ class StripeService
             return 'consultancy';
         }
 
+        if ($priceId === ($this->config['price_user_pack'] ?? '')) {
+            return 'user_pack';
+        }
+
+        if ($priceId === ($this->config['price_evaluation_board'] ?? '')) {
+            return 'evaluation_board';
+        }
+
         return 'unknown';
+    }
+
+    /**
+     * Determine the checkout mode for a given product type.
+     *
+     * Subscription products use Stripe recurring billing; add-on purchases
+     * are one-time payments.
+     *
+     * @param string $productType One of: 'subscription', 'user_pack', 'evaluation_board'
+     * @return string             Stripe checkout mode: 'subscription' or 'payment'
+     */
+    public function modeForProductType(string $productType): string
+    {
+        return match ($productType) {
+            'user_pack', 'evaluation_board' => 'payment',
+            default                         => 'subscription',
+        };
+    }
+
+    // ===========================
+    // INVOICE MANAGEMENT
+    // ===========================
+
+    /**
+     * List up to 50 invoices for a Stripe customer.
+     *
+     * @param string $customerId Stripe customer ID (cus_xxx)
+     * @return \Stripe\Invoice[] Array of Stripe Invoice objects
+     */
+    public function listInvoices(string $customerId): array
+    {
+        \Stripe\Stripe::setApiKey($this->config['secret_key']);
+        $invoices = \Stripe\Invoice::all(['customer' => $customerId, 'limit' => 50]);
+
+        return $invoices->data;
+    }
+
+    /**
+     * Retrieve the PDF download URL for a specific invoice.
+     *
+     * @param string $invoiceId Stripe invoice ID (in_xxx)
+     * @return string|null      PDF URL, or null if not available
+     */
+    public function getInvoicePdfUrl(string $invoiceId): ?string
+    {
+        \Stripe\Stripe::setApiKey($this->config['secret_key']);
+        $invoice = \Stripe\Invoice::retrieve($invoiceId);
+
+        return $invoice->invoice_pdf;
     }
 }

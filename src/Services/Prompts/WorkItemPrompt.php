@@ -32,6 +32,15 @@ Return a JSON array where each element has these exact keys:
 - "okr_title" (string, the relevant OKR if available, else empty string)
 - "okr_description" (string, the relevant OKR description if available, else empty string)
 - "estimated_sprints" (integer, default 2)
+- "dependencies" (array of integers — priority_numbers of items that must be completed before this one; use empty array [] if none)
+PROMPT;
+
+    public const SIZING_PROMPT = <<<'PROMPT'
+You are an Agile estimation expert. For each work item below, estimate how many 2-week sprints it would take for a standard Scrum team (5-9 people) to complete.
+
+Return a JSON array where each element has: "id" (integer), "estimated_sprints" (integer, minimum 1, maximum 6).
+
+Work items:
 PROMPT;
 
     public const DESCRIPTION_PROMPT = <<<'PROMPT'

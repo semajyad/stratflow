@@ -22,6 +22,7 @@ use StratFlow\Models\Subscription;
 use StratFlow\Models\Team;
 use StratFlow\Models\TeamMember;
 use StratFlow\Models\User;
+use StratFlow\Services\StripeService;
 
 class AdminController
 {
@@ -435,6 +436,70 @@ class AdminController
 
         $_SESSION['flash_message'] = 'Member removed from ' . $team['name'] . '.';
         $this->response->redirect('/app/admin/teams');
+    }
+
+    // =========================================================================
+    // INVOICE MANAGEMENT
+    // =========================================================================
+
+    /**
+     * List all Stripe invoices for the organisation.
+     *
+     * Loads the org's stripe_customer_id, retrieves invoices from Stripe,
+     * and renders the invoices template. If no customer ID is configured,
+     * shows an empty list.
+     */
+    public function invoices(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $org      = Organisation::findById($this->db, $orgId);
+        $invoices = [];
+
+        if ($org && !empty($org['stripe_customer_id'])) {
+            try {
+                $stripe   = new StripeService($this->config['stripe']);
+                $invoices = $stripe->listInvoices($org['stripe_customer_id']);
+            } catch (\Exception $e) {
+                $_SESSION['flash_error'] = 'Could not load invoices: ' . $e->getMessage();
+            }
+        }
+
+        $this->response->render('admin/invoices', [
+            'user'          => $user,
+            'invoices'      => $invoices,
+            'active_page'   => 'admin',
+            'flash_message' => $_SESSION['flash_message'] ?? null,
+            'flash_error'   => $_SESSION['flash_error']   ?? null,
+        ], 'app');
+
+        unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Redirect the user to the Stripe-hosted PDF URL for a single invoice.
+     *
+     * @param string $id Stripe invoice ID (in_xxx)
+     */
+    public function downloadInvoice(string $id): void
+    {
+        try {
+            $stripe  = new StripeService($this->config['stripe']);
+            $pdfUrl  = $stripe->getInvoicePdfUrl($id);
+        } catch (\Exception $e) {
+            $_SESSION['flash_error'] = 'Could not retrieve invoice PDF.';
+            $this->response->redirect('/app/admin/invoices');
+            return;
+        }
+
+        if (empty($pdfUrl)) {
+            $_SESSION['flash_error'] = 'No PDF available for this invoice.';
+            $this->response->redirect('/app/admin/invoices');
+            return;
+        }
+
+        $this->response->redirect($pdfUrl);
     }
 
     // =========================================================================

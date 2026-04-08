@@ -2,9 +2,10 @@
 /**
  * CheckoutController
  *
- * Handles creation of Stripe Checkout Sessions. Validates the submitted
- * price_id against configured values, then redirects to the Stripe-hosted
- * checkout page. On error, falls back to the pricing page with a message.
+ * Handles creation of Stripe Checkout Sessions. Accepts either a direct
+ * price_id or a product_type ('subscription', 'user_pack', 'evaluation_board')
+ * and resolves the correct price ID and checkout mode from config. Validates
+ * the price_id against configured values before creating the session.
  */
 
 declare(strict_types=1);
@@ -37,20 +38,28 @@ class CheckoutController
     /**
      * Create a Stripe Checkout Session and redirect to the hosted checkout URL.
      *
-     * Validates that the POSTed price_id matches one of the two configured Stripe
-     * price IDs before creating the session. On Stripe API error, renders the
-     * pricing page with an error message.
+     * Accepts a product_type ('subscription', 'user_pack', 'evaluation_board') to
+     * determine the price ID and checkout mode automatically, or a direct price_id.
+     * Validates the resolved price against configured values before creating the session.
+     * On Stripe API error, renders the pricing page with an error message.
      */
     public function create(): void
     {
-        $priceId = $this->request->post('price_id', '');
+        $stripe      = new StripeService($this->config['stripe']);
+        $productType = (string) $this->request->post('product_type', '');
+        $priceId     = (string) $this->request->post('price_id', '');
 
-        $validPriceIds = array_filter([
-            $this->config['stripe']['price_product'],
-            $this->config['stripe']['price_consultancy'],
-        ]);
+        // Resolve price_id and mode from product_type when provided
+        $mode = 'subscription';
+        if ($productType !== '') {
+            [$priceId, $mode] = $this->resolveProductType($productType);
+        } else {
+            $mode = 'subscription';
+        }
 
-        if (!in_array($priceId, $validPriceIds, true)) {
+        $validPriceIds = $stripe->validPriceIds();
+
+        if ($priceId === '' || !in_array($priceId, $validPriceIds, true)) {
             $this->response->render('pricing', [
                 'stripe_key'        => $this->config['stripe']['publishable_key'],
                 'price_product'     => $this->config['stripe']['price_product'],
@@ -61,12 +70,11 @@ class CheckoutController
         }
 
         try {
-            $stripe     = new StripeService($this->config['stripe']);
             $appUrl     = rtrim($this->config['app']['url'], '/');
             $successUrl = $appUrl . '/success';
             $cancelUrl  = $appUrl . '/pricing';
 
-            $session = $stripe->createCheckoutSession($priceId, $successUrl, $cancelUrl);
+            $session = $stripe->createCheckoutSession($priceId, $successUrl, $cancelUrl, null, $mode);
             $this->response->redirect($session->url);
         } catch (\Stripe\Exception\ApiErrorException $e) {
             $this->response->render('pricing', [
@@ -76,5 +84,24 @@ class CheckoutController
                 'flash_message'     => 'Payment service error. Please try again later.',
             ]);
         }
+    }
+
+    // ===========================
+    // HELPERS
+    // ===========================
+
+    /**
+     * Map a product_type string to [priceId, checkoutMode].
+     *
+     * @param string $productType One of: 'subscription', 'user_pack', 'evaluation_board'
+     * @return array{0: string, 1: string} Tuple of [price_id, mode]
+     */
+    private function resolveProductType(string $productType): array
+    {
+        return match ($productType) {
+            'user_pack'        => [$this->config['stripe']['price_user_pack'] ?? '', 'payment'],
+            'evaluation_board' => [$this->config['stripe']['price_evaluation_board'] ?? '', 'payment'],
+            default            => [$this->config['stripe']['price_product'] ?? '', 'subscription'],
+        };
     }
 }

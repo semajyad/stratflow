@@ -34,6 +34,8 @@ return [
         'webhook_secret' => $_ENV['STRIPE_WEBHOOK_SECRET'] ?? '',
         'price_product' => $_ENV['STRIPE_PRICE_PRODUCT'] ?? '',
         'price_consultancy' => $_ENV['STRIPE_PRICE_CONSULTANCY'] ?? '',
+        'price_user_pack' => $_ENV['STRIPE_PRICE_USER_PACK'] ?? '',
+        'price_evaluation_board' => $_ENV['STRIPE_PRICE_EVAL_BOARD'] ?? '',
     ],
     'upload' => [
         'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 52428800),

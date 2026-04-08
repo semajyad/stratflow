@@ -21,6 +21,11 @@
         <?php if ($item['requires_review'] ?? false): ?>
             <span class="badge badge-warning">Requires Review</span>
         <?php endif; ?>
+        <?php if (!empty($item['dependencies'])): ?>
+            <span class="badge badge-info" title="Depends on: <?= htmlspecialchars($item['dependency_titles']) ?>">
+                &#x2190; Depends on <?= count($item['dependencies']) ?>
+            </span>
+        <?php endif; ?>
         <p class="work-item-desc-preview"><?= htmlspecialchars(substr($item['description'] ?? '', 0, 120)) ?><?= strlen($item['description'] ?? '') > 120 ? '...' : '' ?></p>
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>

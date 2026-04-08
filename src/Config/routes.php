@@ -106,10 +106,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/teams/remove-member',   'AdminController@removeTeamMember', ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/settings',              'AdminController@settings',         ['auth', 'admin']);
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/invoices',              'AdminController@invoices',         ['auth', 'admin']);
     $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/invoices/{id}/download', 'AdminController@downloadInvoice', ['auth', 'admin']);
 
     // Superadmin — system-wide management (superadmin role only)
     $router->add('GET',  '/superadmin',                           'SuperadminController@index',           ['auth', 'superadmin']);

@@ -17,6 +17,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\DiagramNode;
 use StratFlow\Models\Document;
+use StratFlow\Models\HLItemDependency;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\StrategyDiagram;
@@ -69,6 +70,14 @@ class WorkItemController
 
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $diagram   = StrategyDiagram::findByProjectId($this->db, $projectId);
+
+        // Attach dependency data to each work item for the template
+        foreach ($workItems as &$item) {
+            $deps = HLItemDependency::findByItemId($this->db, (int) $item['id']);
+            $item['dependencies']       = $deps;
+            $item['dependency_titles']  = implode(', ', array_column($deps, 'depends_on_title'));
+        }
+        unset($item);
 
         $this->response->render('work-items', [
             'user'                 => $user,
@@ -146,11 +155,14 @@ class WorkItemController
         // Delete existing work items and create new ones
         HLWorkItem::deleteByProjectId($this->db, $projectId);
 
+        // First pass: create all items and build a map of priority_number => new DB id
+        $priorityToId = [];
         foreach ($itemsData as $index => $item) {
-            HLWorkItem::create($this->db, [
+            $priorityNumber = (int) ($item['priority_number'] ?? ($index + 1));
+            $newId = HLWorkItem::create($this->db, [
                 'project_id'        => $projectId,
                 'diagram_id'        => (int) $diagram['id'],
-                'priority_number'   => $item['priority_number'] ?? ($index + 1),
+                'priority_number'   => $priorityNumber,
                 'title'             => $item['title'] ?? 'Untitled Work Item',
                 'description'       => $item['description'] ?? null,
                 'strategic_context' => $item['strategic_context'] ?? null,
@@ -158,9 +170,143 @@ class WorkItemController
                 'okr_description'   => $item['okr_description'] ?? null,
                 'estimated_sprints' => $item['estimated_sprints'] ?? 2,
             ]);
+            $priorityToId[$priorityNumber] = $newId;
+        }
+
+        // Second pass: create dependency records using the priority → id map
+        foreach ($itemsData as $index => $item) {
+            $priorityNumber  = (int) ($item['priority_number'] ?? ($index + 1));
+            $itemId          = $priorityToId[$priorityNumber] ?? null;
+            $depPriorities   = $item['dependencies'] ?? [];
+
+            if ($itemId === null || empty($depPriorities) || !is_array($depPriorities)) {
+                continue;
+            }
+
+            $dependsOnIds = [];
+            foreach ($depPriorities as $depPriority) {
+                $depId = $priorityToId[(int) $depPriority] ?? null;
+                if ($depId !== null) {
+                    $dependsOnIds[] = $depId;
+                }
+            }
+
+            if (!empty($dependsOnIds)) {
+                HLItemDependency::createBatch($this->db, $itemId, $dependsOnIds);
+            }
         }
 
         $_SESSION['flash_message'] = count($itemsData) . ' work items generated successfully.';
+        $this->response->redirect('/app/work-items?project_id=' . $projectId);
+    }
+
+    /**
+     * Create a new work item from manual form submission.
+     *
+     * Appends the new item at the end of the priority list for the project.
+     */
+    public function store(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $title = trim((string) $this->request->post('title', ''));
+        if ($title === '') {
+            $_SESSION['flash_error'] = 'Work item title is required.';
+            $this->response->redirect('/app/work-items?project_id=' . $projectId);
+            return;
+        }
+
+        $existing         = HLWorkItem::findByProjectId($this->db, $projectId);
+        $maxPriority      = count($existing);
+        $estimatedSprints = $this->request->post('estimated_sprints', '');
+
+        HLWorkItem::create($this->db, [
+            'project_id'        => $projectId,
+            'priority_number'   => $maxPriority + 1,
+            'title'             => $title,
+            'description'       => trim((string) $this->request->post('description', '')) ?: null,
+            'okr_title'         => trim((string) $this->request->post('okr_title', '')) ?: null,
+            'okr_description'   => trim((string) $this->request->post('okr_description', '')) ?: null,
+            'owner'             => trim((string) $this->request->post('owner', '')) ?: null,
+            'estimated_sprints' => $estimatedSprints !== '' ? (int) $estimatedSprints : 2,
+        ]);
+
+        $_SESSION['flash_message'] = 'Work item created.';
+        $this->response->redirect('/app/work-items?project_id=' . $projectId);
+    }
+
+    /**
+     * Re-estimate sprint sizing for all work items in a project via AI.
+     *
+     * Sends all current work items to Gemini with SIZING_PROMPT and batch-
+     * updates the estimated_sprints field for each returned item.
+     */
+    public function regenerateSizing(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
+        if (empty($workItems)) {
+            $_SESSION['flash_error'] = 'No work items to size.';
+            $this->response->redirect('/app/work-items?project_id=' . $projectId);
+            return;
+        }
+
+        // Build work items input list for AI
+        $itemLines = [];
+        foreach ($workItems as $item) {
+            $line = "- ID {$item['id']}: {$item['title']}";
+            if (!empty($item['description'])) {
+                $line .= ' — ' . mb_substr($item['description'], 0, 120);
+            }
+            $itemLines[] = $line;
+        }
+        $input = implode("\n", $itemLines);
+
+        try {
+            $gemini  = new GeminiService($this->config);
+            $results = $gemini->generateJson(WorkItemPrompt::SIZING_PROMPT, $input);
+        } catch (\RuntimeException $e) {
+            $_SESSION['flash_error'] = 'Sizing regeneration failed: ' . $e->getMessage();
+            $this->response->redirect('/app/work-items?project_id=' . $projectId);
+            return;
+        }
+
+        if (!is_array($results) || empty($results)) {
+            $_SESSION['flash_error'] = 'AI returned an unexpected format. Please try again.';
+            $this->response->redirect('/app/work-items?project_id=' . $projectId);
+            return;
+        }
+
+        // Build a lookup of allowed IDs for security
+        $allowedIds = array_column($workItems, 'id');
+
+        foreach ($results as $result) {
+            $itemId           = (int) ($result['id'] ?? 0);
+            $estimatedSprints = max(1, min(6, (int) ($result['estimated_sprints'] ?? 2)));
+
+            if (in_array($itemId, $allowedIds, true)) {
+                HLWorkItem::update($this->db, $itemId, ['estimated_sprints' => $estimatedSprints]);
+            }
+        }
+
+        $_SESSION['flash_message'] = 'Sprint sizing regenerated for ' . count($results) . ' work items.';
         $this->response->redirect('/app/work-items?project_id=' . $projectId);
     }
 
