@@ -114,4 +114,24 @@ class Subscription
         $row = $stmt->fetch();
         return ($row && $row['user_seat_limit']) ? (int) $row['user_seat_limit'] : 5;
     }
+
+    /**
+     * Check whether an organisation's active subscription includes evaluation board access.
+     *
+     * @param Database $db    Database instance
+     * @param int      $orgId Organisation primary key
+     * @return bool           True if the org has evaluation board access
+     */
+    public static function hasEvaluationBoard(Database $db, int $orgId): bool
+    {
+        $stmt = $db->query(
+            "SELECT has_evaluation_board FROM subscriptions
+             WHERE organisation_id = :org_id AND status = 'active'
+             ORDER BY id DESC LIMIT 1",
+            [':org_id' => $orgId]
+        );
+
+        $row = $stmt->fetch();
+        return $row && (bool) $row['has_evaluation_board'];
+    }
 }

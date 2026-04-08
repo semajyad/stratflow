@@ -31,6 +31,7 @@
             </main>
         </div>
     </div>
+    <?php include __DIR__ . '/../partials/sounding-board-modal.php'; ?>
     <script src="/assets/js/app.js"></script>
 </body>
 </html>

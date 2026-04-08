@@ -20,6 +20,7 @@ use StratFlow\Models\Document;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\StrategyDiagram;
+use StratFlow\Models\Subscription;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\WorkItemPrompt;
 
@@ -70,13 +71,14 @@ class WorkItemController
         $diagram   = StrategyDiagram::findByProjectId($this->db, $projectId);
 
         $this->response->render('work-items', [
-            'user'          => $user,
-            'project'       => $project,
-            'work_items'    => $workItems,
-            'diagram'       => $diagram,
-            'active_page'   => 'work-items',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'work_items'           => $workItems,
+            'diagram'              => $diagram,
+            'active_page'          => 'work-items',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

@@ -18,6 +18,7 @@ use StratFlow\Core\Response;
 use StratFlow\Models\Project;
 use StratFlow\Models\Sprint;
 use StratFlow\Models\SprintStory;
+use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\SprintPrompt;
@@ -76,13 +77,14 @@ class SprintController
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
 
         $this->response->render('sprints', [
-            'user'          => $user,
-            'project'       => $project,
-            'sprints'       => $sprints,
-            'unallocated'   => $unallocated,
-            'active_page'   => 'sprints',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'sprints'              => $sprints,
+            'unallocated'          => $unallocated,
+            'active_page'          => 'sprints',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

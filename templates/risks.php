@@ -19,6 +19,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 <div class="page-header flex justify-between items-center mb-6">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Risk Modelling</h1>
     <div class="flex items-center gap-2">
+        <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <form method="POST" action="/app/risks/generate" style="display: inline;">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">

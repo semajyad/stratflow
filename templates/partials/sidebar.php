@@ -32,5 +32,11 @@
                 &#9881; Administration
             </a>
         <?php endif; ?>
+
+        <?php if (($user['role'] ?? '') === 'superadmin'): ?>
+            <a href="/superadmin" class="nav-link <?= ($active_page ?? '') === 'superadmin' ? 'active' : '' ?>">
+                &#128081; Superadmin
+            </a>
+        <?php endif; ?>
     </nav>
 </aside>

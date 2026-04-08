@@ -17,6 +17,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
+use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\UserStoryPrompt;
@@ -68,13 +69,14 @@ class UserStoryController
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
 
         $this->response->render('user-stories', [
-            'user'          => $user,
-            'project'       => $project,
-            'stories'       => $stories,
-            'work_items'    => $workItems,
-            'active_page'   => 'user-stories',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'stories'              => $stories,
+            'work_items'           => $workItems,
+            'active_page'          => 'user-stories',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

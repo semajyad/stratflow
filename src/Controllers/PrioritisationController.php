@@ -17,6 +17,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
+use StratFlow\Models\Subscription;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\PrioritisationPrompt;
 
@@ -67,13 +68,14 @@ class PrioritisationController
         $framework = $project['selected_framework'] ?? 'rice';
 
         $this->response->render('prioritisation', [
-            'user'          => $user,
-            'project'       => $project,
-            'work_items'    => $workItems,
-            'framework'     => $framework,
-            'active_page'   => 'prioritisation',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'work_items'           => $workItems,
+            'framework'            => $framework,
+            'active_page'          => 'prioritisation',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

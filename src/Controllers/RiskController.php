@@ -19,6 +19,7 @@ use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\Risk;
 use StratFlow\Models\RiskItemLink;
+use StratFlow\Models\Subscription;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\RiskPrompt;
 
@@ -101,15 +102,16 @@ class RiskController
         }
 
         $this->response->render('risks', [
-            'user'          => $user,
-            'project'       => $project,
-            'risks'         => $risks,
-            'work_items'    => $workItems,
-            'work_item_map' => $workItemMap,
-            'heatmap'       => $heatmap,
-            'active_page'   => 'risks',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'risks'                => $risks,
+            'work_items'           => $workItems,
+            'work_item_map'        => $workItemMap,
+            'heatmap'              => $heatmap,
+            'active_page'          => 'risks',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

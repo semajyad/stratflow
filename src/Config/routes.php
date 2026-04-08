@@ -83,6 +83,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/{id}',         'SprintController@update',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
 
+    // Sounding Board — AI persona evaluations
+    $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth']);
+    $router->add('GET',  '/app/sounding-board/results/{id}',          'SoundingBoardController@results',  ['auth']);
+    $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth']);
+    $router->add('GET',  '/app/sounding-board/history',               'SoundingBoardController@history',  ['auth']);
+
     // Admin — static routes MUST come before {id} routes
     $router->add('GET',  '/app/admin',                       'AdminController@index',            ['auth', 'admin']);
     $router->add('GET',  '/app/admin/users',                 'AdminController@users',            ['auth', 'admin']);
@@ -97,4 +103,13 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);
+
+    // Superadmin — system-wide management (superadmin role only)
+    $router->add('GET',  '/superadmin',                           'SuperadminController@index',           ['auth', 'superadmin']);
+    $router->add('GET',  '/superadmin/organisations',             'SuperadminController@organisations',   ['auth', 'superadmin']);
+    $router->add('POST', '/superadmin/organisations/{id}',        'SuperadminController@updateOrg',       ['auth', 'superadmin', 'csrf']);
+    $router->add('GET',  '/superadmin/organisations/{id}/export', 'SuperadminController@exportOrg',       ['auth', 'superadmin']);
+    $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
+    $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
+    $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);
 };

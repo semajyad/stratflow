@@ -915,3 +915,145 @@ function toggleSprintEditForm(sprintId) {
         form.classList.toggle('hidden');
     }
 }
+
+// ===========================
+// Sounding Board
+// ===========================
+
+/**
+ * Open the sounding board modal and reset to configuration view.
+ */
+function openSoundingBoard() {
+    document.getElementById('sounding-board-modal').style.display = 'flex';
+    document.getElementById('sb-config').style.display = 'block';
+    document.getElementById('sb-loading').style.display = 'none';
+    document.getElementById('sb-results').style.display = 'none';
+}
+
+/**
+ * Close the sounding board modal.
+ */
+function closeSoundingBoard() {
+    document.getElementById('sounding-board-modal').style.display = 'none';
+}
+
+/**
+ * Run an AI sounding board evaluation by sending screen content
+ * to the server for persona-based analysis.
+ */
+function runSoundingBoard() {
+    var trigger = document.querySelector('.sounding-board-trigger');
+    var projectId = trigger ? trigger.dataset.projectId : '';
+    var screenContext = trigger ? trigger.dataset.screen : '';
+
+    // Gather main content text from the page
+    var mainContent = '';
+    var contentEl = document.querySelector('.app-content');
+    if (contentEl) {
+        mainContent = contentEl.innerText || '';
+    }
+
+    var panelType = document.getElementById('sb-panel-type').value;
+    var evalLevel = document.getElementById('sb-eval-level').value;
+
+    document.getElementById('sb-config').style.display = 'none';
+    document.getElementById('sb-loading').style.display = 'block';
+
+    fetch('/app/sounding-board/evaluate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            project_id: parseInt(projectId),
+            panel_type: panelType,
+            evaluation_level: evalLevel,
+            screen_context: screenContext,
+            screen_content: mainContent.substring(0, 5000)
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('sb-loading').style.display = 'none';
+        document.getElementById('sb-results').style.display = 'block';
+        renderSoundingBoardResults(data);
+    })
+    .catch(function(err) {
+        document.getElementById('sb-loading').style.display = 'none';
+        document.getElementById('sb-config').style.display = 'block';
+        alert('Evaluation failed: ' + err.message);
+    });
+}
+
+/**
+ * Render persona evaluation results into the modal results container.
+ *
+ * @param {Object} data Response from the evaluate endpoint: {id, results}
+ */
+function renderSoundingBoardResults(data) {
+    var container = document.getElementById('sb-results');
+    var html = '<h4>Evaluation Results</h4>';
+
+    if (data.error) {
+        html += '<p class="text-danger">' + escapeHtml(data.error) + '</p>';
+        container.innerHTML = html;
+        return;
+    }
+
+    data.results.forEach(function(result, index) {
+        html += '<div class="persona-result" data-eval-id="' + data.id + '" data-index="' + index + '">'
+            + '<div class="persona-header">'
+            + '<strong>' + escapeHtml(result.role_title) + '</strong>'
+            + '<span class="persona-status badge badge-secondary">' + escapeHtml(result.status) + '</span>'
+            + '</div>'
+            + '<div class="persona-response">' + escapeHtml(result.response).replace(/\n/g, '<br>') + '</div>'
+            + '<div class="persona-actions">'
+            + '<button class="btn btn-sm btn-primary" onclick="respondToPersona(' + data.id + ', ' + index + ', \'accept\')">Accept</button>'
+            + '<button class="btn btn-sm btn-secondary" onclick="respondToPersona(' + data.id + ', ' + index + ', \'reject\')">Reject</button>'
+            + '</div>'
+            + '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Accept or reject a single persona's evaluation response.
+ *
+ * @param {number} evalId      Evaluation result ID
+ * @param {number} memberIndex Index of the persona in the results array
+ * @param {string} action      'accept' or 'reject'
+ */
+function respondToPersona(evalId, memberIndex, action) {
+    fetch('/app/sounding-board/results/' + evalId + '/respond', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            member_index: memberIndex,
+            action: action
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.status === 'ok') {
+            var card = document.querySelector('[data-eval-id="' + evalId + '"][data-index="' + memberIndex + '"]');
+            if (card) {
+                var statusBadge = card.querySelector('.persona-status');
+                statusBadge.textContent = action + 'ed';
+                statusBadge.className = 'persona-status badge ' + (action === 'accept' ? 'badge-success' : 'badge-muted');
+                card.querySelector('.persona-actions').style.display = 'none';
+            }
+        }
+    });
+}
+
+// Wire up sounding board trigger buttons on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.sounding-board-trigger').forEach(function(btn) {
+        btn.addEventListener('click', openSoundingBoard);
+    });
+});

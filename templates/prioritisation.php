@@ -26,7 +26,10 @@ $formula = $isRice
      =========================== -->
 <div class="page-header flex justify-between items-center mb-6">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Prioritisation</h1>
-    <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to Work Items</a>
+    <div class="flex items-center gap-2">
+        <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
+        <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to Work Items</a>
+    </div>
 </div>
 
 <!-- ===========================

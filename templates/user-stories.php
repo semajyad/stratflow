@@ -22,6 +22,7 @@
         </p>
     </div>
     <div class="flex items-center gap-2">
+        <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <a href="/app/risks?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to Risk Modelling</a>
         <button type="button" class="btn btn-secondary btn-sm" onclick="toggleStoryModal()">Add Story Manually</button>
     </div>
