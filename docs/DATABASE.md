@@ -16,8 +16,17 @@ organisations
         ├── documents (project_id → projects.id)
         ├── strategy_diagrams (project_id → projects.id)
         │     └── diagram_nodes (diagram_id → strategy_diagrams.id)
-        └── hl_work_items (project_id → projects.id,
-                           diagram_id → strategy_diagrams.id [nullable])
+        ├── hl_work_items (project_id → projects.id,
+        │                  diagram_id → strategy_diagrams.id [nullable])
+        │     └── risk_item_links (work_item_id → hl_work_items.id)
+        ├── risks (project_id → projects.id)
+        │     └── risk_item_links (risk_id → risks.id)
+        ├── user_stories (project_id → projects.id,
+        │                 parent_hl_item_id → hl_work_items.id [nullable],
+        │                 blocked_by → user_stories.id [nullable])
+        └── sprints (project_id → projects.id)
+              └── sprint_stories (sprint_id → sprints.id,
+                                  user_story_id → user_stories.id)
 
 login_attempts (standalone — tracks IP-based brute force attempts)
 ```
@@ -96,7 +105,7 @@ Rate-limiting table for brute force protection. Stores one row per login attempt
 
 ### `projects`
 
-A project is the top-level work unit within an organisation. It owns documents, diagrams, and work items.
+A project is the top-level work unit within an organisation. It owns documents, diagrams, work items, risks, user stories, and sprints.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -104,11 +113,14 @@ A project is the top-level work unit within an organisation. It owns documents, 
 | `org_id` | INT UNSIGNED | NOT NULL, FK → organisations | Multi-tenancy scope key |
 | `name` | VARCHAR(255) | NOT NULL | |
 | `status` | ENUM | NOT NULL, DEFAULT `draft` | `draft`, `active`, `completed` |
+| `selected_framework` | ENUM | NULL | `rice`, `wsjf` — chosen prioritisation framework; NULL until set |
 | `created_by` | INT UNSIGNED | NOT NULL, FK → users | |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 | `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
 
 **Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE; `created_by` → `users.id` ON DELETE RESTRICT
+
+**Added in:** migration `001_v1_completion.sql` (`selected_framework` column)
 
 ---
 
@@ -170,7 +182,7 @@ Individual nodes extracted from a diagram, with optional OKR metadata attached b
 
 ### `hl_work_items`
 
-High-Level Work Items (HLWIs) generated from the strategy diagram. Each item represents approximately one month of team effort.
+High-Level Work Items (HLWIs) generated from the strategy diagram. Each item represents approximately one month of team effort. Phase 1 added RICE/WSJF scoring columns and a computed final score.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -185,10 +197,117 @@ High-Level Work Items (HLWIs) generated from the strategy diagram. Each item rep
 | `okr_description` | TEXT | NULL | Inherited from diagram node |
 | `owner` | VARCHAR(255) | NULL | Assigned team or person |
 | `estimated_sprints` | INT UNSIGNED | NOT NULL, DEFAULT 2 | Default = 2 sprints (~1 month) |
+| `rice_reach` | INT UNSIGNED | NULL | RICE: users/stakeholders impacted (1–10) |
+| `rice_impact` | INT UNSIGNED | NULL | RICE: significance of impact per user (1–10) |
+| `rice_confidence` | INT UNSIGNED | NULL | RICE: confidence in estimates (1–10) |
+| `rice_effort` | INT UNSIGNED | NULL | RICE: effort required (1–10) |
+| `wsjf_business_value` | INT UNSIGNED | NULL | WSJF: business value delivered (1–10) |
+| `wsjf_time_criticality` | INT UNSIGNED | NULL | WSJF: urgency (1–10) |
+| `wsjf_risk_reduction` | INT UNSIGNED | NULL | WSJF: risk/opportunity addressed (1–10) |
+| `wsjf_job_size` | INT UNSIGNED | NULL | WSJF: size of work (1–10) |
+| `final_score` | DECIMAL(10,2) | NULL | Computed RICE or WSJF score; NULL until scored |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 | `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
 
 **Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `diagram_id` → `strategy_diagrams.id` ON DELETE SET NULL
+
+**Added in:** migration `001_v1_completion.sql` (all `rice_*`, `wsjf_*`, and `final_score` columns)
+
+---
+
+### `risks`
+
+Project risks identified manually or via AI. Each risk has a likelihood and impact score (1–5 scale). The computed `priority` field is `likelihood × impact`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `title` | VARCHAR(255) | NOT NULL | Concise risk title |
+| `description` | TEXT | NULL | 2–3 sentence description |
+| `likelihood` | TINYINT UNSIGNED | NOT NULL, DEFAULT 3 | 1 (rare) to 5 (almost certain) |
+| `impact` | TINYINT UNSIGNED | NOT NULL, DEFAULT 3 | 1 (negligible) to 5 (catastrophic) |
+| `mitigation` | TEXT | NULL | AI-generated or manually entered mitigation strategy |
+| `priority` | DECIMAL(5,2) | NULL | Computed: likelihood × impact; NULL until calculated |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE
+
+---
+
+### `risk_item_links`
+
+Many-to-many join table linking risks to the work items they relate to.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `risk_id` | INT UNSIGNED | NOT NULL, FK → risks | |
+| `work_item_id` | INT UNSIGNED | NOT NULL, FK → hl_work_items | |
+
+**Foreign keys:** `risk_id` → `risks.id` ON DELETE CASCADE; `work_item_id` → `hl_work_items.id` ON DELETE CASCADE
+
+**Unique constraint:** `uq_risk_item (risk_id, work_item_id)` — one link per risk–item pair
+
+---
+
+### `user_stories`
+
+Granular user stories decomposed from High-Level Work Items. Each story follows the "As a [role], I want [action], so that [value]" format and represents approximately 3 days of development work.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `parent_hl_item_id` | INT UNSIGNED | NULL, FK → hl_work_items | NULL if parent item was deleted |
+| `priority_number` | INT UNSIGNED | NOT NULL | Order within the backlog (1 = highest) |
+| `title` | VARCHAR(255) | NOT NULL | Full "As a..." user story statement |
+| `description` | TEXT | NULL | Technical description of what needs to be built |
+| `parent_link` | VARCHAR(255) | NULL | Optional external Jira/Linear ticket URL |
+| `team_assigned` | VARCHAR(255) | NULL | Team or person responsible |
+| `size` | INT UNSIGNED | NULL | Story points (Fibonacci: 1, 2, 3, 5, 8, 13, 20) |
+| `blocked_by` | INT UNSIGNED | NULL, FK → user_stories | Self-referential dependency |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `parent_hl_item_id` → `hl_work_items.id` ON DELETE SET NULL; `blocked_by` → `user_stories.id` ON DELETE SET NULL
+
+---
+
+### `sprints`
+
+Sprint containers for sprint planning and allocation. Stores date range and team capacity in story points.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `name` | VARCHAR(255) | NOT NULL | Sprint name (e.g. "Sprint 1") |
+| `start_date` | DATE | NULL | Sprint start date |
+| `end_date` | DATE | NULL | Sprint end date |
+| `team_capacity` | INT UNSIGNED | NULL | Total story points the team can deliver |
+| `status` | ENUM | NOT NULL, DEFAULT `planning` | `planning`, `active`, `completed` |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE
+
+---
+
+### `sprint_stories`
+
+Many-to-many join table assigning user stories to sprints.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `sprint_id` | INT UNSIGNED | NOT NULL, FK → sprints | |
+| `user_story_id` | INT UNSIGNED | NOT NULL, FK → user_stories | |
+
+**Foreign keys:** `sprint_id` → `sprints.id` ON DELETE CASCADE; `user_story_id` → `user_stories.id` ON DELETE CASCADE
+
+**Unique constraint:** `uq_sprint_story (sprint_id, user_story_id)` — a story can only appear in one sprint at a time
 
 ---
 
@@ -198,6 +317,8 @@ High-Level Work Items (HLWIs) generated from the strategy diagram. Each item rep
 |-------|-------|---------|------|
 | `users` | (implicit) | `email` | UNIQUE |
 | `login_attempts` | `idx_ip_time` | `ip_address, attempted_at` | INDEX |
+| `risk_item_links` | `uq_risk_item` | `risk_id, work_item_id` | UNIQUE |
+| `sprint_stories` | `uq_sprint_story` | `sprint_id, user_story_id` | UNIQUE |
 
 All other lookups rely on primary keys and foreign key indexes created automatically by InnoDB.
 

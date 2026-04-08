@@ -78,6 +78,19 @@ stratflow/
 │   │   ├── config.php          App-level constants loaded from .env
 │   │   └── routes.php          Route definitions closure
 │   ├── Controllers/            One controller per feature area
+│   │   ├── AuthController.php
+│   │   ├── CheckoutController.php
+│   │   ├── DiagramController.php
+│   │   ├── HomeController.php
+│   │   ├── PricingController.php
+│   │   ├── PrioritisationController.php  ← Phase 1: RICE/WSJF prioritisation
+│   │   ├── RiskController.php            ← Phase 1: Risk modelling
+│   │   ├── SprintController.php          ← Phase 1: Sprint allocation
+│   │   ├── SuccessController.php
+│   │   ├── UploadController.php
+│   │   ├── UserStoryController.php       ← Phase 1: User story decomposition
+│   │   ├── WebhookController.php
+│   │   └── WorkItemController.php
 │   ├── Core/
 │   │   ├── Auth.php            Session-based authentication
 │   │   ├── CSRF.php            Token generation and validation
@@ -90,6 +103,19 @@ stratflow/
 │   │   ├── AuthMiddleware.php
 │   │   └── CSRFMiddleware.php
 │   ├── Models/                 Thin data-access objects; each wraps PDO queries for one table
+│   │   ├── DiagramNode.php
+│   │   ├── Document.php
+│   │   ├── HLWorkItem.php
+│   │   ├── Organisation.php
+│   │   ├── Project.php
+│   │   ├── Risk.php                ← Phase 1
+│   │   ├── RiskItemLink.php        ← Phase 1
+│   │   ├── Sprint.php              ← Phase 1
+│   │   ├── SprintStory.php         ← Phase 1
+│   │   ├── StrategyDiagram.php
+│   │   ├── Subscription.php
+│   │   ├── User.php
+│   │   └── UserStory.php           ← Phase 1
 │   └── Services/
 │       ├── FileProcessor.php   PDF text extraction (smalot/pdfparser)
 │       ├── GeminiService.php   Gemini API HTTP client
@@ -97,7 +123,11 @@ stratflow/
 │       └── Prompts/
 │           ├── SummaryPrompt.php
 │           ├── DiagramPrompt.php
-│           └── WorkItemPrompt.php
+│           ├── WorkItemPrompt.php
+│           ├── PrioritisationPrompt.php  ← Phase 1: RICE_PROMPT and WSJF_PROMPT
+│           ├── RiskPrompt.php            ← Phase 1: GENERATE_PROMPT and MITIGATION_PROMPT
+│           ├── UserStoryPrompt.php       ← Phase 1: DECOMPOSE_PROMPT and SIZE_PROMPT
+│           └── SprintPrompt.php          ← Phase 1: ALLOCATE_PROMPT
 ├── templates/
 │   ├── layouts/                Master layout files (app shell, public shell)
 │   ├── partials/               Reusable view fragments
@@ -177,8 +207,14 @@ Controller extracts structured data from the text response:
   - Summary: plain text (3 paragraphs)
   - Diagram: Mermaid.js source (stripped of any markdown fences)
   - Work items: JSON array (parsed with json_decode)
+  - Prioritisation scores: JSON array of {id, reach, impact, ...} objects
+  - Risks: JSON array of {title, description, likelihood, impact, linked_items} objects
+  - Risk mitigation: plain text (2–3 sentences)
+  - User stories: JSON array of {title, description, size} objects
+  - Story size: JSON object {size, reasoning}
+  - Sprint allocation: JSON array of {story_id, sprint_id} pairs
 ```
 
-Prompt constants live in `src/Services/Prompts/`. They are pure PHP string constants — no templating library. The `DESCRIPTION_PROMPT` uses `{title}`, `{context}`, and `{summary}` placeholders replaced via `str_replace()` in `GeminiService` before sending.
+Prompt constants live in `src/Services/Prompts/`. They are pure PHP string constants — no templating library. Prompts that require dynamic values use `{placeholder}` tokens replaced via `str_replace()` before sending (e.g. `DESCRIPTION_PROMPT` uses `{title}`, `{context}`, `{summary}`; `MITIGATION_PROMPT` uses `{title}`, `{description}`, `{likelihood}`, `{impact}`, `{linked_items}`; `SIZE_PROMPT` uses `{title}`, `{description}`; `ALLOCATE_PROMPT` uses `{sprints}`, `{stories}`).
 
 See [GEMINI_PROMPTS.md](GEMINI_PROMPTS.md) for full prompt text and tuning notes.
