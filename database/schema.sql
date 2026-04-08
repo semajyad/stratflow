@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS organisations (
     name VARCHAR(255) NOT NULL,
     stripe_customer_id VARCHAR(255) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    settings_json JSON NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     status ENUM('active','cancelled','expired') NOT NULL DEFAULT 'active',
     started_at DATETIME NOT NULL,
     expires_at DATETIME NULL,
+    user_seat_limit INT UNSIGNED NOT NULL DEFAULT 5,
     FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -181,6 +183,27 @@ CREATE TABLE IF NOT EXISTS sprint_stories (
     FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
     FOREIGN KEY (user_story_id) REFERENCES user_stories(id) ON DELETE CASCADE,
     UNIQUE KEY uq_sprint_story (sprint_id, user_story_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Phase 2: Admin Features
+CREATE TABLE IF NOT EXISTS teams (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    org_id INT UNSIGNED NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    capacity INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS team_members (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    team_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_team_user (team_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

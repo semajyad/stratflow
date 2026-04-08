@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace StratFlow\Core;
 
+use StratFlow\Middleware\AdminMiddleware;
 use StratFlow\Middleware\AuthMiddleware;
 use StratFlow\Middleware\CSRFMiddleware;
 
@@ -133,8 +134,9 @@ class Router
     {
         foreach ($middlewareKeys as $key) {
             $result = match ($key) {
-                'auth' => (new AuthMiddleware())->handle($this->auth, $this->response),
-                'csrf' => (new CSRFMiddleware())->handle($this->request, $this->csrf, $this->response),
+                'auth'  => (new AuthMiddleware())->handle($this->auth, $this->response),
+                'csrf'  => (new CSRFMiddleware())->handle($this->request, $this->csrf, $this->response),
+                'admin' => (new AdminMiddleware())->handle($this->auth, $this->response),
                 default => true,
             };
 
