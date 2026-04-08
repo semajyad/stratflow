@@ -30,11 +30,22 @@ class Database
             $config['database']
         );
 
-        $this->pdo = new PDO($dsn, $config['username'], $config['password'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+        try {
+            $this->pdo = new PDO($dsn, $config['username'], $config['password'], [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+        } catch (\Throwable $e) {
+            // Re-throw as RuntimeException so callers always receive a consistent,
+            // catchable Throwable regardless of the underlying driver error type
+            // (e.g. caching_sha2_password auth failures may not surface as PDOException).
+            throw new \RuntimeException(
+                'Database connection failed: ' . $e->getMessage(),
+                (int) $e->getCode(),
+                $e
+            );
+        }
 
         self::$instance = $this;
     }
