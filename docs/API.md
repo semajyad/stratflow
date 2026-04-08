@@ -37,12 +37,14 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/diagram/save` | `DiagramController@save` | auth, csrf | Persist the current diagram |
 | POST | `/app/diagram/save-okr` | `DiagramController@saveOkr` | auth, csrf | Save OKR data for a diagram node |
 | GET | `/app/work-items` | `WorkItemController@index` | auth | Work items list page |
+| POST | `/app/work-items/store` | `WorkItemController@store` | auth, csrf | Create a work item manually |
 | POST | `/app/work-items/generate` | `WorkItemController@generate` | auth, csrf | AI-generate work items from diagram |
 | POST | `/app/work-items/reorder` | `WorkItemController@reorder` | auth | AJAX: update priority order |
 | GET | `/app/work-items/export` | `WorkItemController@export` | auth | Download CSV or JSON export |
 | POST | `/app/work-items/{id}` | `WorkItemController@update` | auth, csrf | Update a work item's fields |
 | POST | `/app/work-items/{id}/delete` | `WorkItemController@delete` | auth, csrf | Delete a work item |
 | POST | `/app/work-items/{id}/generate-description` | `WorkItemController@generateDescription` | auth | AI-generate a detailed scope description |
+| POST | `/app/work-items/regenerate-sizing` | `WorkItemController@regenerateSizing` | auth, csrf | Re-run AI sprint sizing estimates for all work items |
 | GET | `/app/prioritisation` | `PrioritisationController@index` | auth | Prioritisation screen |
 | POST | `/app/prioritisation/framework` | `PrioritisationController@selectFramework` | auth, csrf | Select RICE or WSJF framework for the project |
 | POST | `/app/prioritisation/scores` | `PrioritisationController@saveScores` | auth | AJAX: save individual item scores |
@@ -62,6 +64,7 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/user-stories/{id}` | `UserStoryController@update` | auth, csrf | Update a user story's fields |
 | POST | `/app/user-stories/{id}/delete` | `UserStoryController@delete` | auth, csrf | Delete a user story |
 | POST | `/app/user-stories/{id}/suggest-size` | `UserStoryController@suggestSize` | auth | AJAX: AI suggest story point size |
+| POST | `/app/user-stories/regenerate-sizing` | `UserStoryController@regenerateSizing` | auth, csrf | Re-run AI story point sizing for all user stories in the project |
 | GET | `/app/sprints` | `SprintController@index` | auth | Sprint allocation screen |
 | POST | `/app/sprints/store` | `SprintController@store` | auth, csrf | Create a sprint |
 | POST | `/app/sprints/assign` | `SprintController@assignStory` | auth | AJAX: assign a user story to a sprint |
@@ -81,6 +84,8 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/admin/teams/add-member` | `AdminController@addTeamMember` | auth, admin, csrf | Add a user to a team (both must belong to same org) |
 | POST | `/app/admin/teams/remove-member` | `AdminController@removeTeamMember` | auth, admin, csrf | Remove a user from a team |
 | GET | `/app/admin/settings` | `AdminController@settings` | auth, admin | Organisation settings page (personas, defaults, tripwires) |
+| GET | `/app/admin/invoices` | `AdminController@invoices` | auth, admin | List all Stripe invoices for the organisation |
+| GET | `/app/admin/invoices/{id}/download` | `AdminController@downloadInvoice` | auth, admin | Download a single invoice PDF by Stripe invoice ID |
 | POST | `/app/admin/settings` | `AdminController@saveSettings` | auth, admin, csrf | Save organisation settings to `organisations.settings_json` |
 | POST | `/app/sounding-board/evaluate` | `SoundingBoardController@evaluate` | auth | Run an AI evaluation; expects JSON body: `project_id`, `panel_type`, `evaluation_level`, `screen_context`, `screen_content`. Returns `{id, results}` |
 | GET | `/app/sounding-board/results/{id}` | `SoundingBoardController@results` | auth | Load a single evaluation result by ID; returns decoded evaluation data |

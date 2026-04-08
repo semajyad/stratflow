@@ -23,6 +23,8 @@ organisations
         │     └── diagram_nodes (diagram_id → strategy_diagrams.id)
         ├── hl_work_items (project_id → projects.id,
         │                  diagram_id → strategy_diagrams.id [nullable])
+        │     ├── hl_item_dependencies (item_id → hl_work_items.id,         ← Phase 5
+        │     │                         depends_on_id → hl_work_items.id)
         │     └── risk_item_links (work_item_id → hl_work_items.id)
         ├── risks (project_id → projects.id)
         │     └── risk_item_links (risk_id → risks.id)
@@ -472,6 +474,24 @@ Added in Phase 4 (Strategic Drift Engine).
 
 ---
 
+### `hl_item_dependencies`
+
+Records blocking dependencies between High-Level Work Items. A row `(item_id, depends_on_id)` means "item_id depends on depends_on_id" — i.e., `depends_on_id` must be completed before `item_id` can begin.
+Added in Phase 5 (HL Work Item Dependencies).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `item_id` | INT UNSIGNED | NOT NULL, FK → hl_work_items | The dependent work item (the one that is blocked) |
+| `depends_on_id` | INT UNSIGNED | NOT NULL, FK → hl_work_items | The blocking work item (must be completed first) |
+| `dependency_type` | ENUM | NOT NULL, DEFAULT `hard` | `hard` (must complete before starting), `soft` (preferred ordering) |
+
+**Foreign keys:** `item_id` → `hl_work_items.id` ON DELETE CASCADE; `depends_on_id` → `hl_work_items.id` ON DELETE CASCADE
+
+**Unique constraint:** `uq_item_dependency (item_id, depends_on_id)` — one dependency link per ordered pair; `ON DUPLICATE KEY UPDATE` prevents errors on re-save
+
+---
+
 ## Indexes Summary
 
 | Table | Index | Columns | Type |
@@ -481,6 +501,7 @@ Added in Phase 4 (Strategic Drift Engine).
 | `risk_item_links` | `uq_risk_item` | `risk_id, work_item_id` | UNIQUE |
 | `sprint_stories` | `uq_sprint_story` | `sprint_id, user_story_id` | UNIQUE |
 | `team_members` | `uq_team_user` | `team_id, user_id` | UNIQUE |
+| `hl_item_dependencies` | `uq_item_dependency` | `item_id, depends_on_id` | UNIQUE |
 
 All other lookups rely on primary keys and foreign key indexes created automatically by InnoDB.
 

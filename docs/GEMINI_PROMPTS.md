@@ -148,7 +148,42 @@ Return a JSON array where each element has these exact keys:
 
 ---
 
-## 4. Description Prompt
+## 4. Sizing Prompt
+
+**File:** `src/Services/Prompts/WorkItemPrompt.php`
+**Constant:** `WorkItemPrompt::SIZING_PROMPT`
+**Used by:** `WorkItemController@regenerateSizing`
+
+### Purpose
+
+Bulk re-estimates sprint counts for all existing High-Level Work Items in a project. Called when the user triggers "Regenerate Sizing" from the work items screen. Results are applied via `HLWorkItem::update()` for each returned item.
+
+### Input format
+
+The prompt constant is the preamble. The content appended is a plain-text list of all work items in the project (id, title, description).
+
+### Expected output
+
+A JSON array where each element has:
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `id` | integer | Work item ID |
+| `estimated_sprints` | integer | Minimum 1, maximum 6 |
+
+### Prompt text
+
+```
+You are an Agile estimation expert. For each work item below, estimate how many 2-week sprints it would take for a standard Scrum team (5-9 people) to complete.
+
+Return a JSON array where each element has: "id" (integer), "estimated_sprints" (integer, minimum 1, maximum 6).
+
+Work items:
+```
+
+---
+
+## 5. Description Prompt
 
 **File:** `src/Services/Prompts/WorkItemPrompt.php`
 **Constant:** `WorkItemPrompt::DESCRIPTION_PROMPT`
@@ -195,7 +230,7 @@ Overall Strategy Summary: {summary}
 
 ---
 
-## 5. Prioritisation Prompt
+## 6. Prioritisation Prompt
 
 **File:** `src/Services/Prompts/PrioritisationPrompt.php`
 **Constants:** `PrioritisationPrompt::RICE_PROMPT`, `PrioritisationPrompt::WSJF_PROMPT`
@@ -259,7 +294,7 @@ Return a JSON array where each element has: "id" (the work item ID), "business_v
 
 ---
 
-## 6. Risk Prompt
+## 7. Risk Prompt
 
 **File:** `src/Services/Prompts/RiskPrompt.php`
 **Constants:** `RiskPrompt::GENERATE_PROMPT`, `RiskPrompt::MITIGATION_PROMPT`
@@ -330,7 +365,7 @@ Linked Work Items: {linked_items}
 
 ---
 
-## 7. User Story Prompt
+## 8. User Story Prompt
 
 **File:** `src/Services/Prompts/UserStoryPrompt.php`
 **Constants:** `UserStoryPrompt::DECOMPOSE_PROMPT`, `UserStoryPrompt::SIZE_PROMPT`
@@ -396,7 +431,7 @@ Story Description: {description}
 
 ---
 
-## 8. Sprint Prompt
+## 9. Sprint Prompt
 
 **File:** `src/Services/Prompts/SprintPrompt.php`
 **Constant:** `SprintPrompt::ALLOCATE_PROMPT`
@@ -447,7 +482,7 @@ Only allocate stories that fit within sprint capacity. Leave stories unallocated
 
 ---
 
-## 9. Persona Prompt
+## 10. Persona Prompt
 
 **File:** `src/Services/Prompts/PersonaPrompt.php`
 **Class:** `PersonaPrompt`
@@ -511,7 +546,7 @@ Content to evaluate:
 
 ---
 
-## 10. Drift Prompt
+## 11. Drift Prompt
 
 **File:** `src/Services/Prompts/DriftPrompt.php`
 **Constant:** `DriftPrompt::ALIGNMENT_PROMPT`

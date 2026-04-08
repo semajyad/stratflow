@@ -131,7 +131,8 @@ stratflow/
 │   │   ├── UserStory.php           ← Phase 1
 │   │   ├── StrategicBaseline.php   ← Phase 4: Point-in-time project snapshots for drift comparison
 │   │   ├── DriftAlert.php          ← Phase 4: Alerts for capacity/dependency tripwires and alignment issues
-│   │   └── GovernanceItem.php      ← Phase 4: Change-control queue; pending items require human approval
+│   │   ├── GovernanceItem.php      ← Phase 4: Change-control queue; pending items require human approval
+│   │   └── HLItemDependency.php    ← Phase 5: Blocking dependencies between HL work items; supports createBatch replace pattern
 │   └── Services/
 │       ├── FileProcessor.php   PDF text extraction (smalot/pdfparser)
 │       ├── GeminiService.php   Gemini API HTTP client
@@ -148,9 +149,11 @@ stratflow/
 │           ├── UserStoryPrompt.php       ← Phase 1: DECOMPOSE_PROMPT and SIZE_PROMPT
 │           ├── SprintPrompt.php          ← Phase 1: ALLOCATE_PROMPT
 │           └── DriftPrompt.php           ← Phase 4: ALIGNMENT_PROMPT for OKR alignment assessment
+│           (WorkItemPrompt.php also contains SIZING_PROMPT ← Phase 5: bulk sprint re-estimation)
 ├── templates/
 │   ├── layouts/                Master layout files (app shell, public shell)
-│   ├── partials/               Reusable view fragments
+│   ├── partials/
+│   │   └── workflow-nav.php    ← Phase 5: Shared step-by-step navigation bar rendered across all app screens
 │   └── *.php                   Page templates
 ├── database/
 │   ├── schema.sql              Canonical schema (applied by Docker on first start)
@@ -239,9 +242,14 @@ DriftDetectionService (Phase 4) uses GeminiService::generateJson() for alignment
     └── DriftDetectionService::detectDrift($projectId, $threshold)
           ├── StrategicBaseline::findLatestByProjectId()   ← load baseline snapshot
           ├── checkCapacityTripwire()                      ← compare story sizes per parent
-          ├── checkDependencyTripwire()                    ← find cross-team blockers
+          ├── checkDependencyTripwire()                    ← find cross-team blockers using HLItemDependency (Phase 5)
           └── (optional) GeminiService::generateJson()     ← DriftPrompt::ALIGNMENT_PROMPT
                 └── Returns: {aligned: bool, confidence: 0-100, explanation: string}
+
+WorkItemController (Phase 5) uses WorkItemPrompt::SIZING_PROMPT for bulk re-estimation:
+  WorkItemController@regenerateSizing
+    └── GeminiService::generate(WorkItemPrompt::SIZING_PROMPT, $itemList)
+          └── Returns: JSON array of {id, estimated_sprints} — applied via HLWorkItem::update()
 ```
 
 Prompt constants live in `src/Services/Prompts/`. They are pure PHP string constants — no templating library. Prompts that require dynamic values use `{placeholder}` tokens replaced via `str_replace()` before sending (e.g. `DESCRIPTION_PROMPT` uses `{title}`, `{context}`, `{summary}`; `MITIGATION_PROMPT` uses `{title}`, `{description}`, `{likelihood}`, `{impact}`, `{linked_items}`; `SIZE_PROMPT` uses `{title}`, `{description}`; `ALLOCATE_PROMPT` uses `{sprints}`, `{stories}`).
