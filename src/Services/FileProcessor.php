@@ -30,8 +30,8 @@ class FileProcessor
     // CONSTANTS
     // ===========================
 
-    /** @var int Maximum file size enforced at PHP level (10 MB) */
-    private const MAX_FILE_SIZE = 10485760;
+    /** @var int Maximum file size enforced at PHP level (50 MB) */
+    private const MAX_FILE_SIZE = 52428800;
 
     /** @var array Dangerous byte signatures to scan for in uploads */
     private const DANGEROUS_SIGNATURES = [
@@ -94,17 +94,19 @@ class FileProcessor
         }
 
         // Verify MIME type using finfo (server-side double-check)
-        // Only run on actual uploaded files (tmp_name must exist)
         if (is_file($file['tmp_name'])) {
             $verifyResult = $this->verifyMimeType($file['tmp_name'], $ext);
             if ($verifyResult !== null) {
                 return ['valid' => false, 'error' => $verifyResult];
             }
 
-            // Scan file content for dangerous payloads
-            $scanResult = $this->scanFileContent($file['tmp_name']);
-            if ($scanResult !== null) {
-                return ['valid' => false, 'error' => $scanResult];
+            // Only scan plain text files for dangerous payloads
+            // PDF and DOCX are binary formats that legitimately contain these signatures
+            if ($ext === 'txt') {
+                $scanResult = $this->scanFileContent($file['tmp_name']);
+                if ($scanResult !== null) {
+                    return ['valid' => false, 'error' => $scanResult];
+                }
             }
         }
 
@@ -213,13 +215,12 @@ class FileProcessor
             return null;
         }
 
-        // Check if detected MIME matches any expected MIME for this extension
+        // Check if detected MIME matches expected for this extension
+        // Allow common alternatives that finfo reports on different platforms
         $expectedMimes = self::EXTENSION_MIME_MAP[$ext] ?? [];
-        if (!empty($expectedMimes) && !in_array($detectedMime, $expectedMimes, true)) {
-            // Allow application/octet-stream as some systems report this for DOCX/DOC
-            if ($detectedMime !== 'application/octet-stream' && $detectedMime !== 'application/zip') {
-                return 'File content does not match the declared file type. Detected: ' . $detectedMime;
-            }
+        $alwaysAllowed = ['application/octet-stream', 'application/zip', 'application/x-empty', 'text/plain'];
+        if (!empty($expectedMimes) && !in_array($detectedMime, $expectedMimes, true) && !in_array($detectedMime, $alwaysAllowed, true)) {
+            return 'File content does not match the declared file type. Detected: ' . $detectedMime;
         }
 
         return null;

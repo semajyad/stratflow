@@ -41,7 +41,7 @@ class Session
                 'domain'   => '',
                 'secure'   => $isSecure,
                 'httponly'  => true,
-                'samesite'  => 'Strict',
+                'samesite'  => 'Lax',      // Lax allows Stripe redirect to keep session
             ]);
 
             session_start();
@@ -110,19 +110,10 @@ class Session
      */
     private function generateFingerprint(): string
     {
-        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-
-        // Extract first two octets for IPv4, first 4 groups for IPv6
-        if (str_contains($ip, '.')) {
-            $parts = explode('.', $ip);
-            $partialIp = ($parts[0] ?? '0') . '.' . ($parts[1] ?? '0');
-        } else {
-            $parts = explode(':', $ip);
-            $partialIp = implode(':', array_slice($parts, 0, 4));
-        }
-
-        return hash('sha256', $ua . '|' . $partialIp);
+        // Only use User-Agent for fingerprint — IP changes behind proxies/load balancers
+        // (Railway, Cloudflare, etc.) cause false session invalidation
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+        return hash('sha256', $ua);
     }
 
     /**
