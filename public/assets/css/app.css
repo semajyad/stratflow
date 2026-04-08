@@ -1741,3 +1741,224 @@ tbody tr:hover {
         justify-content: flex-end;
     }
 }
+
+/* === Sprint Allocation ====================================================== */
+
+.sprint-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.backlog-panel {
+    flex: 0 0 40%;
+    max-width: 40%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.sprints-panel {
+    flex: 0 0 58%;
+    max-width: 58%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.panel-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.backlog-stories {
+    padding: 0.5rem;
+    min-height: 200px;
+}
+
+.sprint-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.sprint-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.sprint-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.sprint-title-row h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.sprint-dates {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.capacity-bar {
+    position: relative;
+    height: 22px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.capacity-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), #22c55e);
+    border-radius: 4px;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.capacity-fill.over-capacity {
+    background: linear-gradient(90deg, var(--danger), #ef4444);
+}
+
+.capacity-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.sprint-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sprint-stories {
+    padding: 0.5rem;
+    min-height: 60px;
+}
+
+.sprint-story-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: grab;
+    font-size: 0.85rem;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.sprint-story-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.sprint-story-item:active {
+    cursor: grabbing;
+}
+
+.sprint-story-item .story-title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sprint-story-item .badge {
+    flex-shrink: 0;
+}
+
+.story-parent-tag {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    background: var(--primary-light);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.sprint-creation-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.sprint-edit-form {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: #fefce8;
+}
+
+.sprint-form-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge-muted {
+    background: var(--secondary);
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+}
+
+/* SortableJS ghost styling */
+.sortable-ghost {
+    opacity: 0.4;
+    background: var(--primary-light);
+    border: 2px dashed var(--primary);
+}
+
+.sortable-chosen {
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* Responsive sprint layout */
+@media (max-width: 900px) {
+    .sprint-layout {
+        flex-direction: column;
+    }
+
+    .backlog-panel,
+    .sprints-panel {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .sprint-creation-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

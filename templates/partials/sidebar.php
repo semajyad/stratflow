@@ -24,6 +24,6 @@
         <a href="/app/user-stories" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
             User Stories
         </a>
-        <a href="#" class="nav-link disabled" title="Coming Soon">AI Execution</a>
+        <a href="/app/sprints" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">Sprint Allocation</a>
     </nav>
 </aside>

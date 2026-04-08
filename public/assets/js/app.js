@@ -750,3 +750,168 @@ function escapeHtml(text) {
     div.appendChild(document.createTextNode(text));
     return div.innerHTML;
 }
+
+// ===========================
+// Sprint Allocation — Drag & Drop
+// ===========================
+
+document.addEventListener('DOMContentLoaded', function() {
+    var backlog = document.getElementById('backlog-stories');
+    if (backlog && typeof Sortable !== 'undefined') {
+        Sortable.create(backlog, {
+            group: 'sprint-allocation',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onRemove: function(evt) {
+                var storyId = evt.item.dataset.storyId;
+                var targetSprintId = evt.to.dataset.sprintId;
+                if (targetSprintId) {
+                    assignStoryToSprint(targetSprintId, storyId);
+                }
+            }
+        });
+
+        // Each sprint bucket
+        document.querySelectorAll('.sprint-stories').forEach(function(bucket) {
+            Sortable.create(bucket, {
+                group: 'sprint-allocation',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onAdd: function(evt) {
+                    var storyId = evt.item.dataset.storyId;
+                    var sprintId = bucket.dataset.sprintId;
+                    // Only call assign if the item came from backlog or another sprint
+                    // (onRemove on the source handles unassign from old sprint)
+                    assignStoryToSprint(sprintId, storyId);
+                    updateSprintCapacityBar(sprintId);
+                },
+                onRemove: function(evt) {
+                    var sprintId = bucket.dataset.sprintId;
+                    var storyId = evt.item.dataset.storyId;
+                    var targetSprintId = evt.to.dataset.sprintId;
+                    // If moving to backlog (no sprint ID), unassign
+                    if (!targetSprintId) {
+                        unassignStoryFromSprint(sprintId, storyId);
+                    }
+                    updateSprintCapacityBar(sprintId);
+                }
+            });
+        });
+    }
+});
+
+/**
+ * Assign a story to a sprint via AJAX POST.
+ *
+ * @param {string|number} sprintId Sprint ID
+ * @param {string|number} storyId  Story ID
+ */
+function assignStoryToSprint(sprintId, storyId) {
+    fetch('/app/sprints/assign', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            sprint_id: parseInt(sprintId),
+            story_id: parseInt(storyId)
+        })
+    }).then(function(res) { return res.json(); })
+      .then(function(data) {
+          if (data.sprint_load !== undefined) {
+              updateSprintCapacityBarFromLoad(sprintId, data.sprint_load);
+          }
+      });
+}
+
+/**
+ * Unassign a story from a sprint via AJAX POST.
+ *
+ * @param {string|number} sprintId Sprint ID
+ * @param {string|number} storyId  Story ID
+ */
+function unassignStoryFromSprint(sprintId, storyId) {
+    fetch('/app/sprints/unassign', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            sprint_id: parseInt(sprintId),
+            story_id: parseInt(storyId)
+        })
+    }).then(function(res) { return res.json(); })
+      .then(function(data) {
+          if (data.sprint_load !== undefined) {
+              updateSprintCapacityBarFromLoad(sprintId, data.sprint_load);
+          }
+      });
+}
+
+/**
+ * Recalculate capacity bar from DOM items (client-side fallback).
+ *
+ * @param {string|number} sprintId Sprint ID
+ */
+function updateSprintCapacityBar(sprintId) {
+    var bucket = document.getElementById('sprint-' + sprintId + '-stories');
+    if (!bucket) return;
+
+    var items = bucket.querySelectorAll('.sprint-story-item');
+    var total = 0;
+    items.forEach(function(item) {
+        var badge = item.querySelector('.badge');
+        if (badge) {
+            var pts = parseInt(badge.textContent);
+            if (!isNaN(pts)) total += pts;
+        }
+    });
+
+    var card = bucket.closest('.sprint-card');
+    var capacity = parseInt(card.dataset.capacity) || 1;
+    var fill = card.querySelector('.capacity-fill');
+    var label = card.querySelector('.capacity-label');
+
+    if (fill && label) {
+        fill.style.width = Math.min(100, (total / capacity) * 100) + '%';
+        label.textContent = total + ' / ' + capacity + ' pts';
+        fill.className = 'capacity-fill' + (total > capacity ? ' over-capacity' : '');
+    }
+}
+
+/**
+ * Update capacity bar from server-reported load value.
+ *
+ * @param {string|number} sprintId Sprint ID
+ * @param {number}        load     Total points from server
+ */
+function updateSprintCapacityBarFromLoad(sprintId, load) {
+    var card = document.querySelector('.sprint-card[data-sprint-id="' + sprintId + '"]');
+    if (!card) return;
+
+    var capacity = parseInt(card.dataset.capacity) || 1;
+    var fill = card.querySelector('.capacity-fill');
+    var label = card.querySelector('.capacity-label');
+
+    if (fill && label) {
+        fill.style.width = Math.min(100, (load / capacity) * 100) + '%';
+        label.textContent = load + ' / ' + capacity + ' pts';
+        fill.className = 'capacity-fill' + (load > capacity ? ' over-capacity' : '');
+    }
+}
+
+/**
+ * Toggle the inline edit form for a sprint card.
+ *
+ * @param {number} sprintId Sprint ID
+ */
+function toggleSprintEditForm(sprintId) {
+    var form = document.getElementById('sprint-edit-' + sprintId);
+    if (form) {
+        form.classList.toggle('hidden');
+    }
+}
