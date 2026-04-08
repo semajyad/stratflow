@@ -11,18 +11,33 @@ if (!$email) { echo "Pass ?email=xxx"; exit; }
 $user = \StratFlow\Models\User::findByEmail($db, $email);
 if (!$user) { echo "User not found: $email\n"; exit; }
 
-// Create set_password token
 $token = \StratFlow\Models\PasswordToken::create($db, (int)$user['id'], 'set_password');
 $url = rtrim($config['app']['url'], '/') . '/set-password/' . $token;
 
 echo "User: {$user['full_name']} ({$user['email']})\n";
-echo "Token: $token\n";
 echo "URL: $url\n\n";
 
-// Send via Resend
-$emailService = new \StratFlow\Services\EmailService($config);
-echo "Resend API key: " . (empty($config['mail']['resend_api_key']) ? 'NOT SET' : substr($config['mail']['resend_api_key'], 0, 10) . '...') . "\n";
-echo "From: {$config['mail']['from_email']}\n\n";
+$smtpUser = $config['mail']['smtp_user'] ?? '';
+$smtpPass = $config['mail']['smtp_pass'] ?? '';
+echo "SMTP user: " . ($smtpUser ? substr($smtpUser, 0, 5) . '...' : 'NOT SET') . "\n";
+echo "SMTP pass: " . ($smtpPass ? 'SET (' . strlen($smtpPass) . ' chars)' : 'NOT SET') . "\n\n";
 
-$sent = $emailService->sendWelcome($email, $user['full_name'], $url);
-echo "Result: " . ($sent ? "EMAIL SENT!" : "FAILED - check logs") . "\n";
+echo "Testing ssl://smtp.gmail.com:465...\n";
+$socket = @fsockopen('ssl://smtp.gmail.com', 465, $errno, $errstr, 15);
+if (!$socket) {
+    echo "SOCKET FAILED: $errstr ($errno)\n";
+} else {
+    echo "SOCKET OK\n";
+    $greeting = fgets($socket, 512);
+    echo "Greeting: $greeting\n";
+    fclose($socket);
+}
+
+echo "\n--- Full email send ---\n";
+$emailService = new \StratFlow\Services\EmailService($config);
+try {
+    $sent = $emailService->sendWelcome($email, $user['full_name'], $url);
+    echo "Result: " . ($sent ? "EMAIL SENT!" : "FAILED") . "\n";
+} catch (\Throwable $e) {
+    echo "EXCEPTION: " . $e->getMessage() . "\n";
+}
