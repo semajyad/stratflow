@@ -69,6 +69,12 @@ class CheckoutController
             return;
         }
 
+        // Dev mode: skip Stripe when keys are placeholders
+        if ($this->config['app']['debug'] && str_contains($this->config['stripe']['secret_key'], '_xxx')) {
+            $this->handleDevCheckout($priceId);
+            return;
+        }
+
         try {
             $appUrl     = rtrim($this->config['app']['url'], '/');
             $successUrl = $appUrl . '/success';
@@ -89,6 +95,32 @@ class CheckoutController
     // ===========================
     // HELPERS
     // ===========================
+
+    /**
+     * Dev mode: simulate a successful checkout without Stripe.
+     * Creates an org subscription and redirects to success page.
+     */
+    private function handleDevCheckout(string $priceId): void
+    {
+        $planType = ($priceId === ($this->config['stripe']['price_consultancy'] ?? '')) ? 'consultancy' : 'product';
+
+        // If user is logged in, use their org. Otherwise create a dev subscription for the seed org.
+        $orgId = $this->auth->check() ? $this->auth->orgId() : 1;
+
+        // Create or update subscription
+        $existing = \StratFlow\Models\Subscription::findByOrgId($this->db, $orgId);
+        if (!$existing) {
+            \StratFlow\Models\Subscription::create($this->db, [
+                'org_id' => $orgId,
+                'stripe_subscription_id' => 'dev_sub_' . time(),
+                'plan_type' => $planType,
+                'status' => 'active',
+                'started_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $this->response->redirect('/success');
+    }
 
     /**
      * Map a product_type string to [priceId, checkoutMode].

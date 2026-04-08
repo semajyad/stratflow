@@ -5,7 +5,7 @@
  * Static data-access methods for the `subscriptions` table.
  * All methods accept a Database instance and use prepared statements.
  *
- * Columns: id, organisation_id, stripe_subscription_id, plan_type, status, created_at, updated_at
+ * Columns: id, org_id, stripe_subscription_id, plan_type, status, created_at, updated_at
  */
 
 declare(strict_types=1);
@@ -20,19 +20,20 @@ class Subscription
      * Insert a new subscription row and return its new ID.
      *
      * @param Database $db   Database instance
-     * @param array    $data Associative array: organisation_id, stripe_subscription_id, plan_type, status
+     * @param array    $data Associative array: org_id, stripe_subscription_id, plan_type, status
      * @return int           ID of the inserted row
      */
     public static function create(Database $db, array $data): int
     {
         $db->query(
-            "INSERT INTO subscriptions (organisation_id, stripe_subscription_id, plan_type, status)
-             VALUES (:organisation_id, :stripe_subscription_id, :plan_type, :status)",
+            "INSERT INTO subscriptions (org_id, stripe_subscription_id, plan_type, status, started_at)
+             VALUES (:org_id, :stripe_subscription_id, :plan_type, :status, :started_at)",
             [
-                ':organisation_id'         => $data['organisation_id'],
+                ':org_id'                  => $data['org_id'],
                 ':stripe_subscription_id'  => $data['stripe_subscription_id'],
                 ':plan_type'               => $data['plan_type'],
                 ':status'                  => $data['status'] ?? 'active',
+                ':started_at'              => $data['started_at'] ?? date('Y-m-d H:i:s'),
             ]
         );
 
@@ -49,7 +50,7 @@ class Subscription
     public static function findByOrgId(Database $db, int $orgId): ?array
     {
         $stmt = $db->query(
-            "SELECT * FROM subscriptions WHERE organisation_id = :org_id ORDER BY id DESC LIMIT 1",
+            "SELECT * FROM subscriptions WHERE org_id = :org_id ORDER BY id DESC LIMIT 1",
             [':org_id' => $orgId]
         );
 
@@ -106,7 +107,7 @@ class Subscription
     {
         $stmt = $db->query(
             "SELECT user_seat_limit FROM subscriptions
-             WHERE organisation_id = :org_id AND status = 'active'
+             WHERE org_id = :org_id AND status = 'active'
              ORDER BY id DESC LIMIT 1",
             [':org_id' => $orgId]
         );
@@ -126,7 +127,7 @@ class Subscription
     {
         $stmt = $db->query(
             "SELECT has_evaluation_board FROM subscriptions
-             WHERE organisation_id = :org_id AND status = 'active'
+             WHERE org_id = :org_id AND status = 'active'
              ORDER BY id DESC LIMIT 1",
             [':org_id' => $orgId]
         );

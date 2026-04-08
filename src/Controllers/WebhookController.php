@@ -123,7 +123,7 @@ class WebhookController
         // Create the subscription record
         if (!empty($stripeSubId)) {
             Subscription::create($this->db, [
-                'organisation_id'        => $orgId,
+                'org_id'                 => $orgId,
                 'stripe_subscription_id' => $stripeSubId,
                 'plan_type'              => $planType,
                 'status'                 => 'active',

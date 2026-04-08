@@ -11,7 +11,7 @@
         <?php require __DIR__ . '/../partials/sidebar.php'; ?>
         <div class="app-main">
             <header class="app-topbar">
-                <button class="sidebar-toggle" id="sidebar-toggle">&#9776;</button>
+                <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
                 <div class="topbar-right">
                     <span class="user-name"><?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></span>
                     <form method="POST" action="/logout" class="inline-form">

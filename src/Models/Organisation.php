@@ -168,7 +168,7 @@ class Organisation
 
         // Subscriptions
         $stmt = $db->query(
-            "SELECT * FROM subscriptions WHERE organisation_id = :org_id",
+            "SELECT * FROM subscriptions WHERE org_id = :org_id",
             [':org_id' => $id]
         );
         $org['subscriptions'] = $stmt->fetchAll();
