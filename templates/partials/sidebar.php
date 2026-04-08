@@ -2,11 +2,19 @@
 // Build project query string if we're in a project context
 $pid = isset($project) ? (int) $project['id'] : 0;
 $pq = $pid ? "?project_id={$pid}" : '';
+// Persist last project for home page "Continue Working" section
+if ($pid) { $_SESSION['_last_project_id'] = $pid; }
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <a href="/app/home">StratFlow</a>
     </div>
+    <?php if ($pid && isset($project)): ?>
+    <div class="sidebar-project">
+        <span class="sidebar-project-label">Current Project</span>
+        <span class="sidebar-project-name"><?= htmlspecialchars($project['name']) ?></span>
+    </div>
+    <?php endif; ?>
     <nav class="sidebar-nav">
         <a href="/app/home" class="nav-link <?= ($active_page ?? '') === 'home' ? 'active' : '' ?>">
             Home

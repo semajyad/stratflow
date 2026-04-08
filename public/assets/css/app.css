@@ -238,6 +238,30 @@ main.container {
     letter-spacing: -0.025em;
 }
 
+.sidebar-project {
+    padding: 0.625rem 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-project-label {
+    display: block;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.sidebar-project-name {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .sidebar-nav {
     flex: 1;
     padding: 1rem 0;

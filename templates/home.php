@@ -22,6 +22,33 @@
 </div>
 
 <!-- ===========================
+     Continue Working
+     =========================== -->
+<?php
+$lastProjectId = $_SESSION['_last_project_id'] ?? null;
+$lastProject = null;
+if ($lastProjectId && !empty($projects)) {
+    foreach ($projects as $p) {
+        if ((int)$p['id'] === (int)$lastProjectId) {
+            $lastProject = $p;
+            break;
+        }
+    }
+}
+?>
+<?php if ($lastProject): ?>
+<section class="card mb-4" style="border-left: 4px solid var(--primary);">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem;">
+        <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Continue Working On</span>
+            <h3 style="margin: 0.25rem 0 0; font-size: 1.125rem;"><?= htmlspecialchars($lastProject['name']) ?></h3>
+        </div>
+        <a href="/app/upload?project_id=<?= (int) $lastProject['id'] ?>" class="btn btn-primary">Resume Project</a>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
      Your Projects
      =========================== -->
 <section class="card">
