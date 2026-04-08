@@ -25,6 +25,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/login',  'AuthController@login',  ['csrf']);
     $router->add('POST', '/logout', 'AuthController@logout', ['csrf', 'auth']);
 
+    // Password reset flow
+    $router->add('GET',  '/forgot-password',      'AuthController@showForgotPassword');
+    $router->add('POST', '/forgot-password',      'AuthController@sendResetEmail',  ['csrf']);
+    $router->add('GET',  '/set-password/{token}', 'AuthController@showSetPassword');
+    $router->add('POST', '/set-password/{token}', 'AuthController@setPassword',     ['csrf']);
+
     // App — authenticated pages
     $router->add('GET',  '/app/home',     'HomeController@index',         ['auth']);
     $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'csrf']);

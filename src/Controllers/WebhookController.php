@@ -21,7 +21,10 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Organisation;
+use StratFlow\Models\PasswordToken;
 use StratFlow\Models\Subscription;
+use StratFlow\Models\User;
+use StratFlow\Services\EmailService;
 use StratFlow\Services\StripeService;
 
 class WebhookController
@@ -128,6 +131,30 @@ class WebhookController
                 'plan_type'              => $planType,
                 'status'                 => 'active',
             ]);
+        }
+
+        // Create the first user (org admin) with a welcome email
+        if (!empty($customerEmail)) {
+            $existingUser = User::findByEmail($this->db, $customerEmail);
+
+            if ($existingUser === null) {
+                $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+                $displayName    = explode('@', $customerEmail)[0];
+
+                $newUserId = User::create($this->db, [
+                    'org_id'        => $orgId,
+                    'full_name'     => $displayName,
+                    'email'         => $customerEmail,
+                    'password_hash' => $randomPassword,
+                    'role'          => 'org_admin',
+                ]);
+
+                $token          = PasswordToken::create($this->db, $newUserId, 'set_password');
+                $setPasswordUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
+
+                $emailService = new EmailService($this->config);
+                $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
+            }
         }
     }
 

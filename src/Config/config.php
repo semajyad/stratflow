@@ -55,6 +55,10 @@ return [
         'price_user_pack' => $_ENV['STRIPE_PRICE_USER_PACK'] ?? '',
         'price_evaluation_board' => $_ENV['STRIPE_PRICE_EVAL_BOARD'] ?? '',
     ],
+    'mail' => [
+        'from_name'  => $_ENV['MAIL_FROM_NAME'] ?? 'StratFlow',
+        'from_email' => $_ENV['MAIL_FROM_EMAIL'] ?? 'noreply@stratflow.app',
+    ],
     'upload' => [
         'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 52428800),
         'allowed_types' => ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],

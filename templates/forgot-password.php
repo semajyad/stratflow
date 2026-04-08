@@ -1,9 +1,11 @@
 <?php
 /**
- * Login Template
+ * Forgot Password Template
  *
- * Centered login card with email/password fields, CSRF protection,
- * and an error message area for failed authentication attempts.
+ * Simple form asking for an email address to receive a password reset link.
+ * Uses the public layout (no authentication required).
+ *
+ * Variables: $csrf_token (string), $success (bool|null), $error (string|null)
  */
 ?>
 
@@ -12,12 +14,12 @@
 
         <div class="auth-card-header">
             <h1 class="auth-logo">StratFlow</h1>
-            <p class="auth-subtitle">Sign in to your account</p>
+            <p class="auth-subtitle">Reset your password</p>
         </div>
 
-        <?php if (!empty($flash_message)): ?>
+        <?php if (!empty($success)): ?>
             <div class="flash-message flash-message--success" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
-                <?= htmlspecialchars($flash_message) ?>
+                If an account exists with that email, a password reset link has been sent. Please check your inbox.
             </div>
         <?php endif; ?>
 
@@ -27,7 +29,7 @@
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="/login" class="auth-form">
+        <form method="POST" action="/forgot-password" class="auth-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
             <div class="form-group">
@@ -43,27 +45,11 @@
                 >
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    class="form-control"
-                    placeholder="••••••••"
-                    required
-                >
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-
-            <div style="text-align: center; margin-top: 12px;">
-                <a href="/forgot-password" style="font-size: 14px; color: #64748b;">Forgot your password?</a>
-            </div>
+            <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
         </form>
 
         <div class="auth-card-footer">
-            <a href="/pricing">&larr; Back to Pricing</a>
+            <a href="/login">&larr; Back to Login</a>
         </div>
 
     </div>

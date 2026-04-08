@@ -144,10 +144,6 @@
                 <input type="email" name="email" class="form-input" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-input" required minlength="8">
-            </div>
-            <div class="form-group">
                 <label class="form-label">Role</label>
                 <select name="role" class="form-input">
                     <option value="user">User</option>
@@ -155,6 +151,7 @@
                 </select>
             </div>
         </div>
+        <p style="color: #64748b; font-size: 14px; margin-top: 8px;">A welcome email will be sent so the user can set their own password.</p>
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Create User</button>
         </div>

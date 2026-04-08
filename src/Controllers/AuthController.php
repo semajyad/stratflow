@@ -15,6 +15,9 @@ use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Models\PasswordToken;
+use StratFlow\Models\User;
+use StratFlow\Services\EmailService;
 
 class AuthController
 {
@@ -46,10 +49,11 @@ class AuthController
         }
 
         $this->response->render('login', [
-            'error' => $_SESSION['login_error'] ?? null,
+            'error'         => $_SESSION['login_error'] ?? null,
+            'flash_message' => $_SESSION['flash_message'] ?? null,
         ]);
 
-        unset($_SESSION['login_error']);
+        unset($_SESSION['login_error'], $_SESSION['flash_message']);
     }
 
     /**
@@ -88,6 +92,123 @@ class AuthController
     public function logout(): void
     {
         $this->auth->logout();
+        $this->response->redirect('/login');
+    }
+
+    // =========================================================================
+    // PASSWORD RESET FLOW
+    // =========================================================================
+
+    /**
+     * Show the forgot-password form.
+     *
+     * GET /forgot-password — renders a simple email input form.
+     */
+    public function showForgotPassword(): void
+    {
+        if ($this->auth->check()) {
+            $this->response->redirect('/app/home');
+        }
+
+        $this->response->render('forgot-password', []);
+    }
+
+    /**
+     * Handle forgot-password form submission.
+     *
+     * POST /forgot-password — looks up the user by email, creates a reset token,
+     * and sends a password reset email. Always shows a success message regardless
+     * of whether the email exists (prevents user enumeration).
+     */
+    public function sendResetEmail(): void
+    {
+        $email = trim((string) $this->request->post('email', ''));
+
+        // Always show success to prevent user enumeration
+        $user = User::findByEmail($this->db, $email);
+
+        if ($user && $user['is_active']) {
+            $token = PasswordToken::create($this->db, (int) $user['id'], 'reset_password');
+            $resetUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
+
+            $emailService = new EmailService($this->config);
+            $emailService->sendPasswordReset($email, $user['full_name'], $resetUrl);
+        }
+
+        $this->response->render('forgot-password', [
+            'success' => true,
+        ]);
+    }
+
+    /**
+     * Show the set-password form for a given token.
+     *
+     * GET /set-password/{token} — validates the token and renders the
+     * password input form if valid, or an error message if expired/invalid.
+     *
+     * @param string $token The password token from the URL
+     */
+    public function showSetPassword(string $token): void
+    {
+        $tokenRow = PasswordToken::findByToken($this->db, $token);
+
+        $this->response->render('set-password', [
+            'token'       => $token,
+            'token_valid' => $tokenRow !== null,
+        ]);
+    }
+
+    /**
+     * Process the set-password form submission.
+     *
+     * POST /set-password/{token} — validates the token, checks password
+     * requirements (min 8 chars, confirmation match), updates the user's
+     * password hash, marks the token as used, and redirects to login.
+     *
+     * @param string $token The password token from the URL
+     */
+    public function setPassword(string $token): void
+    {
+        $tokenRow = PasswordToken::findByToken($this->db, $token);
+
+        if ($tokenRow === null) {
+            $this->response->render('set-password', [
+                'token'       => $token,
+                'token_valid' => false,
+            ]);
+            return;
+        }
+
+        $password     = (string) $this->request->post('password', '');
+        $confirmation = (string) $this->request->post('password_confirmation', '');
+
+        if (strlen($password) < 8) {
+            $this->response->render('set-password', [
+                'token'       => $token,
+                'token_valid' => true,
+                'error'       => 'Password must be at least 8 characters.',
+            ]);
+            return;
+        }
+
+        if ($password !== $confirmation) {
+            $this->response->render('set-password', [
+                'token'       => $token,
+                'token_valid' => true,
+                'error'       => 'Passwords do not match.',
+            ]);
+            return;
+        }
+
+        // Update user password and mark token as used
+        User::update($this->db, (int) $tokenRow['user_id'], [
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        ]);
+
+        PasswordToken::markUsed($this->db, (int) $tokenRow['id']);
+
+        $_SESSION['login_error'] = null;
+        $_SESSION['flash_message'] = 'Your password has been set. You can now sign in.';
         $this->response->redirect('/login');
     }
 }

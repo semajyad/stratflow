@@ -18,10 +18,12 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Organisation;
+use StratFlow\Models\PasswordToken;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\Team;
 use StratFlow\Models\TeamMember;
 use StratFlow\Models\User;
+use StratFlow\Services\EmailService;
 use StratFlow\Services\StripeService;
 
 class AdminController
@@ -106,7 +108,9 @@ class AdminController
     /**
      * Create a new user in the organisation.
      *
-     * Validates seat limit, email uniqueness, and password length.
+     * Validates seat limit and email uniqueness. Generates a random password
+     * (not shared), creates a set_password token, and sends a welcome email
+     * so the user can set their own password.
      */
     public function createUser(): void
     {
@@ -125,18 +129,11 @@ class AdminController
 
         $email    = trim((string) $this->request->post('email', ''));
         $fullName = trim((string) $this->request->post('full_name', ''));
-        $password = (string) $this->request->post('password', '');
         $role     = (string) $this->request->post('role', 'user');
 
         // Validate
-        if ($fullName === '' || $email === '' || $password === '') {
-            $_SESSION['flash_error'] = 'All fields are required.';
-            $this->response->redirect('/app/admin/users');
-            return;
-        }
-
-        if (strlen($password) < 8) {
-            $_SESSION['flash_error'] = 'Password must be at least 8 characters.';
+        if ($fullName === '' || $email === '') {
+            $_SESSION['flash_error'] = 'Name and email are required.';
             $this->response->redirect('/app/admin/users');
             return;
         }
@@ -153,15 +150,25 @@ class AdminController
             return;
         }
 
-        User::create($this->db, [
+        // Generate a random password hash (user will never know this password)
+        $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+
+        $newUserId = User::create($this->db, [
             'org_id'        => $orgId,
             'full_name'     => $fullName,
             'email'         => $email,
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_hash' => $randomPassword,
             'role'          => $role,
         ]);
 
-        $_SESSION['flash_message'] = 'User "' . $fullName . '" created successfully.';
+        // Create set_password token and send welcome email
+        $token = PasswordToken::create($this->db, $newUserId, 'set_password');
+        $setPasswordUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
+
+        $emailService = new EmailService($this->config);
+        $emailService->sendWelcome($email, $fullName, $setPasswordUrl);
+
+        $_SESSION['flash_message'] = 'User created. A welcome email has been sent to ' . $email . '.';
         $this->response->redirect('/app/admin/users');
     }
 
