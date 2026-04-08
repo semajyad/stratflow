@@ -11,6 +11,11 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Fix MPM: disable prefork, enable event (or just ensure only one is loaded)
+RUN a2dismod mpm_event 2>/dev/null || true \
+    && a2dismod mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -26,19 +31,19 @@ RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/Allo
 WORKDIR /var/www/html
 COPY . .
 
+# Fix line endings on shell scripts (Windows CRLF -> LF)
+RUN sed -i 's/\r$//' scripts/*.sh 2>/dev/null || true
+
 # Install production deps
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Create uploads directory
-RUN mkdir -p public/uploads && chown -R www-data:www-data public/uploads
+# Create uploads directory and set permissions
+RUN mkdir -p public/uploads \
+    && chown -R www-data:www-data /var/www/html
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html
+# Make entrypoint executable
+RUN chmod +x scripts/docker-entrypoint.sh
 
 EXPOSE 80
 
-# Startup script: configure port, init DB, start Apache
-COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-CMD ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["scripts/docker-entrypoint.sh"]

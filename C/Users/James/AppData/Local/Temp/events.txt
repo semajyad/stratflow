@@ -1,0 +1,457 @@
+[00:00:00.011675650 / 00:00:00.011675650] [2540176 bytes] PHPUnit Started (PHPUnit 11.5.55 using PHP 8.4.19 (cli) on Linux)
+[00:00:00.480435600 / 00:00:00.468759950] [4340888 bytes] Test Runner Configured
+[00:00:00.789469936 / 00:00:00.309034336] [4604776 bytes] Bootstrap Finished (/var/www/html/tests/bootstrap.php)
+[00:00:01.346079581 / 00:00:00.556609645] [5160456 bytes] Event Facade Sealed
+[00:00:01.699588411 / 00:00:00.353508830] [7271424 bytes] Test Runner Triggered Deprecation (Metadata found in doc-comment for class StratFlow\Tests\Unit\Services\GeminiServiceTest. Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.)
+[00:00:01.751488001 / 00:00:00.051899590] [7497536 bytes] Test Suite Loaded (61 tests)
+[00:00:01.776537892 / 00:00:00.025049891] [7618696 bytes] Test Runner Started
+[00:00:01.792916492 / 00:00:00.016378600] [7618696 bytes] Test Suite Sorted
+[00:00:01.808538392 / 00:00:00.015621900] [7618696 bytes] Test Runner Execution Started (61 tests)
+[00:00:01.812009417 / 00:00:00.003471025] [7618696 bytes] Test Suite Started (/var/www/html/tests/phpunit.xml, 61 tests)
+[00:00:01.820155842 / 00:00:00.008146425] [7618696 bytes] Test Suite Started (unit, 51 tests)
+[00:00:01.839454062 / 00:00:00.019298220] [7618696 bytes] Test Suite Started (StratFlow\Tests\Unit\Core\CSRFTest, 9 tests)
+[00:00:01.907163788 / 00:00:00.067709726] [8456936 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsNonEmptyString)
+[00:00:01.912285479 / 00:00:00.005121691] [8146616 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsNonEmptyString)
+[00:00:02.397167111 / 00:00:00.484881632] [8872472 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsNonEmptyString)
+[00:00:02.475487133 / 00:00:00.078320022] [8993120 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsNonEmptyString)
+[00:00:02.485878782 / 00:00:00.010391649] [8993192 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenIs64HexChars)
+[00:00:02.489807383 / 00:00:00.003928601] [8966216 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenIs64HexChars)
+[00:00:02.513747555 / 00:00:00.023940172] [9027560 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenIs64HexChars)
+[00:00:02.518475319 / 00:00:00.004727764] [9027560 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenIs64HexChars)
+[00:00:02.528673148 / 00:00:00.010197829] [9027560 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsDifferentValuesEachCall)
+[00:00:02.539403620 / 00:00:00.010730472] [9000128 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsDifferentValuesEachCall)
+[00:00:02.548538008 / 00:00:00.009134388] [9005368 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsDifferentValuesEachCall)
+[00:00:02.558789559 / 00:00:00.010251551] [9005368 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testGenerateTokenReturnsDifferentValuesEachCall)
+[00:00:02.568893953 / 00:00:00.010104394] [9005368 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsTrueForCorrectToken)
+[00:00:02.580553177 / 00:00:00.011659224] [8999400 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsTrueForCorrectToken)
+[00:00:02.598648572 / 00:00:00.018095395] [9045288 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsTrueForCorrectToken)
+[00:00:02.602740135 / 00:00:00.004091563] [9045288 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsTrueForCorrectToken)
+[00:00:02.612488103 / 00:00:00.009747968] [9045288 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForWrongToken)
+[00:00:02.623365233 / 00:00:00.010877130] [9000632 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForWrongToken)
+[00:00:02.640051072 / 00:00:00.016685839] [9046536 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForWrongToken)
+[00:00:02.645028042 / 00:00:00.004976970] [9046536 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForWrongToken)
+[00:00:02.654540088 / 00:00:00.009512046] [9046536 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForEmptyToken)
+[00:00:02.664606077 / 00:00:00.010065989] [9001872 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForEmptyToken)
+[00:00:02.674547206 / 00:00:00.009941129] [9007232 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForEmptyToken)
+[00:00:02.684731576 / 00:00:00.010184370] [9007232 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseForEmptyToken)
+[00:00:02.695371360 / 00:00:00.010639784] [9007232 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseWhenNoTokenGenerated)
+[00:00:02.705805481 / 00:00:00.010434121] [9001144 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseWhenNoTokenGenerated)
+[00:00:02.716630258 / 00:00:00.010824777] [9005440 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseWhenNoTokenGenerated)
+[00:00:02.728067975 / 00:00:00.011437717] [9005440 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testValidateTokenReturnsFalseWhenNoTokenGenerated)
+[00:00:02.739201610 / 00:00:00.011133635] [9005440 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenGeneratesTokenIfNoneExists)
+[00:00:02.749717508 / 00:00:00.010515898] [9000416 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenGeneratesTokenIfNoneExists)
+[00:00:02.762124157 / 00:00:00.012406649] [9005480 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenGeneratesTokenIfNoneExists)
+[00:00:02.773449084 / 00:00:00.011324927] [9005480 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenGeneratesTokenIfNoneExists)
+[00:00:02.783147469 / 00:00:00.009698385] [9005480 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenReturnsSameTokenOnSubsequentCalls)
+[00:00:02.793686179 / 00:00:00.010538710] [8999688 bytes] Test Prepared (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenReturnsSameTokenOnSubsequentCalls)
+[00:00:02.803858013 / 00:00:00.010171834] [9005424 bytes] Test Passed (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenReturnsSameTokenOnSubsequentCalls)
+[00:00:02.814992433 / 00:00:00.011134420] [9005424 bytes] Test Finished (StratFlow\Tests\Unit\Core\CSRFTest::testGetTokenReturnsSameTokenOnSubsequentCalls)
+[00:00:02.825660089 / 00:00:00.010667656] [9005424 bytes] Test Suite Finished (StratFlow\Tests\Unit\Core\CSRFTest, 9 tests)
+[00:00:02.835444873 / 00:00:00.009784784] [9005424 bytes] Test Suite Started (StratFlow\Tests\Unit\Core\DatabaseTest, 7 tests)
+[00:00:02.846802629 / 00:00:00.011357756] [9034120 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testConnectionSucceeds)
+[00:00:02.856751693 / 00:00:00.009949064] [8999792 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testConnectionSucceeds)
+[00:00:02.884914590 / 00:00:00.028162897] [9095672 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testConnectionSucceeds)
+[00:00:02.888634230 / 00:00:00.003719640] [9095672 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testConnectionSucceeds)
+[00:00:02.899199400 / 00:00:00.010565170] [9095672 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testGetPdoReturnsPdoInstance)
+[00:00:02.909799243 / 00:00:00.010599843] [9052552 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testGetPdoReturnsPdoInstance)
+[00:00:02.921217224 / 00:00:00.011417981] [9095504 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testGetPdoReturnsPdoInstance)
+[00:00:02.931256754 / 00:00:00.010039530] [9095504 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testGetPdoReturnsPdoInstance)
+[00:00:02.940928455 / 00:00:00.009671701] [9095504 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryReturnsStatement)
+[00:00:02.951398123 / 00:00:00.010469668] [9051808 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryReturnsStatement)
+[00:00:02.963929776 / 00:00:00.012531653] [9094760 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryReturnsStatement)
+[00:00:02.972396543 / 00:00:00.008466767] [9094760 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryReturnsStatement)
+[00:00:02.983915883 / 00:00:00.011519340] [9094760 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryFetchesExpectedRow)
+[00:00:02.994008350 / 00:00:00.010092467] [9051064 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryFetchesExpectedRow)
+[00:00:03.012869916 / 00:00:00.018861566] [9117608 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryFetchesExpectedRow)
+[00:00:03.016884989 / 00:00:00.004015073] [9117608 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryFetchesExpectedRow)
+[00:00:03.027585275 / 00:00:00.010700286] [9117608 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryWithBoundParams)
+[00:00:03.037852222 / 00:00:00.010266947] [9067960 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryWithBoundParams)
+[00:00:03.049738679 / 00:00:00.011886457] [9110912 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryWithBoundParams)
+[00:00:03.058489017 / 00:00:00.008750338] [9110912 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryWithBoundParams)
+[00:00:03.069074876 / 00:00:00.010585859] [9110912 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryAgainstRealTable)
+[00:00:03.081248733 / 00:00:00.012173857] [9067216 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryAgainstRealTable)
+[00:00:03.106573802 / 00:00:00.025325069] [9152496 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryAgainstRealTable)
+[00:00:03.110833870 / 00:00:00.004260068] [9152496 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testQueryAgainstRealTable)
+[00:00:03.121227033 / 00:00:00.010393163] [9152496 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\DatabaseTest::testInvalidSqlThrowsException)
+[00:00:03.131645391 / 00:00:00.010418358] [9071088 bytes] Test Prepared (StratFlow\Tests\Unit\Core\DatabaseTest::testInvalidSqlThrowsException)
+[00:00:03.160932732 / 00:00:00.029287341] [9166712 bytes] Test Passed (StratFlow\Tests\Unit\Core\DatabaseTest::testInvalidSqlThrowsException)
+[00:00:03.165296908 / 00:00:00.004364176] [9166712 bytes] Test Finished (StratFlow\Tests\Unit\Core\DatabaseTest::testInvalidSqlThrowsException)
+[00:00:03.175524011 / 00:00:00.010227103] [9166712 bytes] Test Suite Finished (StratFlow\Tests\Unit\Core\DatabaseTest, 7 tests)
+[00:00:03.185480432 / 00:00:00.009956421] [9166712 bytes] Test Suite Started (StratFlow\Tests\Unit\Core\RouterTest, 10 tests)
+[00:00:03.197252915 / 00:00:00.011772483] [9166712 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testAddRegistersRoute)
+[00:00:03.206636118 / 00:00:00.009383203] [9127640 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testAddRegistersRoute)
+[00:00:03.222821690 / 00:00:00.016185572] [9242616 bytes] Test Triggered PHPUnit Deprecation (StratFlow\Tests\Unit\Core\RouterTest::testAddRegistersRoute)
+                                                          Class StratFlow\Core\Request has a method named "method". Doubling classes that have a method named "method" is deprecated. Support for this will be removed in PHPUnit 12.
+[00:00:03.232709119 / 00:00:00.009887429] [9371176 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.241227855 / 00:00:00.008518736] [9371176 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.251610378 / 00:00:00.010382523] [9465784 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.255483246 / 00:00:00.003872868] [9465784 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.275261778 / 00:00:00.019778532] [9477680 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.292367067 / 00:00:00.017105289] [9506576 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testAddRegistersRoute)
+[00:00:03.296593415 / 00:00:00.004226348] [9506576 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testAddRegistersRoute)
+[00:00:03.308077090 / 00:00:00.011483675] [9506576 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testAddNormalisesMethodToUppercase)
+[00:00:03.317860055 / 00:00:00.009782965] [9458488 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testAddNormalisesMethodToUppercase)
+[00:00:03.329919480 / 00:00:00.012059425] [9459904 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.340128668 / 00:00:00.010209188] [9460256 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.351223288 / 00:00:00.011094620] [9460528 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.361215916 / 00:00:00.009992628] [9460736 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.371514824 / 00:00:00.010298908] [9460928 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.382240188 / 00:00:00.010725364] [9461120 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testAddNormalisesMethodToUppercase)
+[00:00:03.392500679 / 00:00:00.010260491] [9461120 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testAddNormalisesMethodToUppercase)
+[00:00:03.401720298 / 00:00:00.009219619] [9461120 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testAddStoresMiddleware)
+[00:00:03.411705726 / 00:00:00.009985428] [9457760 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testAddStoresMiddleware)
+[00:00:03.421529381 / 00:00:00.009823655] [9459160 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.432720384 / 00:00:00.011191003] [9459528 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.443306485 / 00:00:00.010586101] [9459800 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.454284509 / 00:00:00.010978024] [9460008 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.464746936 / 00:00:00.010462427] [9460200 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.475080734 / 00:00:00.010333798] [9460392 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testAddStoresMiddleware)
+[00:00:03.484138464 / 00:00:00.009057730] [9460392 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testAddStoresMiddleware)
+[00:00:03.495424599 / 00:00:00.011286135] [9460392 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testMultipleRoutesAreAllRegistered)
+[00:00:03.506015862 / 00:00:00.010591263] [9457016 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testMultipleRoutesAreAllRegistered)
+[00:00:03.515436219 / 00:00:00.009420357] [9458432 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.525657045 / 00:00:00.010220826] [9458784 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.537430166 / 00:00:00.011773121] [9459056 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.547606009 / 00:00:00.010175843] [9459264 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.558143196 / 00:00:00.010537187] [9459456 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.568168028 / 00:00:00.010024832] [9459648 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testMultipleRoutesAreAllRegistered)
+[00:00:03.578303313 / 00:00:00.010135285] [9459648 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testMultipleRoutesAreAllRegistered)
+[00:00:03.588238243 / 00:00:00.009934930] [9459648 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testStaticPatternBecomesExactRegex)
+[00:00:03.599502566 / 00:00:00.011264323] [9456288 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testStaticPatternBecomesExactRegex)
+[00:00:03.608932000 / 00:00:00.009429434] [9457704 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.619562578 / 00:00:00.010630578] [9458056 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.628715645 / 00:00:00.009153067] [9458328 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.639039763 / 00:00:00.010324118] [9458536 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.647658636 / 00:00:00.008618873] [9458728 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.657763862 / 00:00:00.010105226] [9458920 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testStaticPatternBecomesExactRegex)
+[00:00:03.667011002 / 00:00:00.009247140] [9458920 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testStaticPatternBecomesExactRegex)
+[00:00:03.676507092 / 00:00:00.009496090] [9458920 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testParamPlaceholderConvertsToNamedGroup)
+[00:00:03.685892427 / 00:00:00.009385335] [9455560 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testParamPlaceholderConvertsToNamedGroup)
+[00:00:03.695261444 / 00:00:00.009369017] [9456976 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.704751033 / 00:00:00.009489589] [9457328 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.713908876 / 00:00:00.009157843] [9457600 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.722924205 / 00:00:00.009015329] [9457808 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.733632754 / 00:00:00.010708549] [9458000 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.743444699 / 00:00:00.009811945] [9458192 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testParamPlaceholderConvertsToNamedGroup)
+[00:00:03.753778770 / 00:00:00.010334071] [9458192 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testParamPlaceholderConvertsToNamedGroup)
+[00:00:03.762831881 / 00:00:00.009053111] [9458192 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testMultipleParamsConvert)
+[00:00:03.772328866 / 00:00:00.009496985] [9454832 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testMultipleParamsConvert)
+[00:00:03.781765268 / 00:00:00.009436402] [9456232 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.792571122 / 00:00:00.010805854] [9456600 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.803247688 / 00:00:00.010676566] [9456872 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.814428069 / 00:00:00.011180381] [9457080 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.826515525 / 00:00:00.012087456] [9457272 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.837678693 / 00:00:00.011163168] [9457464 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testMultipleParamsConvert)
+[00:00:03.849520906 / 00:00:00.011842213] [9457464 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testMultipleParamsConvert)
+[00:00:03.862004277 / 00:00:00.012483371] [9457464 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testRegexMatchesConcreteUri)
+[00:00:03.875903210 / 00:00:00.013898933] [9454088 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testRegexMatchesConcreteUri)
+[00:00:03.887146263 / 00:00:00.011243053] [9455488 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.900095714 / 00:00:00.012949451] [9455856 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:03.911877271 / 00:00:00.011781557] [9456128 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:03.921935819 / 00:00:00.010058548] [9456336 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:03.933330275 / 00:00:00.011394456] [9456528 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:03.943461972 / 00:00:00.010131697] [9456720 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testRegexMatchesConcreteUri)
+[00:00:03.952785762 / 00:00:00.009323790] [9456720 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testRegexMatchesConcreteUri)
+[00:00:03.963455677 / 00:00:00.010669915] [9456720 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testRegexDoesNotMatchDeeperPath)
+[00:00:03.972601980 / 00:00:00.009146303] [9453344 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testRegexDoesNotMatchDeeperPath)
+[00:00:03.982155800 / 00:00:00.009553820] [9454744 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:03.992432968 / 00:00:00.010277168] [9455112 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:04.002497190 / 00:00:00.010064222] [9455384 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:04.012015562 / 00:00:00.009518372] [9455592 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:04.021872649 / 00:00:00.009857087] [9455784 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:04.031445456 / 00:00:00.009572807] [9455976 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testRegexDoesNotMatchDeeperPath)
+[00:00:04.040401225 / 00:00:00.008955769] [9455976 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testRegexDoesNotMatchDeeperPath)
+[00:00:04.048773185 / 00:00:00.008371960] [9455976 bytes] Test Preparation Started (StratFlow\Tests\Unit\Core\RouterTest::testRootPatternMatchesRoot)
+[00:00:04.058067130 / 00:00:00.009293945] [9452600 bytes] Test Prepared (StratFlow\Tests\Unit\Core\RouterTest::testRootPatternMatchesRoot)
+[00:00:04.067632069 / 00:00:00.009564939] [9454000 bytes] Mock Object Created (StratFlow\Core\Request)
+[00:00:04.077284780 / 00:00:00.009652711] [9454368 bytes] Mock Object Created (StratFlow\Core\Response)
+[00:00:04.087178392 / 00:00:00.009893612] [9454640 bytes] Mock Object Created (StratFlow\Core\Auth)
+[00:00:04.098262363 / 00:00:00.011083971] [9454848 bytes] Mock Object Created (StratFlow\Core\CSRF)
+[00:00:04.107457082 / 00:00:00.009194719] [9455040 bytes] Mock Object Created (StratFlow\Core\Database)
+[00:00:04.116583560 / 00:00:00.009126478] [9455232 bytes] Test Passed (StratFlow\Tests\Unit\Core\RouterTest::testRootPatternMatchesRoot)
+[00:00:04.125882498 / 00:00:00.009298938] [9455232 bytes] Test Finished (StratFlow\Tests\Unit\Core\RouterTest::testRootPatternMatchesRoot)
+[00:00:04.136520566 / 00:00:00.010638068] [9455232 bytes] Test Suite Finished (StratFlow\Tests\Unit\Core\RouterTest, 10 tests)
+[00:00:04.145654390 / 00:00:00.009133824] [9455232 bytes] Test Suite Started (StratFlow\Tests\Unit\Models\HLWorkItemTest, 11 tests)
+[00:00:04.370922830 / 00:00:00.225268440] [9505064 bytes] Before First Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::setUpBeforeClass)
+[00:00:04.377887450 / 00:00:00.006964620] [9505064 bytes] Before First Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::setUpBeforeClass
+[00:00:04.390088115 / 00:00:00.012200665] [9505064 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateReturnsPositiveId)
+[00:00:04.399214982 / 00:00:00.009126867] [9497968 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateReturnsPositiveId)
+[00:00:04.428291508 / 00:00:00.029076526] [9565456 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.431818258 / 00:00:00.003526750] [9565456 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.441558388 / 00:00:00.009740130] [9565456 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateReturnsPositiveId)
+[00:00:04.450057010 / 00:00:00.008498622] [9565456 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateReturnsPositiveId)
+[00:00:04.458913221 / 00:00:00.008856211] [9565456 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreatedItemCanBeFoundById)
+[00:00:04.468513614 / 00:00:00.009600393] [9516544 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreatedItemCanBeFoundById)
+[00:00:04.497561302 / 00:00:00.029047688] [9558696 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.502739962 / 00:00:00.005178660] [9558696 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.513794591 / 00:00:00.011054629] [9558696 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreatedItemCanBeFoundById)
+[00:00:04.524489180 / 00:00:00.010694589] [9558696 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreatedItemCanBeFoundById)
+[00:00:04.533559657 / 00:00:00.009070477] [9558696 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateWithOptionalFieldsStoredCorrectly)
+[00:00:04.542640118 / 00:00:00.009080461] [9517856 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateWithOptionalFieldsStoredCorrectly)
+[00:00:04.557422382 / 00:00:00.014782264] [9558640 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.561641634 / 00:00:00.004219252] [9558640 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.569738473 / 00:00:00.008096839] [9558640 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateWithOptionalFieldsStoredCorrectly)
+[00:00:04.578546095 / 00:00:00.008807622] [9558640 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testCreateWithOptionalFieldsStoredCorrectly)
+[00:00:04.587640620 / 00:00:00.009094525] [9558640 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByIdReturnsNullForMissingRecord)
+[00:00:04.596443252 / 00:00:00.008802632] [9517128 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByIdReturnsNullForMissingRecord)
+[00:00:04.606240155 / 00:00:00.009796903] [9557352 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.613697693 / 00:00:00.007457538] [9557352 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.624211495 / 00:00:00.010513802] [9557352 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByIdReturnsNullForMissingRecord)
+[00:00:04.633037261 / 00:00:00.008825766] [9557352 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByIdReturnsNullForMissingRecord)
+[00:00:04.641871009 / 00:00:00.008833748] [9557352 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsAllItems)
+[00:00:04.651458222 / 00:00:00.009587213] [9516400 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsAllItems)
+[00:00:04.673111316 / 00:00:00.021653094] [9558896 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.677697605 / 00:00:00.004586289] [9558896 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.686260149 / 00:00:00.008562544] [9558896 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsAllItems)
+[00:00:04.694225832 / 00:00:00.007965683] [9558896 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsAllItems)
+[00:00:04.703798795 / 00:00:00.009572963] [9558896 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdOrdersByPriority)
+[00:00:04.711897538 / 00:00:00.008098743] [9515672 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdOrdersByPriority)
+[00:00:04.733485227 / 00:00:00.021587689] [9558264 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.736750401 / 00:00:00.003265174] [9558264 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.745725625 / 00:00:00.008975224] [9558264 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdOrdersByPriority)
+[00:00:04.755395439 / 00:00:00.009669814] [9558264 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdOrdersByPriority)
+[00:00:04.764112778 / 00:00:00.008717339] [9558264 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsEmptyForUnknownProject)
+[00:00:04.773114882 / 00:00:00.009002104] [9514944 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsEmptyForUnknownProject)
+[00:00:04.784302452 / 00:00:00.011187570] [9555184 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.793996713 / 00:00:00.009694261] [9555184 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.802037396 / 00:00:00.008040683] [9555184 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsEmptyForUnknownProject)
+[00:00:04.811871668 / 00:00:00.009834272] [9555184 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testFindByProjectIdReturnsEmptyForUnknownProject)
+[00:00:04.820387483 / 00:00:00.008515815] [9555184 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateChangesTitle)
+[00:00:04.831883160 / 00:00:00.011495677] [9515512 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateChangesTitle)
+[00:00:04.850226842 / 00:00:00.018343682] [9556168 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.853733289 / 00:00:00.003506447] [9556168 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.861941688 / 00:00:00.008208399] [9556168 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateChangesTitle)
+[00:00:04.870543898 / 00:00:00.008602210] [9556168 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateChangesTitle)
+[00:00:04.879632813 / 00:00:00.009088915] [9556168 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateMultipleColumns)
+[00:00:04.888767746 / 00:00:00.009134933] [9514768 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateMultipleColumns)
+[00:00:04.906163586 / 00:00:00.017395840] [9555448 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.909383150 / 00:00:00.003219564] [9555448 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.919909729 / 00:00:00.010526579] [9555448 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateMultipleColumns)
+[00:00:04.930570822 / 00:00:00.010661093] [9555448 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testUpdateMultipleColumns)
+[00:00:04.940191346 / 00:00:00.009620524] [9555448 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteRemovesSingleItem)
+[00:00:04.950332759 / 00:00:00.010141413] [9514024 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteRemovesSingleItem)
+[00:00:04.967441000 / 00:00:00.017108241] [9554240 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:04.973044753 / 00:00:00.005603753] [9554240 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:04.981734453 / 00:00:00.008689700] [9554240 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteRemovesSingleItem)
+[00:00:04.991901894 / 00:00:00.010167441] [9554240 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteRemovesSingleItem)
+[00:00:05.001674351 / 00:00:00.009772457] [9554240 bytes] Test Preparation Started (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteByProjectIdRemovesAllItems)
+[00:00:05.010562114 / 00:00:00.008887763] [9513280 bytes] Test Prepared (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteByProjectIdRemovesAllItems)
+[00:00:05.030335205 / 00:00:00.019773091] [9553512 bytes] After Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown)
+[00:00:05.033626928 / 00:00:00.003291723] [9553512 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDown
+[00:00:05.043438280 / 00:00:00.009811352] [9553512 bytes] Test Passed (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteByProjectIdRemovesAllItems)
+[00:00:05.052920481 / 00:00:00.009482201] [9553512 bytes] Test Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest::testDeleteByProjectIdRemovesAllItems)
+[00:00:05.073086655 / 00:00:00.020166174] [9553512 bytes] After Last Test Method Called (StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDownAfterClass)
+[00:00:05.076796251 / 00:00:00.003709596] [9553512 bytes] After Last Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Models\HLWorkItemTest::tearDownAfterClass
+[00:00:05.085883226 / 00:00:00.009086975] [9553512 bytes] Test Suite Finished (StratFlow\Tests\Unit\Models\HLWorkItemTest, 11 tests)
+[00:00:05.095408378 / 00:00:00.009525152] [9553512 bytes] Test Suite Started (StratFlow\Tests\Unit\Services\FileProcessorTest, 10 tests)
+[00:00:05.104997126 / 00:00:00.009588748] [9553512 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidTxtFilePasses)
+[00:00:05.119182690 / 00:00:00.014185564] [9593064 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.122816077 / 00:00:00.003633387] [9593064 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.136013228 / 00:00:00.013197151] [9543248 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidTxtFilePasses)
+[00:00:05.145036722 / 00:00:00.009023494] [9544648 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidTxtFilePasses)
+[00:00:05.154464345 / 00:00:00.009427623] [9544728 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidTxtFilePasses)
+[00:00:05.163963380 / 00:00:00.009499035] [9544728 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidPdfFilePasses)
+[00:00:05.173613714 / 00:00:00.009650334] [9544728 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.183324858 / 00:00:00.009711144] [9544728 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.192928658 / 00:00:00.009603800] [9542504 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidPdfFilePasses)
+[00:00:05.202091155 / 00:00:00.009162497] [9543904 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidPdfFilePasses)
+[00:00:05.211262465 / 00:00:00.009171310] [9543984 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidPdfFilePasses)
+[00:00:05.220832201 / 00:00:00.009569736] [9543984 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidDocxFilePasses)
+[00:00:05.230840751 / 00:00:00.010008550] [9543984 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.240709291 / 00:00:00.009868540] [9543984 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.250890725 / 00:00:00.010181434] [9541760 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidDocxFilePasses)
+[00:00:05.259506152 / 00:00:00.008615427] [9543176 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidDocxFilePasses)
+[00:00:05.270216773 / 00:00:00.010710621] [9543240 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testValidDocxFilePasses)
+[00:00:05.279441771 / 00:00:00.009224998] [9543240 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedExtensionFails)
+[00:00:05.288353497 / 00:00:00.008911726] [9543240 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.298052719 / 00:00:00.009699222] [9543240 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.306856252 / 00:00:00.008803533] [9541032 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedExtensionFails)
+[00:00:05.323812610 / 00:00:00.016956358] [9604664 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedExtensionFails)
+[00:00:05.329537362 / 00:00:00.005724752] [9604664 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedExtensionFails)
+[00:00:05.340579129 / 00:00:00.011041767] [9604664 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testOversizedFileFails)
+[00:00:05.351032193 / 00:00:00.010453064] [9604664 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.362492558 / 00:00:00.011460365] [9604664 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.375933126 / 00:00:00.013440568] [9553152 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testOversizedFileFails)
+[00:00:05.389962760 / 00:00:00.014029634] [9554552 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testOversizedFileFails)
+[00:00:05.402067429 / 00:00:00.012104669] [9554632 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testOversizedFileFails)
+[00:00:05.412776435 / 00:00:00.010709006] [9554632 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testUploadErrorCodeFails)
+[00:00:05.425846498 / 00:00:00.013070063] [9554632 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.442437647 / 00:00:00.016591149] [9554632 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.452930402 / 00:00:00.010492755] [9552408 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testUploadErrorCodeFails)
+[00:00:05.466171024 / 00:00:00.013240622] [9553824 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testUploadErrorCodeFails)
+[00:00:05.478614621 / 00:00:00.012443597] [9553888 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testUploadErrorCodeFails)
+[00:00:05.493960233 / 00:00:00.015345612] [9553888 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedMimeTypeFails)
+[00:00:05.509122136 / 00:00:00.015161903] [9553888 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.520413079 / 00:00:00.011290943] [9553888 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.533777901 / 00:00:00.013364822] [9551680 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedMimeTypeFails)
+[00:00:05.545255075 / 00:00:00.011477174] [9553096 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedMimeTypeFails)
+[00:00:05.558675909 / 00:00:00.013420834] [9553176 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testDisallowedMimeTypeFails)
+[00:00:05.570045666 / 00:00:00.011369757] [9553176 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextFromTxtFixture)
+[00:00:05.581816626 / 00:00:00.011770960] [9553176 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.594516542 / 00:00:00.012699916] [9553176 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.605521251 / 00:00:00.011004709] [9550952 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextFromTxtFixture)
+[00:00:05.632478879 / 00:00:00.026957628] [9563384 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextFromTxtFixture)
+[00:00:05.637799259 / 00:00:00.005320380] [9563384 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextFromTxtFixture)
+[00:00:05.650037350 / 00:00:00.012238091] [9563384 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextReturnsEmptyForUnknownMime)
+[00:00:05.662789745 / 00:00:00.012752395] [9563384 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.677514094 / 00:00:00.014724349] [9563384 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.691203387 / 00:00:00.013689293] [9550224 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextReturnsEmptyForUnknownMime)
+[00:00:05.704138427 / 00:00:00.012935040] [9551672 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextReturnsEmptyForUnknownMime)
+[00:00:05.714413377 / 00:00:00.010274950] [9551752 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextReturnsEmptyForUnknownMime)
+[00:00:05.725699800 / 00:00:00.011286423] [9551752 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextForBinaryDocReturnsUnsupportedMessage)
+[00:00:05.737187379 / 00:00:00.011487579] [9551752 bytes] Before Test Method Called (StratFlow\Tests\Unit\Services\FileProcessorTest::setUp)
+[00:00:05.747811980 / 00:00:00.010624601] [9551752 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Unit\Services\FileProcessorTest::setUp
+[00:00:05.759227986 / 00:00:00.011416006] [9549512 bytes] Test Prepared (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextForBinaryDocReturnsUnsupportedMessage)
+[00:00:05.770931978 / 00:00:00.011703992] [9550992 bytes] Test Passed (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextForBinaryDocReturnsUnsupportedMessage)
+[00:00:05.782494060 / 00:00:00.011562082] [9551072 bytes] Test Finished (StratFlow\Tests\Unit\Services\FileProcessorTest::testExtractTextForBinaryDocReturnsUnsupportedMessage)
+[00:00:05.792785711 / 00:00:00.010291651] [9551072 bytes] Test Suite Finished (StratFlow\Tests\Unit\Services\FileProcessorTest, 10 tests)
+[00:00:05.805934927 / 00:00:00.013149216] [9551072 bytes] Test Suite Started (StratFlow\Tests\Unit\Services\GeminiServiceTest, 4 tests)
+[00:00:05.818510130 / 00:00:00.012575203] [9583160 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiated)
+[00:00:05.828643097 / 00:00:00.010132967] [9550536 bytes] Test Prepared (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiated)
+[00:00:05.844608977 / 00:00:00.015965880] [9689656 bytes] Test Passed (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiated)
+[00:00:05.850080880 / 00:00:00.005471903] [9689656 bytes] Test Finished (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiated)
+[00:00:05.860708015 / 00:00:00.010627135] [9689656 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiatedWithDifferentModels)
+[00:00:05.872563173 / 00:00:00.011855158] [9639024 bytes] Test Prepared (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiatedWithDifferentModels)
+[00:00:05.884054154 / 00:00:00.011490981] [9640504 bytes] Test Passed (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiatedWithDifferentModels)
+[00:00:05.895371161 / 00:00:00.011317007] [9640584 bytes] Test Finished (StratFlow\Tests\Unit\Services\GeminiServiceTest::testServiceCanBeInstantiatedWithDifferentModels)
+[00:00:05.905983531 / 00:00:00.010612370] [9640584 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateThrowsOnInvalidApiKey)
+[00:00:05.916575122 / 00:00:00.010591591] [9638528 bytes] Test Prepared (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateThrowsOnInvalidApiKey)
+[00:00:06.247743305 / 00:00:00.331168183] [9685928 bytes] Test Passed (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateThrowsOnInvalidApiKey)
+[00:00:06.255494964 / 00:00:00.007751659] [9685928 bytes] Test Finished (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateThrowsOnInvalidApiKey)
+[00:00:06.265440311 / 00:00:00.009945347] [9685928 bytes] Test Preparation Started (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateJsonThrowsOnInvalidApiKey)
+[00:00:06.275561442 / 00:00:00.010121131] [9679952 bytes] Test Prepared (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateJsonThrowsOnInvalidApiKey)
+[00:00:06.608312632 / 00:00:00.332751190] [9727808 bytes] Test Passed (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateJsonThrowsOnInvalidApiKey)
+[00:00:06.613364833 / 00:00:00.005052201] [9727808 bytes] Test Finished (StratFlow\Tests\Unit\Services\GeminiServiceTest::testGenerateJsonThrowsOnInvalidApiKey)
+[00:00:06.623425278 / 00:00:00.010060445] [9727808 bytes] Test Suite Finished (StratFlow\Tests\Unit\Services\GeminiServiceTest, 4 tests)
+[00:00:06.633168564 / 00:00:00.009743286] [9727808 bytes] Test Suite Finished (unit, 51 tests)
+[00:00:06.644153659 / 00:00:00.010985095] [9727808 bytes] Test Suite Started (integration, 10 tests)
+[00:00:06.654130321 / 00:00:00.009976662] [9727808 bytes] Test Suite Started (StratFlow\Tests\Integration\AuthFlowTest, 10 tests)
+[00:00:06.665276580 / 00:00:00.011146259] [9759320 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testCorrectCredentialsReturnsTrue)
+[00:00:06.886954622 / 00:00:00.221678042] [9849632 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:06.891980827 / 00:00:00.005026205] [9849632 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:06.901158423 / 00:00:00.009177596] [9802920 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testCorrectCredentialsReturnsTrue)
+[00:00:07.111196477 / 00:00:00.210038054] [9844960 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:07.117672457 / 00:00:00.006475980] [9844960 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:07.128697058 / 00:00:00.011024601] [9844960 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testCorrectCredentialsReturnsTrue)
+[00:00:07.141858462 / 00:00:00.013161404] [9844960 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testCorrectCredentialsReturnsTrue)
+[00:00:07.152802973 / 00:00:00.010944511] [9844960 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testAfterSuccessfulLoginUserIsAuthenticated)
+[00:00:07.372376178 / 00:00:00.219573205] [9844960 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:07.378848232 / 00:00:00.006472054] [9844960 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:07.388636230 / 00:00:00.009787998] [9802232 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testAfterSuccessfulLoginUserIsAuthenticated)
+[00:00:07.601187300 / 00:00:00.212551070] [9844232 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:07.605787531 / 00:00:00.004600231] [9844232 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:07.615989532 / 00:00:00.010202001] [9844232 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testAfterSuccessfulLoginUserIsAuthenticated)
+[00:00:07.624967760 / 00:00:00.008978228] [9844232 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testAfterSuccessfulLoginUserIsAuthenticated)
+[00:00:07.635280007 / 00:00:00.010312247] [9844232 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testAuthenticatedUserHasCorrectEmail)
+[00:00:07.854727880 / 00:00:00.219447873] [9844232 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:07.862083593 / 00:00:00.007355713] [9844232 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:07.872833687 / 00:00:00.010750094] [9801504 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testAuthenticatedUserHasCorrectEmail)
+[00:00:08.085456343 / 00:00:00.212622656] [9843504 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:08.089230244 / 00:00:00.003773901] [9843504 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:08.098630786 / 00:00:00.009400542] [9843504 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testAuthenticatedUserHasCorrectEmail)
+[00:00:08.108493822 / 00:00:00.009863036] [9843504 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testAuthenticatedUserHasCorrectEmail)
+[00:00:08.118173057 / 00:00:00.009679235] [9843504 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testWrongPasswordReturnsFalse)
+[00:00:08.332188311 / 00:00:00.214015254] [9843504 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:08.335768618 / 00:00:00.003580307] [9843504 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:08.346255813 / 00:00:00.010487195] [9800776 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testWrongPasswordReturnsFalse)
+[00:00:08.559408540 / 00:00:00.213152727] [9840856 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:08.566133010 / 00:00:00.006724470] [9840856 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:08.576661307 / 00:00:00.010528297] [9840856 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testWrongPasswordReturnsFalse)
+[00:00:08.588084063 / 00:00:00.011422756] [9840856 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testWrongPasswordReturnsFalse)
+[00:00:08.597448250 / 00:00:00.009364187] [9840856 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testNonExistentUserReturnsFalse)
+[00:00:08.808057055 / 00:00:00.210608805] [9840856 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:08.812685424 / 00:00:00.004628369] [9840856 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:08.822387308 / 00:00:00.009701884] [9800032 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testNonExistentUserReturnsFalse)
+[00:00:08.839424689 / 00:00:00.017037381] [9839104 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:08.843304145 / 00:00:00.003879456] [9839104 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:08.853125719 / 00:00:00.009821574] [9839104 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testNonExistentUserReturnsFalse)
+[00:00:08.862877808 / 00:00:00.009752089] [9839104 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testNonExistentUserReturnsFalse)
+[00:00:08.871717121 / 00:00:00.008839313] [9839104 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testFailedLoginDoesNotSetSession)
+[00:00:09.082874710 / 00:00:00.211157589] [9839104 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:09.090105072 / 00:00:00.007230362] [9839104 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:09.099320370 / 00:00:00.009215298] [9799304 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testFailedLoginDoesNotSetSession)
+[00:00:09.310404253 / 00:00:00.211083883] [9839384 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:09.315662872 / 00:00:00.005258619] [9839384 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:09.327263469 / 00:00:00.011600597] [9839384 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testFailedLoginDoesNotSetSession)
+[00:00:09.337320913 / 00:00:00.010057444] [9839384 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testFailedLoginDoesNotSetSession)
+[00:00:09.347156619 / 00:00:00.009835706] [9839384 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testFreshIpIsNotRateLimited)
+[00:00:09.564676927 / 00:00:00.217520308] [9839384 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:09.572758354 / 00:00:00.008081427] [9839384 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:09.582136629 / 00:00:00.009378275] [9798576 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testFreshIpIsNotRateLimited)
+[00:00:09.599195675 / 00:00:00.017059046] [9837392 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:09.603325005 / 00:00:00.004129330] [9837392 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:09.611842047 / 00:00:00.008517042] [9837392 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testFreshIpIsNotRateLimited)
+[00:00:09.621510275 / 00:00:00.009668228] [9837392 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testFreshIpIsNotRateLimited)
+[00:00:09.630840650 / 00:00:00.009330375] [9837392 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testIpIsRateLimitedAfterFiveFailures)
+[00:00:09.845138522 / 00:00:00.214297872] [9837392 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:09.852147656 / 00:00:00.007009134] [9837392 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:09.861888589 / 00:00:00.009740933] [9797832 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testIpIsRateLimitedAfterFiveFailures)
+[00:00:09.895873418 / 00:00:00.033984829] [9836648 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:09.899640863 / 00:00:00.003767445] [9836648 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:09.911018731 / 00:00:00.011377868] [9836648 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testIpIsRateLimitedAfterFiveFailures)
+[00:00:09.921808817 / 00:00:00.010790086] [9836648 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testIpIsRateLimitedAfterFiveFailures)
+[00:00:09.929831563 / 00:00:00.008022746] [9836648 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testFourFailuresDoNotTriggerRateLimit)
+[00:00:10.137834300 / 00:00:00.208002737] [9836648 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:10.143412871 / 00:00:00.005578571] [9836648 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:10.152596407 / 00:00:00.009183536] [9797104 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testFourFailuresDoNotTriggerRateLimit)
+[00:00:10.181320487 / 00:00:00.028724080] [9835920 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:10.184711312 / 00:00:00.003390825] [9835920 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:10.193956269 / 00:00:00.009244957] [9835920 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testFourFailuresDoNotTriggerRateLimit)
+[00:00:10.202998511 / 00:00:00.009042242] [9835920 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testFourFailuresDoNotTriggerRateLimit)
+[00:00:10.212536283 / 00:00:00.009537772] [9835920 bytes] Test Preparation Started (StratFlow\Tests\Integration\AuthFlowTest::testLogoutClearsAuthState)
+[00:00:10.420637712 / 00:00:00.208101429] [9835920 bytes] Before Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::setUp)
+[00:00:10.424947537 / 00:00:00.004309825] [9835920 bytes] Before Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::setUp
+[00:00:10.438118271 / 00:00:00.013170734] [9796376 bytes] Test Prepared (StratFlow\Tests\Integration\AuthFlowTest::testLogoutClearsAuthState)
+[00:00:10.651143668 / 00:00:00.213025397] [9838376 bytes] After Test Method Called (StratFlow\Tests\Integration\AuthFlowTest::tearDown)
+[00:00:10.657739001 / 00:00:00.006595333] [9838376 bytes] After Test Method Finished:
+                                                          - StratFlow\Tests\Integration\AuthFlowTest::tearDown
+[00:00:10.668080410 / 00:00:00.010341409] [9838376 bytes] Test Passed (StratFlow\Tests\Integration\AuthFlowTest::testLogoutClearsAuthState)
+[00:00:10.679176661 / 00:00:00.011096251] [9838376 bytes] Test Finished (StratFlow\Tests\Integration\AuthFlowTest::testLogoutClearsAuthState)
+[00:00:10.687845547 / 00:00:00.008668886] [9838376 bytes] Test Suite Finished (StratFlow\Tests\Integration\AuthFlowTest, 10 tests)
+[00:00:10.698558934 / 00:00:00.010713387] [9838376 bytes] Test Suite Finished (integration, 10 tests)
+[00:00:10.708678335 / 00:00:00.010119401] [9838376 bytes] Test Suite Finished (/var/www/html/tests/phpunit.xml, 61 tests)
+[00:00:10.722293221 / 00:00:00.013614886] [9838376 bytes] Test Runner Execution Finished
+[00:00:10.729350435 / 00:00:00.007057214] [9838376 bytes] Test Runner Finished
+[00:00:10.757526420 / 00:00:00.028175985] [9941968 bytes] PHPUnit Finished (Shell Exit Code: 0)

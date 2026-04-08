@@ -1,8 +1,10 @@
 [build]
 dockerfilePath = "Dockerfile"
+# Force no cache on rebuild
+watchPatterns = ["**"]
 
 [deploy]
-healthcheckPath = "/pricing"
+healthcheckPath = "/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
