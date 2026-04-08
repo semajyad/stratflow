@@ -25,13 +25,29 @@ class EmailService
     // =========================================================================
 
     /**
-     * Send an HTML email. Tries Gmail SMTP first, falls back to Resend API.
+     * Send an HTML email via MailerSend API (primary) with Gmail SMTP fallback.
      */
     public function send(string $to, string $subject, string $htmlBody): bool
     {
         $fromName = $this->config['mail']['from_name'] ?? 'StratFlow';
 
-        // Primary: Gmail SMTP (works for all recipients)
+        // Primary: MailerSend API (HTTP — works on Railway, sends to anyone)
+        $mailerSendKey = $this->config['mail']['mailersend_api_key'] ?? '';
+        $mailerSendFrom = $this->config['mail']['mailersend_from'] ?? '';
+
+        if ($mailerSendKey !== '' && $mailerSendFrom !== '') {
+            try {
+                $sent = $this->sendViaMailerSend($mailerSendKey, $fromName, $mailerSendFrom, $to, $subject, $htmlBody);
+                if ($sent) {
+                    error_log("[StratFlow] Email sent via MailerSend to {$to}");
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                error_log("[StratFlow] MailerSend failed: {$e->getMessage()}");
+            }
+        }
+
+        // Fallback: Gmail SMTP (works locally, blocked on Railway)
         $smtpUser = $this->config['mail']['smtp_user'] ?? '';
         $smtpPass = $this->config['mail']['smtp_pass'] ?? '';
 
@@ -43,28 +59,56 @@ class EmailService
                     return true;
                 }
             } catch (\Throwable $e) {
-                error_log("[StratFlow] Gmail SMTP failed: {$e->getMessage()}");
-            }
-        }
-
-        // Fallback: Resend API (limited to verified domains)
-        $resendKey = $this->config['mail']['resend_api_key'] ?? '';
-        $fromEmail = $this->config['mail']['from_email'] ?? 'onboarding@resend.dev';
-
-        if ($resendKey !== '') {
-            try {
-                $sent = $this->sendViaResend($resendKey, $fromName, $fromEmail, $to, $subject, $htmlBody);
-                if ($sent) {
-                    error_log("[StratFlow] Email sent via Resend to {$to}");
-                    return true;
-                }
-            } catch (\Throwable $e) {
-                error_log("[StratFlow] Resend also failed: {$e->getMessage()}");
+                error_log("[StratFlow] Gmail SMTP also failed: {$e->getMessage()}");
             }
         }
 
         error_log("[StratFlow] Email FAILED to {$to} — no delivery method succeeded");
         return false;
+    }
+
+    // =========================================================================
+    // MAILERSEND API
+    // =========================================================================
+
+    private function sendViaMailerSend(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+    {
+        $payload = json_encode([
+            'from' => ['email' => $fromEmail, 'name' => $fromName],
+            'to' => [['email' => $to]],
+            'subject' => $subject,
+            'html' => $htmlBody,
+        ]);
+
+        $ch = curl_init('https://api.mailersend.com/v1/email');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            throw new \RuntimeException("MailerSend cURL error: {$curlError}");
+        }
+
+        // 202 Accepted = success (MailerSend returns empty body on success)
+        if ($httpCode === 202) {
+            return true;
+        }
+
+        $body = json_decode($response, true);
+        $errorMsg = $body['message'] ?? "HTTP {$httpCode}";
+        throw new \RuntimeException("MailerSend API error: {$errorMsg}");
     }
 
     // =========================================================================

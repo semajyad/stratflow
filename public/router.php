@@ -34,8 +34,6 @@ if ($uri === '/_debug') {
 
 // Serve setup scripts directly (bypasses front controller)
 
-if ($uri === '/provision-users.php' && is_file($filePath)) { require $filePath; exit; }
-if ($uri === '/send-reset.php' && is_file($filePath)) { require $filePath; exit; }
 // Serve static files (not PHP files)
 if ($uri !== '/' && $ext !== '' && $ext !== 'php' && is_file($filePath)) {
     $mimeTypes = [
