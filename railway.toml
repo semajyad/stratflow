@@ -1,8 +1,3 @@
-[build]
-dockerfilePath = "Dockerfile"
-# Force no cache on rebuild
-watchPatterns = ["**"]
-
 [deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 120

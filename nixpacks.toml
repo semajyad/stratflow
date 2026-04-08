@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["php84", "php84Extensions.pdo_mysql", "php84Extensions.zip", "php84Extensions.gd", "php84Extensions.mbstring"]
+
+[phases.install]
+cmds = ["composer install --no-dev --optimize-autoloader"]
+
+[start]
+cmd = "php -S 0.0.0.0:${PORT:-8080} -t public public/index.php"
