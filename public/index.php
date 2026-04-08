@@ -24,14 +24,15 @@ if ($config['app']['debug']) {
 // === Bootstrap Core Services ===
 try {
     $db = new \StratFlow\Core\Database($config['db']);
-} catch (\PDOException $e) {
-    // If DB is unavailable, show a maintenance page (allows health checks to detect issues)
-    if (!$config['app']['debug']) {
-        http_response_code(503);
-        echo '<h1>StratFlow is starting up...</h1><p>Please try again in a moment.</p>';
-    } else {
-        http_response_code(503);
+} catch (\Throwable $e) {
+    // Catch any connection failure (PDOException, Exception, or driver-level errors
+    // such as caching_sha2_password auth failures that may not surface as PDOException).
+    error_log('[StratFlow] Database connection failed: ' . $e->getMessage());
+    http_response_code(503);
+    if ($config['app']['debug']) {
         echo '<h1>Database connection failed</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre>';
+    } else {
+        echo '<h1>StratFlow is starting up...</h1><p>Please try again in a moment.</p>';
     }
     exit;
 }
