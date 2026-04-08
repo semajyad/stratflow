@@ -86,6 +86,11 @@ Middleware is run in the order listed in the route definition.
 | GET | `/app/sounding-board/results/{id}` | `SoundingBoardController@results` | auth | Load a single evaluation result by ID; returns decoded evaluation data |
 | POST | `/app/sounding-board/results/{id}/respond` | `SoundingBoardController@respond` | auth | Accept or reject an individual persona response; expects JSON body: `member_index`, `action` (`accept`\|`reject`) |
 | GET | `/app/sounding-board/history` | `SoundingBoardController@history` | auth | Return evaluation history for a project; expects query param `project_id` |
+| GET | `/app/governance` | `DriftController@dashboard` | auth | Governance dashboard — active alerts, pending governance items, baseline history for a project (requires `project_id` query param) |
+| POST | `/app/governance/baseline` | `DriftController@createBaseline` | auth, csrf | Create a new strategic baseline snapshot for the project; captures current work items and story metrics |
+| POST | `/app/governance/detect` | `DriftController@runDetection` | auth, csrf | Run full drift detection against the latest baseline; raises DriftAlerts for capacity tripwires and dependency tripwires |
+| POST | `/app/governance/alerts/{id}` | `DriftController@acknowledgeAlert` | auth, csrf | Acknowledge or resolve a drift alert; expects POST param `action` (`acknowledge` or `resolve`) |
+| POST | `/app/governance/queue/{id}` | `DriftController@reviewChange` | auth, csrf | Approve or reject a governance queue item; expects POST param `action` (`approve` or `reject`); clears `requires_review` on the related work item when approved |
 | GET | `/superadmin` | `SuperadminController@index` | auth, superadmin | Superadmin dashboard — org count, active user count, active subscription count |
 | GET | `/superadmin/organisations` | `SuperadminController@organisations` | auth, superadmin | List all organisations with status, user count, and subscription info |
 | POST | `/superadmin/organisations/{id}` | `SuperadminController@updateOrg` | auth, superadmin, csrf | Suspend, enable, or delete an organisation; expects POST param `action` |

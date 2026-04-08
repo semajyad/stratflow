@@ -95,7 +95,8 @@ stratflow/
 │   │   ├── WorkItemController.php
 │   │   ├── AdminController.php           ← Phase 2: User/team management + org settings
 │   │   ├── SoundingBoardController.php   ← Phase 3: AI persona evaluation; seeds default panels on first use
-│   │   └── SuperadminController.php      ← Phase 3: Cross-org management, persona defaults, role assignment
+│   │   ├── SuperadminController.php      ← Phase 3: Cross-org management, persona defaults, role assignment
+│   │   └── DriftController.php           ← Phase 4: Governance dashboard, baseline creation, drift detection, alert/queue management
 │   ├── Core/
 │   │   ├── Auth.php            Session-based authentication
 │   │   ├── CSRF.php            Token generation and validation
@@ -127,11 +128,15 @@ stratflow/
 │   │   ├── Team.php                ← Phase 2: Team CRUD; includes member_count via LEFT JOIN
 │   │   ├── TeamMember.php          ← Phase 2: Junction table; INSERT IGNORE prevents duplicates
 │   │   ├── User.php
-│   │   └── UserStory.php           ← Phase 1
+│   │   ├── UserStory.php           ← Phase 1
+│   │   ├── StrategicBaseline.php   ← Phase 4: Point-in-time project snapshots for drift comparison
+│   │   ├── DriftAlert.php          ← Phase 4: Alerts for capacity/dependency tripwires and alignment issues
+│   │   └── GovernanceItem.php      ← Phase 4: Change-control queue; pending items require human approval
 │   └── Services/
 │       ├── FileProcessor.php   PDF text extraction (smalot/pdfparser)
 │       ├── GeminiService.php   Gemini API HTTP client
-│       ├── SoundingBoardService.php  ← Phase 3: Iterates panel members, calls Gemini per persona, returns results array
+│       ├── SoundingBoardService.php      ← Phase 3: Iterates panel members, calls Gemini per persona, returns results array
+│       ├── DriftDetectionService.php     ← Phase 4: Creates baselines, runs capacity/dependency tripwires, AI alignment checks
 │       ├── StripeService.php   Stripe SDK wrapper
 │       └── Prompts/
 │           ├── SummaryPrompt.php
@@ -141,7 +146,8 @@ stratflow/
 │           ├── PrioritisationPrompt.php  ← Phase 1: RICE_PROMPT and WSJF_PROMPT
 │           ├── RiskPrompt.php            ← Phase 1: GENERATE_PROMPT and MITIGATION_PROMPT
 │           ├── UserStoryPrompt.php       ← Phase 1: DECOMPOSE_PROMPT and SIZE_PROMPT
-│           └── SprintPrompt.php          ← Phase 1: ALLOCATE_PROMPT
+│           ├── SprintPrompt.php          ← Phase 1: ALLOCATE_PROMPT
+│           └── DriftPrompt.php           ← Phase 4: ALIGNMENT_PROMPT for OKR alignment assessment
 ├── templates/
 │   ├── layouts/                Master layout files (app shell, public shell)
 │   ├── partials/               Reusable view fragments
@@ -227,6 +233,15 @@ Controller extracts structured data from the text response:
   - User stories: JSON array of {title, description, size} objects
   - Story size: JSON object {size, reasoning}
   - Sprint allocation: JSON array of {story_id, sprint_id} pairs
+
+DriftDetectionService (Phase 4) uses GeminiService::generateJson() for alignment checks:
+  DriftController
+    └── DriftDetectionService::detectDrift($projectId, $threshold)
+          ├── StrategicBaseline::findLatestByProjectId()   ← load baseline snapshot
+          ├── checkCapacityTripwire()                      ← compare story sizes per parent
+          ├── checkDependencyTripwire()                    ← find cross-team blockers
+          └── (optional) GeminiService::generateJson()     ← DriftPrompt::ALIGNMENT_PROMPT
+                └── Returns: {aligned: bool, confidence: 0-100, explanation: string}
 ```
 
 Prompt constants live in `src/Services/Prompts/`. They are pure PHP string constants — no templating library. Prompts that require dynamic values use `{placeholder}` tokens replaced via `str_replace()` before sending (e.g. `DESCRIPTION_PROMPT` uses `{title}`, `{context}`, `{summary}`; `MITIGATION_PROMPT` uses `{title}`, `{description}`, `{likelihood}`, `{impact}`, `{linked_items}`; `SIZE_PROMPT` uses `{title}`, `{description}`; `ALLOCATE_PROMPT` uses `{sprints}`, `{stories}`).

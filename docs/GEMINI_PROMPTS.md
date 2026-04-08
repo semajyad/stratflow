@@ -511,6 +511,56 @@ Content to evaluate:
 
 ---
 
+## 10. Drift Prompt
+
+**File:** `src/Services/Prompts/DriftPrompt.php`
+**Constant:** `DriftPrompt::ALIGNMENT_PROMPT`
+**Used by:** `DriftDetectionService::checkAlignment()`
+
+### Purpose
+
+Assesses whether a newly added user story aligns with the project's original strategic OKRs. Called by `DriftDetectionService` when Gemini is available, as part of the alignment check within the Drift Engine. If the AI is unavailable or returns an error, the method returns null and detection continues without blocking.
+
+### Input format
+
+The prompt constant contains three `{placeholder}` tokens replaced via `str_replace()` before sending:
+
+| Placeholder | Replaced with |
+|-------------|--------------|
+| `{okrs}` | Combined OKR text from the project's diagram nodes |
+| `{story_title}` | Title of the newly added user story |
+| `{story_description}` | Description of the newly added user story |
+
+### Expected output
+
+A JSON object only, no prose:
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `aligned` | boolean | `true` if the story serves the strategic goals |
+| `confidence` | number | 0–100 — confidence in the alignment assessment |
+| `explanation` | string | 1–2 sentences explaining the assessment |
+
+### Prompt text
+
+```
+You are a Strategic Alignment Assessor. Given the original strategic OKRs and a newly added user story, assess whether this story aligns with the original strategic goals.
+
+Return a JSON object with:
+- "aligned": boolean (true if the story serves the strategic goals)
+- "confidence": number 0-100 (how confident you are)
+- "explanation": string (1-2 sentences explaining your assessment)
+
+Original Strategic OKRs:
+{okrs}
+
+New User Story:
+Title: {story_title}
+Description: {story_description}
+```
+
+---
+
 ## Tuning Notes
 
 | Setting | Value | Notes |

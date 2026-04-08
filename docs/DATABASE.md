@@ -32,7 +32,11 @@ organisations
         ├── sprints (project_id → projects.id)
         │     └── sprint_stories (sprint_id → sprints.id,
         │                         user_story_id → user_stories.id)
-        └── evaluation_results (project_id → projects.id)
+        ├── evaluation_results (project_id → projects.id)
+        ├── strategic_baselines (project_id → projects.id)    ← Phase 4
+        ├── drift_alerts (project_id → projects.id)           ← Phase 4
+        └── governance_queue (project_id → projects.id,       ← Phase 4
+                              reviewed_by → users.id [nullable])
 
 login_attempts (standalone — tracks IP-based brute force attempts)
 ```
@@ -217,10 +221,11 @@ High-Level Work Items (HLWIs) generated from the strategy diagram. Each item rep
 | `final_score` | DECIMAL(10,2) | NULL | Computed RICE or WSJF score; NULL until scored |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 | `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+| `requires_review` | TINYINT(1) | NOT NULL, DEFAULT 0 | 1 = flagged by Drift Engine; cleared when governance item is approved |
 
 **Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `diagram_id` → `strategy_diagrams.id` ON DELETE SET NULL
 
-**Added in:** migration `001_v1_completion.sql` (all `rice_*`, `wsjf_*`, and `final_score` columns)
+**Added in:** migration `001_v1_completion.sql` (all `rice_*`, `wsjf_*`, and `final_score` columns); `requires_review` added in Phase 4 (Strategic Drift Engine)
 
 ---
 
@@ -279,8 +284,11 @@ Granular user stories decomposed from High-Level Work Items. Each story follows 
 | `blocked_by` | INT UNSIGNED | NULL, FK → user_stories | Self-referential dependency |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 | `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+| `requires_review` | TINYINT(1) | NOT NULL, DEFAULT 0 | 1 = flagged by Drift Engine for governance review |
 
 **Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `parent_hl_item_id` → `hl_work_items.id` ON DELETE SET NULL; `blocked_by` → `user_stories.id` ON DELETE SET NULL
+
+**Added in:** Phase 4 (`requires_review` column)
 
 ---
 
@@ -406,6 +414,61 @@ Added in Phase 3 (Sounding Board).
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 
 **Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `panel_id` → `persona_panels.id` ON DELETE CASCADE
+
+---
+
+### `strategic_baselines`
+
+Point-in-time snapshots of a project's scope and plan. Created manually by users via the governance dashboard. The Drift Engine compares the current project state against the latest baseline to detect deviations.
+Added in Phase 4 (Strategic Drift Engine).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `snapshot_json` | JSON | NOT NULL | Point-in-time snapshot: work_items array, stories.total_count, stories.total_size, stories.by_parent |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE
+
+---
+
+### `drift_alerts`
+
+Alerts raised by the Drift Engine when a project deviates from its strategic baseline. Alert types cover capacity overruns (`capacity_tripwire`), cross-team dependency blockers (`dependency_tripwire`), scope creep (`scope_creep`), and AI-assessed OKR misalignment (`alignment`).
+Added in Phase 4 (Strategic Drift Engine).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `alert_type` | ENUM | NOT NULL | `scope_creep`, `capacity_tripwire`, `dependency_tripwire`, `alignment` |
+| `severity` | ENUM | NOT NULL, DEFAULT `warning` | `info`, `warning`, `critical` |
+| `details_json` | JSON | NOT NULL | Structured alert context (parent item, baseline/current sizes, growth %, blocking story IDs, etc.) |
+| `status` | ENUM | NOT NULL, DEFAULT `active` | `active`, `acknowledged`, `resolved` |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE
+
+---
+
+### `governance_queue`
+
+Proposed changes to a project that require human review before being applied. Supports the Drift Engine's change-control gate for new stories, scope changes, size changes, and dependency changes. Approval or rejection is recorded by the reviewing user.
+Added in Phase 4 (Strategic Drift Engine).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `change_type` | ENUM | NOT NULL | `new_story`, `scope_change`, `size_change`, `dependency_change` |
+| `proposed_change_json` | JSON | NOT NULL | Full details of the proposed change (title, description, work item IDs, etc.) |
+| `status` | ENUM | NOT NULL, DEFAULT `pending` | `pending`, `approved`, `rejected` |
+| `reviewed_by` | INT UNSIGNED | NULL, FK → users | User who approved or rejected the item; NULL until reviewed |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `reviewed_by` → `users.id` ON DELETE SET NULL
 
 ---
 
