@@ -56,6 +56,7 @@ External services:
 4. **Middleware** runs before the controller:
    - `AuthMiddleware`: checks `$_SESSION['user_id']`; redirects to `/login` if absent
    - `CSRFMiddleware`: compares `$_POST['_csrf_token']` against the session token; returns 403 on mismatch
+   - `AdminMiddleware`: checks that `$_SESSION['user']['role']` is `org_admin` or `superadmin`; redirects to `/app/home` if not
 
 5. **Controller** contains the HTTP handler logic:
    - Reads input from the `Request` object
@@ -90,7 +91,8 @@ stratflow/
 │   │   ├── UploadController.php
 │   │   ├── UserStoryController.php       ← Phase 1: User story decomposition
 │   │   ├── WebhookController.php
-│   │   └── WorkItemController.php
+│   │   ├── WorkItemController.php
+│   │   └── AdminController.php           ← Phase 2: User/team management + org settings
 │   ├── Core/
 │   │   ├── Auth.php            Session-based authentication
 │   │   ├── CSRF.php            Token generation and validation
@@ -101,7 +103,8 @@ stratflow/
 │   │   └── Session.php         Session wrapper
 │   ├── Middleware/
 │   │   ├── AuthMiddleware.php
-│   │   └── CSRFMiddleware.php
+│   │   ├── CSRFMiddleware.php
+│   │   └── AdminMiddleware.php           ← Phase 2: Restricts routes to org_admin/superadmin role
 │   ├── Models/                 Thin data-access objects; each wraps PDO queries for one table
 │   │   ├── DiagramNode.php
 │   │   ├── Document.php
@@ -114,6 +117,8 @@ stratflow/
 │   │   ├── SprintStory.php         ← Phase 1
 │   │   ├── StrategyDiagram.php
 │   │   ├── Subscription.php
+│   │   ├── Team.php                ← Phase 2: Team CRUD; includes member_count via LEFT JOIN
+│   │   ├── TeamMember.php          ← Phase 2: Junction table; INSERT IGNORE prevents duplicates
 │   │   ├── User.php
 │   │   └── UserStory.php           ← Phase 1
 │   └── Services/

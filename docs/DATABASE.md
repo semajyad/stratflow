@@ -12,6 +12,8 @@ The schema file is at `database/schema.sql`. It is loaded automatically on first
 organisations
   ├── users (org_id → organisations.id)
   ├── subscriptions (org_id → organisations.id)
+  ├── teams (org_id → organisations.id)
+  │     └── team_members (team_id → teams.id, user_id → users.id)
   └── projects (org_id → organisations.id)
         ├── documents (project_id → projects.id)
         ├── strategy_diagrams (project_id → projects.id)
@@ -47,6 +49,7 @@ Top-level tenant. Each paying customer is one organisation.
 | `name` | VARCHAR(255) | NOT NULL | Organisation display name |
 | `stripe_customer_id` | VARCHAR(255) | NULL | Stripe customer object ID |
 | `is_active` | TINYINT(1) | NOT NULL, DEFAULT 1 | 0 = suspended |
+| `settings_json` | JSON | NULL | Org-level workflow settings: AI persona prompts, HL item defaults, capacity tripwires |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 
 ---
@@ -84,6 +87,7 @@ Tracks Stripe subscription state per organisation.
 | `status` | ENUM | NOT NULL, DEFAULT `active` | `active`, `cancelled`, `expired` |
 | `started_at` | DATETIME | NOT NULL | |
 | `expires_at` | DATETIME | NULL | NULL = ongoing subscription |
+| `user_seat_limit` | INT UNSIGNED | NOT NULL, DEFAULT 5 | Maximum number of user accounts allowed for this subscription tier |
 
 **Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE
 
@@ -311,6 +315,42 @@ Many-to-many join table assigning user stories to sprints.
 
 ---
 
+### `teams`
+
+Groups of users within an organisation. Used for sprint capacity planning and member assignment.
+Added in Phase 2 (Admin Features).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NOT NULL, FK → organisations | Multi-tenancy scope key |
+| `name` | VARCHAR(255) | NOT NULL | Team display name |
+| `description` | TEXT | NULL | Optional description of the team's purpose |
+| `capacity` | INT UNSIGNED | NULL | Sprint capacity in story points |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE
+
+---
+
+### `team_members`
+
+Many-to-many junction table linking users to teams. A user may belong to multiple teams.
+Added in Phase 2 (Admin Features).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `team_id` | INT UNSIGNED | NOT NULL, FK → teams | |
+| `user_id` | INT UNSIGNED | NOT NULL, FK → users | |
+
+**Foreign keys:** `team_id` → `teams.id` ON DELETE CASCADE; `user_id` → `users.id` ON DELETE CASCADE
+
+**Unique constraint:** `uq_team_user (team_id, user_id)` — a user can only appear once per team
+
+---
+
 ## Indexes Summary
 
 | Table | Index | Columns | Type |
@@ -319,6 +359,7 @@ Many-to-many join table assigning user stories to sprints.
 | `login_attempts` | `idx_ip_time` | `ip_address, attempted_at` | INDEX |
 | `risk_item_links` | `uq_risk_item` | `risk_id, work_item_id` | UNIQUE |
 | `sprint_stories` | `uq_sprint_story` | `sprint_id, user_story_id` | UNIQUE |
+| `team_members` | `uq_team_user` | `team_id, user_id` | UNIQUE |
 
 All other lookups rely on primary keys and foreign key indexes created automatically by InnoDB.
 

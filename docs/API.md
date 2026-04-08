@@ -8,6 +8,7 @@ All routes are defined in `src/Config/routes.php`. The application uses a custom
 |-----|-------|-------------|
 | `auth` | `AuthMiddleware` | Requires an active session; redirects to `/login` if unauthenticated |
 | `csrf` | `CSRFMiddleware` | Validates the `_csrf_token` field in POST requests; aborts with 403 on mismatch |
+| `admin` | `AdminMiddleware` | Requires `org_admin` or `superadmin` role; redirects to `/app/home` if unauthorised |
 
 Middleware is run in the order listed in the route definition.
 
@@ -67,6 +68,19 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/sprints/ai-allocate` | `SprintController@aiAllocate` | auth, csrf | AI auto-allocate unassigned stories across sprints |
 | POST | `/app/sprints/{id}` | `SprintController@update` | auth, csrf | Update a sprint's fields |
 | POST | `/app/sprints/{id}/delete` | `SprintController@delete` | auth, csrf | Delete a sprint |
+| GET | `/app/admin` | `AdminController@index` | auth, admin | Admin dashboard — user count, team count, subscription status |
+| GET | `/app/admin/users` | `AdminController@users` | auth, admin | List all users in the organisation |
+| POST | `/app/admin/users` | `AdminController@createUser` | auth, admin, csrf | Create a new user (seat limit enforced) |
+| POST | `/app/admin/users/{id}` | `AdminController@updateUser` | auth, admin, csrf | Update an existing user's name, email, role, or password |
+| POST | `/app/admin/users/{id}/delete` | `AdminController@deleteUser` | auth, admin, csrf | Deactivate a user (soft delete; cannot self-delete) |
+| GET | `/app/admin/teams` | `AdminController@teams` | auth, admin | List all teams with member counts and member details |
+| POST | `/app/admin/teams` | `AdminController@createTeam` | auth, admin, csrf | Create a new team |
+| POST | `/app/admin/teams/{id}` | `AdminController@updateTeam` | auth, admin, csrf | Update a team's name, description, or capacity |
+| POST | `/app/admin/teams/{id}/delete` | `AdminController@deleteTeam` | auth, admin, csrf | Delete a team (CASCADE removes memberships) |
+| POST | `/app/admin/teams/add-member` | `AdminController@addTeamMember` | auth, admin, csrf | Add a user to a team (both must belong to same org) |
+| POST | `/app/admin/teams/remove-member` | `AdminController@removeTeamMember` | auth, admin, csrf | Remove a user from a team |
+| GET | `/app/admin/settings` | `AdminController@settings` | auth, admin | Organisation settings page (personas, defaults, tripwires) |
+| POST | `/app/admin/settings` | `AdminController@saveSettings` | auth, admin, csrf | Save organisation settings to `organisations.settings_json` |
 
 ---
 
