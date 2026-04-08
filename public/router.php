@@ -33,7 +33,9 @@ if ($uri === '/_debug') {
 }
 
 // Serve setup-admin directly (bypasses front controller)
+if ($uri === "/create-martin.php" && is_file($filePath)) { require $filePath; exit; }
 if ($uri === '/setup-admin.php' && is_file($filePath)) {
+if ($uri === "/create-martin.php" && is_file($filePath)) { require $filePath; exit; }
     require $filePath;
     exit;
 }
