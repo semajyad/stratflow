@@ -109,38 +109,55 @@
 <section class="card mb-6">
     <div class="card-header">
         <h3>Node OKRs</h3>
+        <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> nodes</span>
     </div>
     <div class="card-body">
-        <div class="node-okr-list">
-            <?php foreach ($nodes as $node): ?>
-                <div class="node-okr-item" data-node-id="<?= (int) $node['id'] ?>">
-                    <div class="node-okr-header">
-                        <span class="badge badge-primary"><?= htmlspecialchars($node['node_key']) ?></span>
-                        <strong><?= htmlspecialchars($node['label']) ?></strong>
-                    </div>
-                    <div class="node-okr-fields">
-                        <div class="form-group">
-                            <label>OKR Title</label>
-                            <input
-                                type="text"
-                                class="okr-title"
-                                value="<?= htmlspecialchars($node['okr_title'] ?? '') ?>"
-                                placeholder="e.g. Increase market penetration by 20%"
-                            >
+        <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <div class="node-okr-list">
+                <?php foreach ($nodes as $node):
+                    // Pre-fill title from node label if empty
+                    $defaultTitle = $node['okr_title'] ?: ('Achieve: ' . $node['label']);
+                    $defaultDesc  = $node['okr_description'] ?: ('Define key results for the "' . $node['label'] . '" initiative. What measurable outcomes indicate success?');
+                ?>
+                    <div class="node-okr-item">
+                        <div class="node-okr-header">
+                            <div>
+                                <span class="badge badge-primary"><?= htmlspecialchars($node['node_key']) ?></span>
+                                <strong><?= htmlspecialchars($node['label']) ?></strong>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                    onclick="if(confirm('Remove this node OKR?')) { this.closest('.node-okr-item').remove(); }">
+                                Remove
+                            </button>
                         </div>
-                        <div class="form-group">
-                            <label>OKR Description</label>
-                            <textarea
-                                class="okr-description"
-                                rows="2"
-                                placeholder="Describe the objective and key results..."
-                            ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
+                        <div class="node-okr-fields">
+                            <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
+                            <div class="form-group">
+                                <label>OKR Title</label>
+                                <input type="text"
+                                       name="nodes[<?= (int) $node['id'] ?>][okr_title]"
+                                       value="<?= htmlspecialchars($defaultTitle) ?>"
+                                       class="form-control"
+                                       placeholder="e.g. Increase market penetration by 20%">
+                            </div>
+                            <div class="form-group">
+                                <label>OKR Description</label>
+                                <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="Describe the objective and key results..."
+                                ><?= htmlspecialchars($defaultDesc) ?></textarea>
+                            </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary save-okr-btn">Save OKR</button>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
+            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Save All OKRs</button>
+            </div>
+        </form>
     </div>
 </section>
 

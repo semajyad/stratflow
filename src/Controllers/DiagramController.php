@@ -264,6 +264,42 @@ class DiagramController
         $this->response->json(['status' => 'ok']);
     }
 
+    /**
+     * Save all OKRs in a single form POST.
+     */
+    public function saveAllOkrs(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $nodes = $this->request->post('nodes', []);
+        if (!is_array($nodes)) {
+            $nodes = [];
+        }
+
+        $updated = 0;
+        foreach ($nodes as $nodeData) {
+            $nodeId = (int) ($nodeData['id'] ?? 0);
+            if ($nodeId <= 0) continue;
+
+            DiagramNode::update($this->db, $nodeId, [
+                'okr_title'       => trim((string) ($nodeData['okr_title'] ?? '')),
+                'okr_description' => trim((string) ($nodeData['okr_description'] ?? '')),
+            ]);
+            $updated++;
+        }
+
+        $_SESSION['flash_message'] = "{$updated} OKRs saved.";
+        $this->response->redirect('/app/diagram?project_id=' . $projectId);
+    }
+
     // ===========================
     // HELPERS
     // ===========================
