@@ -46,6 +46,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'csrf']);
     $router->add('POST', '/app/diagram/save-okr',      'DiagramController@saveOkr',     ['auth', 'csrf']);
     $router->add('POST', '/app/diagram/save-all-okrs', 'DiagramController@saveAllOkrs', ['auth', 'csrf']);
+    $router->add('POST', '/app/diagram/generate-okrs', 'DiagramController@generateOkrs', ['auth', 'csrf']);
 
     // Prioritisation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/prioritisation',             'PrioritisationController@index',           ['auth']);

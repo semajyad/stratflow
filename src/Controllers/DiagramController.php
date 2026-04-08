@@ -265,6 +265,88 @@ class DiagramController
     }
 
     /**
+     * Generate SMART OKRs for all diagram nodes using AI.
+     */
+    public function generateOkrs(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $diagram = StrategyDiagram::findByProjectId($this->db, $projectId);
+        if ($diagram === null) {
+            $_SESSION['flash_error'] = 'No diagram found. Generate a diagram first.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        $nodes = DiagramNode::findByDiagramId($this->db, (int) $diagram['id']);
+        if (empty($nodes)) {
+            $_SESSION['flash_error'] = 'No nodes found in the diagram.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        // Build input: list of nodes with their labels + any document context
+        $nodeLines = [];
+        foreach ($nodes as $n) {
+            $nodeLines[] = "- Node {$n['node_key']}: {$n['label']}";
+        }
+
+        // Get document summary for context
+        $docs = \StratFlow\Models\Document::findByProjectId($this->db, $projectId);
+        $summary = '';
+        foreach ($docs as $doc) {
+            if (!empty($doc['ai_summary'])) {
+                $summary = $doc['ai_summary'];
+                break;
+            }
+        }
+
+        $input = "Strategic Nodes:\n" . implode("\n", $nodeLines);
+        if ($summary) {
+            $input .= "\n\nStrategic Context:\n" . $summary;
+        }
+
+        try {
+            $gemini = new GeminiService($this->config);
+            $okrs = $gemini->generateJson(\StratFlow\Services\Prompts\DiagramPrompt::OKR_PROMPT, $input);
+        } catch (\RuntimeException $e) {
+            $_SESSION['flash_error'] = 'OKR generation failed: ' . $e->getMessage();
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        // Map OKRs back to nodes by node_key
+        $okrMap = [];
+        foreach ($okrs as $okr) {
+            $key = $okr['node_key'] ?? '';
+            $okrMap[strtoupper(trim($key))] = $okr;
+        }
+
+        $updated = 0;
+        foreach ($nodes as $node) {
+            $key = strtoupper(trim($node['node_key']));
+            if (isset($okrMap[$key])) {
+                DiagramNode::update($this->db, (int) $node['id'], [
+                    'okr_title'       => trim($okrMap[$key]['okr_title'] ?? ''),
+                    'okr_description' => trim($okrMap[$key]['okr_description'] ?? ''),
+                ]);
+                $updated++;
+            }
+        }
+
+        $_SESSION['flash_message'] = "{$updated} SMART OKRs generated. Review and edit as needed, then save.";
+        $this->response->redirect('/app/diagram?project_id=' . $projectId);
+    }
+
+    /**
      * Save all OKRs in a single form POST.
      */
     public function saveAllOkrs(): void

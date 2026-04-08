@@ -108,8 +108,20 @@
 <?php if (!empty($nodes)): ?>
 <section class="card mb-6">
     <div class="card-header">
-        <h3>Node OKRs</h3>
-        <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> nodes</span>
+        <div>
+            <h3 style="margin:0;">Node OKRs</h3>
+            <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> nodes — SMART objectives with measurable key results</span>
+        </div>
+        <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
+              data-loading="Generating SMART OKRs..."
+              data-overlay="AI is generating SMART objectives and key results for each node. This may take 15-30 seconds.">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="btn btn-primary btn-sm"
+                    onclick="return confirm('Generate AI-powered SMART OKRs for all nodes? This will replace any existing OKRs.')">
+                Generate SMART OKRs (AI)
+            </button>
+        </form>
     </div>
     <div class="card-body">
         <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
