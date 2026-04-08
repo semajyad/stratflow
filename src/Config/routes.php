@@ -61,17 +61,17 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth']);
     $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'csrf']);
     $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
-    $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
+    $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
 
     // Risk modelling — static routes MUST come before {id} routes
     $router->add('GET',  '/app/risks',                'RiskController@index',              ['auth']);
     $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'csrf']);
     $router->add('POST', '/app/risks',                'RiskController@store',              ['auth', 'csrf']);
-    $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
+    $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
 
     // User stories — static routes MUST come before {id} routes
     $router->add('GET',  '/app/user-stories',                       'UserStoryController@index',           ['auth']);
@@ -80,9 +80,9 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth']);
     $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'csrf']);
     $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
-    $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
+    $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
 
     // Sprint allocation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/sprints',             'SprintController@index',         ['auth']);
@@ -92,8 +92,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/auto-generate', 'SprintController@autoGenerate',  ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/auto-fill',     'SprintController@autoFill',      ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
 
     // Governance — drift detection and change control
     $router->add('GET',  '/app/governance',              'DriftController@dashboard',      ['auth']);
