@@ -1177,3 +1177,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Password visibility toggle
+function togglePassword(btn) {
+    var wrapper = btn.closest('.password-wrapper');
+    var input = wrapper.querySelector('input');
+    var eyeOn = btn.querySelector('.eye-icon');
+    var eyeOff = btn.querySelector('.eye-off-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeOn.style.display = 'none';
+        eyeOff.style.display = 'block';
+    } else {
+        input.type = 'password';
+        eyeOn.style.display = 'block';
+        eyeOff.style.display = 'none';
+    }
+}

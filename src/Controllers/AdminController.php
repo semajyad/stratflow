@@ -140,7 +140,11 @@ class AdminController
             return;
         }
 
-        if (!in_array($role, ['user', 'org_admin'], true)) {
+        $allowedRoles = ['user', 'org_admin'];
+        if (($this->auth->user()['role'] ?? '') === 'superadmin') {
+            $allowedRoles[] = 'superadmin';
+        }
+        if (!in_array($role, $allowedRoles, true)) {
             $role = 'user';
         }
 
@@ -211,7 +215,11 @@ class AdminController
             return;
         }
 
-        if (!in_array($role, ['user', 'org_admin'], true)) {
+        $allowedRoles = ['user', 'org_admin'];
+        if (($this->auth->user()['role'] ?? '') === 'superadmin') {
+            $allowedRoles[] = 'superadmin';
+        }
+        if (!in_array($role, $allowedRoles, true)) {
             $role = 'user';
         }
 

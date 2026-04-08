@@ -3015,3 +3015,30 @@ tbody tr:hover {
     font-size: 0.9375rem;
     margin: 0;
 }
+
+/* Password toggle */
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper .form-control {
+    padding-right: 2.75rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.password-toggle:hover {
+    color: var(--text);
+}
