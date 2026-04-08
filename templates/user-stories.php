@@ -50,6 +50,10 @@
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="hl-selector">
+                <label class="checkbox-label" style="font-weight:600; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:0.5rem;">
+                    <input type="checkbox" id="select-all-hl" onchange="document.querySelectorAll('input[name=\'hl_item_ids[]\']').forEach(cb => cb.checked = this.checked)">
+                    Select All
+                </label>
                 <?php foreach ($work_items as $wi): ?>
                     <label class="checkbox-label">
                         <input type="checkbox" name="hl_item_ids[]" value="<?= (int) $wi['id'] ?>">
