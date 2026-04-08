@@ -2,7 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-preDeployCommand = "php database/init-db.php"
 startCommand = "php -S 0.0.0.0:${PORT:-8080} -t public public/index.php"
 healthcheckPath = "/"
 healthcheckTimeout = 120

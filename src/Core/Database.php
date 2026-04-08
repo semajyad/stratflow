@@ -68,4 +68,29 @@ class Database
     {
         return $this->pdo;
     }
+
+    /**
+     * Check whether a table exists in the current database.
+     *
+     * Useful for graceful degradation when the schema has not yet been
+     * initialised (e.g. first deploy before manual DB setup).
+     *
+     * @param string $table Table name to check
+     * @return bool
+     */
+    public function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT 1 FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name = ?
+                  LIMIT 1'
+            );
+            $stmt->execute([$table]);
+            return $stmt->fetchColumn() !== false;
+        } catch (\PDOException) {
+            return false;
+        }
+    }
 }
