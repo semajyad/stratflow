@@ -1,3 +1,8 @@
+<?php
+// Build project query string if we're in a project context
+$pid = isset($project) ? (int) $project['id'] : 0;
+$pq = $pid ? "?project_id={$pid}" : '';
+?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <a href="/app/home">StratFlow</a>
@@ -6,26 +11,28 @@
         <a href="/app/home" class="nav-link <?= ($active_page ?? '') === 'home' ? 'active' : '' ?>">
             Home
         </a>
-        <a href="/app/upload" class="nav-link <?= ($active_page ?? '') === 'upload' ? 'active' : '' ?>">
+        <a href="/app/upload<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'upload' ? 'active' : '' ?>">
             Document Upload
         </a>
-        <a href="/app/diagram" class="nav-link <?= ($active_page ?? '') === 'diagram' ? 'active' : '' ?>">
+        <a href="/app/diagram<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'diagram' ? 'active' : '' ?>">
             Strategy Roadmap
         </a>
-        <a href="/app/work-items" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
+        <a href="/app/work-items<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
             High-Level Work Items
         </a>
-        <a href="/app/prioritisation" class="nav-link <?= ($active_page ?? '') === 'prioritisation' ? 'active' : '' ?>">
+        <a href="/app/prioritisation<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'prioritisation' ? 'active' : '' ?>">
             Prioritisation
         </a>
-        <a href="/app/risks" class="nav-link <?= ($active_page ?? '') === 'risks' ? 'active' : '' ?>">
+        <a href="/app/risks<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'risks' ? 'active' : '' ?>">
             Risk Modelling
         </a>
-        <a href="/app/user-stories" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
+        <a href="/app/user-stories<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
             User Stories
         </a>
-        <a href="/app/sprints" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">Sprint Allocation</a>
-        <a href="/app/governance" class="nav-link <?= ($active_page ?? '') === 'governance' ? 'active' : '' ?>">
+        <a href="/app/sprints<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">
+            Sprint Allocation
+        </a>
+        <a href="/app/governance<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'governance' ? 'active' : '' ?>">
             Governance
         </a>
 
