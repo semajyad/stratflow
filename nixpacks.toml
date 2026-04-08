@@ -5,4 +5,4 @@ nixPkgs = ["php84", "php84Extensions.pdo_mysql", "php84Extensions.mysqlnd", "php
 cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [start]
-cmd = "php scripts/init-db.php 2>&1 || true; php -c php.ini -S 0.0.0.0:${PORT:-8080} -t public public/router.php"
+cmd = "php scripts/init-db.php 2>&1 || true; PHP_INI_SCAN_DIR='' php -d upload_max_filesize=50M -d post_max_size=55M -d memory_limit=256M -d max_execution_time=120 -d file_uploads=On -S 0.0.0.0:${PORT:-8080} -t public public/router.php"

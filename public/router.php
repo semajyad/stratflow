@@ -8,33 +8,9 @@ $docRoot = __DIR__;
 $filePath = $docRoot . $uri;
 $ext = strtolower(pathinfo($uri, PATHINFO_EXTENSION));
 
-// Debug endpoint
-if ($uri === '/_debug') {
-    header('Content-Type: text/plain');
-    echo "URI: $uri\n";
-    echo "DocRoot (__DIR__): $docRoot\n";
-    echo "CWD: " . getcwd() . "\n";
-    echo "DOCUMENT_ROOT: " . ($_SERVER['DOCUMENT_ROOT'] ?? 'not set') . "\n\n";
-
-    $testPath = $docRoot . '/assets/css/app.css';
-    echo "Test path: $testPath\n";
-    echo "file_exists: " . (file_exists($testPath) ? 'YES' : 'NO') . "\n";
-    echo "is_file: " . (is_file($testPath) ? 'YES' : 'NO') . "\n\n";
-
-    echo "Listing $docRoot:\n";
-    foreach (scandir($docRoot) as $f) echo "  $f\n";
-    echo "\nListing $docRoot/assets:\n";
-    if (is_dir("$docRoot/assets")) {
-        foreach (scandir("$docRoot/assets") as $f) echo "  $f\n";
-    } else {
-        echo "  NOT A DIRECTORY\n";
-    }
-    exit;
-}
 
 // Serve setup scripts directly (bypasses front controller)
 
-if ($uri === '/phpinfo-check.php' && is_file($filePath)) { require $filePath; exit; }
 // Serve static files (not PHP files)
 if ($uri !== '/' && $ext !== '' && $ext !== 'php' && is_file($filePath)) {
     $mimeTypes = [
