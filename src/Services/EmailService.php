@@ -25,15 +25,32 @@ class EmailService
     // =========================================================================
 
     /**
-     * Send an HTML email. Tries Resend API first, falls back to Gmail SMTP.
+     * Send an HTML email. Tries Gmail SMTP first, falls back to Resend API.
      */
     public function send(string $to, string $subject, string $htmlBody): bool
     {
         $fromName = $this->config['mail']['from_name'] ?? 'StratFlow';
-        $fromEmail = $this->config['mail']['from_email'] ?? 'noreply@stratflow.app';
-        $resendKey = $this->config['mail']['resend_api_key'] ?? '';
 
-        // Primary: Resend API
+        // Primary: Gmail SMTP (works for all recipients)
+        $smtpUser = $this->config['mail']['smtp_user'] ?? '';
+        $smtpPass = $this->config['mail']['smtp_pass'] ?? '';
+
+        if ($smtpUser !== '' && $smtpPass !== '') {
+            try {
+                $sent = $this->sendViaGmailSmtp($smtpUser, $smtpPass, $fromName, $to, $subject, $htmlBody);
+                if ($sent) {
+                    error_log("[StratFlow] Email sent via Gmail SMTP to {$to}");
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                error_log("[StratFlow] Gmail SMTP failed: {$e->getMessage()}");
+            }
+        }
+
+        // Fallback: Resend API (limited to verified domains)
+        $resendKey = $this->config['mail']['resend_api_key'] ?? '';
+        $fromEmail = $this->config['mail']['from_email'] ?? 'onboarding@resend.dev';
+
         if ($resendKey !== '') {
             try {
                 $sent = $this->sendViaResend($resendKey, $fromName, $fromEmail, $to, $subject, $htmlBody);
@@ -42,34 +59,7 @@ class EmailService
                     return true;
                 }
             } catch (\Throwable $e) {
-                error_log("[StratFlow] Resend failed: {$e->getMessage()}, falling back to SMTP");
-            }
-        }
-
-        // Fallback: Gmail SMTP
-        $smtpUser = $this->config['mail']['smtp_user'] ?? '';
-        $smtpPass = $this->config['mail']['smtp_pass'] ?? '';
-
-        if ($smtpUser !== '' && $smtpPass !== '') {
-            try {
-                $smtpHost = $this->config['mail']['smtp_host'] ?? 'smtp.gmail.com';
-                $smtpPort = (int)($this->config['mail']['smtp_port'] ?? 587);
-                $smtpFrom = $this->config['mail']['smtp_user'];
-
-                $headers = "From: {$fromName} <{$smtpFrom}>\r\n";
-                $headers .= "To: {$to}\r\n";
-                $headers .= "Subject: {$subject}\r\n";
-                $headers .= "MIME-Version: 1.0\r\n";
-                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-                $message = $headers . "\r\n" . $htmlBody;
-
-                $sent = $this->sendViaSMTP($smtpHost, $smtpPort, $smtpUser, $smtpPass, $smtpFrom, $to, $message);
-                if ($sent) {
-                    error_log("[StratFlow] Email sent via SMTP to {$to}");
-                    return true;
-                }
-            } catch (\Throwable $e) {
-                error_log("[StratFlow] SMTP also failed: {$e->getMessage()}");
+                error_log("[StratFlow] Resend also failed: {$e->getMessage()}");
             }
         }
 
@@ -125,33 +115,43 @@ class EmailService
     }
 
     // =========================================================================
-    // GMAIL SMTP FALLBACK
+    // GMAIL SMTP (SSL on port 465 — no STARTTLS needed)
     // =========================================================================
 
-    private function sendViaSMTP(string $host, int $port, string $user, string $pass, string $from, string $to, string $message): bool
+    private function sendViaGmailSmtp(string $user, string $pass, string $fromName, string $to, string $subject, string $htmlBody): bool
     {
-        $socket = @fsockopen($host, $port, $errno, $errstr, 10);
+        // Use ssl:// on port 465 — implicit TLS, no STARTTLS negotiation needed
+        $socket = @fsockopen('ssl://smtp.gmail.com', 465, $errno, $errstr, 15);
         if (!$socket) {
-            throw new \RuntimeException("SMTP connect failed: {$errstr} ({$errno})");
+            throw new \RuntimeException("Gmail SMTP connect failed: {$errstr} ({$errno})");
         }
 
-        $this->smtpRead($socket);
+        $this->smtpRead($socket); // 220 greeting
         $this->smtpCommand($socket, "EHLO stratflow.app", 250);
-        $this->smtpCommand($socket, "STARTTLS", 220);
 
-        if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
-            throw new \RuntimeException("STARTTLS negotiation failed");
-        }
-
-        $this->smtpCommand($socket, "EHLO stratflow.app", 250);
+        // AUTH LOGIN
         $this->smtpCommand($socket, "AUTH LOGIN", 334);
         $this->smtpCommand($socket, base64_encode($user), 334);
         $this->smtpCommand($socket, base64_encode($pass), 235);
-        $this->smtpCommand($socket, "MAIL FROM:<{$from}>", 250);
+
+        // Envelope
+        $this->smtpCommand($socket, "MAIL FROM:<{$user}>", 250);
         $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
+
+        // Message
         $this->smtpCommand($socket, "DATA", 354);
+
+        $message = "From: {$fromName} <{$user}>\r\n";
+        $message .= "To: {$to}\r\n";
+        $message .= "Subject: {$subject}\r\n";
+        $message .= "MIME-Version: 1.0\r\n";
+        $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $message .= "\r\n";
+        $message .= $htmlBody;
+
         fwrite($socket, $message . "\r\n.\r\n");
-        $this->smtpRead($socket);
+        $this->smtpRead($socket); // 250 OK
+
         $this->smtpCommand($socket, "QUIT", 221);
         fclose($socket);
 
