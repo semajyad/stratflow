@@ -34,6 +34,7 @@ if ($uri === '/_debug') {
 
 // Serve setup scripts directly (bypasses front controller)
 
+if ($uri === '/phpinfo-check.php' && is_file($filePath)) { require $filePath; exit; }
 // Serve static files (not PHP files)
 if ($uri !== '/' && $ext !== '' && $ext !== 'php' && is_file($filePath)) {
     $mimeTypes = [
