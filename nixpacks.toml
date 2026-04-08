@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["php84", "php84Extensions.pdo_mysql", "php84Extensions.zip", "php84Extensions.gd", "php84Extensions.mbstring", "composer"]
+nixPkgs = ["php84", "php84Extensions.pdo_mysql", "php84Extensions.zip", "php84Extensions.gd", "php84Extensions.mbstring", "php84Packages.composer"]
 
 [phases.install]
 cmds = ["composer install --no-dev --optimize-autoloader"]
