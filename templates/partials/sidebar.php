@@ -25,6 +25,9 @@
             User Stories
         </a>
         <a href="/app/sprints" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">Sprint Allocation</a>
+        <a href="/app/governance" class="nav-link <?= ($active_page ?? '') === 'governance' ? 'active' : '' ?>">
+            Governance
+        </a>
 
         <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
             <hr class="sidebar-divider">

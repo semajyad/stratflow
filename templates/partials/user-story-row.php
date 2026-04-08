@@ -19,6 +19,9 @@
     <div class="story-info">
         <strong><?= htmlspecialchars($story['title']) ?></strong>
         <span class="badge badge-secondary"><?= htmlspecialchars($story['parent_title'] ?? 'Unlinked') ?></span>
+        <?php if ($story['requires_review'] ?? false): ?>
+            <span class="badge badge-warning">Requires Review</span>
+        <?php endif; ?>
         <?php if ($story['blocked_by']): ?>
             <span class="badge badge-warning">Blocked</span>
         <?php endif; ?>

@@ -19,6 +19,8 @@ use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
+use StratFlow\Models\GovernanceItem;
+use StratFlow\Models\StrategicBaseline;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\UserStoryPrompt;
 
@@ -154,6 +156,26 @@ class UserStoryController
             }
         }
 
+        // Create governance queue item if a baseline exists
+        $baseline = StrategicBaseline::findLatestByProjectId($this->db, $projectId);
+        if ($baseline && $totalCreated > 0) {
+            $parentTitles = [];
+            foreach ($hlItemIds as $hlItemId) {
+                $hlItem = HLWorkItem::findById($this->db, (int) $hlItemId);
+                if ($hlItem) {
+                    $parentTitles[] = $hlItem['title'];
+                }
+            }
+            GovernanceItem::create($this->db, [
+                'project_id' => $projectId,
+                'change_type' => 'new_story',
+                'proposed_change_json' => [
+                    'stories_created' => $totalCreated,
+                    'parent_items' => $parentTitles,
+                ],
+            ]);
+        }
+
         $_SESSION['flash_message'] = "{$totalCreated} user stories generated successfully.";
         $this->response->redirect('/app/user-stories?project_id=' . $projectId);
     }
@@ -227,6 +249,9 @@ class UserStoryController
         $blockedBy      = $this->request->post('blocked_by', '');
         $size           = $this->request->post('size', '');
 
+        $oldSize = (int) ($story['size'] ?? 0);
+        $newSize = $size !== '' ? (int) $size : 0;
+
         UserStory::update($this->db, $id, [
             'title'             => trim((string) $this->request->post('title', $story['title'])),
             'description'       => trim((string) $this->request->post('description', $story['description'] ?? '')),
@@ -235,6 +260,11 @@ class UserStoryController
             'size'              => $size !== '' ? (int) $size : null,
             'blocked_by'        => $blockedBy !== '' ? (int) $blockedBy : null,
         ]);
+
+        // Flag parent work item for review if size changed significantly
+        if ($oldSize > 0 && $newSize > 0 && abs($newSize - $oldSize) >= 2 && $story['parent_hl_item_id']) {
+            HLWorkItem::update($this->db, (int) $story['parent_hl_item_id'], ['requires_review' => 1]);
+        }
 
         $_SESSION['flash_message'] = 'User story updated.';
         $this->response->redirect('/app/user-stories?project_id=' . $story['project_id']);

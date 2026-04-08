@@ -83,6 +83,13 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/{id}',         'SprintController@update',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
 
+    // Governance — drift detection and change control
+    $router->add('GET',  '/app/governance',              'DriftController@dashboard',      ['auth']);
+    $router->add('POST', '/app/governance/baseline',     'DriftController@createBaseline', ['auth', 'csrf']);
+    $router->add('POST', '/app/governance/detect',       'DriftController@runDetection',   ['auth', 'csrf']);
+    $router->add('POST', '/app/governance/alerts/{id}',  'DriftController@acknowledgeAlert', ['auth', 'csrf']);
+    $router->add('POST', '/app/governance/queue/{id}',   'DriftController@reviewChange',   ['auth', 'csrf']);
+
     // Sounding Board — AI persona evaluations
     $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth']);
     $router->add('GET',  '/app/sounding-board/results/{id}',          'SoundingBoardController@results',  ['auth']);

@@ -186,13 +186,29 @@ class WorkItemController
             return;
         }
 
-        HLWorkItem::update($this->db, $id, [
+        $newDescription     = trim((string) $this->request->post('description', $item['description'] ?? ''));
+        $newEstimatedSprints = $this->request->post('estimated_sprints', '');
+
+        $updateData = [
             'title'           => trim((string) $this->request->post('title', $item['title'])),
-            'description'     => trim((string) $this->request->post('description', $item['description'] ?? '')),
+            'description'     => $newDescription,
             'okr_title'       => trim((string) $this->request->post('okr_title', $item['okr_title'] ?? '')),
             'okr_description' => trim((string) $this->request->post('okr_description', $item['okr_description'] ?? '')),
             'owner'           => trim((string) $this->request->post('owner', $item['owner'] ?? '')),
-        ]);
+        ];
+
+        if ($newEstimatedSprints !== '') {
+            $updateData['estimated_sprints'] = (int) $newEstimatedSprints;
+        }
+
+        HLWorkItem::update($this->db, $id, $updateData);
+
+        // Flag for review if description or sprint estimate changed
+        $descChanged    = $newDescription !== ($item['description'] ?? '');
+        $sprintChanged  = $newEstimatedSprints !== '' && (int) $newEstimatedSprints !== (int) $item['estimated_sprints'];
+        if ($descChanged || $sprintChanged) {
+            HLWorkItem::update($this->db, $id, ['requires_review' => 1]);
+        }
 
         $_SESSION['flash_message'] = 'Work item updated.';
         $this->response->redirect('/app/work-items?project_id=' . $item['project_id']);

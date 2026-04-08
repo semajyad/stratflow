@@ -2326,6 +2326,138 @@ tbody tr:hover {
     background: #15803d;
 }
 
+/* === Governance Dashboard ==================================================== */
+
+.governance-section {
+    margin-bottom: 2rem;
+}
+
+.governance-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.alert-list,
+.governance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.alert-card,
+.governance-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--secondary);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+.alert-card.severity-info {
+    border-left-color: var(--primary);
+}
+
+.alert-card.severity-warning {
+    border-left-color: var(--warning);
+}
+
+.alert-card.severity-critical {
+    border-left-color: var(--danger);
+}
+
+.governance-item {
+    border-left-color: var(--primary);
+}
+
+.alert-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.alert-type {
+    text-transform: capitalize;
+}
+
+.alert-date {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    margin-left: auto;
+}
+
+.alert-details {
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.alert-details p {
+    margin: 0;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.badge-info {
+    background: var(--primary);
+    color: #fff;
+}
+
+.badge-critical {
+    background: var(--danger);
+    color: #fff;
+}
+
+.baseline-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.baseline-table th,
+.baseline-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.baseline-table th {
+    background: var(--bg);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+}
+
+.baseline-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.baseline-table tbody tr:hover {
+    background: var(--bg);
+}
+
+.empty-state {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-light);
+}
+
 .persona-editor-panel .card-header {
     display: flex;
     align-items: center;

@@ -18,6 +18,9 @@
     <span class="priority-number"><?= (int) $item['priority_number'] ?></span>
     <div class="work-item-info">
         <strong><?= htmlspecialchars($item['title']) ?></strong>
+        <?php if ($item['requires_review'] ?? false): ?>
+            <span class="badge badge-warning">Requires Review</span>
+        <?php endif; ?>
         <p class="work-item-desc-preview"><?= htmlspecialchars(substr($item['description'] ?? '', 0, 120)) ?><?= strlen($item['description'] ?? '') > 120 ? '...' : '' ?></p>
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>
