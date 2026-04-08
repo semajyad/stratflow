@@ -19,6 +19,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Your strategy diagram visually maps the initiatives and dependencies from your uploaded documents. Click nodes to add OKRs, edit the Mermaid code directly, or regenerate from your summary.
+</div>
+
+<!-- ===========================
      Document Summary Context
      =========================== -->
 <?php if (!empty($document_summary)): ?>
@@ -143,6 +150,8 @@
     </a>
 </div>
 <?php endif; ?>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- Mermaid.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>

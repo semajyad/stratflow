@@ -14,7 +14,7 @@
             <h3>Edit Work Item</h3>
             <button class="modal-close" onclick="closeEditModal()">&times;</button>
         </div>
-        <form method="POST" id="edit-form">
+        <form method="POST" id="edit-form" action="/app/work-items/store">
             <div class="modal-body">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
@@ -42,6 +42,11 @@
                 <div class="form-group">
                     <label>Owner</label>
                     <input type="text" name="owner" id="modal-owner" placeholder="e.g. Team Alpha">
+                </div>
+
+                <div class="form-group">
+                    <label>Estimated Sprints</label>
+                    <input type="number" name="estimated_sprints" id="modal-estimated-sprints" min="1" max="12" placeholder="2">
                 </div>
 
                 <div class="form-group">

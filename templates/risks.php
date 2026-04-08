@@ -34,6 +34,13 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Identify and manage project risks. Auto-generate risks from your work items using AI, set likelihood and impact scores, and generate mitigation strategies.
+</div>
+
+<!-- ===========================
      Add/Edit Risk Modal
      =========================== -->
 <div id="risk-modal" class="modal-overlay hidden">
@@ -173,14 +180,4 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     </div>
 </div>
 
-<!-- ===========================
-     Navigation
-     =========================== -->
-<div class="flex items-center justify-between mb-6" style="flex-wrap: wrap; gap: 1rem;">
-    <a href="/app/prioritisation?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
-        &larr; Back to Prioritisation
-    </a>
-    <a href="/app/user-stories?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
-        Proceed to User Stories &rarr;
-    </a>
-</div>
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>

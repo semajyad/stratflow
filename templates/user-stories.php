@@ -29,6 +29,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    User stories break down high-level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.
+</div>
+
+<!-- ===========================
      HL Item Selector — AI Decomposition
      =========================== -->
 <?php if (!empty($work_items)): ?>
@@ -74,21 +81,33 @@
 </div>
 
 <!-- ===========================
-     Export Section
+     Export + Regenerate Sizing Section
      =========================== -->
 <div class="card mb-6">
     <div class="card-body export-section">
-        <strong>Export User Stories</strong>
-        <div class="flex items-center gap-2 mt-2">
-            <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=csv" class="btn btn-secondary btn-sm">
-                Export CSV
-            </a>
-            <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=json" class="btn btn-secondary btn-sm">
-                Export JSON
-            </a>
-            <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=jira" class="btn btn-secondary btn-sm">
-                Export Jira CSV
-            </a>
+        <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <strong>Export User Stories</strong>
+                <div class="flex items-center gap-2 mt-2">
+                    <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=csv" class="btn btn-secondary btn-sm">
+                        Export CSV
+                    </a>
+                    <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=json" class="btn btn-secondary btn-sm">
+                        Export JSON
+                    </a>
+                    <a href="/app/user-stories/export?project_id=<?= (int) $project['id'] ?>&format=jira" class="btn btn-secondary btn-sm">
+                        Export Jira CSV
+                    </a>
+                </div>
+            </div>
+            <form method="POST" action="/app/user-stories/regenerate-sizing">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        onclick="return confirm('Re-estimate story point sizes for all user stories using AI?')">
+                    Regenerate Sizing
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -108,17 +127,7 @@
      =========================== -->
 <?php require __DIR__ . '/partials/user-story-modal.php'; ?>
 
-<!-- ===========================
-     Navigation
-     =========================== -->
-<div class="flex items-center justify-between mb-6" style="flex-wrap: wrap; gap: 1rem;">
-    <a href="/app/risks?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
-        &larr; Back to Risk Modelling
-    </a>
-    <a href="#" class="btn btn-secondary disabled" title="Coming Soon">
-        Allocate to Sprints &rarr;
-    </a>
-</div>
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>

@@ -31,6 +31,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Monitor strategic drift and manage change control. Run detection to compare the current project state against your baseline, review flagged changes, and approve or reject amendments.
+</div>
+
+<!-- ===========================
      Active Alerts
      =========================== -->
 <div class="governance-section">
@@ -65,6 +72,8 @@
         </div>
     <?php endif; ?>
 </div>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- ===========================
      Baseline History

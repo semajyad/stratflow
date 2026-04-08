@@ -2493,3 +2493,38 @@ tbody tr:hover {
         flex-direction: column;
     }
 }
+
+/* ===========================
+   Page Description Banner
+   =========================== */
+.page-description {
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* ===========================
+   Workflow Navigation
+   =========================== */
+.workflow-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ===========================
+   Brand Logo (login page)
+   =========================== */
+.brand-logo {
+    font-size: 2rem;
+    color: var(--primary);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}

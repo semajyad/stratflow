@@ -403,6 +403,95 @@ class UserStoryController
     }
 
     /**
+     * Re-estimate story point sizes for all user stories in a project via AI.
+     *
+     * Sends story titles and descriptions to Gemini with a sizing prompt and
+     * batch-updates the size field for each returned story.
+     */
+    public function regenerateSizing(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $stories = UserStory::findByProjectId($this->db, $projectId);
+        if (empty($stories)) {
+            $_SESSION['flash_error'] = 'No user stories to size.';
+            $this->response->redirect('/app/user-stories?project_id=' . $projectId);
+            return;
+        }
+
+        // Build prompt for all stories in one call
+        $sizingPrompt = <<<'PROMPT'
+You are an Agile estimation expert. For each user story below, estimate the story point size using the modified Fibonacci scale: 1, 2, 3, 5, 8, 13.
+
+Return a JSON array where each element has: "id" (integer), "size" (integer from the Fibonacci scale).
+
+User stories:
+PROMPT;
+
+        $itemLines = [];
+        foreach ($stories as $story) {
+            $line = "- ID {$story['id']}: {$story['title']}";
+            if (!empty($story['description'])) {
+                $line .= ' — ' . mb_substr($story['description'], 0, 100);
+            }
+            $itemLines[] = $line;
+        }
+        $input = implode("\n", $itemLines);
+
+        try {
+            $gemini  = new GeminiService($this->config);
+            $results = $gemini->generateJson($sizingPrompt, $input);
+        } catch (\RuntimeException $e) {
+            $_SESSION['flash_error'] = 'Sizing regeneration failed: ' . $e->getMessage();
+            $this->response->redirect('/app/user-stories?project_id=' . $projectId);
+            return;
+        }
+
+        if (!is_array($results) || empty($results)) {
+            $_SESSION['flash_error'] = 'AI returned an unexpected format. Please try again.';
+            $this->response->redirect('/app/user-stories?project_id=' . $projectId);
+            return;
+        }
+
+        // Build a lookup of allowed IDs for security
+        $allowedIds    = array_column($stories, 'id');
+        $validSizes    = [1, 2, 3, 5, 8, 13];
+        $updatedCount  = 0;
+
+        foreach ($results as $result) {
+            $storyId = (int) ($result['id'] ?? 0);
+            $size    = (int) ($result['size'] ?? 3);
+
+            // Snap to nearest valid Fibonacci value
+            if (!in_array($size, $validSizes, true)) {
+                $closest = $validSizes[0];
+                foreach ($validSizes as $v) {
+                    if (abs($v - $size) < abs($closest - $size)) {
+                        $closest = $v;
+                    }
+                }
+                $size = $closest;
+            }
+
+            if (in_array($storyId, $allowedIds, true)) {
+                UserStory::update($this->db, $storyId, ['size' => $size]);
+                $updatedCount++;
+            }
+        }
+
+        $_SESSION['flash_message'] = "Story point sizing regenerated for {$updatedCount} user stories.";
+        $this->response->redirect('/app/user-stories?project_id=' . $projectId);
+    }
+
+    /**
      * Export user stories as CSV, JSON, or Jira-compatible CSV download.
      *
      * Reads format from query string and sends the appropriate file.

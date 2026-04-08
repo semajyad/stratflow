@@ -32,6 +32,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Allocate user stories into time-boxed sprints. Drag stories from the backlog into sprint buckets, monitor capacity utilisation, and use AI for automatic allocation.
+</div>
+
+<!-- ===========================
      Sprint Creation Form
      =========================== -->
 <div class="card mb-6">
@@ -102,3 +109,5 @@
         <?php endforeach; ?>
     </div>
 </div>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>

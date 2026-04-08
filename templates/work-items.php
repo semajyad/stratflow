@@ -23,6 +23,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    High-level work items represent approximately one month of effort for a Scrum team. Drag to reorder priorities, edit details, or generate AI descriptions.
+</div>
+
+<!-- ===========================
      Mini Diagram Thumbnail
      =========================== -->
 <?php if (!empty($diagram)): ?>
@@ -36,7 +43,7 @@
      Generate Work Items
      =========================== -->
 <div class="card mb-6">
-    <div class="card-body flex items-center justify-between">
+    <div class="card-body flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
         <div>
             <strong>AI Work Item Generation</strong>
             <p class="text-muted" style="margin:0.25rem 0 0; font-size:0.875rem;">
@@ -47,16 +54,33 @@
                 <?php endif; ?>
             </p>
         </div>
-        <form method="POST" action="/app/work-items/generate">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary"
-                    <?php if (!empty($work_items)): ?>
-                    onclick="return confirm('This will replace all existing work items. Continue?')"
-                    <?php endif; ?>>
-                <?= empty($work_items) ? 'Generate Work Items' : 'Regenerate Work Items' ?>
-            </button>
-        </form>
+        <div class="flex items-center gap-2" style="flex-wrap: wrap;">
+            <form method="POST" action="/app/work-items/generate">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-primary"
+                        <?php if (!empty($work_items)): ?>
+                        onclick="return confirm('This will replace all existing work items. Continue?')"
+                        <?php endif; ?>>
+                    <?= empty($work_items) ? 'Generate Work Items' : 'Regenerate Work Items' ?>
+                </button>
+            </form>
+            <?php if (!empty($work_items)): ?>
+            <form method="POST" action="/app/work-items/regenerate-sizing">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-secondary"
+                        onclick="return confirm('Re-estimate sprint sizing for all work items using AI?')">
+                    Regenerate Sizing
+                </button>
+            </form>
+            <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="openWorkItemModal(null)"
+            >Add Work Item</button>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
@@ -106,6 +130,8 @@
     </div>
 </div>
 <?php endif; ?>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>

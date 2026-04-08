@@ -48,12 +48,14 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth']);
 
     // Work items — static routes MUST come before {id} routes
-    $router->add('GET',  '/app/work-items',                        'WorkItemController@index',               ['auth']);
-    $router->add('POST', '/app/work-items/generate',               'WorkItemController@generate',            ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/reorder',                'WorkItemController@reorder',             ['auth']);
-    $router->add('GET',  '/app/work-items/export',                 'WorkItemController@export',              ['auth']);
-    $router->add('POST', '/app/work-items/{id}',                   'WorkItemController@update',              ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/{id}/delete',            'WorkItemController@delete',              ['auth', 'csrf']);
+    $router->add('GET',  '/app/work-items',                           'WorkItemController@index',               ['auth']);
+    $router->add('POST', '/app/work-items/generate',                  'WorkItemController@generate',            ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/store',                     'WorkItemController@store',               ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth']);
+    $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'csrf']);
+    $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
+    $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
 
     // Risk modelling — static routes MUST come before {id} routes
@@ -65,14 +67,15 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
 
     // User stories — static routes MUST come before {id} routes
-    $router->add('GET',  '/app/user-stories',                  'UserStoryController@index',       ['auth']);
-    $router->add('POST', '/app/user-stories/generate',         'UserStoryController@generate',    ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/store',            'UserStoryController@store',       ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/reorder',          'UserStoryController@reorder',     ['auth']);
-    $router->add('GET',  '/app/user-stories/export',           'UserStoryController@export',      ['auth']);
-    $router->add('POST', '/app/user-stories/{id}',             'UserStoryController@update',      ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/delete',      'UserStoryController@delete',      ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/suggest-size', 'UserStoryController@suggestSize', ['auth']);
+    $router->add('GET',  '/app/user-stories',                       'UserStoryController@index',           ['auth']);
+    $router->add('POST', '/app/user-stories/generate',              'UserStoryController@generate',        ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/store',                 'UserStoryController@store',           ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth']);
+    $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'csrf']);
+    $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
+    $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
 
     // Sprint allocation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/sprints',             'SprintController@index',         ['auth']);

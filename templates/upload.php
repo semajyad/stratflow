@@ -18,6 +18,13 @@
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Upload your strategy documents, meeting notes, or transcripts. StratFlow will extract the text and generate an AI summary to prepare for strategic mapping.
+</div>
+
+<!-- ===========================
      Instructions
      =========================== -->
 <div class="info-box">
@@ -156,6 +163,8 @@
         </div>
     <?php endif; ?>
 </section>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <?php
 /**

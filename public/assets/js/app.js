@@ -660,6 +660,53 @@ function closeEditModal() {
     }
 }
 
+/**
+ * Open the work item modal in create or edit mode.
+ *
+ * Pass null to open in create mode (blank fields, POST to /store).
+ * Pass an element or data object to open in edit mode.
+ *
+ * @param {HTMLElement|null} rowEl - The .work-item-row element, or null for create mode
+ */
+function openWorkItemModal(rowEl) {
+    var modal = document.getElementById('edit-modal');
+    if (!modal) { return; }
+
+    var form      = document.getElementById('edit-form');
+    var modalTitle = modal.querySelector('.modal-header h3');
+    var submitBtn  = modal.querySelector('.modal-footer .btn-primary');
+    var descBtn    = document.getElementById('generate-desc-btn');
+
+    if (rowEl === null) {
+        // Create mode — clear fields and point to store endpoint
+        if (modalTitle) { modalTitle.textContent = 'Add Work Item'; }
+        if (submitBtn)  { submitBtn.textContent = 'Create'; }
+        if (descBtn)    { descBtn.style.display = 'none'; }
+        document.getElementById('modal-priority').value    = '';
+        document.getElementById('modal-title').value       = '';
+        document.getElementById('modal-description').value = '';
+        document.getElementById('modal-okr-title').value   = '';
+        document.getElementById('modal-okr-desc').value    = '';
+        document.getElementById('modal-owner').value       = '';
+        form.action = '/app/work-items/store';
+    } else {
+        // Edit mode — reuse existing data population
+        if (modalTitle) { modalTitle.textContent = 'Edit Work Item'; }
+        if (submitBtn)  { submitBtn.textContent = 'Update'; }
+        if (descBtn)    { descBtn.style.display = ''; }
+        var currentEditId = rowEl.dataset.id;
+        document.getElementById('modal-priority').value      = rowEl.querySelector('.priority-number') ? rowEl.querySelector('.priority-number').textContent : '';
+        document.getElementById('modal-title').value         = rowEl.dataset.title || '';
+        document.getElementById('modal-description').value   = rowEl.dataset.description || '';
+        document.getElementById('modal-okr-title').value     = rowEl.dataset.okrTitle || '';
+        document.getElementById('modal-okr-desc').value      = rowEl.dataset.okrDesc || '';
+        document.getElementById('modal-owner').value         = rowEl.dataset.owner || '';
+        form.action = '/app/work-items/' + currentEditId;
+    }
+
+    modal.classList.remove('hidden');
+}
+
 // ===========================
 // Global: Risk Modal Toggle
 // ===========================

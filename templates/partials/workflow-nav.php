@@ -1,0 +1,46 @@
+<?php
+/**
+ * Workflow Navigation Partial
+ *
+ * Renders Back / Forward buttons based on the current $active_page variable.
+ * Include at the bottom of each workflow step template. Requires $project and
+ * $active_page to be set in the rendering scope.
+ */
+
+$steps = [
+    'upload'         => ['label' => 'Document Upload',  'url' => '/app/upload'],
+    'diagram'        => ['label' => 'Strategy Roadmap', 'url' => '/app/diagram'],
+    'work-items'     => ['label' => 'Work Items',        'url' => '/app/work-items'],
+    'prioritisation' => ['label' => 'Prioritisation',   'url' => '/app/prioritisation'],
+    'risks'          => ['label' => 'Risk Modelling',   'url' => '/app/risks'],
+    'user-stories'   => ['label' => 'User Stories',     'url' => '/app/user-stories'],
+    'sprints'        => ['label' => 'Sprint Allocation', 'url' => '/app/sprints'],
+    'governance'     => ['label' => 'Governance',       'url' => '/app/governance'],
+];
+
+$stepKeys     = array_keys($steps);
+$currentIndex = array_search($active_page ?? '', $stepKeys);
+$prevStep     = ($currentIndex !== false && $currentIndex > 0)
+    ? $steps[$stepKeys[$currentIndex - 1]]
+    : null;
+$nextStep     = ($currentIndex !== false && $currentIndex < count($stepKeys) - 1)
+    ? $steps[$stepKeys[$currentIndex + 1]]
+    : null;
+?>
+<?php if ($prevStep || $nextStep): ?>
+<div class="workflow-nav">
+    <?php if ($prevStep): ?>
+        <a href="<?= $prevStep['url'] ?>?project_id=<?= (int) ($project['id'] ?? 0) ?>" class="btn btn-secondary">
+            &larr; <?= htmlspecialchars($prevStep['label']) ?>
+        </a>
+    <?php else: ?>
+        <span></span>
+    <?php endif; ?>
+
+    <?php if ($nextStep): ?>
+        <a href="<?= $nextStep['url'] ?>?project_id=<?= (int) ($project['id'] ?? 0) ?>" class="btn btn-primary">
+            <?= htmlspecialchars($nextStep['label']) ?> &rarr;
+        </a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>

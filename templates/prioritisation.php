@@ -33,6 +33,13 @@ $formula = $isRice
 </div>
 
 <!-- ===========================
+     Page Description
+     =========================== -->
+<div class="page-description">
+    Score your work items using industry-standard frameworks. RICE evaluates Reach, Impact, Confidence, and Effort. WSJF evaluates Business Value, Time Criticality, Risk Reduction, and Job Size.
+</div>
+
+<!-- ===========================
      Framework Selector
      =========================== -->
 <div class="card mb-6">
@@ -170,10 +177,9 @@ $formula = $isRice
             Re-rank by Score
         </button>
     </form>
-    <a href="/app/risks?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
-        Proceed to Risk Modelling
-    </a>
 </div>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <?php else: ?>
 <div class="card">
