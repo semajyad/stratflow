@@ -7,22 +7,38 @@
 /* === Custom Properties ====================================================== */
 
 :root {
-    --primary:       #2563eb;
-    --primary-dark:  #1d4ed8;
-    --primary-light: #dbeafe;
-    --secondary:     #64748b;
-    --success:       #16a34a;
-    --danger:        #dc2626;
-    --warning:       #d97706;
-    --bg:            #f8fafc;
-    --surface:       #ffffff;
-    --text:          #1e293b;
-    --text-light:    #64748b;
-    --border:        #e2e8f0;
-    --shadow:        0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-lg:     0 10px 25px rgba(0, 0, 0, 0.1);
-    --radius:        8px;
-    --sidebar-width: 240px;
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --primary-light: #eef2ff;
+    --primary-hover: #6366f1;
+    --secondary: #64748b;
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --info: #0891b2;
+    --bg: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-secondary: #475569;
+    --text-light: #94a3b8;
+    --text-muted: #94a3b8;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --sidebar-width: 260px;
 }
 
 /* === Reset & Base =========================================================== */
@@ -41,14 +57,15 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-                 Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -192,8 +209,8 @@ main.container {
 
 .sidebar {
     width: var(--sidebar-width);
-    background: var(--surface);
-    border-right: 1px solid var(--border);
+    background: #0f172a;
+    border-right: none;
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -202,21 +219,23 @@ main.container {
     bottom: 0;
     z-index: 200;
     overflow-y: auto;
+    color: #cbd5e1;
 }
 
 .sidebar-brand {
     display: flex;
     align-items: center;
-    height: 64px;
+    height: 56px;
     padding: 0 1.25rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-brand a {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
     font-weight: 800;
-    color: var(--primary);
+    color: #ffffff;
     text-decoration: none;
+    letter-spacing: -0.025em;
 }
 
 .sidebar-nav {
@@ -228,25 +247,27 @@ main.container {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.625rem 1.25rem;
-    color: var(--text-light);
-    font-size: 0.9375rem;
+    padding: 0.5rem 1.25rem;
+    color: #94a3b8;
+    font-size: 0.875rem;
     font-weight: 500;
     border-radius: 0;
     text-decoration: none;
-    transition: background 0.15s, color 0.15s;
+    transition: all 150ms ease;
+    border-left: 3px solid transparent;
 }
 
 .sidebar-nav a:hover {
-    background: var(--primary-light);
-    color: var(--primary-dark);
+    background: rgba(255,255,255,0.06);
+    color: #e2e8f0;
     text-decoration: none;
 }
 
 .sidebar-nav a.active {
-    background: var(--primary-light);
-    color: var(--primary);
-    border-right: 3px solid var(--primary);
+    background: rgba(79, 70, 229, 0.15);
+    color: #818cf8;
+    border-left: 3px solid #818cf8;
+    border-right: none;
 }
 
 .sidebar-nav .nav-icon {
@@ -483,7 +504,7 @@ main.container {
 .form-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 @media (max-width: 600px) {
@@ -703,7 +724,7 @@ select:focus,
 textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 input::placeholder,
@@ -1670,7 +1691,7 @@ tbody tr:hover {
 .score-dropdown:focus {
     border-color: var(--primary);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
 }
 
 .score-select {
@@ -2218,7 +2239,7 @@ tbody tr:hover {
 
 .sprint-story-item:hover {
     border-color: var(--primary);
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.12);
 }
 
 .sprint-story-item:active {
@@ -2282,7 +2303,7 @@ tbody tr:hover {
 }
 
 .sortable-chosen {
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 /* Responsive sprint layout */
@@ -2430,7 +2451,7 @@ tbody tr:hover {
 /* Sidebar divider */
 .sidebar-divider {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid rgba(255,255,255,0.08);
     margin: 0.75rem 1rem;
 }
 
@@ -2867,4 +2888,30 @@ tbody tr:hover {
     text-align: center;
     margin-bottom: 1.5rem;
     font-weight: 700;
+}
+
+/* === Animations ============================================================ */
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-0.5rem); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: 0 auto;
 }

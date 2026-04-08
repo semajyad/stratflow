@@ -24,7 +24,7 @@ jobs:
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
     steps:
       - uses: actions/checkout@v4
@@ -33,24 +33,51 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, zip, gd, mbstring
+          extensions: pdo_mysql, zip, gd, mbstring, curl
           coverage: none
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Create .env
+        run: |
+          cat > .env << 'ENVEOF'
+          APP_ENV=testing
+          APP_URL=http://localhost
+          APP_DEBUG=true
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=stratflow
+          DB_USERNAME=stratflow
+          DB_PASSWORD=stratflow_secret
+          GEMINI_API_KEY=test-key
+          GEMINI_MODEL=gemini-2.5-flash
+          STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+          STRIPE_SECRET_KEY=sk_test_xxx
+          STRIPE_WEBHOOK_SECRET=whsec_xxx
+          STRIPE_PRICE_PRODUCT=price_xxx
+          STRIPE_PRICE_CONSULTANCY=price_xxx
+          STRIPE_PRICE_USER_PACK=price_xxx
+          STRIPE_PRICE_EVAL_BOARD=price_xxx
+          MAIL_FROM_NAME=StratFlow
+          MAIL_FROM_EMAIL=test@example.com
+          MAIL_SMTP_HOST=localhost
+          MAIL_SMTP_PORT=587
+          MAIL_SMTP_USER=
+          MAIL_SMTP_PASS=
+          UPLOAD_MAX_SIZE=52428800
+          ENVEOF
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' .env
+
       - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
-            mysqladmin ping -h 127.0.0.1 -u stratflow -pstratflow_secret 2>/dev/null && break
+            mysqladmin ping -h 127.0.0.1 -u stratflow -pstratflow_secret 2>/dev/null && exit 0
             sleep 2
           done
-
-      - name: Create .env
-        run: |
-          cp .env.example .env
-          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
-          sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
+          echo "MySQL did not start"
+          exit 1
 
       - name: Initialize database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
