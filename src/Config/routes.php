@@ -63,4 +63,14 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
+
+    // User stories — static routes MUST come before {id} routes
+    $router->add('GET',  '/app/user-stories',                  'UserStoryController@index',       ['auth']);
+    $router->add('POST', '/app/user-stories/generate',         'UserStoryController@generate',    ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/store',            'UserStoryController@store',       ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/reorder',          'UserStoryController@reorder',     ['auth']);
+    $router->add('GET',  '/app/user-stories/export',           'UserStoryController@export',      ['auth']);
+    $router->add('POST', '/app/user-stories/{id}',             'UserStoryController@update',      ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/delete',      'UserStoryController@delete',      ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/suggest-size', 'UserStoryController@suggestSize', ['auth']);
 };

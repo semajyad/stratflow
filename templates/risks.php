@@ -179,7 +179,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     <a href="/app/prioritisation?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
         &larr; Back to Prioritisation
     </a>
-    <a href="#" class="btn btn-secondary disabled" title="Coming Soon">
+    <a href="/app/user-stories?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary">
         Proceed to User Stories &rarr;
     </a>
 </div>

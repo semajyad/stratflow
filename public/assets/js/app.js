@@ -384,6 +384,117 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ===========================
+    // User Stories: SortableJS Drag & Drop
+    // ===========================
+    var storyList = document.getElementById('user-stories-list');
+    if (storyList && typeof Sortable !== 'undefined') {
+        Sortable.create(storyList, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                var items = storyList.querySelectorAll('.story-row');
+                var order = [];
+                items.forEach(function(el, index) {
+                    order.push({ id: parseInt(el.dataset.id), position: index + 1 });
+                    el.querySelector('.priority-number').textContent = index + 1;
+                });
+
+                var csrfToken = document.querySelector('input[name="_csrf_token"]');
+                fetch('/app/user-stories/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        order: order,
+                        _csrf_token: csrfToken ? csrfToken.value : ''
+                    })
+                });
+            }
+        });
+    }
+
+    // ===========================
+    // User Stories: Edit Modal Population
+    // ===========================
+    var currentStoryId = null;
+
+    document.querySelectorAll('.edit-story-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var row = btn.closest('.story-row');
+            currentStoryId = row.dataset.id;
+
+            document.getElementById('story-modal-title').textContent = 'Edit User Story';
+            document.getElementById('story-title').value       = row.dataset.title || '';
+            document.getElementById('story-description').value = row.dataset.description || '';
+            document.getElementById('story-team').value        = row.dataset.team || '';
+            document.getElementById('story-size').value        = row.dataset.size || '';
+            document.getElementById('story-blocked-by').value  = row.dataset.blockedBy || '';
+            document.getElementById('story-parent').value      = row.dataset.parentId || '';
+            document.getElementById('story-submit-btn').textContent = 'Update';
+            document.getElementById('story-form').action = '/app/user-stories/' + currentStoryId;
+
+            // Hide the current story from the blocked-by dropdown
+            var blockedBySelect = document.getElementById('story-blocked-by');
+            Array.from(blockedBySelect.options).forEach(function(opt) {
+                opt.style.display = opt.value === currentStoryId ? 'none' : '';
+            });
+
+            document.getElementById('ai-size-reasoning').style.display = 'none';
+            document.getElementById('story-modal').classList.remove('hidden');
+        });
+    });
+
+    // ===========================
+    // User Stories: AI Size Suggestion (AJAX)
+    // ===========================
+    var aiSizeBtn = document.getElementById('ai-size-btn');
+    if (aiSizeBtn) {
+        aiSizeBtn.addEventListener('click', function() {
+            if (!currentStoryId) { return; }
+
+            aiSizeBtn.disabled    = true;
+            aiSizeBtn.textContent = 'Generating...';
+
+            fetch('/app/user-stories/' + currentStoryId + '/suggest-size', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.status === 'ok') {
+                    document.getElementById('story-size').value = String(data.size);
+                    if (data.reasoning) {
+                        var reasoningEl = document.getElementById('ai-size-reasoning');
+                        reasoningEl.textContent = 'AI reasoning: ' + data.reasoning;
+                        reasoningEl.style.display = 'block';
+                    }
+                    aiSizeBtn.textContent = 'Suggested!';
+                } else {
+                    aiSizeBtn.textContent = 'Error: ' + (data.message || 'Unknown');
+                }
+                setTimeout(function() {
+                    aiSizeBtn.textContent = 'AI Suggest Size';
+                    aiSizeBtn.disabled    = false;
+                }, 2500);
+            })
+            .catch(function() {
+                aiSizeBtn.textContent = 'Error';
+                setTimeout(function() {
+                    aiSizeBtn.textContent = 'AI Suggest Size';
+                    aiSizeBtn.disabled    = false;
+                }, 2500);
+            });
+        });
+    }
+
+    // ===========================
     // Upload: Extracted Text Toggle
     // ===========================
     document.querySelectorAll('.toggle-text').forEach(function(btn) {
@@ -587,6 +698,44 @@ function updateRpnPreview() {
     var preview = document.getElementById('rpn-preview');
     if (preview) {
         preview.textContent = l * i;
+    }
+}
+
+// ===========================
+// Global: Story Modal Toggle
+// ===========================
+
+/**
+ * Toggle the user story add/edit modal. Resets to "Add" mode when opening fresh.
+ */
+function toggleStoryModal() {
+    var modal = document.getElementById('story-modal');
+    if (!modal) { return; }
+
+    if (modal.classList.contains('hidden')) {
+        // Reset to "Add" mode
+        document.getElementById('story-modal-title').textContent = 'Add User Story';
+        document.getElementById('story-form').action = '/app/user-stories/store';
+        document.getElementById('story-title').value = '';
+        document.getElementById('story-description').value = '';
+        document.getElementById('story-team').value = '';
+        document.getElementById('story-size').value = '';
+        document.getElementById('story-blocked-by').value = '';
+        document.getElementById('story-parent').value = '';
+        document.getElementById('story-submit-btn').textContent = 'Save';
+        document.getElementById('ai-size-reasoning').style.display = 'none';
+
+        // Show all options in blocked-by dropdown
+        var blockedBySelect = document.getElementById('story-blocked-by');
+        if (blockedBySelect) {
+            Array.from(blockedBySelect.options).forEach(function(opt) {
+                opt.style.display = '';
+            });
+        }
+
+        modal.classList.remove('hidden');
+    } else {
+        modal.classList.add('hidden');
     }
 }
 

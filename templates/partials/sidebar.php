@@ -21,7 +21,9 @@
         <a href="/app/risks" class="nav-link <?= ($active_page ?? '') === 'risks' ? 'active' : '' ?>">
             Risk Modelling
         </a>
-        <a href="#" class="nav-link disabled" title="Coming Soon">Technical Translation</a>
+        <a href="/app/user-stories" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
+            User Stories
+        </a>
         <a href="#" class="nav-link disabled" title="Coming Soon">AI Execution</a>
     </nav>
 </aside>
