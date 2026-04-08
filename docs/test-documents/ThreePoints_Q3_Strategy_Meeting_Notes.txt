@@ -1,0 +1,132 @@
+ThreePoints Solutions — Q3 2026 Strategy Planning Meeting
+Date: 1 April 2026
+Attendees: Martin Rajcok (CEO), James Day (CTO), Sarah Chen (VP Product), David Kim (VP Engineering), Lisa Park (Head of Sales)
+
+=== EXECUTIVE SUMMARY ===
+
+ThreePoints Solutions has experienced 40% revenue growth in the past 12 months, driven primarily by the Assessments product line. The board has approved a $2.5M NZD investment to expand into three new markets by Q4 2026. This meeting establishes the strategic priorities, key initiatives, and resource allocation for Q3-Q4 execution.
+
+=== KEY STRATEGIC DECISIONS ===
+
+1. MARKET EXPANSION — AUSTRALIA AND SOUTHEAST ASIA
+
+Martin outlined the expansion strategy: "We've proven the model in New Zealand. Australian enterprises have the same pain points — slow strategy-to-execution cycles, misaligned teams, and no visibility into strategic drift. Our StratFlow platform solves all three."
+
+Target markets:
+- Australia (primary): Focus on Sydney and Melbourne enterprise accounts. Target companies with 500-5000 employees in financial services, healthcare, and technology sectors.
+- Singapore (secondary): Gateway to Southeast Asia. Target government-linked enterprises and MNCs with regional headquarters.
+- Philippines (tertiary): Offshore development partnerships and BPO companies seeking to improve their delivery processes.
+
+Key milestones:
+- April 2026: Establish Australian subsidiary (ThreePoints Australia Pty Ltd)
+- May 2026: Hire Regional Sales Director (Sydney-based)
+- June 2026: Launch first 3 Australian enterprise pilots
+- August 2026: Singapore market entry with 2 strategic partnerships
+- October 2026: First revenue from Australian accounts
+
+Budget allocation: $1.2M for market expansion (travel, hiring, marketing, legal entity setup)
+
+2. STRATFLOW PLATFORM ENHANCEMENT
+
+James presented the StratFlow V3 roadmap. Current platform handles strategy document ingestion through to sprint allocation. V3 adds enterprise-grade capabilities:
+
+Priority features (in order):
+a) Jira/Azure DevOps bidirectional sync — "This is the #1 request from every enterprise prospect. Without it, we can't close deals over $50K ARR." (James)
+b) Executive dashboard with portfolio view — "The person signing the contract needs to see ROI. They don't care about user stories." (Lisa)
+c) Microsoft Teams meeting integration — "Every strategy starts in a Teams call. If we can ingest meeting transcripts directly, we eliminate the first friction point." (Sarah)
+d) Real-time collaboration — comments, @mentions, notifications — "We need multi-user before we can sell to teams larger than 5." (David)
+e) AI Strategy Coach — conversational interface for on-demand strategic advice
+
+Technical dependencies:
+- Jira sync requires OAuth 2.0 implementation with Atlassian's API
+- Teams integration requires Azure AD app registration and Microsoft Graph API access
+- Dashboard requires Chart.js integration and a caching layer for performance
+- All features must maintain HIPAA/SOC2 compliance — audit logging on every action
+
+Timeline: Q3 for Jira + Dashboard, Q4 for Teams + Collaboration
+
+3. SALES AND GO-TO-MARKET STRATEGY
+
+Lisa presented the revised pricing model:
+- Starter tier: $49/user/month (5 user minimum) — core platform only
+- Professional tier: $99/user/month — includes Jira sync, dashboard, sounding boards
+- Enterprise tier: $199/user/month — includes Teams integration, AI coach, SSO/SAML, dedicated support
+- Consultancy add-on: $5,000/engagement — 10 hours of strategic facilitation
+
+Target pipeline:
+- 15 qualified leads by end of Q2 (current: 8)
+- 5 signed contracts by end of Q3
+- $500K ARR by end of Q4
+
+Key accounts in negotiation:
+- Westpac NZ (financial services, 200 users) — in POC stage
+- Fisher & Paykel Healthcare (medical devices, 150 users) — proposal submitted
+- Xero (technology, 100 users) — initial conversations
+- ANZ Bank Australia (financial services, 500 users) — waiting for Jira integration
+
+4. ENGINEERING AND INFRASTRUCTURE
+
+David outlined the engineering priorities:
+- Current team: 8 engineers (4 backend, 2 frontend, 1 DevOps, 1 QA)
+- Hiring plan: Add 3 engineers in Q3 (1 senior backend, 1 frontend, 1 security specialist)
+- Infrastructure: Migrate from Railway to AWS for enterprise customers requiring data residency
+- Security: Complete SOC 2 Type II certification by September 2026
+- Performance: Target <2 second page load, <30 second AI generation
+
+Technical debt priorities:
+- Database query optimization (some pages loading in 4+ seconds)
+- End-to-end test automation (currently manual testing causes regressions)
+- API versioning for future third-party integrations
+
+5. CUSTOMER SUCCESS AND RETENTION
+
+Sarah presented customer feedback themes:
+- "The AI summary is impressive but sometimes too generic" — need to improve prompt engineering
+- "We want to see progress over time" — need analytics and reporting
+- "The diagram is hard to read on mobile" — responsive improvements needed
+- "Can we use this for our OKR planning process?" — potential new use case
+- NPS score: 42 (industry average: 36, target: 50 by Q4)
+
+Retention strategy:
+- Quarterly business reviews with all enterprise accounts
+- In-app onboarding wizard for new users (reduce time-to-value from 2 hours to 30 minutes)
+- Monthly product webinars and case study publications
+- Customer advisory board (invite top 5 accounts)
+
+=== ACTION ITEMS ===
+
+1. [Martin] Register Australian subsidiary by April 15
+2. [Lisa] Publish revised pricing on website by April 8
+3. [James] Complete Jira integration POC by May 1
+4. [David] Post job listings for 3 engineering roles by April 10
+5. [Sarah] Design onboarding wizard wireframes by April 20
+6. [James] Submit SOC 2 Type II assessment application by April 30
+7. [Lisa] Schedule Westpac NZ POC kickoff for week of April 14
+8. [Martin] Finalize Singapore partnership MOU by June 1
+9. [David] Complete database optimization sprint by April 25
+10. [Sarah] Launch customer advisory board with Q1 pilot accounts by May 15
+
+=== RISKS AND DEPENDENCIES ===
+
+- Risk: Australian market entry requires local data residency (AWS Sydney region) — blocked on infrastructure migration
+- Risk: SOC 2 certification timeline may slip if security specialist hire is delayed
+- Risk: Jira integration complexity could push Q3 delivery to Q4
+- Dependency: Teams integration requires Microsoft ISV partnership approval (6-8 week process)
+- Dependency: Enterprise pricing requires updated Stripe configuration with volume discounts
+- Mitigation: Parallel-track Jira and Dashboard development to derisk timeline
+
+=== BUDGET SUMMARY ===
+
+Total Q3-Q4 investment: $2.5M NZD
+- Market expansion: $1.2M (48%)
+- Engineering hiring: $450K (18%)
+- Infrastructure (AWS): $300K (12%)
+- Sales & marketing: $350K (14%)
+- Security & compliance: $200K (8%)
+
+Expected ROI: $500K ARR by Q4, $2M ARR by Q2 2027 (12-month payback period)
+
+=== NEXT MEETING ===
+
+Monthly strategy review: May 1, 2026
+Quarterly board presentation: June 15, 2026
