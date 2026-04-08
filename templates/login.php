@@ -14,14 +14,8 @@
             <h2 class="auth-heading">Sign in to your account</h2>
         </div>
 
-        <?php if (!empty($flash_message)): ?>
-            <div class="flash-message flash-message--success">
-                <?= htmlspecialchars($flash_message) ?>
-            </div>
-        <?php endif; ?>
-
         <?php if (!empty($error)): ?>
-            <div class="flash-message flash-message--error">
+            <div class="flash-message flash-error">
                 <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>

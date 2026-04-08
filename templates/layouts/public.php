@@ -20,8 +20,11 @@
         </div>
     </header>
     <main class="container">
-        <?php if ($flash = ($flash_message ?? null)): ?>
-            <div class="flash-message"><?= htmlspecialchars($flash) ?></div>
+        <?php if (!empty($flash_message)): ?>
+            <div class="flash-message flash-success"><?= htmlspecialchars($flash_message) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($flash_error)): ?>
+            <div class="flash-message flash-error"><?= htmlspecialchars($flash_error) ?></div>
         <?php endif; ?>
         <?= $content ?>
     </main>

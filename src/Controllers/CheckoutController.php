@@ -64,7 +64,7 @@ class CheckoutController
                 'stripe_key'        => $this->config['stripe']['publishable_key'],
                 'price_product'     => $this->config['stripe']['price_product'],
                 'price_consultancy' => $this->config['stripe']['price_consultancy'],
-                'flash_message'     => 'Invalid plan selected. Please try again.',
+                'flash_error'       => 'Invalid plan selected. Please try again.',
             ]);
             return;
         }
@@ -87,7 +87,7 @@ class CheckoutController
                 'stripe_key'        => $this->config['stripe']['publishable_key'],
                 'price_product'     => $this->config['stripe']['price_product'],
                 'price_consultancy' => $this->config['stripe']['price_consultancy'],
-                'flash_message'     => 'Payment service error. Please try again later.',
+                'flash_error'       => 'Payment service error. Please try again later.',
             ]);
         }
     }
