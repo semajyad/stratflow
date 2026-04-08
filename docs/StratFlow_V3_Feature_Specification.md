@@ -1,85 +1,73 @@
-# ThreePoints StratFlow V3 — Feature Specification
+# Version 3 — Enterprise Integration & Intelligence
 
-StratFlow V1 established the strategy-to-delivery pipeline: upload documents, generate strategy diagrams, decompose into work items, score via RICE/WSJF, model risks, break into user stories, and allocate to sprints. V2 added the governance layer — sounding boards, admin surfaces, the Strategic Drift Engine with baselines, tripwires, and a change-control queue — creating the only tool that maintains a live closed loop between strategic intent and execution reality. V3 extends the platform into the enterprise: bidirectional integration with Jira and Azure DevOps, portfolio-level executive dashboards, real-time collaboration, conversational AI strategy coaching, multi-format document intelligence, and meeting platform integration. These six features transform StratFlow from a planning-phase tool into the organisation's permanent strategy operating system.
-
----
-
-## System Screens and Functionality
+StratFlow V1 (Items 1–9) established the strategy-to-delivery pipeline: upload documents, generate strategy diagrams, decompose into work items, score via RICE/WSJF, model risks, break into user stories, and allocate to sprints. V2 added the governance layer — sounding boards, admin surfaces, the Strategic Drift Engine with baselines, tripwires, and a change-control queue — creating the only tool that maintains a live closed loop between strategic intent and execution reality. Version 3 extends the platform into the enterprise. Six new features transform StratFlow from a planning-phase tool into the organisation's permanent strategy operating system: bidirectional integration with Jira and Azure DevOps, portfolio-level executive dashboards, real-time collaboration with activity feeds, a conversational AI strategy coach, multi-format document intelligence, and meeting platform integration with Microsoft Teams, Zoom, and Google Meet.
 
 ---
 
-### 10. Integration Hub Screen
+## Item 10: Integration Hub — Bidirectional Jira & Azure DevOps Sync
 
-The Integration Hub is the central configuration surface for connecting StratFlow to external project management and work tracking tools. Accessed from the Admin area sidebar, it allows org admins to authenticate with Jira Cloud or Azure DevOps, select target projects, configure field mappings, and monitor sync health. Each connected integration shows its status (active, paused, error), last sync timestamp, and a count of mapped items.
+**Sprint Goal:** The Connected Ecosystem
 
-The Integration Hub is the foundation of StratFlow's enterprise value proposition. Without it, StratFlow is a planning-phase tool that users abandon once work moves to Jira. With it, StratFlow becomes embedded in the daily engineering workflow and the Drift Engine gains visibility into changes made outside the platform.
-
----
-
-#### 10.1 Integration List View
-
-**Route:** `GET /app/admin/integrations`
-
-Displays all configured integrations for the organisation in a table layout.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Provider | Badge | `Jira Cloud` or `Azure DevOps` with provider logo |
-| Project Name | Text | The external project this integration targets |
-| Status | Status badge | `Active` (green), `Paused` (amber), `Error` (red) |
-| Last Sync | Relative timestamp | e.g. "3 minutes ago", "Never" |
-| Mapped Items | Count | Number of HL work items + user stories currently synced |
-| Actions | Button group | `Configure`, `Sync Now`, `Pause/Resume`, `Delete` |
-
-**Empty state:** "No integrations configured. Connect Jira or Azure DevOps to push your strategy backlog and enable bidirectional drift detection."
-
-**Action buttons:**
-- `+ Connect Jira Cloud` — initiates OAuth 2.0 flow with Atlassian
-- `+ Connect Azure DevOps` — initiates OAuth 2.0 flow with Microsoft
+**Objective:** Eliminate the CSV/JSON export dead-end by establishing a live, authenticated, field-mapped sync pipeline between StratFlow and the two dominant enterprise work tracking platforms, closing the drift detection feedback loop so the Strategic Drift Engine can detect and respond to changes made outside StratFlow.
 
 ---
 
-#### 10.2 Jira Connection Settings
+### Week 1: One-Way Push to Jira Cloud & Azure DevOps
 
-**Route:** `GET /app/admin/integrations/jira/connect`
+**Focus:** Implement OAuth 2.0 authentication flows for both Jira Cloud and Azure DevOps, build the integration configuration screens, and deliver one-way push of HL work items as Epics and user stories as Stories with configurable field mapping.
 
-OAuth 2.0 authentication flow with Atlassian Cloud.
+#### Phase 1: OAuth Authentication & Data Model (Days 1–3)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| Atlassian Site | Dropdown (auto-populated after OAuth) | The Atlassian Cloud instance to connect to |
-| Jira Project | Dropdown | Target Jira project for synced items |
-| Sync Direction | Radio group | `Push Only` (StratFlow → Jira), `Bidirectional` (StratFlow ↔ Jira) |
-| Auto-Sync | Toggle | When enabled, sync runs automatically on item save |
-| Webhook URL | Read-only text + Copy button | URL for Jira to POST change events to (displayed after save) |
+● **Task 10.1: Jira OAuth 2.0 Client.** Implement `JiraService.php` with OAuth 2.0 client for Atlassian Cloud REST API v3. Methods: `authenticate()`, `getProjects()`, `createEpic()`, `createStory()`, `updateIssue()`, `getIssue()`. Store tokens encrypted in `integrations.config_json`. OAuth scopes requested: `read:jira-work`, `write:jira-work`, `read:jira-user`, `manage:jira-webhook`.
 
-**OAuth scopes requested:** `read:jira-work`, `write:jira-work`, `read:jira-user`, `manage:jira-webhook`
+● **Task 10.2: Integration & Sync Mapping Models.** Create `Integration.php` and `SyncMapping.php` models with standard CRUD operations plus `findByOrgAndProvider()`, `findByLocalItem()`, `findByExternalId()`. Integration model stores provider type, OAuth config JSON, status, last sync timestamp, and error count.
 
----
+● **Task 10.3: Integration Controller & Routes.** Create `IntegrationController.php` with routes for connection setup, field mapping, sync trigger, and status view. Register all routes under `/app/admin/integrations/*` with `AdminMiddleware`. Routes include:
+  ○ `GET /app/admin/integrations` — integration list view
+  ○ `GET /app/admin/integrations/jira/connect` — Jira OAuth flow
+  ○ `GET /app/admin/integrations/azure-devops/connect` — Azure DevOps OAuth flow
+  ○ `GET /app/admin/integrations/{id}/field-mapping` — field mapping configuration
+  ○ `GET /app/admin/integrations/{id}/status` — sync status and history
 
-#### 10.3 Azure DevOps Connection Settings
+#### Phase 2: Integration UI & Push Logic (Days 4–5)
 
-**Route:** `GET /app/admin/integrations/azure-devops/connect`
+● **Task 10.4: Integration Hub Templates.** Build `templates/admin/integrations.php` — integration list view showing all configured integrations with provider badge, project name, status (Active/Paused/Error), last sync timestamp, mapped item count, and action buttons (Configure, Sync Now, Pause/Resume, Delete). Include Jira connection form, Azure DevOps connection form, and field mapping table.
 
-OAuth 2.0 authentication flow with Microsoft Azure DevOps.
+● **Task 10.5: One-Way Push Implementation.** Implement push logic: `JiraService::pushWorkItem()` creates a Jira Epic from an HL work item, `pushUserStory()` creates a Jira Story linked to the parent Epic. Insert a `sync_mappings` row on each push recording the local type, local ID, external ID, external URL, and a SHA-256 sync hash of field values for change detection.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| Azure DevOps Organisation | Dropdown (auto-populated after OAuth) | The ADO organisation to connect to |
-| ADO Project | Dropdown | Target project for synced items |
-| Sync Direction | Radio group | `Push Only`, `Bidirectional` |
-| Auto-Sync | Toggle | Automatic sync on item save |
-| Webhook URL | Read-only text + Copy button | URL for ADO Service Hooks to POST to |
-
-**OAuth scopes requested:** `vso.work_write`, `vso.hooks_write`
+● **Task 10.6: Push Trigger UI.** Add "Push to Jira" and "Push to Azure DevOps" buttons on Work Items and User Stories screens. Buttons appear only when an active integration exists for the respective provider. Button click triggers push and displays success/error feedback.
 
 ---
 
-#### 10.4 Field Mapping Configuration
+### Week 2: Bidirectional Sync & Webhook Listener
 
-**Route:** `GET /app/admin/integrations/{id}/field-mapping`
+**Focus:** Implement webhook listeners for both platforms to receive external changes, build bidirectional conflict resolution routed through the governance queue, deliver Azure DevOps feature parity, and surface sync status on the Governance Dashboard.
 
-Configurable mapping between StratFlow fields and external tool fields. Presented as a two-column mapping table with StratFlow fields on the left and external fields on the right (selectable dropdowns).
+#### Phase 3: Webhook Listener & Conflict Resolution (Days 1–3)
+
+● **Task 10.7: Jira Webhook Endpoint.** Implement `POST /webhook/integration/jira` endpoint. Verify Jira webhook signature. Parse event types:
+  ○ `jira:issue_updated` — compare changed fields against sync_mappings; if a mapped item changed, update StratFlow and trigger drift detection
+  ○ `jira:issue_created` — if created under a mapped Epic, create corresponding user story in StratFlow with `requires_review = 1`
+  ○ `jira:issue_deleted` — flag the mapped StratFlow item for governance review
+  ○ `sprint_started`, `sprint_closed` — update StratFlow sprint status
+
+● **Task 10.8: External Change Processing.** On external change detection: update the mapped StratFlow item, set `requires_review = 1`, and call `DriftDetectionService::detectDrift()` for the parent project. Log the sync event in the integration status history.
+
+● **Task 10.9: Conflict Resolution via Governance Queue.** When a bidirectional change conflict is detected (both StratFlow and the external tool modified the same field since last sync), create a `governance_queue` item with `change_type = 'external_change'` containing both values in `proposed_change_json`. The item appears in the Governance Dashboard with an "External Change Detected" label and accept/reject buttons.
+
+#### Phase 4: Azure DevOps Parity & Dashboard Integration (Days 4–5)
+
+● **Task 10.10: Azure DevOps Service.** Implement `AzureDevOpsService.php` — OAuth 2.0 client for Azure DevOps REST API with the same method signatures as JiraService. OAuth scopes: `vso.work_write`, `vso.hooks_write`. Register ADO webhook via Service Hooks API. Handle event types: `workitem.updated`, `workitem.created`, `workitem.deleted`.
+
+● **Task 10.11: Azure DevOps Connection UI.** Build Azure DevOps connection screen and field mapping configuration. Reuse Jira templates with provider-conditional rendering. Field mappings: HL Work Item → Feature, User Story → User Story, Sprint → Iteration, Priority Number → Priority, Story Points → Story Points, Owner → Assigned To.
+
+● **Task 10.12: Governance Dashboard Integration.** Add integration sync status to the Governance Dashboard — show count of pending external changes alongside drift alerts. Display sync health indicators: last sync timestamp, error count, and a "Sync Now" quick action.
+
+---
+
+### Field Mapping Configuration
+
+Configurable mapping between StratFlow fields and external tool fields, presented as a two-column mapping table.
 
 | StratFlow Field | Maps To (Jira) | Maps To (Azure DevOps) | Default |
 |-----------------|----------------|------------------------|---------|
@@ -93,83 +81,11 @@ Configurable mapping between StratFlow fields and external tool fields. Presente
 | Description → | Description | Description | Auto |
 | Strategic Context → | Labels | Tags | Auto |
 
-**Custom field mapping:** For fields not in the default list, a "+ Add Custom Mapping" row allows selecting any StratFlow field and mapping it to any external field by name.
+Custom field mapping: a "+ Add Custom Mapping" row allows selecting any StratFlow field and mapping it to any external field by name.
 
 ---
 
-#### 10.5 Sync Status & History
-
-**Route:** `GET /app/admin/integrations/{id}/status`
-
-Displays sync health and recent sync events for a single integration.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Current Status | Status badge | `Active`, `Paused`, `Error` |
-| Last Successful Sync | Datetime | Timestamp of last error-free sync |
-| Items Synced | Count | Total mapped items (HL work items + user stories) |
-| Pending Changes | Count | StratFlow changes not yet pushed, or external changes not yet pulled |
-| Error Log | Expandable list | Last 20 sync errors with timestamp, item, and error message |
-| Sync History | Table | Last 50 sync events: timestamp, direction (push/pull), items affected, status |
-
-**Manual sync button:** `Sync Now` — triggers an immediate full sync and shows a progress indicator.
-
----
-
-#### 10.6 Webhook Listener Endpoint
-
-**Route:** `POST /webhook/integration/{provider}`
-
-Receives change notifications from Jira or Azure DevOps. Not a UI screen — this is a server-side endpoint.
-
-**Jira webhook payload handling:**
-- `jira:issue_updated` → Compare changed fields against sync_mappings; if mapped item changed, update StratFlow and trigger drift detection
-- `jira:issue_created` → If created under a mapped Epic, create corresponding user story in StratFlow with `requires_review = 1`
-- `jira:issue_deleted` → Flag mapped StratFlow item for governance review
-- `sprint_started`, `sprint_closed` → Update StratFlow sprint status
-
-**Azure DevOps Service Hook handling:**
-- `workitem.updated` → Same pattern as Jira issue_updated
-- `workitem.created` → Same pattern as Jira issue_created
-- `workitem.deleted` → Same pattern as Jira issue_deleted
-
-**Conflict resolution:** When a bidirectional change conflict is detected (both StratFlow and external tool modified the same field since last sync), the system creates a governance queue item of type `external_change` with both values in `proposed_change_json`. The item appears in the Governance Dashboard with an "External Change Detected" label and accept/reject buttons.
-
----
-
-#### 10.7 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Integrate StratFlow with enterprise project management tools (Jira Cloud and Azure DevOps) via bidirectional sync, closing the drift detection feedback loop so the Strategic Drift Engine can detect and respond to changes made outside StratFlow.
-
-**Objective:** Eliminate the CSV/JSON export dead-end by establishing a live, authenticated, field-mapped sync pipeline between StratFlow and the two dominant enterprise work tracking platforms.
-
----
-
-**Week 1 — Phase A: One-Way Push to Jira Cloud**
-
-| Task | Description |
-|------|-------------|
-| Task 10.1 | Implement `JiraService.php` — OAuth 2.0 client for Atlassian Cloud REST API v3. Methods: `authenticate()`, `getProjects()`, `createEpic()`, `createStory()`, `updateIssue()`, `getIssue()`. Store tokens in `integrations.config_json`. |
-| Task 10.2 | Create `Integration.php` and `SyncMapping.php` models with standard CRUD + `findByOrgAndProvider()`, `findByLocalItem()`, `findByExternalId()`. |
-| Task 10.3 | Create `IntegrationController.php` — routes for connection setup, field mapping, sync trigger, status view. Register all routes under `/app/admin/integrations/*` with `AdminMiddleware`. |
-| Task 10.4 | Build `templates/admin/integrations.php` — integration list, Jira connection form, field mapping table. |
-| Task 10.5 | Implement push logic: `JiraService::pushWorkItem()` creates Jira Epic from HL work item, `pushUserStory()` creates Jira Story linked to parent Epic. Insert `sync_mappings` row on each push. |
-| Task 10.6 | Add "Push to Jira" button on Work Items and User Stories screens. Button appears only when an active Jira integration exists. |
-
-**Week 2 — Phase B: Bidirectional Sync + Webhook Listener**
-
-| Task | Description |
-|------|-------------|
-| Task 10.7 | Implement `POST /webhook/integration/jira` endpoint. Verify Jira webhook signature. Parse `jira:issue_updated`, `jira:issue_created`, `jira:issue_deleted` events. |
-| Task 10.8 | On external change detection: update the mapped StratFlow item, set `requires_review = 1`, and call `DriftDetectionService::detectDrift()` for the parent project. |
-| Task 10.9 | Implement conflict resolution: when both sides changed since last sync, create a `governance_queue` item with `change_type = 'external_change'` containing both values. |
-| Task 10.10 | Implement `AzureDevOpsService.php` — OAuth 2.0 client for Azure DevOps REST API. Same method signatures as JiraService. Register ADO webhook via Service Hooks API. |
-| Task 10.11 | Build Azure DevOps connection UI and field mapping (reuse Jira templates with provider-conditional rendering). |
-| Task 10.12 | Add integration sync status to the Governance Dashboard — show count of pending external changes alongside drift alerts. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -183,7 +99,7 @@ Receives change notifications from Jira or Azure DevOps. Not a UI screen — thi
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 CREATE TABLE integrations (
@@ -219,19 +135,63 @@ CREATE TABLE sync_mappings (
 
 ---
 
-### 11. Executive Strategy Dashboard Screen
+## Item 11: Executive Strategy Dashboard & Portfolio View
 
-The Executive Strategy Dashboard provides a portfolio-level view of all projects within an organisation, designed for the VP, CPO, or CTO who signs the contract but does not manage individual backlogs. It surfaces composite health scores, aggregated velocity trends, drift alert summaries, and OKR progress across the entire project portfolio. The dashboard also provides per-project analytics including burndown/burnup charts, sprint velocity over time, and scope change timelines derived from the governance queue.
+**Sprint Goal:** The Strategic Command Centre
 
-This screen sells to the budget holder. The person who approves an annual subscription needs to see return on investment at a glance — not user stories.
+**Objective:** Create the visual surface that sells StratFlow to the person who signs the cheque — a portfolio-level executive dashboard that surfaces composite health scores, velocity trends, OKR progress, and scope change history, enabling C-suite stakeholders to justify the subscription and monitor strategy execution across all projects.
 
 ---
 
-#### 11.1 Portfolio Overview
+### Week 1: Health Score Engine & Portfolio View
+
+**Focus:** Build the composite health score calculation engine, create the portfolio overview with project cards, and implement the dashboard caching layer for performance.
+
+#### Phase 1: Analytics Service & Data Model (Days 1–3)
+
+● **Task 11.1: Analytics Service.** Create `AnalyticsService.php` with methods: `calculateHealthScore($projectId)`, `getPortfolioSummary($orgId)`, `getVelocityData($projectId)`, `getBurndownData($projectId, $sprintId)`, `getOKRProgress($projectId)`, `getTeamUtilisation($orgId)`. The health score is a composite metric (0–100) computed from four weighted dimensions:
+  ○ OKR Coverage (25%): work items with non-empty `okr_title` / total work items * 100
+  ○ Strategic Alignment (25%): 100 - (active alignment drift alerts * 15), minimum 0
+  ○ Risk Exposure (25%): 100 - (sum of active risk priorities / maximum possible risk score * 100)
+  ○ Execution Momentum (25%): story points completed in last 2 sprints / story points planned in last 2 sprints * 100, capped at 100
+
+● **Task 11.2: Dashboard Controller & Routes.** Create `DashboardController.php` with routes: `GET /app/dashboard` (portfolio overview), `GET /app/dashboard/project/{id}/analytics` (per-project analytics), `GET /app/dashboard/project/{id}/okrs` (OKR progress). Register with `AuthMiddleware`. Make the portfolio view the default landing page for `org_admin` users.
+
+● **Task 11.3: Dashboard Cache Model.** Create `DashboardCache.php` model with `getOrCompute($orgId, $cacheKey, $ttlSeconds, $computeFn)` pattern. Cache keys include `portfolio_summary`, `project_health_{id}`, `velocity_{id}`. Invalidate on project, sprint, or governance changes. TTL: 5 minutes.
+
+#### Phase 2: Portfolio UI & User Story Status (Days 4–5)
+
+● **Task 11.4: Portfolio Dashboard Template.** Build `templates/dashboard.php` — portfolio grid with project cards showing: project name (clickable), status badge (Draft/Active/Completed), health score gauge (0–100, colour-coded: green >=75, amber 50–74, red <50), current workflow phase, sprint progress mini bar, active alert count badge, and last activity timestamp. Include organisation health score (weighted average), active project count, active drift alerts with severity breakdown, and aggregate team utilisation bar.
+
+● **Task 11.5: User Story Status Migration.** Add `status` column to `user_stories` table (`ENUM('todo','in_progress','done') NOT NULL DEFAULT 'todo'`) and `completed_at` DATETIME column to support burndown and velocity calculations.
+
+---
+
+### Week 2: Charts & Per-Project Analytics
+
+**Focus:** Implement Chart.js-powered burndown/burnup charts, velocity tracking, OKR progress visualisation, scope change timeline, and team utilisation views.
+
+#### Phase 3: Chart Rendering & Analytics Templates (Days 1–3)
+
+● **Task 11.6: Analytics Page Template.** Build `templates/analytics.php` — per-project analytics view with burndown/burnup chart containers (toggle between chart types), velocity bar chart, and scope change timeline. Include sprint selector dropdown defaulting to the current active sprint.
+
+● **Task 11.7: Chart.js Implementation.** Implement `public/assets/js/charts.js` — Chart.js rendering for burndown (story points remaining vs. time with ideal dashed line and actual solid line), burnup (cumulative completed vs. total scope with scope change dotted line), velocity (bar chart with one bar per completed sprint and rolling 3-sprint average horizontal dashed line), and team utilisation charts. Load Chart.js from CDN.
+
+● **Task 11.8: OKR Progress Template.** Build `templates/okr-progress.php` — OKR cards displaying each OKR title and expandable description, progress bar showing completion percentage based on linked work item status, status badge (On Track >=70%, At Risk 40–69%, Behind <40%), and expandable list of linked work items with sprint allocation and story completion percentages.
+
+#### Phase 4: Timeline & Navigation (Days 4–5)
+
+● **Task 11.9: Scope Change Timeline.** Implement scope change timeline using governance queue data — query `governance_queue` by project, plot events on a horizontal CSS timeline from project creation to today. Events show as markers with hover/click tooltips displaying change type, proposed change summary, approval status, and reviewer. Baseline creation dates appear as vertical marker lines.
+
+● **Task 11.10: Dashboard Navigation.** Add dashboard link to the main sidebar navigation. Make it the default landing page for `org_admin` users. Add sorting options (by health score ascending/descending, by last activity, by name) and filtering options (by status, by health score range, by assigned team) to the portfolio view.
+
+---
+
+### 11.1 Portfolio Overview
 
 **Route:** `GET /app/dashboard`
 
-The landing view after login for users with `org_admin` or higher roles. Displays all organisation projects as cards in a responsive grid.
+The landing view after login for users with `org_admin` or higher roles. The screen will display all organisation projects as cards in a responsive grid.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -246,38 +206,17 @@ The landing view after login for users with `org_admin` or higher roles. Display
 |-------|------|-------------|
 | Project Name | Text | Clickable — navigates to project analytics |
 | Status | Badge | `Draft`, `Active`, `Completed` |
-| Strategy Health Score | Gauge (0–100) | Composite metric (see 11.2) |
-| Current Phase | Text | Which workflow step the project is on (Upload, Diagram, Work Items, etc.) |
+| Strategy Health Score | Gauge (0–100) | Composite metric from four weighted dimensions |
+| Current Phase | Text | Which workflow step the project is on |
 | Sprint Progress | Mini progress bar | Story points completed / total in current sprint |
 | Active Alerts | Count badge | Unresolved drift alerts for this project |
 | Last Activity | Relative timestamp | Most recent change to any project entity |
 
-**Sorting options:** By health score (ascending/descending), by last activity, by name.
-
-**Filtering options:** By status, by health score range, by assigned team.
-
----
-
-#### 11.2 Strategy Health Score Calculation
-
-The Strategy Health Score is a composite metric (0–100) computed from four weighted dimensions:
-
-| Dimension | Weight | Calculation | Score Range |
-|-----------|--------|-------------|-------------|
-| OKR Coverage | 25% | (Work items with non-empty `okr_title`) / (Total work items) * 100 | 0–100 |
-| Strategic Alignment | 25% | 100 - (Active alignment drift alerts * 15), minimum 0 | 0–100 |
-| Risk Exposure | 25% | 100 - (Sum of active risk priorities / Maximum possible risk score * 100) | 0–100 |
-| Execution Momentum | 25% | (Story points completed in last 2 sprints) / (Story points planned in last 2 sprints) * 100, capped at 100 | 0–100 |
-
-The health score is recalculated on every dashboard load and cached in `dashboard_cache` for 5 minutes to avoid repeated computation on page refresh.
-
----
-
-#### 11.3 Burndown / Burnup Charts
+### 11.2 Per-Project Analytics
 
 **Route:** `GET /app/dashboard/project/{id}/analytics`
 
-Per-project analytics view. The burndown chart plots story points remaining vs. time for each sprint. The burnup chart plots cumulative story points completed vs. total scope over time.
+The screen will display per-project burndown/burnup charts, velocity tracking, and scope change timeline.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -286,97 +225,11 @@ Per-project analytics view. The burndown chart plots story points remaining vs. 
 | Ideal Line | Dashed line on chart | Linear ideal trajectory from total points to zero (burndown) or zero to total (burnup) |
 | Actual Line | Solid line on chart | Actual progress computed from sprint_stories completion |
 | Scope Line (burnup only) | Dotted line | Total scope — shows scope changes over time |
-
-**Data source:** Computed from `sprint_stories` join `user_stories` (size column) and `sprints` (date range). Sprint story completion is determined by the `user_stories.status` field (to be added — see schema below).
-
----
-
-#### 11.4 Velocity Chart
-
-Displayed on the per-project analytics page alongside burndown/burnup.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Chart Type | Bar chart | One bar per completed sprint |
-| Y-Axis | Story points | Total points delivered in that sprint |
-| Average Line | Horizontal dashed line | Rolling 3-sprint average velocity |
-| Trend Indicator | Arrow icon | Up/down/stable compared to previous sprint |
+| Velocity Chart | Bar chart | One bar per completed sprint; rolling 3-sprint average horizontal line |
 
 ---
 
-#### 11.5 OKR Progress Visualisation
-
-**Route:** `GET /app/dashboard/project/{id}/okrs`
-
-Displays each OKR (from `diagram_nodes.okr_title`) with its linked work items and their completion status.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| OKR Title | Text | From `diagram_nodes.okr_title` |
-| OKR Description | Text (expandable) | From `diagram_nodes.okr_description` |
-| Progress Bar | Percentage | (Completed work items linked to this OKR) / (Total linked work items) * 100 |
-| Status | Badge | `On Track` (>=70%), `At Risk` (40–69%), `Behind` (<40%) |
-| Linked Work Items | Expandable list | Each work item with its sprint allocation and story completion % |
-
----
-
-#### 11.6 Scope Change Timeline
-
-Visual timeline showing all governance queue events for a project, plotted chronologically.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Timeline | Horizontal timeline | Left = project creation, right = today |
-| Events | Markers on timeline | Each governance queue item plotted at its `created_at` date |
-| Event Detail (on hover/click) | Tooltip/popover | Change type, proposed change summary, status (approved/rejected/pending), reviewer |
-| Baseline Markers | Vertical lines | Each strategic baseline creation date, showing when scope was locked |
-
----
-
-#### 11.7 Team Utilisation Aggregation
-
-Displayed on the portfolio dashboard (section 11.1) and also available per-project.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Team Name | Text | From `teams.name` |
-| Allocated Points | Number | Sum of story points in active sprints assigned to this team |
-| Capacity | Number | From `teams.capacity` or sprint `team_capacity` |
-| Utilisation % | Percentage bar | Allocated / Capacity * 100. Red if >100% (over-allocated), Amber if >85%, Green otherwise |
-
----
-
-#### 11.8 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Build a portfolio-level executive dashboard that surfaces composite health scores, velocity trends, OKR progress, and scope change history, enabling C-suite stakeholders to justify the StratFlow subscription and monitor strategy execution across all projects.
-
-**Objective:** Create the visual surface that sells StratFlow to the person who signs the cheque — the VP or CPO who needs portfolio-level ROI data, not backlog management.
-
----
-
-**Week 1 — Phase A: Health Score Engine + Portfolio View**
-
-| Task | Description |
-|------|-------------|
-| Task 11.1 | Create `AnalyticsService.php` — methods: `calculateHealthScore($projectId)`, `getPortfolioSummary($orgId)`, `getVelocityData($projectId)`, `getBurndownData($projectId, $sprintId)`, `getOKRProgress($projectId)`, `getTeamUtilisation($orgId)`. |
-| Task 11.2 | Create `DashboardController.php` — routes: `GET /app/dashboard` (portfolio), `GET /app/dashboard/project/{id}/analytics` (per-project), `GET /app/dashboard/project/{id}/okrs`. Register with `AuthMiddleware`. |
-| Task 11.3 | Create `DashboardCache.php` model — `getOrCompute($orgId, $cacheKey, $ttlSeconds, $computeFn)` pattern. Invalidate on project/sprint/governance changes. |
-| Task 11.4 | Build `templates/dashboard.php` — portfolio grid with project cards, org health score, alert summary, team utilisation bar. |
-| Task 11.5 | Add `status` column to `user_stories` table (`ENUM('todo','in_progress','done') NOT NULL DEFAULT 'todo'`) to support burndown calculations. |
-
-**Week 2 — Phase B: Charts + Per-Project Analytics**
-
-| Task | Description |
-|------|-------------|
-| Task 11.6 | Build `templates/analytics.php` — burndown/burnup chart containers, velocity chart, scope change timeline. |
-| Task 11.7 | Implement `public/assets/js/charts.js` — Chart.js rendering for burndown, burnup, velocity, and utilisation charts. Load Chart.js from CDN. |
-| Task 11.8 | Build `templates/okr-progress.php` — OKR cards with progress bars and linked work item lists. |
-| Task 11.9 | Implement scope change timeline using governance queue data — query `governance_queue` by project, plot events on a horizontal CSS timeline. |
-| Task 11.10 | Add dashboard link to the main sidebar navigation. Make it the default landing page for org_admin users. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -391,7 +244,7 @@ Displayed on the portfolio dashboard (section 11.1) and also available per-proje
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 CREATE TABLE dashboard_cache (
@@ -413,152 +266,104 @@ ALTER TABLE user_stories ADD COLUMN completed_at DATETIME NULL AFTER status;
 
 ---
 
-### 12. Collaboration & Activity Feed Screen
+## Item 12: Real-Time Collaboration & Activity Feed
 
-The Collaboration system adds multi-user interaction to StratFlow's project workflow. It introduces threaded comments on work items, user stories, and risks with @mention support; a project-level chronological activity feed; and an in-app notification system with a topbar bell icon, unread counts, and optional daily email digests. Without collaboration, StratFlow is a single-player tool — enterprise means teams.
+**Sprint Goal:** The Team Workspace
+
+**Objective:** Deliver the collaboration primitives that enterprise teams expect — threaded comments with @mentions, a project activity feed, and an in-app notification system with optional email digest — transforming StratFlow from a single-player planning tool into a team-ready platform.
 
 ---
 
-#### 12.1 Comment Threads
+### Week 1: Comments & Activity Log
 
-**Accessible from:** Work Item detail view, User Story detail view, Risk detail view
+**Focus:** Implement threaded comments on work items, user stories, and risks with @mention support and Markdown rendering. Build the project-level chronological activity feed with filtering and pagination.
 
-Comments appear as a threaded list below the item detail panel. Each comment shows the author's name, avatar initial, relative timestamp, and body text with Markdown rendering.
+#### Phase 1: Comment System (Days 1–3)
+
+● **Task 12.1: Comment Model.** Create `Comment.php` model — `create()`, `findByCommentable($type, $id)`, `update()`, `softDelete()`. Polymorphic via `commentable_type` (hl_work_item, user_story, risk) + `commentable_id`. Soft delete replaces body with "This comment has been deleted."
+
+● **Task 12.2: Activity Log Model.** Create `ActivityLog.php` model — `log($projectId, $userId, $action, $subjectType, $subjectId, $details)`, `findByProject($projectId, $filters, $page)`. Supports 12 activity types:
+  ○ `created` — work_item, user_story, risk, sprint, baseline
+  ○ `updated` — work_item, user_story, risk
+  ○ `commented` — work_item, user_story, risk
+  ○ `scored` — work_item (RICE/WSJF scores generated or updated)
+  ○ `sized` — user_story (story points set or changed)
+  ○ `allocated` — user_story (assigned to sprint)
+  ○ `evaluated` — project (sounding board evaluation run)
+  ○ `baseline_created` — project (strategic baseline snapshot taken)
+  ○ `drift_detected` — project (drift alert raised)
+  ○ `governance_approved` — governance_item (queue item approved)
+  ○ `governance_rejected` — governance_item (queue item rejected)
+  ○ `synced` — integration (external sync completed)
+
+● **Task 12.3: Comment Controller.** Create `CommentController.php` — routes: `POST /app/comments`, `PUT /app/comments/{id}`, `DELETE /app/comments/{id}`. Parse @mentions from body text, resolve `@Full Name` references to user IDs, and create a notification for each mentioned user with `type = 'mentioned'`.
+
+#### Phase 2: Comment UI & Activity Feed (Days 4–5)
+
+● **Task 12.4: Comment Thread Template.** Build `templates/partials/comment-thread.php` — reusable comment component showing author name with coloured avatar initial, relative timestamp, Markdown-rendered body (supports bold, italic, code, lists, links), edit button (visible to author only), and delete button (visible to author and org_admin). Include @mention autocomplete dropdown triggered by `@` character. Include in work item, user story, and risk detail templates.
+
+● **Task 12.5: Activity Log Instrumentation.** Instrument all existing controllers with `ActivityLog::log()` calls on create, update, delete, score, allocate, evaluate, baseline, and governance actions. Each log entry records project ID, acting user, action type, subject type, subject ID, and contextual details as JSON.
+
+● **Task 12.6: Activity Feed Template.** Build `templates/activity-feed.php` — project activity page with chronological event list showing event icon (varies by action type), actor name, action description, clickable subject link, relative timestamp, and expandable JSON details for complex events. Filtering by activity type, by user, and by date range. Pagination: 50 events per page with infinite scroll. Also build a sidebar widget variant.
+
+---
+
+### Week 2: Notifications & Email Digest
+
+**Focus:** Build the in-app notification system with bell icon, unread counts, and full notification page. Implement seven notification types and an optional daily email digest.
+
+#### Phase 3: Notification Backend (Days 1–3)
+
+● **Task 12.7: Notification Model.** Create `Notification.php` model — `create()`, `findByUser($userId, $filters)`, `markRead($id)`, `markAllRead($userId)`, `getUnreadCount($userId)`. Indexed on `(user_id, is_read, created_at)` for fast unread queries.
+
+● **Task 12.8: Notification Service.** Create `NotificationService.php` — `notify($userId, $type, $title, $body, $link)`, `notifyMentioned($commentId, $mentionedUserIds)`, `notifyTeam($projectId, $type, ...)`. Seven notification types:
+  ○ `mentioned` — "@mention in comment" → "{user} mentioned you in a comment on {item_title}"
+  ○ `assigned` — "Owner field set to current user" → "You were assigned to {item_title}"
+  ○ `review_needed` — "`requires_review` set to 1" → "{item_title} requires governance review"
+  ○ `drift_alert` — "Drift alert created" → "Drift alert ({alert_type}) on {project_name}"
+  ○ `governance_decision` — "Governance item approved or rejected" → "{item_title} was {approved/rejected} by {reviewer}"
+  ○ `comment_reply` — "Comment added to a previously commented item" → "{user} also commented on {item_title}"
+  ○ `evaluation_complete` — "Sounding board evaluation finished" → "Sounding board evaluation complete for {screen}"
+
+● **Task 12.9: Notification Controller.** Create `NotificationController.php` — routes: `GET /app/notifications` (full page), `GET /app/notifications/unread-count` (JSON for bell badge AJAX), `POST /app/notifications/{id}/read`, `POST /app/notifications/mark-all-read`, `GET /app/notifications/preferences`, `POST /app/notifications/preferences`.
+
+#### Phase 4: Notification UI & Email Digest (Days 4–5)
+
+● **Task 12.10: Notification Bell Component.** Build `templates/partials/notification-bell.php` — bell icon with red circle badge showing unread count (hidden when zero), dropdown popover showing last 10 notifications with mark-all-read button, and "View All" link. Add to `templates/layouts/app.php` topbar. Fetch unread count via AJAX on page load.
+
+● **Task 12.11: Notifications Page.** Build `templates/notifications.php` — full notification list with type icon, title, body preview, relative timestamp, and read/unread status. Filter by All/Unread only/by type. Bulk action: checkbox per row with "Mark Read" button.
+
+● **Task 12.12: Email Digest.** Implement email digest — `NotificationService::sendDigest($userId)` method. User preferences stored in `users.notification_preferences` JSON column: email_digest toggle, digest_time (default 08:00 local), and included notification types. Schedule as daily task. Render HTML email from unread notifications with deep links to each notification's target item.
+
+---
+
+### 12.1 Comment Threads
+
+The screen will display a threaded comment list below each work item, user story, and risk detail panel.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| Comment Body | Textarea with Markdown preview | Supports `**bold**`, `*italic*`, `` `code` ``, `- lists`, `[links](url)`. @mention autocomplete triggers on `@` character. |
+| Comment Body | Textarea with Markdown preview | Supports `**bold**`, `*italic*`, `` `code` ``, `- lists`, `[links](url)`. @mention autocomplete triggers on `@` character |
 | Author | Text + avatar initial | `users.full_name`, first letter as coloured circle |
 | Timestamp | Relative | "2 minutes ago", "Yesterday at 3:14 PM" |
-| Edit Button | Icon button | Visible only to comment author. Inline edit with save/cancel. |
-| Delete Button | Icon button | Visible only to comment author and org_admin. Soft delete (body replaced with "This comment has been deleted"). |
+| Edit Button | Icon button | Visible only to comment author |
+| Delete Button | Icon button | Visible only to comment author and org_admin |
 | Comment Count Badge | Number | Shown on item rows in list views — e.g. "3 comments" |
 
-**@mention behaviour:**
-- Typing `@` opens a dropdown of organisation users filtered by name as the user types
-- Selecting a user inserts `@Full Name` into the comment body
-- On comment save, the system parses `@Full Name` references, resolves them to user IDs, and creates a `notification` for each mentioned user with `type = 'mentioned'`
+### 12.2 Notification Bell
 
----
-
-#### 12.2 Activity Feed
-
-**Route:** `GET /app/project/{id}/activity`
-
-A chronological log of all significant events within a project. Also available as a sidebar widget on the project home screen.
+The screen will display a bell icon in the app topbar with real-time unread count.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| Event Icon | Icon | Varies by action type (created, updated, commented, scored, approved, etc.) |
-| Actor | Text | User who performed the action, or "System" for automated events |
-| Action | Text | e.g. "created work item", "commented on", "approved governance item", "drift alert raised" |
-| Subject | Link | Clickable link to the affected item |
-| Timestamp | Relative | |
-| Details | Expandable | JSON details for complex events (field changes, score values, etc.) |
-
-**Activity types logged:**
-
-| Action | Subject Type | Trigger |
-|--------|-------------|---------|
-| `created` | work_item, user_story, risk, sprint, baseline | Any creation |
-| `updated` | work_item, user_story, risk | Any field edit |
-| `commented` | work_item, user_story, risk | Comment added |
-| `scored` | work_item | RICE/WSJF scores generated or updated |
-| `sized` | user_story | Story points set or changed |
-| `allocated` | user_story | Assigned to sprint |
-| `evaluated` | project | Sounding board evaluation run |
-| `baseline_created` | project | Strategic baseline snapshot taken |
-| `drift_detected` | project | Drift alert raised |
-| `governance_approved` | governance_item | Queue item approved |
-| `governance_rejected` | governance_item | Queue item rejected |
-| `synced` | integration | External sync completed |
-
-**Filtering:** By activity type, by user, by date range. Pagination: 50 events per page with infinite scroll.
-
----
-
-#### 12.3 Notification Bell
-
-**Location:** App layout topbar, right side, next to user menu
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Bell Icon | Icon with badge | Displays unread count as a red circle badge. Hidden when count is zero. |
+| Bell Icon | Icon with badge | Displays unread count as a red circle badge. Hidden when count is zero |
 | Dropdown Panel | Popover | Shows last 10 notifications with mark-all-read button at top |
-| Notification Row | Clickable row | Icon + title + relative timestamp. Unread rows have a blue dot indicator. Click navigates to the linked item and marks notification as read. |
+| Notification Row | Clickable row | Icon + title + relative timestamp. Unread rows have a blue dot indicator. Click navigates to linked item and marks as read |
 | "View All" Link | Link | Navigates to full notification list page |
 
-**Full notification page:** `GET /app/notifications`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Notification List | Table | All notifications, newest first, with type icon, title, body preview, timestamp, read/unread status |
-| Filter | Dropdown | All, Unread only, by type |
-| Mark Selected Read | Bulk action | Checkbox per row + "Mark Read" button |
-
 ---
 
-#### 12.4 Notification Types
-
-| Type Key | Trigger | Title Template | Link |
-|----------|---------|---------------|------|
-| `mentioned` | @mention in comment | "{user} mentioned you in a comment on {item_title}" | Comment anchor on item page |
-| `assigned` | Owner/team_assigned field set to current user | "You were assigned to {item_title}" | Item detail page |
-| `review_needed` | `requires_review` set to 1 on an item the user owns | "{item_title} requires governance review" | Governance dashboard |
-| `drift_alert` | Drift alert created on a project the user is a member of | "Drift alert ({alert_type}) on {project_name}" | Governance dashboard |
-| `governance_decision` | Governance item approved or rejected | "{item_title} was {approved/rejected} by {reviewer}" | Governance dashboard |
-| `comment_reply` | Comment added to an item the user previously commented on | "{user} also commented on {item_title}" | Comment anchor on item page |
-| `evaluation_complete` | Sounding board evaluation finished | "Sounding board evaluation complete for {screen}" | Sounding board results |
-
----
-
-#### 12.5 Email Digest (Optional)
-
-**Route:** `GET /app/notifications/preferences`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Email Digest | Toggle | Enable/disable daily email summary |
-| Digest Time | Time picker | When to send the digest (default: 08:00 local time) |
-| Include Types | Checkbox group | Which notification types to include in the digest |
-
-The email digest is a scheduled job (daily cron or Task Scheduler) that queries unread notifications created since the last digest, renders them as a plain HTML email, and sends via SMTP. The digest includes a deep link to each notification's target item.
-
----
-
-#### 12.6 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Enable multi-user collaboration within StratFlow projects through threaded comments with @mentions, a project activity feed, and an in-app notification system, transforming the platform from single-player to team-ready.
-
-**Objective:** Deliver the collaboration primitives that enterprise teams expect — comments, activity history, and notifications — so that strategy work happens inside StratFlow instead of leaking to email and Slack.
-
----
-
-**Week 1 — Phase A: Comments + Activity Log**
-
-| Task | Description |
-|------|-------------|
-| Task 12.1 | Create `Comment.php` model — `create()`, `findByCommentable($type, $id)`, `update()`, `softDelete()`. Polymorphic via `commentable_type` + `commentable_id`. |
-| Task 12.2 | Create `ActivityLog.php` model — `log($projectId, $userId, $action, $subjectType, $subjectId, $details)`, `findByProject($projectId, $filters, $page)`. |
-| Task 12.3 | Create `CommentController.php` — routes: `POST /app/comments`, `PUT /app/comments/{id}`, `DELETE /app/comments/{id}`. Parse @mentions from body, create notifications. |
-| Task 12.4 | Build `templates/partials/comment-thread.php` — reusable comment component. Include in work item, user story, and risk detail templates. |
-| Task 12.5 | Instrument all existing controllers with `ActivityLog::log()` calls on create, update, delete, score, allocate, evaluate, baseline, and governance actions. |
-| Task 12.6 | Build `templates/activity-feed.php` — project activity page with event list, filters, and pagination. Add sidebar widget variant. |
-
-**Week 2 — Phase B: Notifications + Email Digest**
-
-| Task | Description |
-|------|-------------|
-| Task 12.7 | Create `Notification.php` model — `create()`, `findByUser($userId, $filters)`, `markRead($id)`, `markAllRead($userId)`, `getUnreadCount($userId)`. |
-| Task 12.8 | Create `NotificationService.php` — `notify($userId, $type, $title, $body, $link)`, `notifyMentioned($commentId, $mentionedUserIds)`, `notifyTeam($projectId, $type, ...)`. |
-| Task 12.9 | Create `NotificationController.php` — routes: `GET /app/notifications` (full page), `GET /app/notifications/unread-count` (JSON for bell badge), `POST /app/notifications/{id}/read`, `POST /app/notifications/mark-all-read`, `GET /app/notifications/preferences`, `POST /app/notifications/preferences`. |
-| Task 12.10 | Build `templates/partials/notification-bell.php` — bell icon with badge count, dropdown panel. Add to `templates/layouts/app.php` topbar. Fetch unread count via AJAX on page load. |
-| Task 12.11 | Build `templates/notifications.php` — full notification list with filters and bulk actions. |
-| Task 12.12 | Implement email digest — `NotificationService::sendDigest($userId)` method. Schedule as daily task. Render HTML email from unread notifications. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -573,7 +378,7 @@ The email digest is a scheduled job (daily cron or Task Scheduler) that queries 
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 CREATE TABLE comments (
@@ -624,38 +429,72 @@ ALTER TABLE users ADD COLUMN notification_preferences JSON NULL COMMENT '{"email
 
 ---
 
-### 13. AI Strategy Coach Screen
+## Item 13: AI Strategy Coach — Conversational Interface
 
-The AI Strategy Coach is a slide-out conversational panel accessible from any page in the authenticated app. It provides a chat interface where users ask questions about their project strategy, and the AI responds with context-aware answers grounded in the project's actual data — documents, work items, risks, sprints, drift alerts, governance history, and evaluation results. The coach uses pre-built prompt templates for common strategic questions and persists conversation history per project.
+**Sprint Goal:** The Intelligent Advisor
 
-This is the "wow factor" feature. No competitor offers a conversational strategy advisor with full project context. WorkBoard has "Chief of Staff" and "Leadership Coach" AI agents — this is the same pattern applied to StratFlow's richer data set.
-
----
-
-#### 13.1 Coach Panel
-
-**Location:** Slide-out panel triggered by a floating action button (bottom-right corner of every authenticated page). The button displays a chat icon with the label "Strategy Coach".
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Panel Header | Text + close button | "Strategy Coach — {Project Name}" |
-| Conversation History | Scrollable message list | Alternating user (right-aligned, blue) and assistant (left-aligned, grey) message bubbles |
-| Message Input | Textarea + send button | Placeholder: "Ask about your strategy, risks, or roadmap..." |
-| Pre-built Prompts | Button row (collapsible) | Quick-action buttons for common questions (see 13.2) |
-| Conversation Selector | Dropdown | Switch between past conversations or start a new one |
-| Loading Indicator | Animated dots | Shown while awaiting AI response |
-
-**Panel behaviour:**
-- Opens as a 400px-wide right-side panel with slide animation
-- Does not navigate away from the current page
-- Persists across page navigation within the same project (state maintained in session)
-- Close button or clicking outside the panel closes it
+**Objective:** Deliver a slide-out conversational chat panel accessible from every page that connects to Gemini with the full project data as context, enabling users to interrogate their strategy through natural language — the "wow factor" feature that drives premium tier adoption.
 
 ---
 
-#### 13.2 Pre-Built Prompt Templates
+### Week 1: Context Engine & Chat Backend
 
-Displayed as clickable buttons at the top of the coach panel. Each button pre-fills the message input with the prompt text.
+**Focus:** Build the context injection architecture that assembles full project data into the AI system prompt, implement conversation persistence, and deliver the chat backend with token management and progressive truncation.
+
+#### Phase 1: Context Assembly & AI Service (Days 1–3)
+
+● **Task 13.1: Coach Service.** Create `CoachService.php` — `buildContext($projectId)` assembles the context payload from all project tables (see context injection architecture below). `chat($conversationId, $userMessage)` prepends system prompt + context + conversation history, calls `GeminiService::generate()`, stores both user message and assistant response. Context payload includes:
+  ○ Document Summary — `documents.ai_summary` (the AI-generated strategic brief)
+  ○ Strategy Diagram — `strategy_diagrams.mermaid_code` (raw Mermaid source)
+  ○ OKR Data — `diagram_nodes` (all node OKR titles and descriptions)
+  ○ Work Items — `hl_work_items` (titles, descriptions, scores, estimated sprints, priorities)
+  ○ Risks — `risks` (likelihood, impact, mitigation status, linked items)
+  ○ User Stories — `user_stories` (sizes, sprint assignments, blocked_by, status)
+  ○ Sprint Status — `sprints` + `sprint_stories` (date ranges, capacities, allocated points, completion %)
+  ○ Drift Alerts — `drift_alerts` (active alerts with type, severity, details)
+  ○ Governance History — `governance_queue` (recent approved/rejected changes)
+  ○ Evaluation History — `evaluation_results` (last 3 sounding board evaluations)
+  ○ Conversation History — `coach_messages` (last 20 messages for conversational continuity)
+
+● **Task 13.2: Coach System Prompt.** Create `CoachPrompt.php` in `src/Services/Prompts/` — `SYSTEM_PROMPT` constant defining the StratFlow Architect persona: a senior strategy and delivery advisor with complete access to the project's data. Guidelines: cite specific item names, never fabricate data, use bullet points, explain trade-offs, and note when comparisons are based on general best practices rather than industry-specific data. Pre-built prompt templates as named constants.
+
+● **Task 13.3: Conversation & Message Models.** Create `CoachConversation.php` and `CoachMessage.php` models — standard CRUD. `CoachConversation::findByProject($projectId, $userId)` returns conversation list. `CoachMessage::findByConversation($conversationId, $limit)` returns message history ordered by `created_at`. Each message stores role (user/assistant), content, and approximate token count.
+
+#### Phase 2: Controller & Token Management (Days 4–5)
+
+● **Task 13.4: Coach Controller.** Create `CoachController.php` — routes:
+  ○ `GET /app/project/{id}/coach/conversations` — list conversations
+  ○ `POST /app/project/{id}/coach/conversations` — create new conversation
+  ○ `POST /app/coach/conversations/{id}/message` — send message and receive AI response
+  ○ `GET /app/coach/conversations/{id}/messages` — load message history
+
+● **Task 13.5: Token Management.** Implement token counting and progressive truncation in `CoachService::buildContext()` — if total context exceeds 30,000 tokens, progressively truncate: evaluation history first, then governance history, then individual story descriptions, keeping titles and scores intact. Ensure no API errors on projects with large data sets.
+
+---
+
+### Week 2: Chat UI & Pre-Built Prompts
+
+**Focus:** Build the slide-out chat panel, implement the real-time message interface with AJAX, deliver the six pre-built prompt templates, and add conversation management.
+
+#### Phase 3: Panel UI & JavaScript (Days 1–3)
+
+● **Task 13.6: Coach Panel Template.** Build `templates/partials/coach-panel.php` — slide-out panel (400px wide, right side, slide animation) with panel header ("Strategy Coach — {Project Name}" + close button), scrollable message list with alternating user (right-aligned, blue) and assistant (left-aligned, grey) bubbles, message input textarea with send button, collapsible pre-built prompt button row, conversation selector dropdown, and loading indicator (animated dots).
+
+● **Task 13.7: Coach JavaScript.** Implement `public/assets/js/coach.js` — handles panel open/close animation, message send via AJAX POST, response rendering with auto-scroll to latest message, loading indicator during AI response, and pre-built prompt button clicks that pre-fill the message input.
+
+● **Task 13.8: Floating Action Button.** Add floating action button to `templates/layouts/app.php` — visible on all authenticated pages, positioned bottom-right, displays chat icon with the label "Strategy Coach". Panel persists across page navigation within the same project via session state.
+
+#### Phase 4: Styling & Conversation Management (Days 4–5)
+
+● **Task 13.9: Panel Styling.** Style the coach panel — message bubbles with proper spacing, typing indicator animation, responsive layout (full-width on mobile), does not navigate away from current page, close on clicking outside panel.
+
+● **Task 13.10: Conversation Management.** Add new conversation button, conversation list with timestamps and auto-generated titles from first message, and delete old conversations. Conversation selector dropdown switches between past conversations and loads correct message history.
+
+---
+
+### 13.1 Pre-Built Prompt Templates
+
+The screen will display clickable buttons at the top of the coach panel. Each button pre-fills the message input.
 
 | Button Label | Prompt Text |
 |-------------|-------------|
@@ -668,94 +507,7 @@ Displayed as clickable buttons at the top of the coach panel. Each button pre-fi
 
 ---
 
-#### 13.3 Context Injection Architecture
-
-When the user sends a message, `CoachService` builds a system prompt that includes the full project context. The system prompt is invisible to the user but gives the AI complete strategic awareness.
-
-**Context payload assembled by `CoachService::buildContext($projectId)`:**
-
-| Context Section | Source | Included Data |
-|-----------------|--------|---------------|
-| Document Summary | `documents.ai_summary` | The AI-generated strategic brief |
-| Strategy Diagram | `strategy_diagrams.mermaid_code` | Raw Mermaid source of the latest diagram |
-| OKR Data | `diagram_nodes` | All node OKR titles and descriptions |
-| Work Items | `hl_work_items` | All items with titles, descriptions, scores, estimated sprints, priorities |
-| Risks | `risks` | All risks with likelihood, impact, mitigation status, linked items |
-| User Stories | `user_stories` | All stories with sizes, sprint assignments, blocked_by, status |
-| Sprint Status | `sprints` + `sprint_stories` | Sprint date ranges, capacities, allocated points, completion % |
-| Drift Alerts | `drift_alerts` | Active alerts with type, severity, and details |
-| Governance History | `governance_queue` | Recent approved/rejected changes |
-| Evaluation History | `evaluation_results` (last 3) | Most recent sounding board evaluations |
-| Conversation History | `coach_messages` | Last 20 messages for conversational continuity |
-
-**Token management:** If the total context exceeds 30,000 tokens, the system progressively truncates: evaluation history first, then governance history, then individual story descriptions, keeping titles and scores.
-
----
-
-#### 13.4 StratFlow Architect System Prompt
-
-**File:** `src/Services/Prompts/CoachPrompt.php`
-**Constant:** `CoachPrompt::SYSTEM_PROMPT`
-
-```
-You are the ThreePoints StratFlow Architect — a senior strategy and delivery advisor
-embedded in the StratFlow platform. You have complete access to the project's strategic
-documents, OKR framework, work item backlog, risk model, sprint allocation, drift
-alerts, and governance history.
-
-Your role:
-1. Answer questions about the project's strategy, risks, and execution with specific
-   references to the actual data (cite work item titles, risk names, sprint numbers).
-2. Identify gaps, misalignments, and opportunities the user may not have noticed.
-3. Provide actionable recommendations grounded in Agile and strategic planning best
-   practices.
-4. When asked about feasibility, use the actual sprint capacity and velocity data to
-   calculate whether the plan is achievable.
-5. Never fabricate data. If you lack information to answer a question, say so and
-   suggest what data the user should add.
-
-Response guidelines:
-- Be concise but thorough. Use bullet points for multi-part answers.
-- Reference specific items by name (e.g. "Work item 'API Gateway Implementation' is
-  blocking 3 downstream stories").
-- When making recommendations, explain the trade-off involved.
-- If asked to compare against industry benchmarks, note that your comparison is based
-  on general best practices, not the user's specific industry data.
-```
-
----
-
-#### 13.5 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Build a conversational AI strategy advisor that has full project context and can answer questions about roadmap feasibility, risk gaps, velocity trends, and OKR alignment — providing the "aha moment" that drives premium tier adoption.
-
-**Objective:** Deliver a slide-out chat panel on every page that connects to Gemini with the full project data as context, enabling users to interrogate their strategy through natural language.
-
----
-
-**Week 1 — Phase A: Context Engine + Chat Backend**
-
-| Task | Description |
-|------|-------------|
-| Task 13.1 | Create `CoachService.php` — `buildContext($projectId)` assembles the context payload from all project tables. `chat($conversationId, $userMessage)` prepends system prompt + context + conversation history, calls `GeminiService::generate()`, stores response. |
-| Task 13.2 | Create `CoachPrompt.php` in `src/Services/Prompts/` — `SYSTEM_PROMPT` constant as specified in 13.4. Pre-built prompt templates as named constants. |
-| Task 13.3 | Create `CoachConversation.php` and `CoachMessage.php` models — standard CRUD. `CoachConversation::findByProject($projectId, $userId)` returns conversation list. `CoachMessage::findByConversation($conversationId, $limit)` returns message history. |
-| Task 13.4 | Create `CoachController.php` — routes: `GET /app/project/{id}/coach/conversations` (list), `POST /app/project/{id}/coach/conversations` (new), `POST /app/coach/conversations/{id}/message` (send message + receive response), `GET /app/coach/conversations/{id}/messages` (history). |
-| Task 13.5 | Implement token counting and progressive truncation in `CoachService::buildContext()` — prioritise document summary, work items, and risks over evaluation/governance history. |
-
-**Week 2 — Phase B: Chat UI + Pre-Built Prompts**
-
-| Task | Description |
-|------|-------------|
-| Task 13.6 | Build `templates/partials/coach-panel.php` — slide-out panel HTML structure with message list, input area, pre-built prompt buttons, conversation selector. |
-| Task 13.7 | Implement `public/assets/js/coach.js` — handles panel open/close, message send via AJAX POST, response rendering, auto-scroll, loading indicator, pre-built prompt button clicks. |
-| Task 13.8 | Add floating action button to `templates/layouts/app.php` — visible on all authenticated pages, positioned bottom-right. |
-| Task 13.9 | Style the coach panel — message bubbles, typing indicator, responsive (full-width on mobile). |
-| Task 13.10 | Add conversation management: new conversation button, conversation list with timestamps, delete old conversations. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -769,7 +521,7 @@ Response guidelines:
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 CREATE TABLE coach_conversations (
@@ -800,17 +552,76 @@ CREATE TABLE coach_messages (
 
 ---
 
-### 14. Multi-Format Document Intelligence Screen
+## Item 14: Multi-Format Document Intelligence
 
-The Multi-Format Document Intelligence feature extends StratFlow's document upload pipeline to accept audio recordings (MP4, MP3, WAV, M4A), images (PNG, JPG), presentations (PPTX), and URLs (Confluence, Notion, Google Docs). Each new format is processed into extracted text using the appropriate service (OpenAI Whisper for audio/video, Tesseract or Google Vision for images, ZipArchive for PPTX, HTTP fetch + HTML parsing for URLs) and then fed into the existing summary → diagram → work item pipeline unchanged. This removes the single biggest top-of-funnel friction point: "I have a strategy meeting recording, but StratFlow only takes PDFs."
+**Sprint Goal:** The Universal Ingestor v2
+
+**Objective:** Ensure that no matter how a strategy conversation was captured — recorded meeting, whiteboard photo, slide deck, wiki page — StratFlow can ingest it and produce a sprint-ready backlog, removing the single biggest top-of-funnel friction point.
 
 ---
 
-#### 14.1 Enhanced Upload Screen
+### Week 1: Audio/Video Transcription & Image OCR
+
+**Focus:** Implement OpenAI Whisper API integration for audio and video transcription with file chunking, build image OCR via Tesseract or Google Vision, and extend the upload screen to accept new file formats with processing status indicators.
+
+#### Phase 1: Transcription & OCR Services (Days 1–3)
+
+● **Task 14.1: Transcription Service.** Create `TranscriptionService.php` — `transcribe($filePath, $mimeType)` method. Implements OpenAI Whisper API via `multipart/form-data` POST to `https://api.openai.com/v1/audio/transcriptions`. Auto-detects language with manual override in config. Speaker diarisation includes speaker labels (Speaker 1, Speaker 2) when available. Segment timestamps included for reference. For files >25 MB: split into chunks using ffmpeg, transcribe each chunk, concatenate results.
+  ○ Accepted formats: MP4, MP3, WAV, M4A
+  ○ Maximum file size: 100 MB (chunked at 25 MB per Whisper API request)
+  ○ MIME types: `audio/mpeg`, `audio/wav`, `audio/mp4`, `audio/x-m4a`, `video/mp4`
+
+● **Task 14.2: OCR Service.** Create `OCRService.php` — `extract($filePath)` method. Primary provider: Tesseract via `exec('tesseract ...')`. Alternative: Google Vision API via HTTP POST. Pre-processing: image converted to greyscale, contrast-enhanced, and deskewed before OCR. Returns extracted text and confidence score. Low-confidence warning displayed to user if OCR quality <70%.
+  ○ Accepted formats: PNG, JPG, JPEG
+  ○ Maximum file size: 20 MB
+  ○ MIME types: `image/png`, `image/jpeg`
+
+● **Task 14.3: File Processor Extension.** Extend `FileProcessor.php` — add `processAudio()` and `processImage()` methods. Route new MIME types to the appropriate processor. Processing flow for audio: upload → `TranscriptionService::transcribe()` → store transcript in `documents.extracted_text` → store metadata in `documents.transcription_metadata` → user previews transcript → clicks "Continue" to proceed to summary generation. Processing flow for images: upload → `OCRService::extract()` → store text in `documents.extracted_text` → low-confidence warning if appropriate.
+
+#### Phase 2: Upload UI & Configuration (Days 4–5)
+
+● **Task 14.4: Transcription Metadata Column.** Add `transcription_metadata` JSON column to `documents` table. Stores: `duration_seconds`, `language`, `word_count`, `speaker_count` (audio/video) or `ocr_confidence` (image). Example: `{"duration_seconds": 1842, "language": "en", "word_count": 3200, "speaker_count": 4}`.
+
+● **Task 14.5: Enhanced Upload Template.** Update `templates/upload.php` — extend drag-and-drop zone accepted types to include audio, video, image, and presentation formats. Add format indicator badges (`PDF`, `Audio`, `Video`, `Image`, `Presentation`, `URL`). Add processing status bar with status text ("Transcribing audio...", "Extracting text from image..."). Add transcription preview expandable panel with continue/retry buttons for audio/video uploads.
+
+● **Task 14.6: API Key Configuration.** Add `OPENAI_API_KEY` and `GOOGLE_VISION_API_KEY` to `.env.example` and `src/Config/config.php`. Both keys are optional — Whisper requires OpenAI key, Google Vision is an alternative to Tesseract.
+
+---
+
+### Week 2: PPTX Support & URL Import
+
+**Focus:** Implement PowerPoint text extraction via ZipArchive XML parsing, build URL import for Confluence, Notion, and Google Docs pages, and add asynchronous processing for long-running transcription jobs.
+
+#### Phase 3: PPTX Extraction & URL Import (Days 1–3)
+
+● **Task 14.7: PPTX Processor.** Extend `FileProcessor.php` — add `processPptx($filePath)` method. Use PHP `ZipArchive` to open PPTX file, iterate `ppt/slides/slide{N}.xml` files to extract text from `<a:t>` elements, iterate `ppt/notesSlides/notesSlide{N}.xml` for speaker notes. Concatenate slide text and notes by slide number, store in `documents.extracted_text`.
+  ○ Maximum file size: 50 MB
+  ○ MIME type: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
+  ○ Optional: embedded slide images can be extracted and OCR'd (toggle in config)
+
+● **Task 14.8: URL Import Route.** Create URL import route `POST /app/project/{id}/upload/url` in `UploadController`. Detect platform from URL pattern, fetch content via the appropriate method, store as a new document.
+
+● **Task 14.9: Platform-Specific URL Fetchers.** Implement platform-specific content extraction:
+  ○ Google Docs — use export URL: `https://docs.google.com/document/d/{id}/export?format=txt`
+  ○ Confluence — REST API: `GET /wiki/rest/api/content/{id}?expand=body.storage` (requires API token)
+  ○ Notion — API: `GET /v1/blocks/{id}/children` (requires integration token)
+  ○ Generic web page — HTTP GET + `strip_tags()` + remove scripts/styles
+
+#### Phase 4: Platform Integration & Async Processing (Days 4–5)
+
+● **Task 14.10: Confluence & Notion Integration.** Implement Confluence and Notion API integrations behind config flags (both require API tokens). Confluence uses basic auth with API token. Notion uses bearer token from integration setup.
+
+● **Task 14.11: URL Import UI.** Update upload screen with URL import text field and "Import" button. Show detected platform badge ("Confluence", "Notion", "Google Docs", "Web Page") and text preview panel for user confirmation before saving as document.
+
+● **Task 14.12: Processing Status & Async Support.** Add processing status indicators — progress bar and status text for long-running transcription jobs. For audio files >5 minutes duration, consider async processing with polling: submit job → return job ID → client polls for completion → redirect to preview on success.
+
+---
+
+### 14.1 Enhanced Upload Screen
 
 **Route:** `GET /app/project/{id}/upload` (existing route, enhanced)
 
-The existing upload screen is extended with new accepted formats and a URL import field.
+The screen will display the existing upload interface extended with new accepted formats and a URL import field.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -820,131 +631,9 @@ The existing upload screen is extended with new accepted formats and a URL impor
 | Processing Status | Progress bar + status text | "Transcribing audio...", "Extracting text from image...", "Importing page..." |
 | Transcription Preview | Expandable panel | For audio/video: shows transcript with speaker labels and timestamps before proceeding |
 
-**Accepted MIME types (new):**
-- Audio: `audio/mpeg`, `audio/wav`, `audio/mp4`, `audio/x-m4a`
-- Video: `video/mp4`
-- Image: `image/png`, `image/jpeg`
-- Presentation: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
-
-**Maximum file sizes:**
-- Audio/Video: 100 MB (Whisper API limit: 25 MB per request — files larger than 25 MB are chunked)
-- Image: 20 MB
-- Presentation: 50 MB
-
 ---
 
-#### 14.2 Audio/Video Transcription
-
-**Service:** `TranscriptionService.php`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Transcription Provider | Config | OpenAI Whisper API (default) or Google Speech-to-Text |
-| Language | Auto-detected | Whisper auto-detects language; manual override available in config |
-| Speaker Diarisation | Boolean | When available, transcript includes speaker labels (Speaker 1, Speaker 2) |
-| Timestamps | Boolean | Transcript includes segment timestamps for reference |
-
-**Processing flow:**
-1. User uploads audio/video file
-2. `FileProcessor::processAudio($filePath)` calls `TranscriptionService::transcribe()`
-3. For files >25 MB: split into chunks using ffmpeg, transcribe each, concatenate
-4. Transcript stored in `documents.extracted_text`
-5. Transcription metadata (duration, language, word count, speaker count) stored in `documents.transcription_metadata`
-6. User previews transcript, clicks "Continue" to proceed to summary generation
-
----
-
-#### 14.3 Image OCR
-
-**Service:** `OCRService.php`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| OCR Provider | Config | Tesseract (local, free) or Google Vision API (cloud, more accurate) |
-| Pre-processing | Automatic | Image is converted to greyscale, contrast-enhanced, and deskewed before OCR |
-| Confidence Score | Percentage | OCR confidence displayed to user; warning if <70% |
-
-**Processing flow:**
-1. User uploads image file (whiteboard photo, screenshot, etc.)
-2. `FileProcessor::processImage($filePath)` calls `OCRService::extract()`
-3. Extracted text stored in `documents.extracted_text`
-4. Low-confidence warning shown if OCR quality is poor — suggests re-uploading a clearer image
-
----
-
-#### 14.4 Presentation Support (PPTX)
-
-**Service:** Extension to `FileProcessor.php`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| Slide Text | Extracted | Text from all slide text boxes, concatenated by slide number |
-| Speaker Notes | Extracted | Notes from each slide appended after slide text |
-| Embedded Images | Optional | Images within slides can be extracted and OCR'd (toggle in config) |
-
-**Processing flow:**
-1. User uploads PPTX file
-2. `FileProcessor::processPptx($filePath)` opens the PPTX as a ZIP archive
-3. Iterates `ppt/slides/slide{N}.xml` files, extracts text from `<a:t>` elements
-4. Iterates `ppt/notesSlides/notesSlide{N}.xml` for speaker notes
-5. Concatenated text stored in `documents.extracted_text`
-
----
-
-#### 14.5 URL Import
-
-**Route:** `POST /app/project/{id}/upload/url`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| URL Input | Text | The page URL to import |
-| Detected Platform | Badge | "Confluence", "Notion", "Google Docs", or "Web Page" |
-| Import Preview | Text area | Extracted text shown for user confirmation before saving |
-
-**Platform-specific handling:**
-
-| Platform | Method |
-|----------|--------|
-| Google Docs | Use export URL: `https://docs.google.com/document/d/{id}/export?format=txt` |
-| Confluence | Confluence REST API: `GET /wiki/rest/api/content/{id}?expand=body.storage` (requires API token) |
-| Notion | Notion API: `GET /v1/blocks/{id}/children` (requires integration token) |
-| Generic web page | HTTP GET + strip HTML tags via `strip_tags()` + remove scripts/styles |
-
----
-
-#### 14.6 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Extend StratFlow's document upload pipeline to accept audio, video, images, presentations, and URLs — removing the top-of-funnel friction that prevents users from uploading their actual strategy artifacts.
-
-**Objective:** Ensure that no matter how a strategy conversation was captured (recorded meeting, whiteboard photo, slide deck, wiki page), StratFlow can ingest it and produce a sprint-ready backlog.
-
----
-
-**Week 1 — Phase A: Audio/Video Transcription + Image OCR**
-
-| Task | Description |
-|------|-------------|
-| Task 14.1 | Create `TranscriptionService.php` — `transcribe($filePath, $mimeType)` method. Implements OpenAI Whisper API via `multipart/form-data` POST to `https://api.openai.com/v1/audio/transcriptions`. Handles chunking for files >25 MB. |
-| Task 14.2 | Create `OCRService.php` — `extract($filePath)` method. Tesseract via `exec('tesseract ...')` or Google Vision API via HTTP POST. Returns extracted text + confidence score. |
-| Task 14.3 | Extend `FileProcessor.php` — add `processAudio()` and `processImage()` methods. Route new MIME types to the appropriate processor. |
-| Task 14.4 | Add `transcription_metadata` JSON column to `documents` table. Store: duration, language, word count, speaker count (audio/video) or confidence score (image). |
-| Task 14.5 | Update `templates/upload.php` — extend drag-and-drop zone accepted types, add format badges, add transcription preview panel with continue/retry buttons. |
-| Task 14.6 | Add `OPENAI_API_KEY` and `GOOGLE_VISION_API_KEY` to `.env.example` and `src/Config/config.php`. |
-
-**Week 2 — Phase B: PPTX Support + URL Import**
-
-| Task | Description |
-|------|-------------|
-| Task 14.7 | Extend `FileProcessor.php` — add `processPptx($filePath)` method. Use PHP `ZipArchive` to open PPTX, parse slide XML for `<a:t>` text elements and notes XML for speaker notes. |
-| Task 14.8 | Create URL import route `POST /app/project/{id}/upload/url` in `UploadController`. Detect platform from URL pattern, fetch content via appropriate method, store as document. |
-| Task 14.9 | Implement Google Docs export-as-text fetcher. Implement generic web page text extractor with `strip_tags()` and script/style removal. |
-| Task 14.10 | Implement Confluence and Notion API integrations (optional — behind config flags, since they require API tokens). |
-| Task 14.11 | Update upload screen with URL import field. Show detected platform badge and text preview before saving. |
-| Task 14.12 | Add processing status indicators — progress bar and status text for long-running transcription jobs. Consider async processing with polling for audio files >5 minutes. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -959,7 +648,7 @@ The existing upload screen is extended with new accepted formats and a URL impor
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 -- Migration: add transcription metadata to documents
@@ -967,25 +656,95 @@ ALTER TABLE documents ADD COLUMN transcription_metadata JSON NULL
     COMMENT '{"duration_seconds": 1842, "language": "en", "word_count": 3200, "speaker_count": 4, "ocr_confidence": 0.92}'
     AFTER ai_summary;
 
--- Migration: extend mime_type to accommodate new formats
--- No schema change needed — mime_type is VARCHAR(100), sufficient for all new types
+-- No additional schema changes required — mime_type is VARCHAR(100), sufficient for all new types
 ```
 
 ---
 
 ---
 
-### 15. Meeting Platform Integration Screen
+## Item 15: Meeting Platform Integration — Teams, Zoom & Google Meet
 
-The Meeting Platform Integration connects StratFlow to Microsoft Teams, Zoom, and Google Meet to automatically import meeting transcripts and (where available) AI-generated meeting insights. This enables a "meeting-to-strategy" pipeline: a strategy workshop happens in Teams, the transcript is automatically imported into StratFlow, and the platform generates work items from the discussion. This is the most enterprise-workflow-aligned feature in V3 — it meets users where they already spend their time.
+**Sprint Goal:** The Meeting-to-Strategy Bridge
+
+**Objective:** Meet enterprise users where they already work — in video calls. Integrate StratFlow with Microsoft Teams, Zoom, and Google Meet to automatically capture meeting transcripts and AI-generated insights, converting strategy discussions into actionable backlogs without manual transcription or copy-paste.
 
 ---
 
-#### 15.1 Meeting Integration Settings
+### Week 1: Microsoft Teams Integration & VTT Parser
+
+**Focus:** Implement Azure AD OAuth 2.0 with Microsoft Graph API for Teams transcript retrieval, build the shared VTT parser for speaker-attributed text extraction, implement the Copilot AI Insights polling pipeline, and create the meeting integration data model.
+
+#### Phase 1: Teams Service & VTT Parser (Days 1–3)
+
+● **Task 15.1: Meeting Integration Base Service.** Create `MeetingIntegrationService.php` — abstract base class defining the interface: `connect()`, `disconnect()`, `fetchRecentMeetings()`, `fetchTranscript($meetingId)`. Platform-specific services extend this class.
+
+● **Task 15.2: Teams Service.** Create `TeamsService.php extends MeetingIntegrationService` — Azure AD OAuth 2.0 flow via `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`. OAuth scopes: `OnlineMeetingTranscript.Read.All`, `OnlineMeeting.Read`, `User.Read`. Implements:
+  ○ `authenticate()` — Azure AD OAuth flow, token stored encrypted in `meeting_integrations.config_json`
+  ○ `listMeetings()` — fetch recent online meetings via Microsoft Graph
+  ○ `getTranscript($meetingId, $transcriptId)` — `GET /me/onlineMeetings/{meetingId}/transcripts/{transcriptId}/content` returns VTT format
+  ○ `getCopilotInsights($meetingId)` — `GET /copilot/users/{userId}/onlineMeetings/{meetingId}/aiInsights` returns structured meeting notes, action items, and viewpoint mentions
+
+● **Task 15.3: VTT Parser Service.** Create `VTTParserService.php` — `parse($vttContent)` returns structured text and metadata array. Shared parser used by all three meeting platforms. Capabilities:
+  ○ Extracts speaker name from VTT `<v>` tags
+  ○ Preserves timestamps for reference (output format: `[00:00:05] Alice Smith: text`)
+  ○ Strips formatting tags (`<b>`, `<i>`, etc.)
+  ○ Concatenates consecutive segments from the same speaker
+  ○ Returns both formatted text (for `extracted_text`) and structured array (for metadata)
+
+#### Phase 2: Webhook & Data Model (Days 4–5)
+
+● **Task 15.4: Teams Webhook Endpoint.** Implement `POST /webhook/meetings/teams` — receives Microsoft Graph change notifications for transcript availability via `communications/onlineMeetings/getAllTranscripts` subscription. Verifies notification via validation token handshake. On notification: extract `meetingId` and `transcriptId`, fetch transcript content, trigger import pipeline.
+
+● **Task 15.5: Meeting Integration Models.** Create `MeetingIntegration.php` and `MeetingImport.php` models with standard CRUD operations. `MeetingIntegration` stores platform, OAuth config, auto-import flag, default project, and processing level. `MeetingImport` tracks per-meeting import status (pending/processing/completed/failed), meeting metadata, and linked document ID.
+
+● **Task 15.6: Meeting Integration Settings Template.** Build `templates/admin/meeting-integrations.php` — connection cards for Teams, Zoom, and Google Meet, each showing status badge (Connected/Not Connected), "Connect" button, connected account email. Per-platform settings: auto-import toggle, default project dropdown, transcript processing level radio group (`Raw Transcript Only`, `Transcript + AI Summary`, `Transcript + AI Summary + Work Item Generation`).
+
+---
+
+### Week 2: Zoom, Google Meet & Meeting Browser UI
+
+**Focus:** Implement Zoom and Google Meet transcript retrieval, build the meeting browser with selective import, deliver the automatic import pipeline, and implement Copilot AI Insights polling with exponential backoff.
+
+#### Phase 3: Zoom & Google Meet Services (Days 1–3)
+
+● **Task 15.7: Zoom Service.** Create `ZoomService.php extends MeetingIntegrationService` — Server-to-Server OAuth app. Store Account ID, Client ID, Client Secret in `meeting_integrations.config_json`. Scopes: `meeting:read:admin`, `recording:read:admin`. Subscribe to `recording.completed` webhook event. Fetch transcript via `GET /meetings/{meetingId}/transcript` (WebVTT format). Parse with shared VTT parser. Requires Zoom paid plan (Pro/Business/Enterprise) with cloud recording and audio transcript enabled.
+
+● **Task 15.8: Google Meet Service.** Create `GoogleMeetService.php extends MeetingIntegrationService` — Google OAuth 2.0 with scope `https://www.googleapis.com/auth/meetings.space.readonly`. Transcript retrieval via `GET /v2/{parent=conferenceRecords/*}/transcripts` — each `TranscriptEntry` includes `participant` (speaker), `text`, `startOffset`, `endOffset`. Fallback: Google Meet saves transcripts as Google Docs in organiser's Drive — fetch via Google Drive API if Meet API access is limited.
+
+● **Task 15.9: Meeting Browser Template.** Build `templates/meetings.php` — meeting browser at `GET /app/project/{id}/meetings`. Platform filter tab bar (All, Teams, Zoom, Google Meet). Meeting list table with columns: platform icon, meeting title, date/time, duration, participants, import status badge (Not Imported/Imported/Processing). Per-row "Import to Project" button. Bulk import via checkbox selection and "Import Selected" button.
+
+#### Phase 4: Import Pipeline & Copilot Insights (Days 4–5)
+
+● **Task 15.10: Manual Import Flow.** Implement import flow: user clicks "Import" → system fetches transcript from platform API (if not cached) → VTT transcript parsed into speaker-attributed plain text → if Copilot AI Insights available (Teams), append as structured summary section → create new `documents` row with transcript as `extracted_text` and meeting metadata in `transcription_metadata` → redirect user to document summary step. Meeting metadata stored:
+  ○ `source` — platform identifier (teams/zoom/google_meet)
+  ○ `meeting_id` — platform-specific meeting identifier
+  ○ `meeting_title` — meeting subject line
+  ○ `meeting_date` — ISO 8601 datetime
+  ○ `duration_minutes` — meeting length
+  ○ `participant_count` and `participants` array
+  ○ `has_copilot_insights` — boolean
+  ○ `action_items` — array of {text, owner} objects (from Copilot)
+
+● **Task 15.11: Automatic Import Pipeline.** Implement auto-import pipeline for platforms with auto-import enabled:
+  ○ Webhook receives meeting-end notification
+  ○ System waits for transcript availability (immediate for Zoom, up to 15 minutes for Teams, variable for Meet)
+  ○ Transcript fetched and parsed via VTT parser
+  ○ New document created in configured default project
+  ○ If processing level is "Transcript + AI Summary", summary auto-generated
+  ○ If "Transcript + AI Summary + Work Item Generation", full pipeline runs: summary → diagram → work items
+  ○ Notification created for project owner: "Meeting transcript imported: {meeting_title}"
+  ○ Activity log entry created: `action = 'meeting_imported'`
+
+● **Task 15.12: Copilot AI Insights Polling.** Implement Copilot AI Insights polling for Teams with exponential backoff: 5 min → 15 min → 30 min → 1 hr → 2 hr → 4 hr. Copilot insights take up to 4 hours after meeting ends. If insights become available, store alongside raw transcript: `meetingNotes` (structured with titles, text, subpoints), `actionItems` (with owners), `viewpoint` mentions. Append action items to imported document metadata.
+
+---
+
+### 15.1 Meeting Integration Settings
 
 **Route:** `GET /app/admin/integrations/meetings`
 
-Central configuration page for connecting meeting platforms. Sits within the Integration Hub (Section 10) as a dedicated sub-section.
+The screen will display central configuration for connecting meeting platforms, accessible within the Integration Hub as a dedicated sub-section.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -993,199 +752,26 @@ Central configuration page for connecting meeting platforms. Sits within the Int
 | Zoom | Connection card | Status badge, "Connect" button, connected account email |
 | Google Meet | Connection card | Status badge, "Connect" button, connected account email |
 | Auto-Import | Toggle per platform | When enabled, new meeting transcripts are automatically imported on meeting end |
-| Default Project | Dropdown per platform | Which project to import transcripts into by default (can be overridden per meeting) |
+| Default Project | Dropdown per platform | Which project to import transcripts into by default |
 | Transcript Processing | Radio group | `Raw Transcript Only`, `Transcript + AI Summary`, `Transcript + AI Summary + Work Item Generation` |
 
----
-
-#### 15.2 Microsoft Teams Connection
-
-**Authentication:** Azure AD app registration with Microsoft Graph API permissions.
-
-**OAuth 2.0 flow:**
-- Redirect to `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`
-- Scopes: `OnlineMeetingTranscript.Read.All`, `OnlineMeeting.Read`, `User.Read`
-- Token stored encrypted in `meeting_integrations.config_json`
-
-**Transcript retrieval:**
-1. **Webhook subscription:** Register for `communications/onlineMeetings/getAllTranscripts` change notifications via Microsoft Graph Subscriptions API
-2. **On notification received:** Extract `meetingId` and `transcriptId` from the notification payload
-3. **Fetch transcript content:** `GET /me/onlineMeetings/{meetingId}/transcripts/{transcriptId}/content` — returns VTT format
-4. **Parse VTT:** Extract speaker-attributed, timestamped text segments
-
-**Microsoft Copilot AI Insights (optional, requires Copilot license):**
-1. After meeting ends, poll: `GET /copilot/users/{userId}/onlineMeetings/{meetingId}/aiInsights`
-2. AI Insights include: `meetingNotes` (structured with titles, text, subpoints), `actionItems` (with owners), `viewpoint` mentions
-3. Takes up to 4 hours after meeting ends — poll with exponential backoff (5 min, 15 min, 30 min, 1 hr, 2 hr, 4 hr)
-4. If Copilot insights are available, store alongside raw transcript for richer context
-
-**Teams Bot integration (optional, advanced):**
-- Register a Teams Bot that receives `meetingStart` and `meetingEnd` lifecycle events
-- On `meetingEnd`: automatically subscribe for transcript availability
-- Bot manifest permissions: `OnlineMeetingParticipant.Read.Chat`, `OnlineMeeting.ReadBasic.Chat`
-
----
-
-#### 15.3 Zoom Connection
-
-**Authentication:** Zoom Server-to-Server OAuth app.
-
-**Setup:**
-- Create Server-to-Server OAuth app in Zoom Marketplace
-- Scopes: `meeting:read:admin`, `recording:read:admin`
-- Store Account ID, Client ID, Client Secret in `meeting_integrations.config_json`
-
-**Transcript retrieval:**
-1. **Webhook:** Subscribe to `recording.completed` event in Zoom app settings
-2. **On notification received:** Extract `meeting_id` from payload
-3. **Fetch transcript:** `GET /meetings/{meetingId}/transcript` — returns WebVTT format
-4. **Parse VTT:** Same VTT parser as Teams transcripts
-
-**Requirements:**
-- Requires Zoom paid plan (Pro, Business, or Enterprise) — transcription is not available on free plans
-- Meeting must have cloud recording enabled with "Audio transcript" toggled on
-
----
-
-#### 15.4 Google Meet Connection
-
-**Authentication:** Google OAuth 2.0 with Google Meet API.
-
-**OAuth 2.0 flow:**
-- Scopes: `https://www.googleapis.com/auth/meetings.space.readonly`
-- Token stored encrypted in `meeting_integrations.config_json`
-
-**Transcript retrieval:**
-1. **List transcripts:** `GET /v2/{parent=conferenceRecords/*}/transcripts`
-2. **Get transcript entries:** Each `TranscriptEntry` includes `participant` (speaker), `text`, `startOffset`, `endOffset`
-3. **Alternative:** Google Meet saves transcripts as Google Docs in the organiser's Drive — can be fetched via Google Drive API if Meet API access is limited
-
----
-
-#### 15.5 Meeting Browser & Import UI
+### 15.2 Meeting Browser
 
 **Route:** `GET /app/project/{id}/meetings`
 
-Displays recent meetings from all connected platforms, allowing the user to browse and selectively import transcripts.
+The screen will display recent meetings from all connected platforms with selective import.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | Platform Filter | Tab bar | `All`, `Teams`, `Zoom`, `Google Meet` |
-| Meeting List | Table | Columns: Platform icon, Meeting Title, Date/Time, Duration, Participants, Import Status |
+| Meeting List | Table | Platform icon, Meeting Title, Date/Time, Duration, Participants, Import Status |
 | Import Status | Badge | `Not Imported`, `Imported`, `Processing` |
-| Import Button | Button per row | "Import to Project" — triggers transcript fetch, VTT parse, and document creation |
+| Import Button | Button per row | "Import to Project" — triggers transcript fetch, parse, and document creation |
 | Bulk Import | Checkbox selection + button | Select multiple meetings and import all at once |
 
-**Import flow:**
-1. User clicks "Import" on a meeting row
-2. System fetches transcript from the platform API (if not already cached)
-3. VTT transcript is parsed into speaker-attributed plain text
-4. If Copilot AI Insights are available (Teams), they are appended as a structured summary section
-5. A new `documents` row is created with the transcript as `extracted_text` and meeting metadata in `transcription_metadata`
-6. User is redirected to the document summary step of the standard pipeline
-
-**Meeting metadata stored in `transcription_metadata`:**
-
-```json
-{
-    "source": "teams",
-    "meeting_id": "AAMkAGI...",
-    "meeting_title": "Q3 Strategy Workshop",
-    "meeting_date": "2026-04-08T14:00:00Z",
-    "duration_minutes": 62,
-    "participant_count": 8,
-    "participants": ["Alice Smith", "Bob Jones", ...],
-    "has_copilot_insights": true,
-    "action_items": [
-        {"text": "Draft API specification", "owner": "Bob Jones"},
-        {"text": "Review budget proposal", "owner": "Alice Smith"}
-    ]
-}
-```
-
 ---
 
-#### 15.6 VTT Transcript Parser
-
-**Service:** `VTTParserService.php`
-
-Shared parser used by all three meeting platforms. Converts WebVTT format into structured, speaker-attributed text suitable for the StratFlow AI pipeline.
-
-**Input (WebVTT):**
-```
-WEBVTT
-
-00:00:05.000 --> 00:00:12.000
-<v Alice Smith>We need to focus on the API gateway as our first priority.
-
-00:00:12.500 --> 00:00:20.000
-<v Bob Jones>Agreed. The mobile team is blocked until the gateway is ready.
-```
-
-**Output (structured text):**
-```
-[00:00:05] Alice Smith: We need to focus on the API gateway as our first priority.
-[00:00:12] Bob Jones: Agreed. The mobile team is blocked until the gateway is ready.
-```
-
-**Parser capabilities:**
-- Extracts speaker name from VTT `<v>` tags
-- Preserves timestamps for reference
-- Strips formatting tags (`<b>`, `<i>`, etc.)
-- Concatenates consecutive segments from the same speaker
-- Returns both formatted text (for `extracted_text`) and structured array (for metadata)
-
----
-
-#### 15.7 Automatic Import Pipeline
-
-When "Auto-Import" is enabled for a platform (Section 15.1), the system automatically processes new meeting transcripts without user intervention.
-
-**Pipeline:**
-1. Webhook receives meeting-end notification
-2. System waits for transcript availability (immediate for Zoom, up to 15 minutes for Teams, variable for Meet)
-3. Transcript is fetched and parsed
-4. A new document is created in the configured default project
-5. If "Transcript Processing" is set to "Transcript + AI Summary", the summary is auto-generated
-6. If set to "Transcript + AI Summary + Work Item Generation", the full pipeline runs: summary → diagram → work items
-7. A notification is created for the project owner: "Meeting transcript imported: {meeting_title}"
-8. An activity log entry is created: `action = 'meeting_imported'`
-
----
-
-#### 15.8 Sprint Goal & Implementation Plan
-
-**Sprint Goal:** Integrate StratFlow with Microsoft Teams, Zoom, and Google Meet to import meeting transcripts (and Copilot AI Insights where available) directly into the strategy pipeline, enabling a seamless "meeting-to-backlog" workflow.
-
-**Objective:** Meet enterprise users where they already work — in video calls. Automatically capture strategy discussions and convert them into actionable backlogs without manual transcription or copy-paste.
-
----
-
-**Week 1 — Phase A: Microsoft Teams Integration + VTT Parser**
-
-| Task | Description |
-|------|-------------|
-| Task 15.1 | Create `MeetingIntegrationService.php` — base class with `connect()`, `disconnect()`, `fetchRecentMeetings()`, `fetchTranscript($meetingId)` interface. |
-| Task 15.2 | Create `TeamsService.php extends MeetingIntegrationService` — Azure AD OAuth 2.0 flow, Microsoft Graph API client. Implements: `authenticate()`, `listMeetings()`, `getTranscript($meetingId, $transcriptId)`, `getCopilotInsights($meetingId)`. |
-| Task 15.3 | Create `VTTParserService.php` — `parse($vttContent)` returns structured text + metadata array. Handle VTT speaker tags, timestamps, formatting strips, speaker concatenation. |
-| Task 15.4 | Implement webhook endpoint `POST /webhook/meetings/teams` — receives Microsoft Graph change notifications for transcript availability. Verifies notification via validation token handshake. |
-| Task 15.5 | Create `MeetingIntegration.php` and `MeetingImport.php` models. Standard CRUD operations. |
-| Task 15.6 | Build `templates/admin/meeting-integrations.php` — connection cards for Teams/Zoom/Meet with status, auto-import toggle, default project selector, transcript processing level. |
-
-**Week 2 — Phase B: Zoom + Google Meet + Meeting Browser UI**
-
-| Task | Description |
-|------|-------------|
-| Task 15.7 | Create `ZoomService.php extends MeetingIntegrationService` — Server-to-Server OAuth, `recording.completed` webhook handling, transcript fetch via `GET /meetings/{id}/transcript`. |
-| Task 15.8 | Create `GoogleMeetService.php extends MeetingIntegrationService` — Google OAuth 2.0, Google Meet REST API for transcript retrieval, fallback to Google Drive API for transcript documents. |
-| Task 15.9 | Build `templates/meetings.php` — meeting browser with platform tabs, meeting list table, import buttons, bulk import. |
-| Task 15.10 | Implement import flow: fetch transcript → parse VTT → create document → optionally run summary → redirect to pipeline. Store meeting metadata in `transcription_metadata`. |
-| Task 15.11 | Implement auto-import pipeline: webhook trigger → wait for transcript → fetch → parse → create document → optionally run full pipeline → notify project owner. |
-| Task 15.12 | Implement Copilot AI Insights polling for Teams: exponential backoff (5 min to 4 hr), store structured insights in `transcription_metadata`, append action items to imported document. |
-
----
-
-**Definition of Done**
+### Definition of Done (DoD)
 
 | Requirement | Success Criteria |
 |-------------|-----------------|
@@ -1202,7 +788,7 @@ When "Auto-Import" is enabled for a platform (Section 15.1), the system automati
 
 ---
 
-**Database Schema**
+### Database Schema
 
 ```sql
 CREATE TABLE meeting_integrations (
@@ -1250,29 +836,51 @@ CREATE TABLE meeting_imports (
 
 ## V3 Strategic Summary
 
-### Feature Dependency Map
+### Feature Priority & Effort Matrix
 
-```
-Feature 10 (Jira/ADO Sync) ──────── standalone, highest priority
-Feature 11 (Executive Dashboard) ── standalone, builds on existing sprint/governance data
-Feature 12 (Collaboration) ──────── standalone, enhances all existing screens
-Feature 13 (AI Strategy Coach) ──── depends on Feature 12 (activity feed provides richer context)
-Feature 14 (Multi-Format Docs) ──── standalone, extends upload pipeline
-Feature 15 (Meeting Integration) ── depends on Feature 14 (shares TranscriptionService + VTT parser)
-```
+| Item | Feature | Priority | Effort (Sprints) | Business Value | Risk |
+|------|---------|----------|-------------------|----------------|------|
+| 10 | Integration Hub — Jira & Azure DevOps Sync | Critical | 2 weeks | Removes #1 enterprise disqualification | Medium (third-party API dependency) |
+| 11 | Executive Strategy Dashboard & Portfolio View | High | 2 weeks | Sells to the budget holder (VP/CPO/CTO) | Low (internal data only) |
+| 12 | Real-Time Collaboration & Activity Feed | High | 2 weeks | Multi-user requirement for enterprise | Low (standard patterns) |
+| 13 | AI Strategy Coach — Conversational Interface | Medium | 2 weeks | Demo "wow factor" for premium tier | Medium (LLM token costs, context limits) |
+| 14 | Multi-Format Document Intelligence | Medium | 2 weeks | Reduces top-of-funnel bounce rate | Medium (third-party API costs) |
+| 15 | Meeting Platform Integration — Teams, Zoom & Google Meet | High | 2 weeks | Enterprise workflow alignment | High (three platform APIs, webhook reliability) |
 
 ### Implementation Sequencing
 
 | Phase | Timeline | Features | Rationale |
 |-------|----------|----------|-----------|
-| Phase 1 | Weeks 1–4 | Feature 10 (Jira/ADO Sync) + Feature 11 (Executive Dashboard) | Removes the #1 enterprise objection and creates the executive-facing surface that justifies the subscription |
-| Phase 2 | Weeks 5–9 | Feature 12 (Collaboration) + Feature 13 (AI Strategy Coach) | Transforms StratFlow from single-player to team-ready; adds the conversational "wow factor" |
-| Phase 3 | Weeks 10–13 | Feature 14 (Multi-Format Docs) + Feature 15 (Meeting Integration) | Widens the upload funnel and connects StratFlow to the enterprise meeting workflow |
+| Phase 1 (Q2) | Weeks 1–4 | Item 10 (Jira/ADO Sync) + Item 11 (Executive Dashboard) | Removes the #1 enterprise objection and creates the executive-facing surface that justifies the subscription. These two features are standalone with no dependencies. |
+| Phase 2 (Q3) | Weeks 5–9 | Item 12 (Collaboration) + Item 13 (AI Strategy Coach) | Transforms StratFlow from single-player to team-ready. Item 13 depends on Item 12 — the activity feed provides richer context for the AI coach. |
+| Phase 3 (Q4) | Weeks 10–13 | Item 14 (Multi-Format Docs) + Item 15 (Meeting Integration) | Widens the upload funnel and connects StratFlow to the enterprise meeting workflow. Item 15 depends on Item 14 — shares `TranscriptionService` and VTT parser infrastructure. |
+
+### Feature Dependency Map
+
+```
+Item 10 (Jira/ADO Sync) ──────── standalone, highest priority
+Item 11 (Executive Dashboard) ── standalone, builds on existing sprint/governance data
+Item 12 (Collaboration) ──────── standalone, enhances all existing screens
+Item 13 (AI Strategy Coach) ──── depends on Item 12 (activity feed provides richer context)
+Item 14 (Multi-Format Docs) ──── standalone, extends upload pipeline
+Item 15 (Meeting Integration) ── depends on Item 14 (shares TranscriptionService + VTT parser)
+```
+
+### Revenue Impact Projection
+
+| Feature | Enterprise Conversion Impact | Retention Impact | ARPU Impact |
+|---------|------------------------------|-----------------|-------------|
+| Jira/ADO Sync (Item 10) | +60–80% (removes #1 disqualification) | +30% (embedded in workflow) | Neutral |
+| Executive Dashboard (Item 11) | +20% (sells to budget holder) | +40% (daily usage habit) | +15% (portfolio tier) |
+| Collaboration (Item 12) | +15% (multi-user requirement) | +25% (engagement loops) | +30% (more seats) |
+| AI Strategy Coach (Item 13) | +10% (demo wow factor) | +15% (discovery value) | +20% (premium feature) |
+| Multi-Format Docs (Item 14) | +5% (reduces bounce at step 1) | +5% (convenience) | Neutral |
+| Meeting Integration (Item 15) | +15% (enterprise workflow fit) | +20% (automated pipeline) | +10% (premium feature) |
 
 ### Total New Database Tables
 
-| Table | Feature | Purpose |
-|-------|---------|---------|
+| Table | Item | Purpose |
+|-------|------|---------|
 | `integrations` | 10 | Jira/ADO OAuth connections and configuration |
 | `sync_mappings` | 10 | Bidirectional item mapping between StratFlow and external tools |
 | `dashboard_cache` | 11 | Materialised cache for dashboard performance |
@@ -1284,38 +892,14 @@ Feature 15 (Meeting Integration) ── depends on Feature 14 (shares Transcript
 | `meeting_integrations` | 15 | Teams/Zoom/Meet OAuth connections and configuration |
 | `meeting_imports` | 15 | Per-meeting import tracking with status and metadata |
 
-### Total New Schema Migrations
+### Total Schema Migrations
 
-| Migration | Feature | Change |
-|-----------|---------|--------|
+| Migration | Item | Change |
+|-----------|------|--------|
 | `ALTER TABLE documents ADD COLUMN transcription_metadata` | 14 | JSON column for audio/video/image processing metadata |
 | `ALTER TABLE user_stories ADD COLUMN status` | 11 | ENUM for burndown chart calculations |
 | `ALTER TABLE user_stories ADD COLUMN completed_at` | 11 | Timestamp for velocity tracking |
 | `ALTER TABLE users ADD COLUMN notification_preferences` | 12 | JSON column for email digest settings |
-
-### New Files Summary
-
-| Directory | New Files | Feature |
-|-----------|-----------|---------|
-| `src/Services/` | `JiraService.php`, `AzureDevOpsService.php`, `AnalyticsService.php`, `NotificationService.php`, `CoachService.php`, `TranscriptionService.php`, `OCRService.php`, `VTTParserService.php`, `MeetingIntegrationService.php`, `TeamsService.php`, `ZoomService.php`, `GoogleMeetService.php` | 10–15 |
-| `src/Services/Prompts/` | `CoachPrompt.php` | 13 |
-| `src/Controllers/` | `IntegrationController.php`, `DashboardController.php`, `CommentController.php`, `NotificationController.php`, `CoachController.php`, `MeetingController.php` | 10–15 |
-| `src/Models/` | `Integration.php`, `SyncMapping.php`, `DashboardCache.php`, `Comment.php`, `Notification.php`, `ActivityLog.php`, `CoachConversation.php`, `CoachMessage.php`, `MeetingIntegration.php`, `MeetingImport.php` | 10–15 |
-| `templates/` | `dashboard.php`, `analytics.php`, `okr-progress.php`, `activity-feed.php`, `notifications.php`, `meetings.php` | 11–15 |
-| `templates/admin/` | `integrations.php`, `meeting-integrations.php` | 10, 15 |
-| `templates/partials/` | `comment-thread.php`, `notification-bell.php`, `coach-panel.php` | 12, 13 |
-| `public/assets/js/` | `charts.js`, `coach.js` | 11, 13 |
-
-### Revenue Impact Projection
-
-| Feature | Enterprise Conversion Impact | Retention Impact | ARPU Impact |
-|---------|------------------------------|-----------------|-------------|
-| Jira/ADO Sync (10) | +60–80% (removes #1 disqualification) | +30% (embedded in workflow) | Neutral |
-| Executive Dashboard (11) | +20% (sells to budget holder) | +40% (daily usage habit) | +15% (portfolio tier) |
-| Collaboration (12) | +15% (multi-user requirement) | +25% (engagement loops) | +30% (more seats) |
-| AI Strategy Coach (13) | +10% (demo wow factor) | +15% (discovery value) | +20% (premium feature) |
-| Multi-Format Docs (14) | +5% (reduces bounce at step 1) | +5% (convenience) | Neutral |
-| Meeting Integration (15) | +15% (enterprise workflow fit) | +20% (automated pipeline) | +10% (premium feature) |
 
 ### Competitive Position After V3
 
