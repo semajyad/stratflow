@@ -62,6 +62,8 @@ class StripeService
             ],
             'success_url' => $successUrl,
             'cancel_url'  => $cancelUrl,
+            // Always collect email so we can create the user account
+            'customer_creation' => ($mode === 'subscription') ? 'always' : 'if_required',
         ];
 
         if ($customerEmail !== null) {

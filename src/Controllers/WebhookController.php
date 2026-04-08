@@ -86,9 +86,22 @@ class WebhookController
      */
     private function handleCheckoutCompleted(\Stripe\Checkout\Session $session, StripeService $stripe): void
     {
+        // Re-retrieve the session with expanded customer_details and line_items
+        // The webhook payload doesn't always include these
+        try {
+            $session = \Stripe\Checkout\Session::retrieve([
+                'id' => $session->id,
+                'expand' => ['customer_details', 'line_items', 'customer'],
+            ]);
+        } catch (\Throwable $e) {
+            error_log("[StratFlow] Failed to expand checkout session: " . $e->getMessage());
+        }
+
         $customerEmail    = $session->customer_details->email ?? $session->customer_email ?? '';
         $stripeCustomerId = $session->customer ?? '';
         $stripeSubId      = $session->subscription ?? '';
+
+        error_log("[StratFlow] Checkout completed: email={$customerEmail}, customer={$stripeCustomerId}, sub={$stripeSubId}");
 
         // Determine plan type from the first line item price ID
         $planType = 'product';
