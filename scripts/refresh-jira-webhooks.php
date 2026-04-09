@@ -55,7 +55,7 @@ foreach ($integrations as $integration) {
     echo "\nOrg #{$orgId}: ";
 
     try {
-        $jiraService = new \StratFlow\Services\JiraService($config, $integration, $db);
+        $jiraService = new \StratFlow\Services\JiraService($config['jira'] ?? [], $integration, $db);
         $jiraService->refreshWebhooks();
         echo "Webhooks refreshed.\n";
 
@@ -63,7 +63,7 @@ foreach ($integrations as $integration) {
         $expiresAt = $integration['token_expires_at'] ?? null;
         if ($expiresAt && strtotime($expiresAt) < time() + (7 * 86400)) {
             echo "  Token expires soon ({$expiresAt}), refreshing...\n";
-            $jiraService->refreshAccessToken($integration['refresh_token']);
+            $jiraService->refreshAccessToken();
             echo "  Token refreshed.\n";
         }
     } catch (\Throwable $e) {

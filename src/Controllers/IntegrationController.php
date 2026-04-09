@@ -603,6 +603,20 @@ class IntegrationController
             return;
         }
 
+        // Validate webhook signature if secret is configured
+        $signature = $_SERVER['HTTP_X_ATLASSIAN_SIGNATURE'] ?? $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? '';
+        $webhookSecret = $this->config['jira']['webhook_secret'] ?? '';
+        if ($webhookSecret !== '') {
+            $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
+            $providedHash = str_replace('sha256=', '', $signature);
+            if (!hash_equals($expected, $providedHash)) {
+                error_log('[JiraWebhook] Invalid signature — possible spoofing attempt');
+                http_response_code(401);
+                echo json_encode(['error' => 'Invalid signature']);
+                return;
+            }
+        }
+
         $payload = json_decode($rawBody, true);
         if (!$payload) {
             http_response_code(400);
@@ -718,6 +732,14 @@ class IntegrationController
         $integration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         if (!$integration || $integration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Jira is not connected. Go to Administration → Integrations.';
+            $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
+            return;
+        }
+
+        // Sync lock: prevent concurrent syncs
+        $lastSync = $integration['last_sync_at'] ?? null;
+        if ($lastSync && (time() - strtotime($lastSync)) < 10) {
+            $_SESSION['flash_error'] = 'Sync already in progress. Please wait a moment.';
             $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
             return;
         }
@@ -853,35 +875,58 @@ class IntegrationController
             $existingNames = array_map(fn($t) => strtolower($t['name']), $existingTeams);
 
             // 1. Import boards as teams (board = team in Jira)
+            $boardCount = 0;
             try {
                 $boardsResult = $jira->getBoards($projectKey);
-                foreach ($boardsResult['values'] ?? [] as $board) {
-                    $teamName = $board['name'] ?? 'Board ' . $board['id'];
+                $boards = $boardsResult['values'] ?? [];
+                $boardCount = count($boards);
 
-                    if (!in_array(strtolower($teamName), $existingNames)) {
-                        \StratFlow\Models\Team::create($this->db, [
-                            'org_id'        => $orgId,
-                            'name'          => $teamName,
-                            'description'   => "Jira board (ID: {$board['id']}, type: {$board['type']})",
-                            'capacity'      => 0,
-                            'jira_board_id' => (int) $board['id'],
-                        ]);
-                        $existingNames[] = strtolower($teamName);
-                        $created++;
-                    } else {
-                        // Update existing team's board_id if not set
-                        foreach (\StratFlow\Models\Team::findByOrgId($this->db, $orgId) as $et) {
-                            if (strtolower($et['name']) === strtolower($teamName) && empty($et['jira_board_id'])) {
+                foreach ($boards as $board) {
+                    $teamName = $board['name'] ?? 'Board ' . $board['id'];
+                    $boardId  = (int) $board['id'];
+
+                    // Check if a team already has this board_id linked
+                    $existsByBoardId = false;
+                    foreach ($existingTeams as $et) {
+                        if ((int) ($et['jira_board_id'] ?? 0) === $boardId) {
+                            $existsByBoardId = true;
+                            $skipped++;
+                            break;
+                        }
+                    }
+                    if ($existsByBoardId) continue;
+
+                    // Check by name match
+                    if (in_array(strtolower($teamName), $existingNames)) {
+                        // Link existing team to this board
+                        foreach ($existingTeams as $et) {
+                            if (strtolower($et['name']) === strtolower($teamName)) {
                                 \StratFlow\Models\Team::update($this->db, (int) $et['id'], [
-                                    'jira_board_id' => (int) $board['id'],
+                                    'jira_board_id' => $boardId,
                                 ]);
+                                break;
                             }
                         }
                         $skipped++;
+                        continue;
                     }
+
+                    \StratFlow\Models\Team::create($this->db, [
+                        'org_id'        => $orgId,
+                        'name'          => $teamName,
+                        'description'   => "Jira board (ID: {$boardId}, type: " . ($board['type'] ?? 'unknown') . ")",
+                        'capacity'      => 0,
+                        'jira_board_id' => $boardId,
+                    ]);
+                    $existingNames[] = strtolower($teamName);
+                    $existingTeams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
+                    $created++;
                 }
             } catch (\Throwable $e) {
                 error_log('[JiraTeamImport] Board import failed: ' . $e->getMessage());
+                $_SESSION['flash_error'] = 'Board import failed: ' . $e->getMessage();
+                $this->response->redirect('/app/admin/teams');
+                return;
             }
 
             // 2. Discover team names from the Team custom field on issues
@@ -919,7 +964,12 @@ class IntegrationController
                 }
             }
 
-            $_SESSION['flash_message'] = "Jira team import: {$created} created" . ($skipped > 0 ? ", {$skipped} already existed" : '') . '.';
+            $msg = "Jira import: found {$boardCount} board(s). ";
+            if ($created > 0) $msg .= "{$created} team(s) created. ";
+            if ($skipped > 0) $msg .= "{$skipped} already linked. ";
+            if ($created === 0 && $skipped === 0 && $boardCount === 0) $msg .= "No boards found in Jira project {$projectKey}.";
+            elseif ($created === 0 && $boardCount > 0) $msg .= "All boards already have matching teams.";
+            $_SESSION['flash_message'] = trim($msg);
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Failed to import teams: ' . $e->getMessage();
         }

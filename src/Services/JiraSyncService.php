@@ -424,7 +424,28 @@ class JiraSyncService
                         continue;
                     }
 
-                    // Apply update
+                    // Conflict detection: if local item changed since last sync,
+                    // flag as requires_review instead of overwriting
+                    $currentLocalHash = $this->computeSyncHash($localItem);
+                    $lastSyncHash = $mapping['sync_hash'] ?? '';
+                    $localChanged = ($lastSyncHash !== '' && $currentLocalHash !== $lastSyncHash);
+
+                    if ($localChanged) {
+                        // Both sides changed — flag for manual review
+                        $updateData['requires_review'] = 1;
+                        SyncLog::create($this->db, [
+                            'integration_id' => $integrationId,
+                            'direction'      => 'pull',
+                            'action'         => 'update',
+                            'local_type'     => $mapping['local_type'],
+                            'local_id'       => (int) $mapping['local_id'],
+                            'external_id'    => $issue['key'] ?? $externalId,
+                            'details_json'   => json_encode(['conflict' => true, 'local_changed' => true, 'jira_changed' => true]),
+                            'status'         => 'success',
+                        ]);
+                    }
+
+                    // Apply update (Jira takes precedence, but conflicts flagged)
                     if ($mapping['local_type'] === 'hl_work_item') {
                         HLWorkItem::update($this->db, (int) $mapping['local_id'], $updateData);
                     } elseif ($mapping['local_type'] === 'user_story') {
@@ -504,6 +525,9 @@ class JiraSyncService
             (string) ($item['priority_number'] ?? 0),
             $item['owner'] ?? '',
             (string) ($item['size'] ?? 0),
+            $item['team_assigned'] ?? '',
+            (string) ($item['parent_hl_item_id'] ?? 0),
+            (string) ($item['estimated_sprints'] ?? 0),
         ];
 
         return hash('sha256', implode('|', $parts));

@@ -158,11 +158,14 @@ class SprintController
         $endDate      = $this->request->post('end_date', '') ?: null;
         $teamCapacity = $this->request->post('team_capacity', '');
 
+        $teamId = $this->request->post('team_id', '');
+
         Sprint::update($this->db, $id, [
             'name'          => trim((string) $this->request->post('name', $sprint['name'])),
             'start_date'    => $startDate,
             'end_date'      => $endDate,
             'team_capacity' => $teamCapacity !== '' ? (int) $teamCapacity : null,
+            'team_id'       => $teamId !== '' ? (int) $teamId : null,
         ]);
 
         $_SESSION['flash_message'] = 'Sprint updated.';

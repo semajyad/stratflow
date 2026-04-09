@@ -399,6 +399,18 @@ class JiraService
      */
     private function makeAuthenticatedRequest(string $method, string $path, ?array $body = null): array
     {
+        // Proactive token refresh: if token expires within 5 minutes, refresh now
+        if ($this->integration && $this->db) {
+            $expiresAt = $this->integration['token_expires_at'] ?? null;
+            if ($expiresAt && strtotime($expiresAt) < time() + 300) {
+                try {
+                    $this->refreshAccessToken();
+                } catch (\Throwable $e) {
+                    // Will fail on 401 below and retry there
+                }
+            }
+        }
+
         if (!$this->integration) {
             throw new \RuntimeException('No integration record set for authenticated request');
         }
