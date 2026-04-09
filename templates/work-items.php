@@ -27,7 +27,7 @@
      Page Description
      =========================== -->
 <div class="page-description">
-    High-level work items represent approximately one month of effort for a Scrum team. Drag to reorder priorities, edit details, or generate AI descriptions.
+    Work items represent approximately one month of effort for a Scrum team — these become Epics when synced to Jira. Drag to reorder, edit details, or generate AI descriptions.
 </div>
 
 <!-- ===========================

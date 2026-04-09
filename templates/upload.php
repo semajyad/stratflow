@@ -27,21 +27,8 @@ function formatFileSize(int $bytes): string {
     <?php endif; ?>
 </div>
 
-<!-- ===========================
-     Step Indicator
-     =========================== -->
-<div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; align-items:center;">
-    <span class="badge <?= $hasDocuments ? 'badge-success' : 'badge-primary' ?>" style="padding:0.35rem 0.75rem;">
-        1. Upload
-    </span>
-    <span style="color:var(--text-muted);">&rarr;</span>
-    <span class="badge <?= $hasText ? ($hasSummary ? 'badge-success' : 'badge-primary') : 'badge-secondary' ?>" style="padding:0.35rem 0.75rem;">
-        2. AI Summary
-    </span>
-    <span style="color:var(--text-muted);">&rarr;</span>
-    <span class="badge <?= $hasSummary ? 'badge-primary' : 'badge-secondary' ?>" style="padding:0.35rem 0.75rem;">
-        3. Strategy Roadmap
-    </span>
+<div class="page-description">
+    Upload your strategy documents (PDF, DOCX, PPTX, TXT) or paste text directly. StratFlow extracts the content and generates an AI summary — the foundation for your entire roadmap.
 </div>
 
 <?php if ($hasSummary): ?>
@@ -64,9 +51,7 @@ function formatFileSize(int $bytes): string {
 <?php endif; ?>
 
 <?php if ($hasText && !$hasSummary): ?>
-<!-- ===========================
-     Text Extracted — Prompt to generate summary
-     =========================== -->
+<!-- Text Extracted — Prompt to generate summary -->
 <section class="card mb-6" style="border-left: 4px solid var(--primary);">
     <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem;">
         <div>
@@ -84,6 +69,46 @@ function formatFileSize(int $bytes): string {
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Generate AI Summary</button>
         </form>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if ($latestDoc && empty($latestDoc['extracted_text']) && !$hasSummary): ?>
+<!-- Extraction Failure — Actionable recovery -->
+<section class="card mb-6" style="border-left: 4px solid var(--danger, #dc2626);">
+    <div class="card-body" style="padding:1.25rem 1.5rem;">
+        <div style="display:flex; align-items:start; gap:1rem;">
+            <div style="flex-shrink:0; width:40px; height:40px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div style="flex:1;">
+                <h3 style="margin:0 0 0.35rem; color:#991b1b;">Could not extract text from this document</h3>
+                <p class="text-muted" style="margin:0 0 1rem; font-size:0.875rem;">
+                    We couldn't read <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>. This usually happens with scanned PDFs, image-heavy documents, or encrypted files.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.875rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">1.</span>
+                        <span>Upload a different format — <strong>DOCX works best</strong></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">2.</span>
+                        <span>Paste the text directly into the form below</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">3.</span>
+                        <span>Try a different version of the PDF (re-saved or re-exported)</span>
+                    </div>
+                </div>
+                <div style="margin-top:1rem;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('paste-text').focus(); document.getElementById('paste-text').scrollIntoView({behavior:'smooth',block:'center'});">
+                        Paste Text Instead
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 <?php endif; ?>

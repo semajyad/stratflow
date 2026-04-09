@@ -124,6 +124,9 @@ class AuthController
             ]);
         }
 
+        // Clear project context so user doesn't land on stale project next login
+        unset($_SESSION['_last_project_id']);
+
         $this->auth->logout();
         $this->response->redirect('/login');
     }

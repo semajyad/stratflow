@@ -22,6 +22,12 @@ $hasSummary = !empty($document_summary);
     </div>
 </div>
 
+<?php if ($hasDiagram): ?>
+<div class="page-description">
+    Your visual strategy roadmap. Review initiatives and dependencies, set SMART OKRs for each node, then proceed to generate work items.
+</div>
+<?php endif; ?>
+
 <!-- Status messages (AJAX + flash) -->
 <div id="generate-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
 

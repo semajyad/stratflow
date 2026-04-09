@@ -12,13 +12,16 @@
 <!-- ===========================
      Welcome Section
      =========================== -->
-<div class="page-header">
-    <h1 class="page-title">Welcome, <?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></h1>
-    <p class="page-subtitle">
-        StratFlow turns your strategy documents into a prioritised, AI-ready engineering roadmap.
-        Upload a strategy document to extract objectives, generate a visual roadmap, and break
-        down work into high-level items your team can act on immediately.
-    </p>
+<div class="page-header flex justify-between items-center">
+    <div>
+        <h1 class="page-title">Welcome, <?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></h1>
+        <p class="page-subtitle" style="margin:0.25rem 0 0;">
+            StratFlow turns your strategy documents into a prioritised, AI-ready engineering roadmap.
+        </p>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('new-project-modal').classList.remove('hidden'); setTimeout(function(){document.getElementById('new-project-name').focus();},50);">
+        + New Project
+    </button>
 </div>
 
 <!-- ===========================
@@ -42,8 +45,11 @@ if ($lastProjectId && !empty($projects)) {
         <div>
             <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Continue Working On</span>
             <h3 style="margin: 0.25rem 0 0; font-size: 1.125rem;"><?= htmlspecialchars($lastProject['name']) ?></h3>
+            <small class="text-muted" style="display:block; margin-top:0.15rem;">
+                <?= (int) ($lastProject['steps_complete'] ?? 0) ?> of <?= (int) ($lastProject['steps_total'] ?? 8) ?> steps complete &middot; Next: <?= htmlspecialchars($lastProject['next_step_label'] ?? 'Upload') ?>
+            </small>
         </div>
-        <a href="/app/upload?project_id=<?= (int) $lastProject['id'] ?>" class="btn btn-primary">Resume Project</a>
+        <a href="<?= htmlspecialchars($lastProject['next_step_url'] ?? '/app/upload?project_id=' . (int) $lastProject['id']) ?>" class="btn btn-primary">Resume Project</a>
     </div>
 </section>
 <?php endif; ?>
@@ -73,6 +79,11 @@ if ($lastProjectId && !empty($projects)) {
                         <span class="project-date">
                             Created <?= date('j M Y', strtotime($project['created_at'])) ?>
                         </span>
+                        <?php if (isset($project['steps_total'])): ?>
+                            <span class="text-muted" style="font-size:0.75rem;">
+                                &middot; <?= (int) $project['steps_complete'] ?>/<?= (int) $project['steps_total'] ?> steps
+                            </span>
+                        <?php endif; ?>
                     </div>
                     <div class="project-actions" style="display: flex; gap: 0.5rem; align-items: center;">
                         <?php if (!empty($jira_connected) && !empty($jira_projects)): ?>
@@ -92,8 +103,9 @@ if ($lastProjectId && !empty($projects)) {
                         <?php elseif (!empty($project['jira_project_key'])): ?>
                             <span class="badge badge-primary" style="font-size:0.7rem;"><?= htmlspecialchars($project['jira_project_key']) ?></span>
                         <?php endif; ?>
-                        <a href="/app/upload?project_id=<?= (int) $project['id'] ?>"
-                           class="btn btn-primary btn-sm">
+                        <a href="<?= htmlspecialchars($project['next_step_url'] ?? '/app/upload?project_id=' . (int) $project['id']) ?>"
+                           class="btn btn-primary btn-sm"
+                           title="<?= (int) ($project['steps_complete'] ?? 0) ?>/<?= (int) ($project['steps_total'] ?? 8) ?> steps complete — next: <?= htmlspecialchars($project['next_step_label'] ?? 'Upload') ?>">
                             Open Project
                         </a>
                         <?php if (in_array($user['role'] ?? '', ['project_manager', 'org_admin', 'superadmin'])): ?>
@@ -116,28 +128,32 @@ if ($lastProjectId && !empty($projects)) {
     <?php endif; ?>
 </section>
 
-<!-- ===========================
-     New Project Form
-     =========================== -->
-<section class="card">
-    <div class="card-header">
-        <h2 class="card-title">New Project</h2>
-    </div>
-    <form method="POST" action="/app/projects" class="new-project-form">
-        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-        <div class="form-row">
-            <input
-                type="text"
-                name="name"
-                class="form-input"
-                placeholder="Project name"
-                required
-                maxlength="255"
-            >
-            <button type="submit" class="btn btn-primary">Create Project</button>
+<!-- New Project Modal -->
+<div id="new-project-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;"
+     onclick="if(event.target===this) this.classList.add('hidden');">
+    <div class="card" style="max-width:480px; width:90%; margin:0;">
+        <div class="card-header flex justify-between items-center">
+            <h2 class="card-title" style="margin:0;">Create New Project</h2>
+            <button type="button" onclick="document.getElementById('new-project-modal').classList.add('hidden');"
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
-    </form>
-</section>
+        <form method="POST" action="/app/projects" class="card-body">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <div class="form-group">
+                <label class="form-label" for="new-project-name">Project Name</label>
+                <input type="text" id="new-project-name" name="name" class="form-input"
+                       placeholder="e.g. Q3 Platform Modernisation" required maxlength="255" autocomplete="off">
+                <small class="text-muted" style="display:block; margin-top:0.4rem;">
+                    You'll upload a strategy document next to generate your roadmap.
+                </small>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-modal').classList.add('hidden');">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Project</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
 function renameProject(id, currentName, token) {
