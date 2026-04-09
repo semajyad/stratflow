@@ -29,6 +29,36 @@
 <?php endif; ?>
 
 <!-- ===========================
+     Create Organisation
+     =========================== -->
+<section class="card mb-4">
+    <div class="card-header">
+        <h2 class="card-title">Create Organisation</h2>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/superadmin/organisations/create">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <div class="sprint-gen-grid">
+                <div class="sprint-gen-field">
+                    <label>Organisation Name</label>
+                    <input type="text" name="org_name" class="form-control" required placeholder="e.g. Acme Corp">
+                </div>
+                <div class="sprint-gen-field">
+                    <label>Plan Type</label>
+                    <select name="plan_type" class="form-control">
+                        <option value="product">Product</option>
+                        <option value="consultancy">Consultancy</option>
+                    </select>
+                </div>
+                <div class="sprint-gen-field" style="align-self: end;">
+                    <button type="submit" class="btn btn-primary">Create Organisation</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ===========================
      Organisations Table
      =========================== -->
 <section class="card">
@@ -47,6 +77,7 @@
                             <th>Status</th>
                             <th>Users</th>
                             <th>Subscription</th>
+                            <th>Jira</th>
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
@@ -77,6 +108,22 @@
                                     <?php else: ?>
                                         <span class="text-muted">None</span>
                                     <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php
+                                        $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db ?? \StratFlow\Core\Database::getInstance(), $orgId, 'jira');
+                                        $jiraEnabled = $jiraIntegration !== null;
+                                    ?>
+                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>/jira" style="display:inline;">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <?php if ($jiraEnabled): ?>
+                                            <input type="hidden" name="action" value="disable">
+                                            <button type="submit" class="btn btn-sm btn-success" style="font-size:0.75rem;">Enabled</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="action" value="enable">
+                                            <button type="submit" class="btn btn-sm btn-secondary" style="font-size:0.75rem;">Disabled</button>
+                                        <?php endif; ?>
+                                    </form>
                                 </td>
                                 <td><?= htmlspecialchars($org['created_at'] ?? '') ?></td>
                                 <td class="org-actions">

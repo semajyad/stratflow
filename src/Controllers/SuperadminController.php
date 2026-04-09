@@ -106,6 +106,94 @@ class SuperadminController
     }
 
     /**
+     * Create a new organisation with an optional initial subscription.
+     */
+    public function createOrg(): void
+    {
+        $name = trim((string) $this->request->post('org_name', ''));
+        $planType = trim((string) $this->request->post('plan_type', 'product'));
+
+        if ($name === '') {
+            $_SESSION['flash_error'] = 'Organisation name is required.';
+            $this->response->redirect('/superadmin/organisations');
+            return;
+        }
+
+        $orgId = Organisation::create($this->db, [
+            'name' => $name,
+            'stripe_customer_id' => '',
+            'is_active' => 1,
+        ]);
+
+        // Create an active subscription
+        if (in_array($planType, ['product', 'consultancy'], true)) {
+            \StratFlow\Models\Subscription::create($this->db, [
+                'org_id' => $orgId,
+                'stripe_subscription_id' => 'manual_' . time(),
+                'plan_type' => $planType,
+                'status' => 'active',
+                'started_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $user = $this->auth->user();
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'org_created', 'org_id' => $orgId, 'org_name' => $name]);
+
+        $_SESSION['flash_message'] = "Organisation \"{$name}\" created.";
+        $this->response->redirect('/superadmin/organisations');
+    }
+
+    /**
+     * Toggle Jira integration access for an organisation.
+     */
+    public function toggleJira($id): void
+    {
+        $orgId = (int) $id;
+        $org = Organisation::findById($this->db, $orgId);
+        if (!$org) {
+            $_SESSION['flash_error'] = 'Organisation not found.';
+            $this->response->redirect('/superadmin/organisations');
+            return;
+        }
+
+        // Get or create integration record
+        $integration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        $action = (string) $this->request->post('action', '');
+
+        if ($action === 'enable') {
+            if ($integration) {
+                \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], ['status' => 'disconnected']);
+            } else {
+                \StratFlow\Models\Integration::create($this->db, [
+                    'org_id' => $orgId,
+                    'provider' => 'jira',
+                    'display_name' => 'Jira Cloud',
+                    'status' => 'disconnected',
+                ]);
+            }
+            $_SESSION['flash_message'] = "Jira integration enabled for \"{$org['name']}\". They can now connect from their admin panel.";
+        } elseif ($action === 'disable') {
+            if ($integration) {
+                \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], [
+                    'status' => 'disconnected',
+                    'access_token' => '',
+                    'refresh_token' => '',
+                ]);
+            }
+            $_SESSION['flash_message'] = "Jira integration disabled for \"{$org['name']}\".";
+        }
+
+        $user = $this->auth->user();
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'jira_toggle', 'org_id' => $orgId, 'jira_action' => $action]);
+
+        $this->response->redirect('/superadmin/organisations');
+    }
+
+    /**
      * Handle organisation actions: suspend, enable, or delete.
      *
      * @param string $id Organisation primary key (from route param)
