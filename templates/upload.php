@@ -104,8 +104,8 @@ function formatFileSize(int $bytes): string {
         <div class="drop-zone" id="drop-zone">
             <div class="drop-zone-icon">&#128196;</div>
             <p class="drop-zone-label">Drop file here or click to browse</p>
-            <p class="drop-zone-hint">PDF, DOCX, TXT &mdash; up to 50 MB</p>
-            <input type="file" name="document" id="file-input" accept=".txt,.pdf,.doc,.docx" class="file-input-hidden">
+            <p class="drop-zone-hint">PDF, DOCX, PPTX, XLSX, TXT, CSV, RTF &mdash; up to 50 MB</p>
+            <input type="file" name="document" id="file-input" accept=".txt,.csv,.md,.rtf,.pdf,.doc,.docx,.pptx,.xlsx" class="file-input-hidden">
         </div>
         <div class="selected-file" id="selected-file" style="display:none;">
             <span id="selected-file-name"></span>

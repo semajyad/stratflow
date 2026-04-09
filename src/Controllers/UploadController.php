@@ -176,7 +176,11 @@ class UploadController
             'file_size'     => $fileSize,
         ]);
 
-        $_SESSION['flash_message'] = 'Document uploaded and text extracted successfully.';
+        if ($extractedText !== '') {
+            $_SESSION['flash_message'] = 'Document uploaded and text extracted. You can now generate an AI summary.';
+        } else {
+            $_SESSION['flash_error'] = 'Document uploaded but text could not be extracted from this PDF. Try a different format (DOCX or TXT) or paste the text directly.';
+        }
         $this->response->redirect('/app/upload?project_id=' . $projectId);
     }
 

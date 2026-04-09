@@ -45,9 +45,14 @@ class FileProcessor
     /** @var array Map of allowed extensions to expected MIME types */
     private const EXTENSION_MIME_MAP = [
         'txt'  => ['text/plain'],
+        'csv'  => ['text/csv', 'text/plain', 'application/csv'],
+        'md'   => ['text/plain', 'text/markdown'],
+        'rtf'  => ['text/rtf', 'application/rtf'],
         'pdf'  => ['application/pdf'],
         'doc'  => ['application/msword'],
         'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
     ];
 
     // ===========================
@@ -167,22 +172,33 @@ class FileProcessor
      */
     public function extractText(string $filePath, string $mimeType): string
     {
-        switch ($mimeType) {
-            case 'text/plain':
-                return (string) file_get_contents($filePath);
+        // Also check by file extension as a fallback
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-            case 'application/pdf':
-                return $this->extractPdfText($filePath);
+        return match (true) {
+            $mimeType === 'text/plain' || in_array($ext, ['txt', 'csv', 'md'])
+                => (string) file_get_contents($filePath),
 
-            case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                return $this->extractDocxText($filePath);
+            $mimeType === 'application/pdf' || $ext === 'pdf'
+                => $this->extractPdfText($filePath),
 
-            case 'application/msword':
-                return 'Binary .doc format is not supported. Please convert to .docx or paste text manually.';
+            str_contains($mimeType, 'wordprocessingml') || $ext === 'docx'
+                => $this->extractDocxText($filePath),
 
-            default:
-                return '';
-        }
+            str_contains($mimeType, 'presentationml') || $ext === 'pptx'
+                => $this->extractPptxText($filePath),
+
+            str_contains($mimeType, 'spreadsheetml') || $ext === 'xlsx'
+                => $this->extractXlsxText($filePath),
+
+            $mimeType === 'text/rtf' || $mimeType === 'application/rtf' || $ext === 'rtf'
+                => $this->extractRtfText($filePath),
+
+            $mimeType === 'application/msword' || $ext === 'doc'
+                => 'Binary .doc format is not supported. Please save as .docx or paste text.',
+
+            default => '',
+        };
     }
 
     // ===========================
@@ -309,13 +325,142 @@ class FileProcessor
      */
     private function extractPdfText(string $filePath): string
     {
+        // Increase memory for large PDFs
+        $prevMemory = ini_get('memory_limit');
+        ini_set('memory_limit', '512M');
+
         try {
             $parser = new \Smalot\PdfParser\Parser();
             $pdf    = $parser->parseFile($filePath);
-            return $pdf->getText();
-        } catch (\Exception $e) {
-            return '';
+
+            // Try page-by-page extraction (more reliable than getText() for large docs)
+            $text = '';
+            $pages = $pdf->getPages();
+            foreach ($pages as $page) {
+                try {
+                    $pageText = $page->getText();
+                    if (trim($pageText) !== '') {
+                        $text .= $pageText . "\n\n";
+                    }
+                } catch (\Throwable $e) {
+                    // Skip pages that fail but continue with others
+                    continue;
+                }
+            }
+
+            // Fallback to full getText if page-by-page got nothing
+            if (trim($text) === '') {
+                $text = $pdf->getText();
+            }
+
+            ini_set('memory_limit', $prevMemory);
+
+            if (trim($text) !== '') {
+                return trim($text);
+            }
+
+            error_log("[FileProcessor] PDF parser returned empty text for: " . basename($filePath));
+        } catch (\Throwable $e) {
+            ini_set('memory_limit', $prevMemory);
+            error_log("[FileProcessor] PDF extraction failed: " . $e->getMessage());
         }
+
+        return '';
+    }
+
+    /**
+     * Extract text from PPTX (PowerPoint) via ZipArchive.
+     */
+    private function extractPptxText(string $filePath): string
+    {
+        if (!class_exists('ZipArchive')) return '';
+
+        $zip = new \ZipArchive();
+        if ($zip->open($filePath) !== true) return '';
+
+        $text = '';
+        $i = 1;
+        while (($content = $zip->getFromName("ppt/slides/slide{$i}.xml")) !== false) {
+            $text .= strip_tags($content) . "\n\n";
+            $i++;
+        }
+
+        // Also try notes
+        $i = 1;
+        while (($content = $zip->getFromName("ppt/notesSlides/notesSlide{$i}.xml")) !== false) {
+            $noteText = strip_tags($content);
+            if (trim($noteText) !== '') {
+                $text .= "Notes: " . $noteText . "\n";
+            }
+            $i++;
+        }
+
+        $zip->close();
+        return preg_replace('/\s+/', ' ', trim($text));
+    }
+
+    /**
+     * Extract text from XLSX (Excel) via ZipArchive.
+     */
+    private function extractXlsxText(string $filePath): string
+    {
+        if (!class_exists('ZipArchive')) return '';
+
+        $zip = new \ZipArchive();
+        if ($zip->open($filePath) !== true) return '';
+
+        // Read shared strings
+        $strings = [];
+        $sharedStrings = $zip->getFromName('xl/sharedStrings.xml');
+        if ($sharedStrings) {
+            $xml = @simplexml_load_string($sharedStrings);
+            if ($xml) {
+                foreach ($xml->si as $si) {
+                    $strings[] = (string) $si->t ?: (string) $si;
+                }
+            }
+        }
+
+        // Read sheet data
+        $text = '';
+        $sheet1 = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if ($sheet1) {
+            $xml = @simplexml_load_string($sheet1);
+            if ($xml) {
+                foreach ($xml->sheetData->row ?? [] as $row) {
+                    $rowTexts = [];
+                    foreach ($row->c ?? [] as $cell) {
+                        $val = (string) $cell->v;
+                        if ((string) ($cell['t'] ?? '') === 's' && isset($strings[(int) $val])) {
+                            $rowTexts[] = $strings[(int) $val];
+                        } else {
+                            $rowTexts[] = $val;
+                        }
+                    }
+                    $text .= implode(' | ', $rowTexts) . "\n";
+                }
+            }
+        }
+
+        $zip->close();
+        return trim($text);
+    }
+
+    /**
+     * Extract text from RTF.
+     */
+    private function extractRtfText(string $filePath): string
+    {
+        $content = file_get_contents($filePath);
+        if ($content === false) return '';
+
+        // Strip RTF control words and groups
+        $text = preg_replace('/\{[^}]*\}/', '', $content);
+        $text = preg_replace('/\\\\[a-z]+\d*\s?/i', '', $text ?? '');
+        $text = preg_replace('/[{}]/', '', $text ?? '');
+        $text = preg_replace('/\s+/', ' ', trim($text ?? ''));
+
+        return $text;
     }
 
     /**
