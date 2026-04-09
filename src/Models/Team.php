@@ -26,13 +26,14 @@ class Team
     public static function create(Database $db, array $data): int
     {
         $db->query(
-            "INSERT INTO teams (org_id, name, description, capacity)
-             VALUES (:org_id, :name, :description, :capacity)",
+            "INSERT INTO teams (org_id, name, description, capacity, jira_board_id)
+             VALUES (:org_id, :name, :description, :capacity, :jira_board_id)",
             [
-                ':org_id'      => $data['org_id'],
-                ':name'        => $data['name'],
-                ':description' => $data['description'] ?? '',
-                ':capacity'    => $data['capacity'] ?? 0,
+                ':org_id'        => $data['org_id'],
+                ':name'          => $data['name'],
+                ':description'   => $data['description'] ?? '',
+                ':capacity'      => $data['capacity'] ?? 0,
+                ':jira_board_id' => $data['jira_board_id'] ?? null,
             ]
         );
 
@@ -88,7 +89,7 @@ class Team
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'name', 'description', 'capacity',
+        'name', 'description', 'capacity', 'jira_board_id',
     ];
 
     public static function update(Database $db, int $id, array $data): void

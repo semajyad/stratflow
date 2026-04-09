@@ -75,12 +75,14 @@ class SprintController
         unset($sprint);
 
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
+        $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
 
         $this->response->render('sprints', [
             'user'                 => $user,
             'project'              => $project,
             'sprints'              => $sprints,
             'unallocated'          => $unallocated,
+            'teams'                => $teams,
             'active_page'          => 'sprints',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,
@@ -115,6 +117,7 @@ class SprintController
         $startDate    = $this->request->post('start_date', '') ?: null;
         $endDate      = $this->request->post('end_date', '') ?: null;
         $teamCapacity = $this->request->post('team_capacity', '');
+        $teamId       = $this->request->post('team_id', '') ?: null;
 
         Sprint::create($this->db, [
             'project_id'    => $projectId,
@@ -122,6 +125,7 @@ class SprintController
             'start_date'    => $startDate,
             'end_date'      => $endDate,
             'team_capacity' => $teamCapacity !== '' ? (int) $teamCapacity : null,
+            'team_id'       => $teamId ? (int) $teamId : null,
         ]);
 
         $_SESSION['flash_message'] = 'Sprint created.';

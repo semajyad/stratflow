@@ -863,14 +863,24 @@ class IntegrationController
 
                     if (!in_array(strtolower($teamName), $existingNames)) {
                         \StratFlow\Models\Team::create($this->db, [
-                            'org_id'      => $orgId,
-                            'name'        => $teamName,
-                            'description' => "Jira board: {$boardName} (ID: {$board['id']})",
-                            'capacity'    => 0,
+                            'org_id'        => $orgId,
+                            'name'          => $teamName,
+                            'description'   => "Jira board: {$boardName} (ID: {$board['id']})",
+                            'capacity'      => 0,
+                            'jira_board_id' => (int) $board['id'],
                         ]);
                         $existingNames[] = strtolower($teamName);
                         $created++;
                     } else {
+                        // Update existing team's board_id if not set
+                        $existingTeams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
+                        foreach ($existingTeams as $et) {
+                            if (strtolower($et['name']) === strtolower($teamName) && empty($et['jira_board_id'])) {
+                                \StratFlow\Models\Team::update($this->db, (int) $et['id'], [
+                                    'jira_board_id' => (int) $board['id'],
+                                ]);
+                            }
+                        }
                         $skipped++;
                     }
                 }

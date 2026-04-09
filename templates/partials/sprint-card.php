@@ -12,6 +12,9 @@
     <div class="sprint-header">
         <div class="sprint-title-row">
             <h4><?= htmlspecialchars($sprint['name']) ?></h4>
+            <?php if (!empty($sprint['team_name'])): ?>
+                <span class="badge badge-primary" style="font-size: 0.7rem;"><?= htmlspecialchars($sprint['team_name']) ?></span>
+            <?php endif; ?>
             <span class="sprint-dates"><?= htmlspecialchars($sprint['start_date'] ?? 'TBD') ?> &mdash; <?= htmlspecialchars($sprint['end_date'] ?? 'TBD') ?></span>
         </div>
         <div class="capacity-bar">

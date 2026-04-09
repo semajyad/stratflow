@@ -51,6 +51,14 @@
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="sprint-creation-form">
+                <?php if (!empty($teams)): ?>
+                <select name="team_id" class="form-control" style="min-width: 140px;">
+                    <option value="">No team</option>
+                    <?php foreach ($teams as $t): ?>
+                        <option value="<?= (int) $t['id'] ?>"><?= htmlspecialchars($t['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php endif; ?>
                 <input type="text" name="name" placeholder="Sprint name (e.g. Sprint 1)" class="form-control" required>
                 <input type="date" name="start_date" class="form-control">
                 <input type="date" name="end_date" class="form-control">

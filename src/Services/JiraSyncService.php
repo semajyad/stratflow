@@ -565,7 +565,7 @@ class JiraSyncService
      * Creates Jira sprints on the board, then moves already-synced
      * user story issues into the corresponding Jira sprints.
      */
-    public function pushSprints(int $projectId, string $jiraProjectKey, int $boardId): array
+    public function pushSprints(int $projectId, string $jiraProjectKey, int $defaultBoardId): array
     {
         $sprints = Sprint::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
@@ -574,12 +574,20 @@ class JiraSyncService
 
         foreach ($sprints as $sprint) {
             try {
+                // Use team's board ID if sprint has a team, otherwise default
+                $boardId = $defaultBoardId;
+                if (!empty($sprint['team_id'])) {
+                    $team = \StratFlow\Models\Team::findById($this->db, (int) $sprint['team_id']);
+                    if ($team && !empty($team['jira_board_id'])) {
+                        $boardId = (int) $team['jira_board_id'];
+                    }
+                }
+
                 $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'sprint', (int) $sprint['id']);
 
                 if ($mapping) {
                     $counts['skipped']++;
                 } else {
-                    // Create sprint in Jira
                     $startDate = $sprint['start_date'] ? date('c', strtotime($sprint['start_date'])) : null;
                     $endDate   = $sprint['end_date']   ? date('c', strtotime($sprint['end_date']))   : null;
 

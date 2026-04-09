@@ -32,14 +32,15 @@ class Sprint
     public static function create(Database $db, array $data): int
     {
         $db->query(
-            "INSERT INTO sprints (project_id, name, start_date, end_date, team_capacity)
-             VALUES (:project_id, :name, :start_date, :end_date, :team_capacity)",
+            "INSERT INTO sprints (project_id, name, start_date, end_date, team_capacity, team_id)
+             VALUES (:project_id, :name, :start_date, :end_date, :team_capacity, :team_id)",
             [
                 ':project_id'    => $data['project_id'],
                 ':name'          => $data['name'],
                 ':start_date'    => $data['start_date'] ?? null,
                 ':end_date'      => $data['end_date'] ?? null,
                 ':team_capacity' => $data['team_capacity'] ?? null,
+                ':team_id'       => $data['team_id'] ?? null,
             ]
         );
 
@@ -62,9 +63,11 @@ class Sprint
     {
         $stmt = $db->query(
             "SELECT s.*,
+                    t.name AS team_name,
                     COALESCE(sub.story_count, 0) AS story_count,
                     COALESCE(sub.total_size, 0)  AS total_size
              FROM sprints s
+             LEFT JOIN teams t ON s.team_id = t.id
              LEFT JOIN (
                  SELECT ss.sprint_id,
                         COUNT(*)          AS story_count,
@@ -74,7 +77,7 @@ class Sprint
                  GROUP BY ss.sprint_id
              ) sub ON s.id = sub.sprint_id
              WHERE s.project_id = :project_id
-             ORDER BY s.start_date ASC, s.id ASC",
+             ORDER BY t.name ASC, s.start_date ASC, s.id ASC",
             [':project_id' => $projectId]
         );
 
@@ -112,7 +115,7 @@ class Sprint
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'name', 'start_date', 'end_date', 'team_capacity',
+        'name', 'start_date', 'end_date', 'team_capacity', 'team_id',
     ];
 
     public static function update(Database $db, int $id, array $data): void
