@@ -309,6 +309,53 @@ class JiraService
         ]);
     }
 
+    // ===========================
+    // AGILE / SPRINT API
+    // ===========================
+
+    /**
+     * Get boards for a project.
+     */
+    public function getBoards(string $projectKey): array
+    {
+        return $this->makeAuthenticatedRequest('GET', '/rest/agile/1.0/board?projectKeyOrId=' . urlencode($projectKey));
+    }
+
+    /**
+     * Get all sprints for a board.
+     */
+    public function getBoardSprints(int $boardId): array
+    {
+        return $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/board/{$boardId}/sprint");
+    }
+
+    /**
+     * Create a sprint on a board.
+     */
+    public function createSprint(int $boardId, string $name, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $body = [
+            'name'          => $name,
+            'originBoardId' => $boardId,
+        ];
+        if ($startDate) $body['startDate'] = $startDate;
+        if ($endDate)   $body['endDate']   = $endDate;
+
+        return $this->makeAuthenticatedRequest('POST', '/rest/agile/1.0/sprint', $body);
+    }
+
+    /**
+     * Move issues into a sprint.
+     */
+    public function moveIssuesToSprint(int $sprintId, array $issueKeys): void
+    {
+        if (empty($issueKeys)) return;
+
+        $this->makeAuthenticatedRequest('POST', "/rest/agile/1.0/sprint/{$sprintId}/issue", [
+            'issues' => $issueKeys,
+        ]);
+    }
+
     /**
      * Refresh webhook registrations to extend expiry.
      */

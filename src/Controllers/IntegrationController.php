@@ -697,6 +697,22 @@ class IntegrationController
             if ($syncType === 'risks' || $syncType === 'all') {
                 $results['push_risks'] = $syncService->pushRisks($projectId, $jiraKey);
             }
+            if ($syncType === 'sprints' || $syncType === 'all') {
+                // Get board ID: from project config or default to board 1
+                $boardId = (int) ($project['jira_board_id'] ?? 0);
+                if ($boardId === 0) {
+                    // Auto-detect: get first board for this project
+                    try {
+                        $boards = $jiraService->getBoards($jiraKey);
+                        $boardId = (int) ($boards['values'][0]['id'] ?? 0);
+                    } catch (\Throwable $e) {
+                        $boardId = 1; // fallback
+                    }
+                }
+                if ($boardId > 0) {
+                    $results['push_sprints'] = $syncService->pushSprints($projectId, $jiraKey, $boardId);
+                }
+            }
 
             // Log item counts for debugging
             error_log("[JiraSync] Project {$projectId} ({$jiraKey}): syncType={$syncType}, results=" . json_encode($results));
@@ -710,30 +726,33 @@ class IntegrationController
             ]);
 
             // Build a clear summary message
-            $totalCreated = 0;
-            $totalUpdated = 0;
-            $totalSkipped = 0;
-            $totalErrors  = 0;
-            $pullUpdated  = 0;
+            $totalCreated   = 0;
+            $totalUpdated   = 0;
+            $totalSkipped   = 0;
+            $totalAllocated = 0;
+            $totalErrors    = 0;
+            $pullUpdated    = 0;
 
             foreach ($results as $type => $counts) {
                 if ($type === 'pull') {
                     $pullUpdated = $counts['updated'] ?? 0;
                     $totalErrors += $counts['errors'] ?? 0;
                 } else {
-                    $totalCreated += $counts['created'] ?? 0;
-                    $totalUpdated += $counts['updated'] ?? 0;
-                    $totalSkipped += $counts['skipped'] ?? 0;
-                    $totalErrors  += $counts['errors'] ?? 0;
+                    $totalCreated   += $counts['created'] ?? 0;
+                    $totalUpdated   += $counts['updated'] ?? 0;
+                    $totalSkipped   += $counts['skipped'] ?? 0;
+                    $totalAllocated += $counts['allocated'] ?? 0;
+                    $totalErrors    += $counts['errors'] ?? 0;
                 }
             }
 
             $parts = [];
-            if ($totalCreated > 0) $parts[] = "{$totalCreated} pushed to Jira";
-            if ($totalUpdated > 0) $parts[] = "{$totalUpdated} updated in Jira";
-            if ($pullUpdated > 0)  $parts[] = "{$pullUpdated} pulled from Jira";
-            if ($totalSkipped > 0) $parts[] = "{$totalSkipped} already in sync";
-            if ($totalErrors > 0)  $parts[] = "{$totalErrors} errors";
+            if ($totalCreated > 0)   $parts[] = "{$totalCreated} pushed to Jira";
+            if ($totalUpdated > 0)   $parts[] = "{$totalUpdated} updated in Jira";
+            if ($totalAllocated > 0) $parts[] = "{$totalAllocated} stories allocated to sprints";
+            if ($pullUpdated > 0)    $parts[] = "{$pullUpdated} pulled from Jira";
+            if ($totalSkipped > 0)   $parts[] = "{$totalSkipped} already in sync";
+            if ($totalErrors > 0)    $parts[] = "{$totalErrors} errors";
 
             if (empty($parts)) {
                 $_SESSION['flash_message'] = 'Jira sync complete — no items to sync.';

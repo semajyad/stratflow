@@ -20,6 +20,8 @@ use StratFlow\Core\Database;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\UserStory;
 use StratFlow\Models\Risk;
+use StratFlow\Models\Sprint;
+use StratFlow\Models\SprintStory;
 use StratFlow\Models\SyncMapping;
 use StratFlow\Models\SyncLog;
 
@@ -534,6 +536,77 @@ class JiraSyncService
         return trim($description);
     }
 
+    // ===========================
+    // PUSH: SPRINTS -> JIRA SPRINTS + STORY ALLOCATION
+    // ===========================
+
+    /**
+     * Push sprints to Jira and allocate stories into them.
+     *
+     * Creates Jira sprints on the board, then moves already-synced
+     * user story issues into the corresponding Jira sprints.
+     */
+    public function pushSprints(int $projectId, string $jiraProjectKey, int $boardId): array
+    {
+        $sprints = Sprint::findByProjectId($this->db, $projectId);
+        $integrationId = (int) $this->integration['id'];
+
+        $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'allocated' => 0, 'errors' => 0];
+
+        foreach ($sprints as $sprint) {
+            try {
+                $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'sprint', (int) $sprint['id']);
+
+                if ($mapping) {
+                    $counts['skipped']++;
+                } else {
+                    // Create sprint in Jira
+                    $startDate = $sprint['start_date'] ? date('c', strtotime($sprint['start_date'])) : null;
+                    $endDate   = $sprint['end_date']   ? date('c', strtotime($sprint['end_date']))   : null;
+
+                    $result = $this->jira->createSprint($boardId, $sprint['name'], $startDate, $endDate);
+
+                    SyncMapping::create($this->db, [
+                        'integration_id' => $integrationId,
+                        'local_type'     => 'sprint',
+                        'local_id'       => (int) $sprint['id'],
+                        'external_id'    => (string) $result['id'],
+                        'external_key'   => 'sprint-' . $result['id'],
+                        'external_url'   => null,
+                        'sync_hash'      => hash('sha256', $sprint['name'] . '|' . ($sprint['start_date'] ?? '') . '|' . ($sprint['end_date'] ?? '')),
+                    ]);
+
+                    $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'sprint', (int) $sprint['id']);
+                    $counts['created']++;
+                }
+
+                // Allocate stories into this Jira sprint
+                if ($mapping) {
+                    $stories = SprintStory::findBySprintId($this->db, (int) $sprint['id']);
+                    $issueKeys = [];
+
+                    foreach ($stories as $story) {
+                        $storyMapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'user_story', (int) $story['id']);
+                        if ($storyMapping && !empty($storyMapping['external_key'])) {
+                            $issueKeys[] = $storyMapping['external_key'];
+                        }
+                    }
+
+                    if (!empty($issueKeys)) {
+                        $jiraSprintId = (int) $mapping['external_id'];
+                        $this->jira->moveIssuesToSprint($jiraSprintId, $issueKeys);
+                        $counts['allocated'] += count($issueKeys);
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log("[JiraPush] Sprint push error: " . $e->getMessage());
+                $counts['errors']++;
+            }
+        }
+
+        return $counts;
+    }
+
     /**
      * Bulk-validate which mapped Jira keys still exist.
      *
@@ -602,10 +675,13 @@ class JiraSyncService
                         $counts['skipped']++;
                         continue;
                     } else {
-                        $desc = $this->buildRiskDescription($risk);
+                        $likelihood = (int) ($risk['likelihood'] ?? 3);
+                        $impact     = (int) ($risk['impact'] ?? 3);
+                        $rpn        = $likelihood * $impact;
+                        $riskLevel  = $rpn >= 15 ? 'critical' : ($rpn >= 9 ? 'high' : ($rpn >= 5 ? 'medium' : 'low'));
                         $this->jira->updateIssue($mapping['external_key'], [
-                            'summary'     => '[Risk] ' . $risk['title'],
-                            'description' => $this->jira->textToAdf($desc),
+                            'summary'     => $risk['title'],
+                            'description' => $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel),
                         ]);
                         SyncMapping::update($this->db, (int) $mapping['id'], [
                             'sync_hash'     => $currentHash,
@@ -617,26 +693,37 @@ class JiraSyncService
                     }
                 }
 
-                // Create new Task for risk
+                // Create new Risk issue
                 {
-                    $desc = $this->buildRiskDescription($risk);
-                    $riskScore = ($risk['likelihood'] ?? 3) * ($risk['impact'] ?? 3);
-                    $priority = $riskScore >= 15 ? 'Highest' : ($riskScore >= 9 ? 'High' : ($riskScore >= 5 ? 'Medium' : 'Low'));
+                    $likelihood = (int) ($risk['likelihood'] ?? 3);
+                    $impact     = (int) ($risk['impact'] ?? 3);
+                    $rpn        = $likelihood * $impact;
+                    $riskLevel  = $rpn >= 15 ? 'critical' : ($rpn >= 9 ? 'high' : ($rpn >= 5 ? 'medium' : 'low'));
+                    $priority   = $rpn >= 15 ? 'Highest' : ($rpn >= 9 ? 'High' : ($rpn >= 5 ? 'Medium' : 'Low'));
+
+                    $adfDesc = $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel);
+                    $labels  = ['stratflow', 'risk', "risk-{$riskLevel}", "rpn-{$rpn}"];
 
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
                         'issuetype'   => ['name' => 'Risk'],
-                        'summary'     => '[Risk] ' . $risk['title'],
-                        'description' => $this->jira->textToAdf($desc),
+                        'summary'     => $risk['title'],
+                        'description' => $adfDesc,
                         'priority'    => ['name' => $priority],
+                        'labels'      => $labels,
                     ];
 
-                    // Fallback to Task if Risk issue type doesn't exist
+                    // Fallback: try without labels if scheme rejects them, then without Risk type
                     try {
                         $result = $this->jira->createIssue($fields);
                     } catch (\RuntimeException $e) {
-                        $fields['issuetype'] = ['name' => 'Task'];
-                        $result = $this->jira->createIssue($fields);
+                        unset($fields['labels']);
+                        try {
+                            $result = $this->jira->createIssue($fields);
+                        } catch (\RuntimeException $e2) {
+                            $fields['issuetype'] = ['name' => 'Task'];
+                            $result = $this->jira->createIssue($fields);
+                        }
                     }
 
                     $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
@@ -665,18 +752,75 @@ class JiraSyncService
     }
 
     /**
-     * Build description text for a risk being pushed to Jira.
+     * Build ADF description for a risk with structured risk matrix table.
      */
-    private function buildRiskDescription(array $risk): string
+    private function buildRiskAdf(array $risk, int $likelihood, int $impact, int $rpn, string $level): array
     {
-        $parts = [];
+        $content = [];
+
+        // Description paragraph
         if (!empty($risk['description'])) {
-            $parts[] = $risk['description'];
+            $content[] = [
+                'type' => 'paragraph',
+                'content' => [['type' => 'text', 'text' => $risk['description']]],
+            ];
         }
-        $parts[] = "Likelihood: {$risk['likelihood']}/5 | Impact: {$risk['impact']}/5 | Risk Score: " . ($risk['likelihood'] * $risk['impact']);
+
+        // Risk Assessment heading
+        $content[] = [
+            'type' => 'heading',
+            'attrs' => ['level' => 3],
+            'content' => [['type' => 'text', 'text' => 'Risk Assessment']],
+        ];
+
+        // Risk matrix table
+        $content[] = [
+            'type' => 'table',
+            'attrs' => ['isNumberColumnEnabled' => false, 'layout' => 'default'],
+            'content' => [
+                $this->adfTableRow(['Metric', 'Value', 'Scale'], true),
+                $this->adfTableRow(['Likelihood', (string) $likelihood, '1 (rare) — 5 (certain)']),
+                $this->adfTableRow(['Impact', (string) $impact, '1 (negligible) — 5 (catastrophic)']),
+                $this->adfTableRow(['RPN (Risk Priority Number)', (string) $rpn, '1-25 (L×I)']),
+                $this->adfTableRow(['Risk Level', strtoupper($level), 'Low / Medium / High / Critical']),
+            ],
+        ];
+
+        // Mitigation section
         if (!empty($risk['mitigation'])) {
-            $parts[] = "Mitigation: " . $risk['mitigation'];
+            $content[] = [
+                'type' => 'heading',
+                'attrs' => ['level' => 3],
+                'content' => [['type' => 'text', 'text' => 'Mitigation Strategy']],
+            ];
+            $content[] = [
+                'type' => 'paragraph',
+                'content' => [['type' => 'text', 'text' => $risk['mitigation']]],
+            ];
         }
-        return implode("\n\n", $parts);
+
+        return ['type' => 'doc', 'version' => 1, 'content' => $content];
+    }
+
+    /**
+     * Helper: build an ADF table row.
+     */
+    private function adfTableRow(array $cells, bool $header = false): array
+    {
+        $cellType = $header ? 'tableHeader' : 'tableCell';
+        $row = ['type' => 'tableRow', 'content' => []];
+        foreach ($cells as $text) {
+            $textNode = ['type' => 'text', 'text' => $text];
+            if ($header) {
+                $textNode['marks'] = [['type' => 'strong']];
+            }
+            $row['content'][] = [
+                'type' => $cellType,
+                'content' => [
+                    ['type' => 'paragraph', 'content' => [$textNode]],
+                ],
+            ];
+        }
+        return $row;
     }
 }
