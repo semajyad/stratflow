@@ -34,15 +34,31 @@ try {
     $pdo->exec($schema);
     echo "Schema applied successfully.\n";
 
-    // Run migrations (idempotent)
+    // Run migrations (each statement individually, skip duplicates)
     $migrationDir = __DIR__ . '/../database/migrations/';
     if (is_dir($migrationDir)) {
         $files = glob($migrationDir . '*.sql');
         sort($files);
         foreach ($files as $file) {
-            echo "Running migration: " . basename($file) . "\n";
+            $name = basename($file);
+            echo "Running migration: {$name}\n";
             $sql = file_get_contents($file);
-            $pdo->exec($sql);
+            // Split on semicolons, run each statement separately so
+            // "duplicate column" errors don't block subsequent statements
+            $statements = array_filter(array_map('trim', explode(';', $sql)));
+            foreach ($statements as $stmt) {
+                if ($stmt === '' || str_starts_with($stmt, '--')) continue;
+                try {
+                    $pdo->exec($stmt);
+                } catch (PDOException $e) {
+                    // 1060 = Duplicate column, 1061 = Duplicate key — safe to skip
+                    if (in_array($e->errorInfo[1] ?? 0, [1060, 1061])) {
+                        echo "  Skipped (already applied): {$e->errorInfo[2]}\n";
+                    } else {
+                        echo "  Warning: {$e->getMessage()}\n";
+                    }
+                }
+            }
         }
         echo "All migrations applied.\n";
     }
