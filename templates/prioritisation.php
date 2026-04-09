@@ -24,20 +24,17 @@ $formula = $isRice
 <!-- ===========================
      Page Header
      =========================== -->
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Prioritisation</h1>
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Prioritisation
+        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+    </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'work_items'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
     </div>
 </div>
-
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
+<div class="page-info-panel hidden">
     Score your work items using industry-standard frameworks. RICE evaluates Reach, Impact, Confidence, and Effort. WSJF evaluates Business Value, Time Criticality, Risk Reduction, and Job Size.
 </div>
 

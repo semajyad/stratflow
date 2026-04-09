@@ -24,6 +24,11 @@ $steps = [
     'governance'     => 'Governance',
 ];
 
+// Only render on workflow pages (skip admin/home/etc.)
+if (!isset($active_page) || !array_key_exists($active_page, $steps)) {
+    return;
+}
+
 $stepUrls = [
     'upload'         => '/app/upload',
     'diagram'        => '/app/diagram',

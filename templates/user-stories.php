@@ -14,12 +14,11 @@
 <!-- ===========================
      Page Header
      =========================== -->
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; User Stories
         <span class="page-title-count"><?= count($stories) ?></span>
+        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
@@ -27,11 +26,7 @@
         <button type="button" class="btn btn-primary btn-sm" onclick="toggleStoryModal()">Add Story</button>
     </div>
 </div>
-
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
+<div class="page-info-panel hidden">
     User stories break down high-level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.
 </div>
 

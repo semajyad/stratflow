@@ -1,4 +1,58 @@
 // ===========================
+// Page Info Popover ("i" icon next to page title)
+// ===========================
+window.togglePageInfo = function(btn) {
+    // The panel is the next .page-info-panel sibling of the page-header div
+    var header = btn.closest('.page-header');
+    if (!header) return;
+    var panel = header.nextElementSibling;
+    while (panel && !panel.classList.contains('page-info-panel')) {
+        panel = panel.nextElementSibling;
+    }
+    if (!panel) return;
+    var isHidden = panel.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+};
+
+// ===========================
+// Sidebar Collapse / Expand
+// ===========================
+(function() {
+    var sidebar = document.getElementById('sidebar');
+    var btn = document.getElementById('sidebar-collapse-btn');
+    if (!sidebar) return;
+
+    // Apply saved state on load (complements the FOUC-preload inline script)
+    var collapsed = false;
+    try {
+        collapsed = localStorage.getItem('stratflow.sidebarCollapsed') === '1';
+    } catch (e) {}
+    if (collapsed) {
+        sidebar.classList.add('is-collapsed');
+        if (btn) {
+            btn.setAttribute('aria-pressed', 'true');
+            btn.setAttribute('aria-label', 'Expand sidebar');
+        }
+    }
+    // Preload class is no longer needed after hydration
+    document.documentElement.classList.remove('sidebar-collapsed-preload');
+})();
+
+window.toggleSidebarCollapsed = function() {
+    var sidebar = document.getElementById('sidebar');
+    var btn = document.getElementById('sidebar-collapse-btn');
+    if (!sidebar) return;
+    var collapsed = sidebar.classList.toggle('is-collapsed');
+    try {
+        localStorage.setItem('stratflow.sidebarCollapsed', collapsed ? '1' : '0');
+    } catch (e) {}
+    if (btn) {
+        btn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    }
+};
+
+// ===========================
 // Row Actions Kebab Menu
 // ===========================
 // Exposed globally so inline onclick on the toggle button can reach it.

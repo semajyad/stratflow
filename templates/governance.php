@@ -13,10 +13,11 @@
 <!-- ===========================
      Page Header
      =========================== -->
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Governance</h1>
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Governance
+        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+    </h1>
     <div class="flex items-center gap-2">
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <form method="POST" action="/app/governance/detect" class="inline-form">
@@ -31,11 +32,7 @@
         </form>
     </div>
 </div>
-
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
+<div class="page-info-panel hidden">
     Monitor strategic drift and manage change control. Run detection to compare the current project state against your baseline, review flagged changes, and approve or reject amendments.
 </div>
 

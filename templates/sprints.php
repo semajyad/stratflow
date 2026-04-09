@@ -17,12 +17,11 @@
 <!-- ===========================
      Page Header
      =========================== -->
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Sprint Allocation
         <span class="page-title-count"><?= count($sprints) ?></span>
+        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'sprints'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
@@ -65,10 +64,7 @@
     </div>
 </div>
 
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
+<div class="page-info-panel hidden">
     Allocate user stories into time-boxed sprints for the selected team. Drag stories from the backlog into sprint buckets, monitor capacity utilisation, and use AI for automatic allocation.
 </div>
 

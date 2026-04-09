@@ -12,10 +12,13 @@ $hasNodes   = !empty($nodes);
 $hasSummary = !empty($document_summary);
 ?>
 
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap</h1>
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap
+        <?php if ($hasDiagram): ?>
+            <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <?php endif; ?>
+    </h1>
     <div class="flex items-center gap-2">
         <?php if ($hasDiagram): ?>
             <div class="view-toggle" role="tablist" aria-label="Diagram view mode">
@@ -29,7 +32,7 @@ $hasSummary = !empty($document_summary);
 </div>
 
 <?php if ($hasDiagram): ?>
-<div class="page-description">
+<div class="page-info-panel hidden">
     Your visual strategy roadmap. Review initiatives and dependencies, set SMART OKRs for each node, then proceed to generate work items.
 </div>
 <?php endif; ?>

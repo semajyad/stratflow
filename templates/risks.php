@@ -16,12 +16,11 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 <!-- ===========================
      Page Header
      =========================== -->
-<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
-
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Risk Modelling
         <span class="page-title-count"><?= count($risks) ?></span>
+        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'risks'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
@@ -41,10 +40,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     </div>
 </div>
 
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
+<div class="page-info-panel hidden">
     Identify and manage project risks. Auto-generate risks from your work items using AI, set likelihood and impact scores, and generate mitigation strategies.
 </div>
 

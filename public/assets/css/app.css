@@ -39,6 +39,7 @@
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --sidebar-width: 260px;
+    --sidebar-width-collapsed: 60px;
 }
 
 /* === Reset & Base =========================================================== */
@@ -219,10 +220,70 @@ main.container {
     bottom: 0;
     z-index: 200;
     overflow-y: auto;
+    overflow-x: hidden;
     color: #cbd5e1;
     /* Hide scrollbar entirely — scrolling still works, just invisible */
     scrollbar-width: none;          /* Firefox */
     -ms-overflow-style: none;       /* IE / legacy Edge */
+    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed state — narrow, icon-only */
+.sidebar.is-collapsed {
+    width: var(--sidebar-width-collapsed);
+}
+
+/* Collapsed brand: show the compact mark, hide the full name */
+.sidebar-brand-mark { display: none; }
+.sidebar.is-collapsed .sidebar-brand-full { display: none; }
+.sidebar.is-collapsed .sidebar-brand-mark  { display: inline-block; }
+
+.sidebar-brand-mark {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    text-decoration: none;
+    margin: 0 auto;
+}
+
+/* Collapsed: hide project switcher, section labels, nav text, dividers */
+.sidebar.is-collapsed .sidebar-project,
+.sidebar.is-collapsed .sidebar-section-label,
+.sidebar.is-collapsed .nav-label,
+.sidebar.is-collapsed .nav-dot,
+.sidebar.is-collapsed .sidebar-divider {
+    display: none;
+}
+
+.sidebar.is-collapsed .sidebar-brand {
+    justify-content: center;
+    padding: 0;
+}
+
+.sidebar.is-collapsed .sidebar-nav a {
+    justify-content: center;
+    padding: 0.55rem 0;
+    gap: 0;
+}
+
+/* Rotate chevron when collapsed */
+.sidebar.is-collapsed .sidebar-collapse-btn svg {
+    transform: rotate(180deg);
+}
+
+/* When collapsed, the browser's native title attribute (set via data-label)
+   provides hover labels. CSS tooltip omitted because sidebar overflow clips it. */
+
+/* Matching main-content offset shift */
+.sidebar.is-collapsed ~ .app-main,
+body.sidebar-collapsed .app-main {
+    margin-left: var(--sidebar-width-collapsed);
 }
 
 .sidebar::-webkit-scrollbar {
@@ -350,6 +411,58 @@ main.container {
     margin: 0.45rem 1rem;
 }
 
+/* Nav link icon (inline SVG) */
+.sidebar-nav .nav-icon {
+    flex-shrink: 0;
+    color: currentColor;
+}
+
+/* Completion dot shown on right of workflow nav items */
+.nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.nav-dot--done {
+    background: #10b981;
+}
+
+/* Collapse/expand toggle button at the bottom of the sidebar */
+.sidebar-collapse-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.55rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: background 150ms, color 150ms;
+}
+
+.sidebar-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+}
+
+.sidebar-collapse-btn svg {
+    transition: transform 200ms;
+    flex-shrink: 0;
+}
+
+.sidebar.is-collapsed .sidebar-collapse-btn {
+    justify-content: center;
+    padding: 0.55rem 0;
+}
+
 .nav-dot {
     flex-shrink: 0;
 }
@@ -360,6 +473,7 @@ main.container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    transition: margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-topbar {
@@ -380,6 +494,7 @@ main.container {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-shrink: 0;
 }
 
 .user-name {
@@ -2952,6 +3067,48 @@ tbody tr:hover {
     line-height: 1.6;
 }
 
+/* Info button next to page title + collapsible info panel */
+.page-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    margin-left: 0.25rem;
+    background: transparent;
+    color: var(--text-light, #94a3b8);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    vertical-align: middle;
+}
+
+.page-info-btn:hover,
+.page-info-btn[aria-expanded="true"] {
+    background: var(--primary-light, #eef2ff);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.page-info-panel {
+    background: var(--primary-light, #eef2ff);
+    border-left: 3px solid var(--primary);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0 6px 6px 0;
+    color: var(--text);
+    line-height: 1.55;
+    font-size: 0.875rem;
+    max-width: 760px;
+}
+
+.page-info-panel.hidden { display: none; }
+
 /* ===========================
    Workflow Navigation
    =========================== */
@@ -3076,46 +3233,51 @@ tbody tr:hover {
 /* ===========================
    Workflow Stepper (top of page)
    =========================== */
+/* Compact stepper (sits inside the topbar) */
 .workflow-stepper {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.25rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex: 1;
+    min-width: 0;
+    padding: 0 1rem;
+    margin: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
     overflow-x: auto;
+    scrollbar-width: none;
 }
+.workflow-stepper::-webkit-scrollbar { display: none; }
 
 .stepper-step {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    flex: 1 1 0;
-    min-width: 70px;
-    padding: 0.25rem;
+    gap: 0.45rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0 0.25rem;
     text-decoration: none;
-    color: var(--text-muted);
+    color: var(--text-light, #94a3b8);
     font-size: 0.75rem;
     font-weight: 500;
     position: relative;
     transition: color 150ms ease;
+    white-space: nowrap;
 }
 
+/* Connector line between steps */
 .stepper-step::after {
     content: '';
-    position: absolute;
-    top: 14px;
-    left: calc(50% + 18px);
-    right: calc(-50% + 18px);
+    display: inline-block;
+    width: 18px;
     height: 2px;
-    background: var(--border);
-    z-index: 0;
+    background: var(--border, #e2e8f0);
+    margin-left: 0.45rem;
+    flex-shrink: 0;
 }
 .stepper-step:last-child::after { display: none; }
 
@@ -3123,17 +3285,16 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #fff;
-    border: 2px solid var(--border);
-    font-size: 0.8125rem;
+    border: 2px solid var(--border, #e2e8f0);
+    font-size: 0.6875rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--text-light, #94a3b8);
     transition: all 150ms ease;
-    position: relative;
-    z-index: 1;
+    flex-shrink: 0;
 }
 
 .stepper-step-label {
@@ -3161,11 +3322,16 @@ tbody tr:hover {
     background: var(--primary);
     border-color: var(--primary);
     color: #fff;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 .stepper-step--current .stepper-step-label {
     color: var(--primary);
     font-weight: 700;
+}
+
+/* Hide labels of non-current steps to save topbar real estate */
+.stepper-step:not(.stepper-step--current) .stepper-step-label {
+    display: none;
 }
 
 .stepper-step--upcoming:hover .stepper-step-circle {
@@ -3176,16 +3342,13 @@ tbody tr:hover {
     color: var(--text);
 }
 
-@media (max-width: 768px) {
-    .stepper-step-label {
-        display: none;
-    }
-    .stepper-step {
-        min-width: 40px;
-    }
-    .workflow-stepper {
-        padding: 0.75rem 1rem;
-    }
+@media (max-width: 900px) {
+    .workflow-stepper .stepper-step-label { display: none; }
+    .stepper-step::after { width: 10px; margin-left: 0.25rem; }
+    .stepper-step { padding: 0 0.125rem; }
+}
+@media (max-width: 640px) {
+    .workflow-stepper { display: none; }
 }
 
 /* ===========================
@@ -3578,65 +3741,6 @@ input[type="number"] {
     font-size: 0.8125rem;
     margin: 0;
     font-style: italic;
-}
-
-/* === Breadcrumbs (topbar) =================================================== */
-
-.breadcrumbs {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.breadcrumbs-list {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    font-size: 0.8125rem;
-    color: var(--text-light, #64748b);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.breadcrumbs-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    min-width: 0;
-}
-
-.breadcrumbs-item a {
-    color: var(--text-light, #64748b);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.15s;
-}
-
-.breadcrumbs-item a:hover {
-    color: var(--primary);
-}
-
-.breadcrumbs-item [aria-current="page"] {
-    color: var(--text, #1e293b);
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 260px;
-}
-
-.breadcrumbs-sep {
-    color: var(--border, #cbd5e1);
-    flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-    .breadcrumbs {
-        display: none;
-    }
 }
 
 /* === Row Actions Kebab Menu ================================================= */
