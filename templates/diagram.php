@@ -1,239 +1,201 @@
 <?php
 /**
- * Strategy Diagram Template
+ * Strategy Roadmap Template
  *
- * Two-column layout: Mermaid diagram render (left) and code editor (right).
- * Below the columns, a list of parsed nodes with OKR input fields.
- *
- * Variables: $project (array), $diagram (?array), $nodes (array),
- *            $document_summary (?string), $csrf_token (string)
+ * Progressive UX: shows the right thing at the right time.
+ * - No diagram: single CTA to generate
+ * - Diagram exists: visual roadmap + OKRs
+ * - Code editor: hidden toggle for power users
  */
+$hasDiagram = !empty($diagram);
+$hasNodes   = !empty($nodes);
+$hasSummary = !empty($document_summary);
 ?>
 
-<!-- ===========================
-     Page Header
-     =========================== -->
 <div class="page-header flex justify-between items-center">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Strategy Diagram</h1>
-    <a href="/app/upload?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to Upload</a>
-</div>
-
-<!-- ===========================
-     Page Description
-     =========================== -->
-<div class="page-description">
-    Your strategy diagram visually maps the initiatives and dependencies from your uploaded documents. Click nodes to add OKRs, edit the Mermaid code directly, or regenerate from your summary.
-</div>
-
-<!-- Inline error/success banner (stays on page) -->
-<div id="diagram-alert" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
-
-<!-- ===========================
-     Document Summary Context
-     =========================== -->
-<?php if (!empty($document_summary)): ?>
-    <div class="info-box mb-6">
-        <strong>AI Summary:</strong>
-        <p><?= htmlspecialchars($document_summary) ?></p>
-    </div>
-<?php elseif (empty($diagram)): ?>
-    <div class="card mb-6" style="border-left: 4px solid var(--primary); background: var(--bg-subtle, #f8f9ff);">
-        <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1rem 1.5rem;">
-            <div>
-                <strong>Getting started</strong>
-                <p class="text-muted" style="margin:0.25rem 0 0; font-size:0.875rem;">
-                    Upload a strategy document and generate an AI summary first, then come back here to create your roadmap diagram.
-                </p>
-            </div>
-            <a href="/app/upload?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary">Upload Document</a>
-        </div>
-    </div>
-<?php endif; ?>
-
-<!-- ===========================
-     Diagram + Editor (Two Columns)
-     =========================== -->
-<div class="diagram-container mb-6">
-    <!-- Left: Rendered Diagram -->
-    <div class="diagram-render card">
-        <div class="card-header">
-            <h3>Diagram Preview</h3>
-        </div>
-        <div class="card-body">
-            <div id="mermaid-output">
-                <?php if (empty($diagram)): ?>
-                    <p class="text-muted">No diagram generated yet. Use the controls on the right to generate one.</p>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right: Code Editor -->
-    <div class="diagram-editor card">
-        <div class="card-header">
-            <h3>Mermaid Code</h3>
-        </div>
-        <div class="card-body">
-            <!-- Save Code Form -->
-            <form method="POST" action="/app/diagram/save"
-                  data-loading="Saving diagram...">
-                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-
-                <div class="form-group">
-                    <textarea
-                        name="mermaid_code"
-                        id="mermaid-code"
-                        rows="14"
-                        placeholder="graph TD&#10;    A[Phase 1] --> B[Phase 2]&#10;    B --> C[Phase 3]"
-                    ><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
-                </div>
-
-                <div class="flex gap-2">
-                    <?php if (!empty($diagram)): ?>
-                        <button type="submit" class="btn btn-primary">Save Code</button>
-                    <?php endif; ?>
-                </div>
-            </form>
-
-            <!-- Generate / Regenerate Button (AJAX — stays on page) -->
-            <div class="mt-4">
-                <button type="button" id="generate-diagram-btn" class="btn <?= empty($diagram) ? 'btn-primary' : 'btn-secondary' ?> btn-block"
-                        onclick="generateDiagramAjax()">
-                    <?= empty($diagram) ? 'Generate Roadmap from Summary' : 'Regenerate Roadmap' ?>
-                </button>
-                <div id="generate-status" style="display:none; margin-top:0.75rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
-            </div>
-
-            <?php if (!empty($diagram)): ?>
-                <p class="text-muted mt-4" style="font-size: 0.8rem;">
-                    Version <?= (int) $diagram['version'] ?>
-                    &middot; Updated <?= date('j M Y, g:ia', strtotime($diagram['updated_at'])) ?>
-                </p>
-            <?php endif; ?>
-        </div>
+    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap</h1>
+    <div class="flex items-center gap-2">
+        <?php if ($hasDiagram): ?>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('code-editor-section').classList.toggle('hidden')">Edit Code</button>
+            <button type="button" id="generate-diagram-btn" class="btn btn-secondary btn-sm" onclick="generateDiagramAjax()">Regenerate</button>
+        <?php endif; ?>
     </div>
 </div>
 
+<!-- Status messages (AJAX + flash) -->
+<div id="generate-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
+
+<?php if (!$hasDiagram): ?>
 <!-- ===========================
-     Node OKRs
+     Empty State: No Diagram Yet
      =========================== -->
-<?php if (!empty($nodes)): ?>
+<section class="card" style="max-width: 640px; margin: 3rem auto;">
+    <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom: 1.5rem; opacity: 0.7;">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="8" y="14" width="8" height="7" rx="1"/><line x1="6.5" y1="10" x2="6.5" y2="14"/>
+            <line x1="17.5" y1="10" x2="17.5" y2="14"/><line x1="6.5" y1="14" x2="12" y2="14"/>
+            <line x1="17.5" y1="14" x2="12" y2="14"/>
+        </svg>
+
+        <?php if ($hasSummary): ?>
+            <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Ready to build your roadmap</h2>
+            <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+                We'll analyse your strategy summary and generate a visual roadmap showing initiatives, dependencies, and strategic phases.
+            </p>
+            <button type="button" id="generate-diagram-btn" class="btn btn-primary btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                Generate Strategy Roadmap
+            </button>
+            <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
+        <?php else: ?>
+            <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Upload a strategy document first</h2>
+            <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+                To generate a roadmap, you need to upload a strategy document and generate an AI summary on the Document Upload page.
+            </p>
+            <a href="/app/upload?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-lg" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                Go to Document Upload
+            </a>
+        <?php endif; ?>
+    </div>
+</section>
+
+<?php else: ?>
+<!-- ===========================
+     Diagram View (Exists)
+     =========================== -->
+
+<!-- Visual Roadmap — Full Width -->
 <section class="card mb-6">
-    <div class="card-header">
-        <div>
-            <h3 style="margin:0;">Node OKRs</h3>
-            <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> nodes — SMART objectives with measurable key results</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <?php
-            // Show "Sync OKRs to Goals" if Jira is connected
-            try {
-                $jiraKey = $project['jira_project_key'] ?? '';
-                if ($jiraKey !== '') {
-                    $goalsIntegration = \StratFlow\Models\Integration::findByOrgAndProvider(
-                        \StratFlow\Core\Database::getInstance(),
-                        (int) ($project['org_id'] ?? 0),
-                        'jira'
-                    );
-                    if ($goalsIntegration && $goalsIntegration['status'] === 'active') {
-            ?>
-                <form method="POST" action="/app/jira/sync" class="inline-form"
-                      data-loading="Syncing OKRs to Goals..."
-                      data-overlay="Pushing OKRs to Atlassian Goals. This may take a moment.">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                    <input type="hidden" name="sync_type" value="work_items">
-                    <button type="submit" class="btn btn-secondary btn-sm"
-                            onclick="return confirm('Sync OKRs to Atlassian Goals?')">
-                        Sync OKRs to Goals
-                    </button>
-                </form>
-            <?php } } } catch (\Throwable $e) { /* skip */ } ?>
-            <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
-                  data-loading="Generating SMART OKRs..."
-                  data-overlay="AI is generating SMART objectives and key results for each node. This may take 15-30 seconds.">
-                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-primary btn-sm"
-                        onclick="return confirm('Generate AI-powered SMART OKRs for all nodes? This will replace any existing OKRs.')">
-                    Generate SMART OKRs (AI)
-                </button>
-            </form>
-        </div>
+    <div class="card-body" style="min-height: 300px; overflow: auto;">
+        <div id="mermaid-output"></div>
+    </div>
+</section>
+
+<!-- Code Editor — Hidden by default -->
+<section id="code-editor-section" class="card mb-6 hidden">
+    <div class="card-header flex justify-between items-center">
+        <h3 style="margin:0;">Mermaid Code</h3>
+        <span class="text-muted" style="font-size:0.8rem;">
+            Version <?= (int) $diagram['version'] ?> &middot; <?= date('j M Y, g:ia', strtotime($diagram['updated_at'])) ?>
+        </span>
     </div>
     <div class="card-body">
-        <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
+        <form method="POST" action="/app/diagram/save" data-loading="Saving...">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="node-okr-list">
-                <?php foreach ($nodes as $node):
-                    // Pre-fill title from node label if empty
-                    $defaultTitle = $node['okr_title'] ?: ('Achieve: ' . $node['label']);
-                    $defaultDesc  = $node['okr_description'] ?: ('Define key results for the "' . $node['label'] . '" initiative. What measurable outcomes indicate success?');
-                ?>
-                    <div class="node-okr-item">
-                        <div class="node-okr-header">
-                            <div>
-                                <span class="badge badge-primary"><?= htmlspecialchars($node['node_key']) ?></span>
-                                <strong><?= htmlspecialchars($node['label']) ?></strong>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
-                                    onclick="if(confirm('Remove this node OKR?')) { this.closest('.node-okr-item').remove(); }">
-                                Remove
-                            </button>
-                        </div>
-                        <div class="node-okr-fields">
-                            <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
-                            <div class="form-group">
-                                <label>OKR Title</label>
-                                <input type="text"
-                                       name="nodes[<?= (int) $node['id'] ?>][okr_title]"
-                                       value="<?= htmlspecialchars($defaultTitle) ?>"
-                                       class="form-control"
-                                       placeholder="e.g. Increase market penetration by 20%">
-                            </div>
-                            <div class="form-group">
-                                <label>OKR Description</label>
-                                <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
-                                          class="form-control"
-                                          rows="2"
-                                          placeholder="Describe the objective and key results..."
-                                ><?= htmlspecialchars($defaultDesc) ?></textarea>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
-                <button type="submit" class="btn btn-primary">Save All OKRs</button>
+            <textarea name="mermaid_code" id="mermaid-code" rows="12" class="form-control" style="font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
+            <div class="flex justify-between items-center mt-2">
+                <small class="text-muted">Edit the Mermaid code and save. The diagram will re-render automatically.</small>
+                <button type="submit" class="btn btn-primary btn-sm">Save Code</button>
             </div>
         </form>
     </div>
 </section>
 
+<!-- Hidden textarea for mermaid rendering when editor is closed -->
+<?php if ($hasDiagram): ?>
+<textarea id="mermaid-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
 <?php endif; ?>
+
+<!-- ===========================
+     OKRs Section
+     =========================== -->
+<?php if ($hasNodes): ?>
+<section class="card mb-6">
+    <div class="card-header flex justify-between items-center">
+        <div>
+            <h3 style="margin:0;">Objectives & Key Results</h3>
+            <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> strategic initiatives</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <?php
+            try {
+                $jiraKey = $project['jira_project_key'] ?? '';
+                if ($jiraKey !== '') {
+                    $goalsIntegration = \StratFlow\Models\Integration::findByOrgAndProvider(
+                        \StratFlow\Core\Database::getInstance(), (int) ($project['org_id'] ?? 0), 'jira'
+                    );
+                    if ($goalsIntegration && $goalsIntegration['status'] === 'active') {
+            ?>
+                <form method="POST" action="/app/jira/sync" class="inline-form"
+                      data-loading="Syncing to Goals..." data-overlay="Pushing OKRs to Atlassian Goals.">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                    <input type="hidden" name="sync_type" value="work_items">
+                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Sync OKRs to Atlassian Goals?')">Sync to Goals</button>
+                </form>
+            <?php } } } catch (\Throwable $e) {} ?>
+            <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
+                  data-loading="Generating OKRs..." data-overlay="AI is generating SMART objectives and key results. This may take 15-30 seconds.">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-primary btn-sm"
+                        onclick="return confirm('Generate SMART OKRs for all nodes? This will replace existing OKRs.')">
+                    Generate OKRs (AI)
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <?php foreach ($nodes as $node):
+                $hasOkr = !empty($node['okr_title']) && $node['okr_title'] !== ('Achieve: ' . $node['label']);
+            ?>
+                <div class="node-okr-item" style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);">
+                    <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
+                    <div style="display: flex; align-items: start; gap: 1rem;">
+                        <span class="badge badge-primary" style="margin-top: 0.15rem; flex-shrink: 0;"><?= htmlspecialchars($node['node_key']) ?></span>
+                        <div style="flex: 1;">
+                            <strong style="font-size: 0.95rem;"><?= htmlspecialchars($node['label']) ?></strong>
+                            <div style="margin-top: 0.5rem;">
+                                <input type="text"
+                                       name="nodes[<?= (int) $node['id'] ?>][okr_title]"
+                                       value="<?= htmlspecialchars($node['okr_title'] ?? '') ?>"
+                                       class="form-control" style="font-size: 0.875rem; margin-bottom: 0.4rem;"
+                                       placeholder="Objective — e.g. Launch AU market presence with 3 pilots by Q3">
+                                <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
+                                          class="form-control" style="font-size: 0.85rem;" rows="2"
+                                          placeholder="KR1: ...&#10;KR2: ...&#10;KR3: ..."
+                                ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+            <div style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Save All OKRs</button>
+            </div>
+        </form>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php endif; /* end hasDiagram */ ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
-<!-- Mermaid.js CDN -->
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 
 <script>
 function generateDiagramAjax() {
     var btn = document.getElementById('generate-diagram-btn');
+    // Use whichever status element exists
     var status = document.getElementById('generate-status');
-    var alert = document.getElementById('diagram-alert');
-    var codeEl = document.getElementById('mermaid-code');
+    var statusEmpty = document.getElementById('generate-status-empty');
+    var activeStatus = (status && status.offsetParent !== null) ? status : (statusEmpty || status);
 
-    // Disable button, show progress
     btn.disabled = true;
-    btn.textContent = 'Generating roadmap...';
-    status.style.display = 'block';
-    status.style.background = '#e8f0fe';
-    status.style.color = '#1a56db';
-    status.innerHTML = '<strong>Generating...</strong> AI is analysing your strategy document and building a visual roadmap. This usually takes 10-20 seconds.';
-    if (alert) alert.style.display = 'none';
+    var origText = btn.textContent;
+    btn.textContent = 'Generating...';
+
+    if (activeStatus) {
+        activeStatus.style.display = 'block';
+        activeStatus.style.background = '#e8f0fe';
+        activeStatus.style.color = '#1a56db';
+        activeStatus.innerHTML = 'AI is analysing your strategy and building a visual roadmap. This usually takes 10-20 seconds...';
+    }
 
     var formData = new FormData();
     formData.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
@@ -247,31 +209,30 @@ function generateDiagramAjax() {
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(res) {
         if (res.ok && res.data.success) {
-            // Success — update code editor and re-render
-            if (codeEl) {
-                codeEl.value = res.data.mermaid_code;
-                codeEl.dispatchEvent(new Event('input'));
+            if (activeStatus) {
+                activeStatus.style.background = '#d4edda';
+                activeStatus.style.color = '#155724';
+                activeStatus.innerHTML = 'Roadmap generated with ' + res.data.node_count + ' initiatives. Loading...';
             }
-            status.style.background = '#d4edda';
-            status.style.color = '#155724';
-            status.innerHTML = '<strong>Done!</strong> ' + res.data.message + ' Reloading page...';
-            // Reload to get updated nodes/OKRs
-            setTimeout(function() { window.location.reload(); }, 1500);
+            setTimeout(function() { window.location.reload(); }, 1000);
         } else {
-            // Error from server
-            status.style.background = '#f8d7da';
-            status.style.color = '#721c24';
-            status.innerHTML = '<strong>Failed:</strong> ' + (res.data.error || 'Unknown error') + '<br><button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-top:0.5rem;">Try Again</button>';
+            if (activeStatus) {
+                activeStatus.style.background = '#f8d7da';
+                activeStatus.style.color = '#721c24';
+                activeStatus.innerHTML = (res.data.error || 'Generation failed') + ' <button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-left:0.5rem;">Try Again</button>';
+            }
             btn.disabled = false;
             btn.textContent = 'Try Again';
         }
     })
     .catch(function(err) {
-        status.style.background = '#f8d7da';
-        status.style.color = '#721c24';
-        status.innerHTML = '<strong>Connection error:</strong> ' + err.message + '<br><button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-top:0.5rem;">Try Again</button>';
+        if (activeStatus) {
+            activeStatus.style.background = '#f8d7da';
+            activeStatus.style.color = '#721c24';
+            activeStatus.innerHTML = 'Connection error. <button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-left:0.5rem;">Try Again</button>';
+        }
         btn.disabled = false;
-        btn.textContent = 'Try Again';
+        btn.textContent = origText;
     });
 }
 </script>
