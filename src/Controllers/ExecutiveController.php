@@ -97,7 +97,7 @@ class ExecutiveController
                FROM sprints s
                JOIN projects p ON s.project_id = p.id
                LEFT JOIN sprint_stories ss ON ss.sprint_id = s.id
-               LEFT JOIN user_stories us ON us.id = ss.story_id AND us.status = \'done\'
+               LEFT JOIN user_stories us ON us.id = ss.user_story_id AND us.status = \'done\'
               WHERE p.org_id = :oid
                 AND s.status = \'completed\'
               GROUP BY s.id, s.name, s.end_date
@@ -110,16 +110,16 @@ class ExecutiveController
 
         // ── 5. Active sprint capacity ─────────────────────────────────────────
         $activeSprints = $this->db->query(
-            'SELECT s.name AS sprint_name, s.capacity,
+            'SELECT s.name AS sprint_name, s.team_capacity AS capacity,
                     p.name AS project_name,
                     COALESCE(SUM(us.size), 0) AS allocated_points
                FROM sprints s
                JOIN projects p ON s.project_id = p.id
                LEFT JOIN sprint_stories ss ON ss.sprint_id = s.id
-               LEFT JOIN user_stories us ON us.id = ss.story_id
+               LEFT JOIN user_stories us ON us.id = ss.user_story_id
               WHERE p.org_id = :oid
                 AND s.status = \'active\'
-              GROUP BY s.id, s.name, s.capacity, p.name
+              GROUP BY s.id, s.name, s.team_capacity, p.name
               ORDER BY p.name, s.name',
             [':oid' => $orgId]
         )->fetchAll();
@@ -174,10 +174,10 @@ class ExecutiveController
 
         // ── 9. Integration health ─────────────────────────────────────────────
         $integrations = $this->db->query(
-            'SELECT name, status, last_sync_at, error_count
+            'SELECT display_name AS name, provider, status, last_sync_at, error_count
                FROM integrations
               WHERE org_id = :oid
-              ORDER BY name',
+              ORDER BY display_name',
             [':oid' => $orgId]
         )->fetchAll();
 
@@ -200,11 +200,10 @@ class ExecutiveController
         // ── Table A: Top 10 active risks ──────────────────────────────────────
         $topRisks = $this->db->query(
             'SELECT r.title, r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
-                    r.status, p.name AS project_name
+                    p.name AS project_name
                FROM risks r
                JOIN projects p ON r.project_id = p.id
               WHERE p.org_id = :oid
-                AND r.status != \'closed\'
               ORDER BY priority DESC
               LIMIT 10',
             [':oid' => $orgId]
@@ -212,7 +211,7 @@ class ExecutiveController
 
         // ── Table B: Active critical drift alerts ─────────────────────────────
         $criticalAlerts = $this->db->query(
-            'SELECT da.alert_type, da.description, da.created_at, p.name AS project_name
+            'SELECT da.alert_type, da.details_json, da.created_at, p.name AS project_name
                FROM drift_alerts da
                JOIN projects p ON da.project_id = p.id
               WHERE p.org_id = :oid
@@ -228,8 +227,8 @@ class ExecutiveController
             'SELECT al.event_type, al.created_at, al.ip_address,
                     u.full_name AS actor_name, al.details_json
                FROM audit_logs al
-               LEFT JOIN users u ON al.user_id = u.id
-              WHERE al.org_id = :oid
+               INNER JOIN users u ON al.user_id = u.id
+              WHERE u.org_id = :oid
               ORDER BY al.created_at DESC
               LIMIT 10',
             [':oid' => $orgId]

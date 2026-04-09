@@ -279,7 +279,7 @@
                 <tr>
                     <th>Type</th>
                     <th>Project</th>
-                    <th>Description</th>
+                    <th>Details</th>
                     <th>Detected</th>
                 </tr>
             </thead>
@@ -288,7 +288,10 @@
                 <tr>
                     <td><span class="badge badge-danger"><?= htmlspecialchars($alert['alert_type'], ENT_QUOTES, 'UTF-8') ?></span></td>
                     <td><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td><?= htmlspecialchars($alert['description'], ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?php
+                        $details = json_decode($alert['details_json'] ?? '{}', true);
+                        echo htmlspecialchars($details['message'] ?? $alert['alert_type'], ENT_QUOTES, 'UTF-8');
+                    ?></td>
                     <td style="font-size:12px; color:#64748b;"><?= htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
                 </tr>
                 <?php endforeach; ?>
