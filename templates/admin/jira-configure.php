@@ -2,17 +2,15 @@
 /**
  * Jira Configuration Template
  *
- * Configure the Jira project to sync with, view field mappings,
- * and test the connection.
+ * Configure the Jira project, field mappings, and board selection.
  *
- * Variables: $user (array), $integration (array), $jira_projects (array),
- *            $current_config (array), $error (string|null), $csrf_token (string)
+ * Variables: $user, $integration, $jira_projects, $jira_fields,
+ *            $jira_issue_types, $jira_boards, $current_config,
+ *            $error, $csrf_token
  */
+$fm = $current_config['field_mapping'] ?? [];
 ?>
 
-<!-- ===========================
-     Page Header
-     =========================== -->
 <div class="page-header">
     <h1 class="page-title">Jira Configuration</h1>
     <p class="page-subtitle">
@@ -21,27 +19,19 @@
 </div>
 
 <?php if ($error): ?>
-    <div class="alert alert-danger" style="margin-bottom: 1rem;">
-        <?= htmlspecialchars($error) ?>
-    </div>
+    <div class="alert alert-danger" style="margin-bottom: 1rem;"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
 
-<!-- ===========================
-     Project Selection
-     =========================== -->
 <form method="POST" action="/app/admin/integrations/jira/configure">
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
+    <!-- Project Selection -->
     <section class="card">
-        <div class="card-header">
-            <h2 class="card-title">Jira Project</h2>
-        </div>
+        <div class="card-header"><h2 class="card-title">Jira Project</h2></div>
         <div class="card-body">
             <p class="text-muted mb-4" style="font-size: 0.875rem;">
                 Select the Jira project where StratFlow items will be synced.
-                Work items will be created as Epics and user stories as Stories.
             </p>
-
             <div class="form-group mb-4">
                 <label class="form-label">Project</label>
                 <?php if (!empty($jira_projects)): ?>
@@ -62,62 +52,143 @@
         </div>
     </section>
 
-    <!-- ===========================
-         Field Mapping (Read-only)
-         =========================== -->
+    <!-- Board Selection -->
+    <?php if (!empty($jira_boards)): ?>
     <section class="card mt-4">
-        <div class="card-header">
-            <h2 class="card-title">Field Mapping</h2>
-        </div>
+        <div class="card-header"><h2 class="card-title">Scrum Board</h2></div>
         <div class="card-body">
             <p class="text-muted mb-4" style="font-size: 0.875rem;">
-                Default field mapping between StratFlow and Jira. Custom mapping will be available in a future release.
+                Select the board used for sprint management. Sprints will be created on this board.
             </p>
+            <div class="form-group">
+                <label class="form-label">Board</label>
+                <select name="board_id" class="form-input" style="max-width: 400px;">
+                    <option value="0">Auto-detect</option>
+                    <?php foreach ($jira_boards as $board): ?>
+                        <option value="<?= (int) $board['id'] ?>"
+                                <?= ((int) ($fm['board_id'] ?? 0)) === (int) $board['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($board['name'] ?? 'Board ' . $board['id']) ?>
+                            (<?= htmlspecialchars($board['type'] ?? '') ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
 
-            <table class="table" style="max-width: 600px;">
-                <thead>
-                    <tr>
-                        <th>StratFlow</th>
-                        <th>Jira</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>HL Work Item</td>
-                        <td>Epic</td>
-                    </tr>
-                    <tr>
-                        <td>Work Item Title</td>
-                        <td>Summary</td>
-                    </tr>
-                    <tr>
-                        <td>Work Item Description + OKR</td>
-                        <td>Description (ADF)</td>
-                    </tr>
-                    <tr>
-                        <td>Priority Number</td>
-                        <td>Priority (Highest/High/Medium/Low/Lowest)</td>
-                    </tr>
-                    <tr>
-                        <td>User Story</td>
-                        <td>Story (linked to parent Epic)</td>
-                    </tr>
-                    <tr>
-                        <td>Story Size</td>
-                        <td>Story Points</td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- Issue Type Mapping -->
+    <section class="card mt-4">
+        <div class="card-header"><h2 class="card-title">Issue Type Mapping</h2></div>
+        <div class="card-body">
+            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+                Map StratFlow item types to Jira issue types. The defaults work for most Scrum projects.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 600px;">
+                <div class="form-group">
+                    <label class="form-label">Work Items create as</label>
+                    <?php if (!empty($jira_issue_types)): ?>
+                        <select name="epic_type" class="form-input">
+                            <?php foreach ($jira_issue_types as $it): ?>
+                                <?php if (!($it['subtask'] ?? false)): ?>
+                                <option value="<?= htmlspecialchars($it['name']) ?>"
+                                        <?= ($fm['epic_type'] ?? 'Epic') === $it['name'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($it['name']) ?>
+                                </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="epic_type" class="form-input" value="<?= htmlspecialchars($fm['epic_type'] ?? 'Epic') ?>">
+                    <?php endif; ?>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">User Stories create as</label>
+                    <?php if (!empty($jira_issue_types)): ?>
+                        <select name="story_type" class="form-input">
+                            <?php foreach ($jira_issue_types as $it): ?>
+                                <?php if (!($it['subtask'] ?? false)): ?>
+                                <option value="<?= htmlspecialchars($it['name']) ?>"
+                                        <?= ($fm['story_type'] ?? 'Story') === $it['name'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($it['name']) ?>
+                                </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="story_type" class="form-input" value="<?= htmlspecialchars($fm['story_type'] ?? 'Story') ?>">
+                    <?php endif; ?>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Risks create as</label>
+                    <?php if (!empty($jira_issue_types)): ?>
+                        <select name="risk_type" class="form-input">
+                            <?php foreach ($jira_issue_types as $it): ?>
+                                <?php if (!($it['subtask'] ?? false)): ?>
+                                <option value="<?= htmlspecialchars($it['name']) ?>"
+                                        <?= ($fm['risk_type'] ?? 'Risk') === $it['name'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($it['name']) ?>
+                                </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="risk_type" class="form-input" value="<?= htmlspecialchars($fm['risk_type'] ?? 'Risk') ?>">
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- ===========================
-         Connection Info
-         =========================== -->
+    <!-- Custom Field Mapping -->
     <section class="card mt-4">
-        <div class="card-header">
-            <h2 class="card-title">Connection Details</h2>
+        <div class="card-header"><h2 class="card-title">Custom Field Mapping</h2></div>
+        <div class="card-body">
+            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+                Map StratFlow data to Jira custom fields. These vary by Jira instance — select the correct fields for your setup.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 700px;">
+                <div class="form-group">
+                    <label class="form-label">Epic Name Field</label>
+                    <?php if (!empty($jira_fields)): ?>
+                        <select name="epic_name_field" class="form-input">
+                            <option value="">None (not required for team-managed)</option>
+                            <?php foreach ($jira_fields as $f): ?>
+                                <option value="<?= htmlspecialchars($f['id']) ?>"
+                                        <?= ($fm['epic_name_field'] ?? 'customfield_10011') === $f['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($f['name']) ?> (<?= htmlspecialchars($f['id']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="epic_name_field" class="form-input" value="<?= htmlspecialchars($fm['epic_name_field'] ?? 'customfield_10011') ?>" placeholder="customfield_10011">
+                    <?php endif; ?>
+                    <small class="text-muted">Required for company-managed projects. Leave empty for team-managed.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Story Points Field</label>
+                    <?php if (!empty($jira_fields)): ?>
+                        <select name="story_points_field" class="form-input">
+                            <option value="">None</option>
+                            <?php foreach ($jira_fields as $f): ?>
+                                <option value="<?= htmlspecialchars($f['id']) ?>"
+                                        <?= ($fm['story_points_field'] ?? 'customfield_10016') === $f['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($f['name']) ?> (<?= htmlspecialchars($f['id']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="story_points_field" class="form-input" value="<?= htmlspecialchars($fm['story_points_field'] ?? 'customfield_10016') ?>" placeholder="customfield_10016">
+                    <?php endif; ?>
+                    <small class="text-muted">Usually "Story point estimate" (customfield_10016).</small>
+                </div>
+            </div>
         </div>
+    </section>
+
+    <!-- Connection Details -->
+    <section class="card mt-4">
+        <div class="card-header"><h2 class="card-title">Connection Details</h2></div>
         <div class="card-body">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
@@ -142,9 +213,6 @@
         </div>
     </section>
 
-    <!-- ===========================
-         Save Button
-         =========================== -->
     <div class="mt-4 mb-6">
         <button type="submit" class="btn btn-primary">Save Configuration</button>
     </div>

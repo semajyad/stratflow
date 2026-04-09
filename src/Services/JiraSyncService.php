@@ -30,6 +30,7 @@ class JiraSyncService
     private Database $db;
     private JiraService $jira;
     private array $integration;
+    private array $fieldMapping;
 
     // ===========================
     // CONSTRUCTOR
@@ -45,6 +46,15 @@ class JiraSyncService
         $this->db          = $db;
         $this->jira        = $jira;
         $this->integration = $integration;
+
+        $config = json_decode($integration['config_json'] ?? '{}', true) ?: [];
+        $this->fieldMapping = $config['field_mapping'] ?? [];
+    }
+
+    /** Get a field mapping value with a default fallback. */
+    private function mapping(string $key, string $default = ''): string
+    {
+        return $this->fieldMapping[$key] ?? $default;
     }
 
     // ===========================
@@ -115,21 +125,22 @@ class JiraSyncService
                     $description = $this->buildWorkItemDescription($item);
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => 'Epic'],
+                        'issuetype'   => ['name' => $this->mapping('epic_type', 'Epic')],
                         'summary'     => $item['title'],
                         'description' => $this->jira->textToAdf($description),
                     ];
 
-                    // Epic Name field (required for classic Jira projects)
-                    // Common custom field IDs: customfield_10011 or customfield_10004
-                    $fields['customfield_10011'] = $item['title'];
+                    // Epic Name field (required for company-managed projects)
+                    $epicNameField = $this->mapping('epic_name_field', 'customfield_10011');
+                    if ($epicNameField) {
+                        $fields[$epicNameField] = $item['title'];
+                    }
 
                     // Try to create — if it fails, retry without optional fields
                     try {
                         $result = $this->jira->createIssue($fields);
                     } catch (\RuntimeException $e) {
-                        // Retry with minimal fields (no Epic Name custom field)
-                        unset($fields['customfield_10011']);
+                        if ($epicNameField) unset($fields[$epicNameField]);
                         $result = $this->jira->createIssue($fields);
                     }
 
@@ -242,14 +253,15 @@ class JiraSyncService
                     // Build fields for new Story — minimal fields to avoid 400s
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => 'Story'],
+                        'issuetype'   => ['name' => $this->mapping('story_type', 'Story')],
                         'summary'     => $story['title'],
                         'description' => $this->jira->textToAdf($story['description'] ?? ''),
                     ];
 
-                    // Story points (customfield_10016 is the most common Jira field)
-                    if (!empty($story['size'])) {
-                        $fields['customfield_10016'] = (float) $story['size'];
+                    // Story points
+                    $spField = $this->mapping('story_points_field', 'customfield_10016');
+                    if (!empty($story['size']) && $spField) {
+                        $fields[$spField] = (float) $story['size'];
                     }
 
                     // Link to parent Epic if available
@@ -357,7 +369,7 @@ class JiraSyncService
             $jql = "key IN ({$keyList}) ORDER BY updated DESC";
             $result = $this->jira->searchIssues(
                 $jql,
-                ['summary', 'description', 'status', 'priority', 'customfield_10016'],
+                ['summary', 'description', 'status', 'priority', $this->mapping('story_points_field', 'customfield_10016')],
                 100
             );
 
@@ -392,8 +404,9 @@ class JiraSyncService
                     }
 
                     // Pull story points for user stories
-                    if ($mapping['local_type'] === 'user_story' && isset($fields['customfield_10016'])) {
-                        $updateData['size'] = (int) $fields['customfield_10016'];
+                    $spField = $this->mapping('story_points_field', 'customfield_10016');
+                    if ($mapping['local_type'] === 'user_story' && $spField && isset($fields[$spField])) {
+                        $updateData['size'] = (int) $fields[$spField];
                     }
 
                     // Check if anything actually changed via sync hash
@@ -706,14 +719,14 @@ class JiraSyncService
 
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => 'Risk'],
+                        'issuetype'   => ['name' => $this->mapping('risk_type', 'Risk')],
                         'summary'     => $risk['title'],
                         'description' => $adfDesc,
                         'priority'    => ['name' => $priority],
                         'labels'      => $labels,
                     ];
 
-                    // Fallback: try without labels if scheme rejects them, then without Risk type
+                    // Fallback: try without labels, then without configured type
                     try {
                         $result = $this->jira->createIssue($fields);
                     } catch (\RuntimeException $e) {

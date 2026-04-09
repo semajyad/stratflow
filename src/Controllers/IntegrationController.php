@@ -229,9 +229,37 @@ class IntegrationController
         $projects = [];
         $error = null;
 
+        $jiraFields   = [];
+        $jiraIssueTypes = [];
+        $jiraBoards   = [];
+
         try {
             $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
             $projects = $jira->getProjects();
+
+            // Load fields and issue types for mapping configuration
+            try {
+                $jiraFields = $jira->getFields();
+                // Filter to custom fields + key standard fields
+                $jiraFields = array_filter($jiraFields, function ($f) {
+                    return ($f['custom'] ?? false)
+                        || in_array($f['id'], ['summary', 'description', 'priority', 'labels', 'assignee', 'duedate']);
+                });
+                usort($jiraFields, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            } catch (\Throwable $e) { /* non-critical */ }
+
+            // Load issue types for the selected project
+            $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
+            $selectedProject = $currentConfig['project_key'] ?? '';
+            if ($selectedProject) {
+                try {
+                    $jiraIssueTypes = $jira->getIssueTypes($selectedProject);
+                } catch (\Throwable $e) { /* non-critical */ }
+                try {
+                    $boardsResult = $jira->getBoards($selectedProject);
+                    $jiraBoards = $boardsResult['values'] ?? [];
+                } catch (\Throwable $e) { /* non-critical */ }
+            }
         } catch (\Throwable $e) {
             $error = 'Could not load Jira projects: ' . $e->getMessage();
         }
@@ -239,14 +267,17 @@ class IntegrationController
         $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
 
         $this->response->render('admin/jira-configure', [
-            'user'           => $user,
-            'integration'    => $integration,
-            'jira_projects'  => $projects,
-            'current_config' => $currentConfig,
-            'error'          => $error,
-            'active_page'    => 'integrations',
-            'flash_message'  => $_SESSION['flash_message'] ?? null,
-            'flash_error'    => $_SESSION['flash_error']   ?? null,
+            'user'             => $user,
+            'integration'      => $integration,
+            'jira_projects'    => $projects,
+            'jira_fields'      => $jiraFields,
+            'jira_issue_types' => $jiraIssueTypes,
+            'jira_boards'      => $jiraBoards,
+            'current_config'   => $currentConfig,
+            'error'            => $error,
+            'active_page'      => 'integrations',
+            'flash_message'    => $_SESSION['flash_message'] ?? null,
+            'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
@@ -278,6 +309,16 @@ class IntegrationController
 
         $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $currentConfig['project_key'] = $projectKey;
+
+        // Save field mappings
+        $currentConfig['field_mapping'] = [
+            'epic_type'          => trim((string) $this->request->post('epic_type', 'Epic')),
+            'story_type'         => trim((string) $this->request->post('story_type', 'Story')),
+            'risk_type'          => trim((string) $this->request->post('risk_type', 'Risk')),
+            'epic_name_field'    => trim((string) $this->request->post('epic_name_field', 'customfield_10011')),
+            'story_points_field' => trim((string) $this->request->post('story_points_field', 'customfield_10016')),
+            'board_id'           => (int) $this->request->post('board_id', 0),
+        ];
 
         Integration::update($this->db, (int) $integration['id'], [
             'config_json' => json_encode($currentConfig),
@@ -698,15 +739,16 @@ class IntegrationController
                 $results['push_risks'] = $syncService->pushRisks($projectId, $jiraKey);
             }
             if ($syncType === 'sprints' || $syncType === 'all') {
-                // Get board ID: from project config or default to board 1
-                $boardId = (int) ($project['jira_board_id'] ?? 0);
+                // Get board ID: from integration config, project record, or auto-detect
+                $intConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
+                $boardId = (int) ($intConfig['field_mapping']['board_id'] ?? 0)
+                        ?: (int) ($project['jira_board_id'] ?? 0);
                 if ($boardId === 0) {
-                    // Auto-detect: get first board for this project
                     try {
                         $boards = $jiraService->getBoards($jiraKey);
                         $boardId = (int) ($boards['values'][0]['id'] ?? 0);
                     } catch (\Throwable $e) {
-                        $boardId = 1; // fallback
+                        $boardId = 1;
                     }
                 }
                 if ($boardId > 0) {
