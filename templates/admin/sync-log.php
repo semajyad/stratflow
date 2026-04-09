@@ -22,7 +22,7 @@
             <a href="/app/admin/integrations">&larr; Back to Integrations</a>
         </p>
         <?php if ($integration && ($integration['status'] ?? '') === 'active'): ?>
-            <form method="POST" action="/app/admin/integrations/jira/bulk-pull-status" style="margin: 0;">
+            <form method="POST" action="/app/admin/integrations/jira/bulk-pull-status" class="inline-form">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>">
                 <button type="submit" class="btn btn-secondary btn-sm">
                     Pull latest status from Jira

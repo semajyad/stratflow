@@ -823,7 +823,8 @@ class JiraSyncService
             return false;
         }
 
-        $jiraStatusName = $issueData['fields']['status']['name'] ?? '';
+        $statusField = $issueData['fields']['status'] ?? null;
+        $jiraStatusName = is_array($statusField) ? (string) ($statusField['name'] ?? '') : '';
         $newStatus = $this->mapJiraStatusName($jiraStatusName);
 
         if ($newStatus === null) {
