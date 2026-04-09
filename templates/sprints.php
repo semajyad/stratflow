@@ -96,19 +96,6 @@
 </div>
 <?php endif; ?>
 
-<?php if (!empty($sprints) && !empty($unallocated)): ?>
-<div style="margin-bottom: 1.5rem;">
-    <form method="POST" action="/app/sprints/auto-fill" class="inline-form"
-          data-loading="Filling sprints..."
-          data-overlay="Filling sprints with stories by priority order up to capacity.">
-        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-        <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-        <button type="submit" class="btn btn-secondary" onclick="return confirm('Auto-fill existing sprints with unallocated stories by priority?')">
-            Auto-Fill Sprints by Priority
-        </button>
-    </form>
-</div>
-<?php endif; ?>
 
 <!-- ===========================
      Split View: Backlog + Sprints
@@ -142,12 +129,12 @@
         <div class="panel-header">
             <h3>Sprints</h3>
             <?php if (!empty($sprints) && !empty($unallocated)): ?>
-                <form method="POST" action="/app/sprints/ai-allocate" class="inline-form"
-                      data-loading="Allocating stories..."
-                      data-overlay="AI is allocating stories to sprints based on capacity and dependencies.">
+                <form method="POST" action="/app/sprints/auto-fill" class="inline-form"
+                      data-loading="Filling sprints..."
+                      data-overlay="Allocating stories to sprints by priority, packing each sprint as close to capacity as possible.">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Auto-allocate unallocated stories into sprints using AI?')">AI Auto-Allocate</button>
+                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Auto-fill sprints with backlog stories by priority?')">Auto-Fill Sprints</button>
                 </form>
             <?php endif; ?>
         </div>
