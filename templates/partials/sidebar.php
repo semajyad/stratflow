@@ -68,6 +68,12 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
             </a>
         <?php endif; ?>
 
+        <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin']) || ($user['has_billing_access'] ?? false)): ?>
+            <a href="/app/admin/billing" class="nav-link <?= ($active_page ?? '') === 'billing' ? 'active' : '' ?>">
+                Billing
+            </a>
+        <?php endif; ?>
+
         <?php if (($user['role'] ?? '') === 'superadmin'): ?>
             <a href="/superadmin" class="nav-link <?= ($active_page ?? '') === 'superadmin' ? 'active' : '' ?>">
                 &#128081; Superadmin

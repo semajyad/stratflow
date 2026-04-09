@@ -61,7 +61,6 @@
                                         'superadmin' => 'badge-warning',
                                         'org_admin' => 'badge-primary',
                                         'project_manager' => 'badge-info',
-                                        'billing_admin' => 'badge-success',
                                         'viewer' => 'badge-secondary',
                                         default => 'badge-secondary',
                                     };
@@ -69,7 +68,6 @@
                                         'superadmin' => 'Superadmin',
                                         'org_admin' => 'Org Admin',
                                         'project_manager' => 'Project Manager',
-                                        'billing_admin' => 'Billing Admin',
                                         'viewer' => 'Viewer',
                                         default => 'User',
                                     };
@@ -122,7 +120,6 @@
                                                 <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>User (edit items)</option>
                                                 <option value="project_manager" <?= $u['role'] === 'project_manager' ? 'selected' : '' ?>>Project Manager</option>
                                                 <option value="org_admin" <?= $u['role'] === 'org_admin' ? 'selected' : '' ?>>Organisation Admin</option>
-                                                <option value="billing_admin" <?= $u['role'] === 'billing_admin' ? 'selected' : '' ?>>Billing Admin</option>
                                                 <?php if (($user['role'] ?? '') === 'superadmin'): ?>
                                                 <option value="superadmin" <?= $u['role'] === 'superadmin' ? 'selected' : '' ?>>Superadmin</option>
                                                 <?php endif; ?>
@@ -179,7 +176,6 @@
                     <option value="user" selected>User (edit items)</option>
                     <option value="project_manager">Project Manager</option>
                     <option value="org_admin">Organisation Admin</option>
-                    <option value="billing_admin">Billing Admin</option>
                     <?php if (($user['role'] ?? '') === 'superadmin'): ?>
                     <option value="superadmin">Superadmin</option>
                     <?php endif; ?>

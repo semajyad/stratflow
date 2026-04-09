@@ -972,14 +972,12 @@ class IntegrationController
             }
 
             // Push OKRs to Atlassian Goals (always, regardless of sync_type)
+            $goalsCreated = 0;
             if ($syncType === 'all' || $syncType === 'work_items') {
                 try {
                     $goalsResult = $syncService->pushOkrsToGoals($projectId);
-                    if ($goalsResult['created'] > 0 || $goalsResult['errors'] > 0) {
-                        $results['push_goals'] = $goalsResult;
-                    }
+                    $goalsCreated = $goalsResult['created'] ?? 0;
                 } catch (\Throwable $e) {
-                    // Goals API optional — don't fail the whole sync
                     error_log("[JiraSync] Goals push failed (non-critical): " . $e->getMessage());
                 }
             }
@@ -1022,6 +1020,7 @@ class IntegrationController
             if ($totalCreated > 0)   $parts[] = "{$totalCreated} pushed to Jira";
             if ($totalUpdated > 0)   $parts[] = "{$totalUpdated} updated in Jira";
             if ($totalAllocated > 0) $parts[] = "{$totalAllocated} stories allocated to sprints";
+            if ($goalsCreated > 0)   $parts[] = "{$goalsCreated} OKRs synced to Goals";
             if ($pullCreated > 0)    $parts[] = "{$pullCreated} imported from Jira";
             if ($pullUpdated > 0)    $parts[] = "{$pullUpdated} pulled from Jira";
             if ($totalConflicts > 0) $parts[] = "{$totalConflicts} conflicts (review required)";

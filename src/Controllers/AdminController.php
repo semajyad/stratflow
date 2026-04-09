@@ -505,6 +505,37 @@ class AdminController
      * and renders the invoices template. If no customer ID is configured,
      * shows an empty list.
      */
+    /**
+     * Billing dashboard — subscription overview, seat usage, plan management.
+     */
+    public function billing(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $org = Organisation::findById($this->db, $orgId);
+        $sub = Subscription::findByOrgId($this->db, $orgId);
+        $seatLimit = Subscription::getSeatLimit($this->db, $orgId);
+
+        // Count active users
+        $activeUsers = User::findByOrgId($this->db, $orgId);
+        $activeCount = count(array_filter($activeUsers, fn($u) => (bool) $u['is_active']));
+
+        $this->response->render('admin/billing', [
+            'user'          => $user,
+            'org'           => $org,
+            'subscription'  => $sub,
+            'seat_limit'    => $seatLimit,
+            'active_users'  => $activeCount,
+            'total_users'   => count($activeUsers),
+            'active_page'   => 'billing',
+            'flash_message' => $_SESSION['flash_message'] ?? null,
+            'flash_error'   => $_SESSION['flash_error']   ?? null,
+        ], 'app');
+
+        unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
     public function invoices(): void
     {
         $user  = $this->auth->user();

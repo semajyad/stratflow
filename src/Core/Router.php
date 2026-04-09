@@ -6,6 +6,7 @@ namespace StratFlow\Core;
 
 use StratFlow\Middleware\AdminMiddleware;
 use StratFlow\Middleware\AuthMiddleware;
+use StratFlow\Middleware\BillingMiddleware;
 use StratFlow\Middleware\CSRFMiddleware;
 use StratFlow\Middleware\SuperadminMiddleware;
 
@@ -138,6 +139,7 @@ class Router
                 'auth'  => (new AuthMiddleware())->handle($this->auth, $this->response),
                 'csrf'  => (new CSRFMiddleware())->handle($this->request, $this->csrf, $this->response),
                 'admin'      => (new AdminMiddleware())->handle($this->auth, $this->response),
+                'billing'    => (new BillingMiddleware())->handle($this->auth, $this->response),
                 'superadmin' => (new SuperadminMiddleware())->handle($this->auth, $this->response),
                 default      => true,
             };
