@@ -12,6 +12,8 @@ $hasNodes   = !empty($nodes);
 $hasSummary = !empty($document_summary);
 ?>
 
+<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
+
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap</h1>
     <div class="flex items-center gap-2">
@@ -136,30 +138,53 @@ $hasSummary = !empty($document_summary);
         <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <?php foreach ($nodes as $node):
-                $hasOkr = !empty($node['okr_title']) && $node['okr_title'] !== ('Achieve: ' . $node['label']);
+            <div class="accordion-list" id="okr-accordion-list">
+            <?php foreach ($nodes as $idx => $node):
+                $hasOkr = !empty($node['okr_title']);
+                // Expand first node by default, collapse others
+                $isOpen = ($idx === 0);
             ?>
-                <div class="node-okr-item" style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);">
+                <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?>">
                     <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
-                    <div style="display: flex; align-items: start; gap: 1rem;">
-                        <span class="badge badge-primary" style="margin-top: 0.15rem; flex-shrink: 0;"><?= htmlspecialchars($node['node_key']) ?></span>
-                        <div style="flex: 1;">
-                            <strong style="font-size: 0.95rem;"><?= htmlspecialchars($node['label']) ?></strong>
-                            <div style="margin-top: 0.5rem;">
-                                <input type="text"
-                                       name="nodes[<?= (int) $node['id'] ?>][okr_title]"
-                                       value="<?= htmlspecialchars($node['okr_title'] ?? '') ?>"
-                                       class="form-control" style="font-size: 0.875rem; margin-bottom: 0.4rem;"
-                                       placeholder="Objective — e.g. Launch AU market presence with 3 pilots by Q3">
-                                <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
-                                          class="form-control" style="font-size: 0.85rem;" rows="2"
-                                          placeholder="KR1: ...&#10;KR2: ...&#10;KR3: ..."
-                                ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
-                            </div>
+                    <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open');">
+                        <span class="badge badge-primary" style="flex-shrink:0;"><?= htmlspecialchars($node['node_key']) ?></span>
+                        <span class="accordion-title"><?= htmlspecialchars($node['label']) ?></span>
+                        <?php if ($hasOkr): ?>
+                            <span class="badge badge-success" style="font-size:0.7rem; flex-shrink:0;">OKR set</span>
+                        <?php else: ?>
+                            <span class="badge badge-secondary" style="font-size:0.7rem; flex-shrink:0;">No OKR</span>
+                        <?php endif; ?>
+                        <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0; margin-left:auto;">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="accordion-body">
+                        <div class="form-group" style="margin-bottom:0.75rem;">
+                            <label class="form-label" style="font-size:0.75rem;">Objective</label>
+                            <input type="text"
+                                   name="nodes[<?= (int) $node['id'] ?>][okr_title]"
+                                   value="<?= htmlspecialchars($node['okr_title'] ?? '') ?>"
+                                   class="form-control" style="font-size:0.875rem;"
+                                   placeholder="e.g. Launch AU market presence with 3 pilots by Q3">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label" style="font-size:0.75rem;">Key Results</label>
+                            <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
+                                      class="form-control" style="font-size:0.85rem;" rows="3"
+                                      placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2&#10;KR3: $500k in committed pipeline by end of Q2"
+                            ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
                         </div>
                     </div>
                 </div>
             <?php endforeach; ?>
+            </div>
+            <script>
+                // Open first accordion item by default
+                (function() {
+                    var first = document.querySelector('#okr-accordion-list .accordion-item');
+                    if (first) first.classList.add('accordion-item--open');
+                })();
+            </script>
             <div style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn btn-primary">Save All OKRs</button>
             </div>

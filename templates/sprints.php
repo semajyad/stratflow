@@ -17,6 +17,8 @@
 <!-- ===========================
      Page Header
      =========================== -->
+<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
+
 <div class="page-header flex justify-between items-center mb-6">
     <div>
         <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Sprint Allocation</h1>

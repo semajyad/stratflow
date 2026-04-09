@@ -92,10 +92,27 @@ class AuthController
                 'email' => $email,
             ]);
 
-            // Redirect to where the user was before session expired, or home
-            $intendedUrl = $_SESSION['_intended_url'] ?? '/app/home';
+            // Redirect to intended URL (if session expired mid-flow), otherwise role-aware default
+            $intendedUrl = $_SESSION['_intended_url'] ?? null;
             unset($_SESSION['_intended_url']);
-            $this->response->redirect($intendedUrl);
+
+            if ($intendedUrl !== null) {
+                $this->response->redirect($intendedUrl);
+                return;
+            }
+
+            // Role-aware landing: viewers with billing flag go to billing,
+            // superadmins go to their dashboard, everyone else goes home.
+            $role = $user['role'] ?? 'user';
+            $hasBilling = (bool) ($user['has_billing_access'] ?? false);
+
+            if ($role === 'superadmin') {
+                $this->response->redirect('/superadmin');
+            } elseif ($role === 'viewer' && $hasBilling) {
+                $this->response->redirect('/app/admin/billing');
+            } else {
+                $this->response->redirect('/app/home');
+            }
         }
 
         AuditLogger::log($this->db, null, AuditLogger::LOGIN_FAILURE, $ip, $ua, [

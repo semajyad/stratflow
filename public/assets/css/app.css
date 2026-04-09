@@ -323,6 +323,22 @@ main.container {
     flex-shrink: 0;
 }
 
+.sidebar-section-label {
+    padding: 1rem 1.25rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.sidebar-section-label:first-child {
+    padding-top: 0.5rem;
+}
+
+.nav-dot {
+    flex-shrink: 0;
+}
+
 .app-main {
     margin-left: var(--sidebar-width);
     flex: 1;
@@ -2921,9 +2937,200 @@ tbody tr:hover {
 .workflow-nav {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border);
+}
+
+/* ===========================
+   Accordion (used on Diagram OKRs)
+   =========================== */
+.accordion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 1.25rem 1rem;
+}
+
+.accordion-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 150ms ease;
+}
+
+.accordion-item--complete {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.accordion-item--open {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text);
+    transition: background 150ms ease;
+}
+
+.accordion-header:hover {
+    background: rgba(79, 70, 229, 0.04);
+}
+
+.accordion-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.accordion-chevron {
+    color: var(--text-muted);
+    transition: transform 200ms ease;
+}
+
+.accordion-item--open .accordion-chevron {
+    transform: rotate(180deg);
+}
+
+.accordion-body {
+    display: none;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+}
+
+.accordion-item--open .accordion-body {
+    display: block;
+}
+
+/* ===========================
+   Workflow Stepper (top of page)
+   =========================== */
+.workflow-stepper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    overflow-x: auto;
+}
+
+.stepper-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex: 1 1 0;
+    min-width: 70px;
+    padding: 0.25rem;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    position: relative;
+    transition: color 150ms ease;
+}
+
+.stepper-step::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: calc(50% + 18px);
+    right: calc(-50% + 18px);
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+}
+.stepper-step:last-child::after { display: none; }
+
+.stepper-step-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--border);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 150ms ease;
+    position: relative;
+    z-index: 1;
+}
+
+.stepper-step-label {
+    text-align: center;
+    line-height: 1.2;
+    transition: color 150ms ease;
+}
+
+.stepper-step--complete .stepper-step-circle {
+    background: var(--success, #059669);
+    border-color: var(--success, #059669);
+    color: #fff;
+}
+.stepper-step--complete::after {
+    background: var(--success, #059669);
+}
+.stepper-step--complete .stepper-step-label {
+    color: var(--text);
+}
+.stepper-step--complete:hover .stepper-step-label {
+    color: var(--primary);
+}
+
+.stepper-step--current .stepper-step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+.stepper-step--current .stepper-step-label {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.stepper-step--upcoming:hover .stepper-step-circle {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.stepper-step--upcoming:hover .stepper-step-label {
+    color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .stepper-step-label {
+        display: none;
+    }
+    .stepper-step {
+        min-width: 40px;
+    }
+    .workflow-stepper {
+        padding: 0.75rem 1rem;
+    }
 }
 
 /* ===========================

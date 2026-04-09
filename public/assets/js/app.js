@@ -1194,3 +1194,120 @@ function togglePassword(btn) {
         eyeOff.style.display = 'none';
     }
 }
+
+// ===========================
+// Jira Sync Preview Modal
+// ===========================
+function showJiraSyncPreview(form) {
+    var projectId = form.dataset.projectId;
+    var syncType  = form.dataset.syncType || 'all';
+    var jiraKey   = form.dataset.jiraKey || '';
+    var csrfToken = form.querySelector('input[name="_csrf_token"]').value;
+
+    // Create or reuse modal
+    var modal = document.getElementById('jira-sync-preview-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'jira-sync-preview-modal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = '<div class="card" style="max-width:560px; width:90%; margin:0;">' +
+        '<div class="card-header flex justify-between items-center">' +
+            '<h2 class="card-title" style="margin:0;">Preview Jira Sync</h2>' +
+            '<button type="button" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>' +
+        '</div>' +
+        '<div class="card-body" id="jira-preview-body">' +
+            '<div style="text-align:center; padding:1.5rem;">' +
+                '<div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>' +
+                '<p class="text-muted" style="margin:0; font-size:0.875rem;">Checking what will be synced to ' + jiraKey + '...</p>' +
+            '</div>' +
+        '</div>' +
+        '</div>';
+
+    // Fetch preview
+    var formData = new FormData();
+    formData.append('_csrf_token', csrfToken);
+    formData.append('project_id', projectId);
+
+    fetch('/app/jira/sync/preview', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var body = document.getElementById('jira-preview-body');
+        if (!body) return;
+
+        if (data.error) {
+            body.innerHTML = '<p style="color:var(--danger); margin:0;">Error: ' + escapeHtml(data.error) + '</p>' +
+                '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
+                    '<button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Close</button>' +
+                '</div>';
+            return;
+        }
+
+        var pushCount = (data.push || []).length;
+        var pullCount = (data.pull || []).length;
+
+        var html = '<p class="text-muted" style="font-size:0.875rem; margin:0 0 1rem;">Review what will happen when you sync to <strong>' + escapeHtml(jiraKey) + '</strong>:</p>';
+
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">';
+        html += '  <div style="padding:1rem; background:#eff6ff; border-radius:8px; text-align:center;">';
+        html += '    <div style="font-size:1.75rem; font-weight:700; color:var(--primary);">' + pushCount + '</div>';
+        html += '    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">To Push</div>';
+        html += '  </div>';
+        html += '  <div style="padding:1rem; background:#f0fdf4; border-radius:8px; text-align:center;">';
+        html += '    <div style="font-size:1.75rem; font-weight:700; color:#059669;">' + pullCount + '</div>';
+        html += '    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">To Import</div>';
+        html += '  </div>';
+        html += '</div>';
+
+        if (pushCount > 0) {
+            html += '<details style="margin-bottom:0.75rem;"><summary style="cursor:pointer; font-size:0.85rem; font-weight:600;">Items to push (' + pushCount + ')</summary>';
+            html += '<ul style="margin:0.5rem 0 0; padding-left:1.5rem; font-size:0.85rem; max-height:200px; overflow-y:auto;">';
+            (data.push || []).forEach(function(item) {
+                var action = item.action === 'create' ? '<span style="color:var(--primary);">NEW</span>' : '<span style="color:#059669;">UPDATE</span>';
+                html += '<li>' + action + ' ' + escapeHtml(item.type) + ': ' + escapeHtml(item.title || '') + '</li>';
+            });
+            html += '</ul></details>';
+        }
+
+        if (pullCount > 0) {
+            html += '<details style="margin-bottom:0.75rem;"><summary style="cursor:pointer; font-size:0.85rem; font-weight:600;">Items to import from Jira (' + pullCount + ')</summary>';
+            html += '<ul style="margin:0.5rem 0 0; padding-left:1.5rem; font-size:0.85rem; max-height:200px; overflow-y:auto;">';
+            (data.pull || []).forEach(function(item) {
+                html += '<li>' + escapeHtml(item.type) + ': ' + escapeHtml(item.title || '') + ' <span class="text-muted">(' + escapeHtml(item.key || '') + ')</span></li>';
+            });
+            html += '</ul></details>';
+        }
+
+        if (pushCount === 0 && pullCount === 0) {
+            html += '<p style="text-align:center; padding:1rem; color:var(--text-muted); margin:0;">Everything is already in sync. No changes to push or pull.</p>';
+        }
+
+        html += '<div class="flex justify-end gap-2" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">';
+        html += '  <button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Cancel</button>';
+        if (pushCount > 0 || pullCount > 0) {
+            html += '  <button type="button" class="btn btn-primary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove(); document.querySelector(\'.jira-sync-form[data-project-id=\\\''+projectId+'\\\']\').submit();">Confirm Sync</button>';
+        }
+        html += '</div>';
+
+        body.innerHTML = html;
+    })
+    .catch(function(err) {
+        var body = document.getElementById('jira-preview-body');
+        if (body) {
+            body.innerHTML = '<p style="color:var(--danger);">Failed to load preview: ' + escapeHtml(err.message) + '</p>' +
+                '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
+                    '<button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Close</button>' +
+                    '<button type="button" class="btn btn-primary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove(); document.querySelector(\'.jira-sync-form[data-project-id=\\\''+projectId+'\\\']\').submit();">Sync Anyway</button>' +
+                '</div>';
+        }
+    });
+}
+

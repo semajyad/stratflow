@@ -36,6 +36,7 @@
         </div>
     </div>
     <?php include __DIR__ . '/../partials/sounding-board-modal.php'; ?>
+    <?php include __DIR__ . '/../partials/onboarding-wizard.php'; ?>
     <script src="/assets/js/app.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/app.js') ?: '1' ?>"></script>
 </body>
 </html>

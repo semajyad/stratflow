@@ -32,29 +32,54 @@ $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
         <a href="/app/home" class="nav-link <?= ($active_page ?? '') === 'home' ? 'active' : '' ?>">
             Home
         </a>
+
+        <?php
+        // Compute step completion for dots next to each workflow nav link
+        $sidebar_completion = [];
+        if ($pid) {
+            try {
+                $sidebar_completion = \StratFlow\Controllers\HomeController::computeStepCompletion(
+                    \StratFlow\Core\Database::getInstance(),
+                    $pid
+                );
+            } catch (\Throwable $e) { /* non-critical */ }
+        }
+        $stepDot = function(string $key) use ($sidebar_completion) {
+            if (empty($sidebar_completion)) return '';
+            $done = !empty($sidebar_completion[$key]);
+            $color = $done ? '#059669' : 'rgba(255,255,255,0.2)';
+            return '<span class="nav-dot" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:' . $color . '; margin-left:auto;"></span>';
+        };
+        ?>
+
+        <div class="sidebar-section-label">Plan</div>
         <a href="/app/upload<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'upload' ? 'active' : '' ?>">
-            Document Upload
+            Document Upload <?= $stepDot('upload') ?>
         </a>
         <a href="/app/diagram<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'diagram' ? 'active' : '' ?>">
-            Strategy Roadmap
+            Strategy Roadmap <?= $stepDot('diagram') ?>
         </a>
         <a href="/app/work-items<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
-            Work Items
+            Work Items <?= $stepDot('work-items') ?>
         </a>
+
+        <div class="sidebar-section-label">Execute</div>
         <a href="/app/prioritisation<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'prioritisation' ? 'active' : '' ?>">
-            Prioritisation
+            Prioritisation <?= $stepDot('prioritisation') ?>
         </a>
         <a href="/app/risks<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'risks' ? 'active' : '' ?>">
-            Risk Modelling
+            Risk Modelling <?= $stepDot('risks') ?>
         </a>
         <a href="/app/user-stories<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
-            User Stories
+            User Stories <?= $stepDot('user-stories') ?>
         </a>
         <a href="/app/sprints<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">
-            Sprint Allocation
+            Sprint Allocation <?= $stepDot('sprints') ?>
         </a>
+
+        <div class="sidebar-section-label">Monitor</div>
         <a href="/app/governance<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'governance' ? 'active' : '' ?>">
-            Governance
+            Governance <?= $stepDot('governance') ?>
         </a>
 
         <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>

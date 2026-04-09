@@ -1,20 +1,21 @@
 <?php
 /**
- * Workflow Navigation Partial
+ * Workflow Navigation (bottom of page)
  *
- * Renders Back / Forward buttons based on the current $active_page variable.
- * Include at the bottom of each workflow step template. Requires $project and
- * $active_page to be set in the rendering scope.
+ * Simple prev/next buttons with step counter. Used at the bottom of
+ * each workflow page. The stepper at the top is a separate partial.
+ *
+ * Required: $project and $active_page set in rendering scope.
  */
 
 $steps = [
     'upload'         => ['label' => 'Document Upload',  'url' => '/app/upload'],
     'diagram'        => ['label' => 'Strategy Roadmap', 'url' => '/app/diagram'],
-    'work-items'     => ['label' => 'Work Items',        'url' => '/app/work-items'],
+    'work-items'     => ['label' => 'Work Items',       'url' => '/app/work-items'],
     'prioritisation' => ['label' => 'Prioritisation',   'url' => '/app/prioritisation'],
     'risks'          => ['label' => 'Risk Modelling',   'url' => '/app/risks'],
     'user-stories'   => ['label' => 'User Stories',     'url' => '/app/user-stories'],
-    'sprints'        => ['label' => 'Sprint Allocation', 'url' => '/app/sprints'],
+    'sprints'        => ['label' => 'Sprint Allocation','url' => '/app/sprints'],
     'governance'     => ['label' => 'Governance',       'url' => '/app/governance'],
 ];
 
@@ -45,6 +46,8 @@ $nextStep     = ($currentIndex !== false && $currentIndex < count($stepKeys) - 1
         <a href="<?= $nextStep['url'] ?>?project_id=<?= (int) ($project['id'] ?? 0) ?>" class="btn btn-primary">
             <?= htmlspecialchars($nextStep['label']) ?> &rarr;
         </a>
+    <?php else: ?>
+        <span></span>
     <?php endif; ?>
 </div>
 <?php endif; ?>

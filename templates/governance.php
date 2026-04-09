@@ -13,6 +13,8 @@
 <!-- ===========================
      Page Header
      =========================== -->
+<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
+
 <div class="page-header flex justify-between items-center mb-6">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Governance</h1>
     <div class="flex items-center gap-2">

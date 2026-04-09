@@ -18,6 +18,8 @@ function formatFileSize(int $bytes): string {
 }
 ?>
 
+<?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
+
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Document Upload</h1>
     <?php if ($hasSummary): ?>
