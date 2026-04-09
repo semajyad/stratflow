@@ -18,4 +18,3 @@ tests/Playwright/test-results/
 .claude/.playwright-ok
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/
-# playwright-gate-test
