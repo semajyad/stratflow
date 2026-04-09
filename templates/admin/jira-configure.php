@@ -182,6 +182,23 @@ $fm = $current_config['field_mapping'] ?? [];
                     <?php endif; ?>
                     <small class="text-muted">Usually "Story point estimate" (customfield_10016).</small>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Team Field</label>
+                    <?php if (!empty($jira_fields)): ?>
+                        <select name="team_field" class="form-input">
+                            <option value="">None</option>
+                            <?php foreach ($jira_fields as $f): ?>
+                                <option value="<?= htmlspecialchars($f['id']) ?>"
+                                        <?= ($fm['team_field'] ?? 'customfield_10001') === $f['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($f['name']) ?> (<?= htmlspecialchars($f['id']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" name="team_field" class="form-input" value="<?= htmlspecialchars($fm['team_field'] ?? 'customfield_10001') ?>" placeholder="customfield_10001">
+                    <?php endif; ?>
+                    <small class="text-muted">Maps the "Team" field for team assignment on stories.</small>
+                </div>
             </div>
         </div>
     </section>

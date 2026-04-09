@@ -317,6 +317,7 @@ class IntegrationController
             'risk_type'          => trim((string) $this->request->post('risk_type', 'Risk')),
             'epic_name_field'    => trim((string) $this->request->post('epic_name_field', 'customfield_10011')),
             'story_points_field' => trim((string) $this->request->post('story_points_field', 'customfield_10016')),
+            'team_field'         => trim((string) $this->request->post('team_field', 'customfield_10001')),
             'board_id'           => (int) $this->request->post('board_id', 0),
         ];
 
@@ -808,5 +809,135 @@ class IntegrationController
         }
 
         $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
+    }
+
+    // =========================================================================
+    // JIRA TEAM IMPORT
+    // =========================================================================
+
+    /**
+     * Import teams from Jira.
+     *
+     * In Jira, teams typically map to boards — each board represents
+     * a team's workspace. This imports all boards from the configured
+     * Jira project as StratFlow teams, plus any team names found in
+     * the Team custom field on existing issues.
+     */
+    public function jiraImportTeams(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        if (!$integration || $integration['status'] !== 'active') {
+            $_SESSION['flash_error'] = 'Jira integration is not active.';
+            $this->response->redirect('/app/admin/teams');
+            return;
+        }
+
+        $config = json_decode($integration['config_json'] ?? '{}', true) ?: [];
+        $projectKey = $config['project_key'] ?? '';
+        if (!$projectKey) {
+            $_SESSION['flash_error'] = 'No Jira project configured. Go to Integrations → Configure.';
+            $this->response->redirect('/app/admin/teams');
+            return;
+        }
+
+        try {
+            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $created = 0;
+            $skipped = 0;
+
+            // Load existing teams for dedup
+            $existingTeams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
+            $existingNames = array_map(fn($t) => strtolower($t['name']), $existingTeams);
+
+            // 1. Import boards as teams (board = team in Jira)
+            try {
+                $boardsResult = $jira->getBoards($projectKey);
+                foreach ($boardsResult['values'] ?? [] as $board) {
+                    $boardName = $board['name'] ?? 'Board ' . $board['id'];
+                    // Clean up board name — remove project key prefix if present
+                    $teamName = preg_replace('/^' . preg_quote($projectKey, '/') . '\s*/', '', $boardName);
+                    $teamName = trim($teamName) ?: $boardName;
+
+                    if (!in_array(strtolower($teamName), $existingNames)) {
+                        \StratFlow\Models\Team::create($this->db, [
+                            'org_id'      => $orgId,
+                            'name'        => $teamName,
+                            'description' => "Jira board: {$boardName} (ID: {$board['id']})",
+                            'capacity'    => 0,
+                        ]);
+                        $existingNames[] = strtolower($teamName);
+                        $created++;
+                    } else {
+                        $skipped++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[JiraTeamImport] Board import failed: ' . $e->getMessage());
+            }
+
+            // 2. Discover team names from the Team custom field on issues
+            $teamField = $config['field_mapping']['team_field'] ?? '';
+            if ($teamField) {
+                try {
+                    $result = $jira->searchIssues(
+                        "project = {$projectKey} AND {$teamField} IS NOT EMPTY",
+                        [$teamField],
+                        100
+                    );
+
+                    foreach ($result['issues'] ?? [] as $issue) {
+                        $val = $issue['fields'][$teamField] ?? null;
+                        $name = null;
+                        if (is_string($val) && $val !== '') {
+                            $name = $val;
+                        } elseif (is_array($val)) {
+                            $name = $val['value'] ?? $val['name'] ?? null;
+                        }
+
+                        if ($name && !in_array(strtolower($name), $existingNames)) {
+                            \StratFlow\Models\Team::create($this->db, [
+                                'org_id'      => $orgId,
+                                'name'        => $name,
+                                'description' => 'Discovered from Jira Team field',
+                                'capacity'    => 0,
+                            ]);
+                            $existingNames[] = strtolower($name);
+                            $created++;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Non-critical
+                }
+            }
+
+            // 3. Import project roles as teams
+            try {
+                $roles = $jira->getProjectRoles($projectKey);
+                foreach ($roles as $roleName => $roleUrl) {
+                    if (in_array($roleName, ['atlassian-addons-project-access'])) continue;
+                    if (!in_array(strtolower($roleName), $existingNames)) {
+                        \StratFlow\Models\Team::create($this->db, [
+                            'org_id'      => $orgId,
+                            'name'        => $roleName,
+                            'description' => "Jira project role",
+                            'capacity'    => 0,
+                        ]);
+                        $existingNames[] = strtolower($roleName);
+                        $created++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Non-critical
+            }
+
+            $_SESSION['flash_message'] = "Jira team import: {$created} created" . ($skipped > 0 ? ", {$skipped} already existed" : '') . '.';
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Failed to import teams: ' . $e->getMessage();
+        }
+
+        $this->response->redirect('/app/admin/teams');
     }
 }

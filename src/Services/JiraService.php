@@ -200,7 +200,8 @@ class JiraService
      */
     public function getIssueTypes(string $projectKey): array
     {
-        return $this->makeAuthenticatedRequest('GET', '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes');
+        $result = $this->makeAuthenticatedRequest('GET', '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes');
+        return $result['issueTypes'] ?? $result['values'] ?? $result;
     }
 
     /**
@@ -319,6 +320,14 @@ class JiraService
     public function getBoards(string $projectKey): array
     {
         return $this->makeAuthenticatedRequest('GET', '/rest/agile/1.0/board?projectKeyOrId=' . urlencode($projectKey));
+    }
+
+    /**
+     * Get project roles (returns role name => URL mapping).
+     */
+    public function getProjectRoles(string $projectKey): array
+    {
+        return $this->makeAuthenticatedRequest('GET', '/rest/api/3/project/' . urlencode($projectKey) . '/role');
     }
 
     /**

@@ -13,11 +13,23 @@
 <!-- ===========================
      Page Header
      =========================== -->
-<div class="page-header">
-    <h1 class="page-title">Team Management</h1>
-    <p class="page-subtitle">
-        <a href="/app/admin">&larr; Back to Administration</a>
-    </p>
+<div class="page-header flex justify-between items-center">
+    <div>
+        <h1 class="page-title">Team Management</h1>
+        <p class="page-subtitle">
+            <a href="/app/admin">&larr; Back to Administration</a>
+        </p>
+    </div>
+    <form method="POST" action="/app/admin/integrations/jira/import-teams" class="inline-form"
+          data-loading="Importing teams..."
+          data-overlay="Importing teams from Jira project roles and team fields.">
+        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+        <button type="submit" class="btn btn-secondary btn-sm"
+                onclick="return confirm('Import teams from Jira? This will create new teams from Jira project roles and team field values.')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
+            Import Teams from Jira
+        </button>
+    </form>
 </div>
 
 <!-- ===========================

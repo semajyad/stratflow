@@ -264,6 +264,12 @@ class JiraSyncService
                         $fields[$spField] = (float) $story['size'];
                     }
 
+                    // Team field
+                    $teamField = $this->mapping('team_field', '');
+                    if ($teamField && !empty($story['team_assigned'])) {
+                        $fields[$teamField] = $story['team_assigned'];
+                    }
+
                     // Link to parent Epic if available
                     if (!empty($story['parent_hl_item_id'])) {
                         $parentMapping = SyncMapping::findByLocalItem(
