@@ -1259,4 +1259,205 @@ class JiraSyncService
         }
         return $row;
     }
+
+    // ===========================
+    // PUSH: OKRs -> ATLASSIAN GOALS
+    // ===========================
+
+    /**
+     * Push OKRs from diagram nodes to Atlassian Goals.
+     *
+     * Each unique OKR title becomes a Goal. OKR descriptions become
+     * the goal description. Uses the Atlassian GraphQL Gateway API.
+     *
+     * @param int $projectId StratFlow project ID
+     * @return array {created: int, skipped: int, errors: int}
+     */
+    public function pushOkrsToGoals(int $projectId): array
+    {
+        $counts = ['created' => 0, 'skipped' => 0, 'errors' => 0];
+
+        $siteUrl = $this->integration['site_url'] ?? '';
+        $cloudId = $this->integration['cloud_id'] ?? '';
+        if (!$cloudId || !$siteUrl) {
+            return $counts;
+        }
+
+        // Get OKRs from work items (they have okr_title/okr_description)
+        $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
+
+        // Deduplicate OKRs by title
+        $okrs = [];
+        foreach ($workItems as $item) {
+            $title = trim($item['okr_title'] ?? '');
+            if ($title !== '' && !isset($okrs[$title])) {
+                $okrs[$title] = [
+                    'title'       => $title,
+                    'description' => trim($item['okr_description'] ?? ''),
+                    'work_items'  => [],
+                ];
+            }
+            if ($title !== '') {
+                $okrs[$title]['work_items'][] = $item['title'];
+            }
+        }
+
+        if (empty($okrs)) {
+            return $counts;
+        }
+
+        // Get existing goals to avoid duplicates
+        $existingGoals = $this->getAtlassianGoals($cloudId, $siteUrl);
+        $existingNames = array_map(fn($g) => strtolower($g['name']), $existingGoals);
+
+        // Get goal type ID from an existing goal, or skip if none exist
+        $goalTypeId = $this->getGoalTypeId($cloudId, $siteUrl, $existingGoals);
+
+        foreach ($okrs as $okr) {
+            try {
+                if (in_array(strtolower($okr['title']), $existingNames)) {
+                    $counts['skipped']++;
+                    continue;
+                }
+
+                // Build description with linked work items
+                $desc = $okr['description'];
+                if (!empty($okr['work_items'])) {
+                    $desc .= ($desc ? "\n\n" : '') . "Linked Work Items:\n- " . implode("\n- ", $okr['work_items']);
+                }
+
+                $result = $this->createAtlassianGoal($cloudId, $siteUrl, $okr['title'], $desc, $goalTypeId);
+                if ($result) {
+                    $counts['created']++;
+
+                    SyncLog::create($this->db, [
+                        'integration_id' => (int) $this->integration['id'],
+                        'direction'      => 'push',
+                        'action'         => 'create',
+                        'local_type'     => 'hl_work_item',
+                        'local_id'       => null,
+                        'external_id'    => $result['key'] ?? $result['id'] ?? null,
+                        'details_json'   => json_encode(['type' => 'goal', 'title' => $okr['title'], 'url' => $result['url'] ?? '']),
+                        'status'         => 'success',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                error_log('[GoalsSync] Failed to create goal: ' . $e->getMessage());
+                $counts['errors']++;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Query existing Atlassian Goals.
+     */
+    private function getAtlassianGoals(string $cloudId, string $siteUrl): array
+    {
+        $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
+        $containerId = "ari:cloud:townsquare::site/{$cloudId}";
+
+        $query = 'query ListGoals { goals_search(containerId: "' . $containerId . '", first: 50) { edges { node { id name key url } } } }';
+
+        $response = $this->graphqlRequest($graphqlUrl, $query);
+        $goals = [];
+        foreach ($response['data']['goals_search']['edges'] ?? [] as $edge) {
+            $goals[] = $edge['node'];
+        }
+        return $goals;
+    }
+
+    /**
+     * Get the default goal type ID from an existing goal.
+     */
+    private function getGoalTypeId(string $cloudId, string $siteUrl, array $existingGoals): ?string
+    {
+        if (empty($existingGoals)) {
+            return null;
+        }
+
+        $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
+        $goalId = $existingGoals[0]['id'];
+
+        $query = 'query GT { goals_byId(goalId: "' . $goalId . '") { goalType @optIn(to: "Townsquare") { id } } }';
+        $response = $this->graphqlRequest($graphqlUrl, $query);
+        return $response['data']['goals_byId']['goalType']['id'] ?? null;
+    }
+
+    /**
+     * Create a goal via the Atlassian GraphQL API.
+     */
+    private function createAtlassianGoal(string $cloudId, string $siteUrl, string $name, string $description, ?string $goalTypeId): ?array
+    {
+        $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
+        $containerId = "ari:cloud:townsquare::site/{$cloudId}";
+
+        $input = 'containerId: "' . $containerId . '", name: "' . addslashes($name) . '"';
+        if ($goalTypeId) {
+            $input .= ', goalTypeId: "' . $goalTypeId . '"';
+        }
+
+        $mutation = 'mutation CG { goals_create(input: { ' . $input . ' }) { goal { id name url key } } }';
+
+        $response = $this->graphqlRequest($graphqlUrl, $mutation);
+        $goal = $response['data']['goals_create']['goal'] ?? null;
+
+        // If created, update description
+        if ($goal && $description !== '') {
+            $adfDesc = json_encode([
+                'type' => 'doc', 'version' => 1,
+                'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $description]]]],
+            ]);
+            $editMutation = 'mutation ED { goals_edit(input: { goalId: "' . $goal['id'] . '", description: ' . json_encode($adfDesc) . ' }) { goal { id } } }';
+            try {
+                $this->graphqlRequest($graphqlUrl, $editMutation);
+            } catch (\Throwable $e) {
+                // Description update failed — goal still created
+            }
+        }
+
+        return $goal;
+    }
+
+    /**
+     * Make a GraphQL request to the Atlassian gateway.
+     * Uses basic auth with Jira API token.
+     */
+    private function graphqlRequest(string $url, string $query): array
+    {
+        $apiToken = $_ENV['JIRA_API_TOKEN'] ?? '';
+        $email = $_ENV['JIRA_EMAIL'] ?? 'jimmybobday@gmail.com';
+
+        if ($apiToken === '') {
+            throw new \RuntimeException('JIRA_API_TOKEN env var required for Goals API');
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode(['query' => $query]),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Basic ' . base64_encode($email . ':' . $apiToken),
+            ],
+            CURLOPT_TIMEOUT => 15,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || $response === false) {
+            throw new \RuntimeException("Goals GraphQL API returned HTTP {$httpCode}");
+        }
+
+        $data = json_decode($response, true);
+        if (!empty($data['errors'])) {
+            throw new \RuntimeException('Goals API error: ' . ($data['errors'][0]['message'] ?? 'Unknown'));
+        }
+
+        return $data;
+    }
 }

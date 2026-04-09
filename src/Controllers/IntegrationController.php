@@ -971,8 +971,18 @@ class IntegrationController
                 }
             }
 
-            // Log item counts for debugging
-            error_log("[JiraSync] Project {$projectId} ({$jiraKey}): syncType={$syncType}, results=" . json_encode($results));
+            // Push OKRs to Atlassian Goals (always, regardless of sync_type)
+            if ($syncType === 'all' || $syncType === 'work_items') {
+                try {
+                    $goalsResult = $syncService->pushOkrsToGoals($projectId);
+                    if ($goalsResult['created'] > 0 || $goalsResult['errors'] > 0) {
+                        $results['push_goals'] = $goalsResult;
+                    }
+                } catch (\Throwable $e) {
+                    // Goals API optional — don't fail the whole sync
+                    error_log("[JiraSync] Goals push failed (non-critical): " . $e->getMessage());
+                }
+            }
 
             // Pull Jira changes back to StratFlow
             $pullResult = $syncService->pullChanges($projectId, $jiraKey);
