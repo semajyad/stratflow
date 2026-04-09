@@ -49,6 +49,11 @@ return [
     'openai' => [
         'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
     ],
+    'jira' => [
+        'client_id'     => $_ENV['JIRA_CLIENT_ID'] ?? '',
+        'client_secret' => $_ENV['JIRA_CLIENT_SECRET'] ?? '',
+        'redirect_uri'  => ($_ENV['APP_URL'] ?? '') . '/app/admin/integrations/jira/callback',
+    ],
     'stripe' => [
         'publishable_key' => $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
         'secret_key' => $_ENV['STRIPE_SECRET_KEY'] ?? '',

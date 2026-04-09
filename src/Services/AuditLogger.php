@@ -35,7 +35,11 @@ class AuditLogger
     public const PROJECT_CREATED       = 'project_created';
     public const PROJECT_DELETED       = 'project_deleted';
     public const DOCUMENT_UPLOADED     = 'document_uploaded';
-    public const API_KEY_USED          = 'api_key_used';
+    public const API_KEY_USED               = 'api_key_used';
+    public const INTEGRATION_CONNECTED      = 'integration_connected';
+    public const INTEGRATION_DISCONNECTED   = 'integration_disconnected';
+    public const INTEGRATION_SYNC           = 'integration_sync';
+    public const INTEGRATION_WEBHOOK        = 'integration_webhook';
 
     // ===========================
     // LOGGING

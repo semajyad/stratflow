@@ -21,6 +21,13 @@
         <?php if ($item['requires_review'] ?? false): ?>
             <span class="badge badge-warning">Requires Review</span>
         <?php endif; ?>
+        <?php if (!empty($item['jira_url'])): ?>
+            <a href="<?= htmlspecialchars($item['jira_url']) ?>" target="_blank" rel="noopener"
+               title="Synced to Jira: <?= htmlspecialchars($item['jira_key'] ?? '') ?>"
+               class="badge badge-info" style="text-decoration: none; font-size: 0.75rem;">
+                Jira: <?= htmlspecialchars($item['jira_key'] ?? '') ?>
+            </a>
+        <?php endif; ?>
         <?php if (!empty($item['dependencies'])): ?>
             <span class="badge badge-info" title="Depends on: <?= htmlspecialchars($item['dependency_titles']) ?>">
                 &#x2190; Depends on <?= count($item['dependencies']) ?>

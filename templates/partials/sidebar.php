@@ -60,6 +60,9 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
             <a href="/app/admin" class="nav-link <?= ($active_page ?? '') === 'admin' ? 'active' : '' ?>">
                 &#9881; Administration
             </a>
+            <a href="/app/admin/integrations" class="nav-link <?= ($active_page ?? '') === 'integrations' ? 'active' : '' ?>">
+                Integrations
+            </a>
         <?php endif; ?>
 
         <?php if (($user['role'] ?? '') === 'superadmin'): ?>

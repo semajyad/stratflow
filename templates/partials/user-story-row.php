@@ -19,6 +19,13 @@
     <div class="story-info">
         <strong><?= htmlspecialchars($story['title']) ?></strong>
         <span class="badge badge-secondary"><?= htmlspecialchars($story['parent_title'] ?? 'Unlinked') ?></span>
+        <?php if (!empty($story['jira_url'])): ?>
+            <a href="<?= htmlspecialchars($story['jira_url']) ?>" target="_blank" rel="noopener"
+               title="Synced to Jira: <?= htmlspecialchars($story['jira_key'] ?? '') ?>"
+               class="badge badge-info" style="text-decoration: none; font-size: 0.75rem;">
+                Jira: <?= htmlspecialchars($story['jira_key'] ?? '') ?>
+            </a>
+        <?php endif; ?>
         <?php if ($story['requires_review'] ?? false): ?>
             <span class="badge badge-warning">Requires Review</span>
         <?php endif; ?>
