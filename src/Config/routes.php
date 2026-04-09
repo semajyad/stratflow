@@ -110,7 +110,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/sounding-board/history',               'SoundingBoardController@history',  ['auth']);
 
     // Jira sync from workflow pages
-    $router->add('POST', '/app/jira/sync', 'IntegrationController@contextualSync', ['auth', 'csrf']);
+    $router->add('POST', '/app/jira/sync',         'IntegrationController@contextualSync', ['auth', 'csrf']);
+    $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth']);
 
     // Project management
     $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira', ['auth', 'csrf']);
@@ -126,6 +127,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/integrations/jira/configure',  'IntegrationController@jiraSaveConfigure',['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/integrations/jira/push',       'IntegrationController@jiraPush',         ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/integrations/jira/pull',       'IntegrationController@jiraPull',         ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/integrations/sync-log/export',  'IntegrationController@syncLogExport',    ['auth', 'admin']);
     $router->add('GET',  '/app/admin/integrations/sync-log',        'IntegrationController@syncLog',          ['auth', 'admin']);
     $router->add('POST', '/app/admin/integrations/jira/import-teams', 'IntegrationController@jiraImportTeams', ['auth', 'admin', 'csrf']);
     $router->add('POST', '/webhook/integration/jira',               'IntegrationController@jiraWebhook');

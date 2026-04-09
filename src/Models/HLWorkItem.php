@@ -38,10 +38,10 @@ class HLWorkItem
         $db->query(
             "INSERT INTO hl_work_items
                 (project_id, diagram_id, priority_number, title, description,
-                 strategic_context, okr_title, okr_description, owner, estimated_sprints)
+                 strategic_context, okr_title, okr_description, owner, estimated_sprints, status)
              VALUES
                 (:project_id, :diagram_id, :priority_number, :title, :description,
-                 :strategic_context, :okr_title, :okr_description, :owner, :estimated_sprints)",
+                 :strategic_context, :okr_title, :okr_description, :owner, :estimated_sprints, :status)",
             [
                 ':project_id'        => $data['project_id'],
                 ':diagram_id'        => $data['diagram_id'] ?? null,
@@ -53,6 +53,7 @@ class HLWorkItem
                 ':okr_description'   => $data['okr_description'] ?? null,
                 ':owner'             => $data['owner'] ?? null,
                 ':estimated_sprints' => $data['estimated_sprints'] ?? 2,
+                ':status'            => $data['status'] ?? 'backlog',
             ]
         );
 

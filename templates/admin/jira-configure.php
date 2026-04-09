@@ -140,13 +140,16 @@ $fm = $current_config['field_mapping'] ?? [];
         </div>
     </section>
 
-    <!-- Custom Field Mapping -->
+    <!-- Standard Field Mapping -->
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Custom Field Mapping</h2></div>
         <div class="card-body">
             <p class="text-muted mb-4" style="font-size: 0.875rem;">
                 Map StratFlow data to Jira custom fields. These vary by Jira instance — select the correct fields for your setup.
             </p>
+
+            <!-- Standard Mappings -->
+            <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Standard Mappings</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 700px;">
                 <div class="form-group">
                     <label class="form-label">Epic Name Field</label>
@@ -200,8 +203,147 @@ $fm = $current_config['field_mapping'] ?? [];
                     <small class="text-muted">Maps the "Team" field for team assignment on stories.</small>
                 </div>
             </div>
+
+            <!-- Additional Field Mappings -->
+            <?php
+            $customMappings = $fm['custom_mappings'] ?? [];
+            $stratflowFields = [
+                'title'             => 'Title',
+                'description'       => 'Description',
+                'owner'             => 'Owner',
+                'status'            => 'Status',
+                'priority_number'   => 'Priority Number',
+                'estimated_sprints' => 'Estimated Sprints',
+                'strategic_context' => 'Strategic Context',
+                'size'              => 'Size (Story Points)',
+                'blocked_by'        => 'Blocked By',
+            ];
+            ?>
+            <h3 style="font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Additional Field Mappings</h3>
+            <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.75rem;">
+                Map additional StratFlow fields to Jira custom fields with a sync direction.
+            </p>
+            <table id="custom-mappings-table" style="width: 100%; max-width: 800px; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border-color, #dee2e6);">
+                        <th style="padding: 0.5rem; font-size: 0.85rem;">StratFlow Field</th>
+                        <th style="padding: 0.5rem; font-size: 0.85rem;">Jira Field</th>
+                        <th style="padding: 0.5rem; font-size: 0.85rem;">Sync Direction</th>
+                        <th style="padding: 0.5rem; width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="custom-mappings-body">
+                    <?php foreach ($customMappings as $idx => $cm): ?>
+                    <tr class="custom-mapping-row" style="border-bottom: 1px solid var(--border-color, #dee2e6);">
+                        <td style="padding: 0.5rem;">
+                            <select name="custom_mappings[<?= $idx ?>][stratflow_field]" class="form-input" style="font-size: 0.85rem;">
+                                <option value="">Select...</option>
+                                <?php foreach ($stratflowFields as $sfKey => $sfLabel): ?>
+                                    <option value="<?= htmlspecialchars($sfKey) ?>"
+                                            <?= ($cm['stratflow_field'] ?? '') === $sfKey ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($sfLabel) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                        <td style="padding: 0.5rem;">
+                            <?php if (!empty($jira_fields)): ?>
+                                <select name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input" style="font-size: 0.85rem;">
+                                    <option value="">Select...</option>
+                                    <?php foreach ($jira_fields as $f): ?>
+                                        <option value="<?= htmlspecialchars($f['id']) ?>"
+                                                <?= ($cm['jira_field'] ?? '') === $f['id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($f['name']) ?> (<?= htmlspecialchars($f['id']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php else: ?>
+                                <input type="text" name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input"
+                                       value="<?= htmlspecialchars($cm['jira_field'] ?? '') ?>" placeholder="customfield_XXXXX"
+                                       style="font-size: 0.85rem;">
+                            <?php endif; ?>
+                        </td>
+                        <td style="padding: 0.5rem;">
+                            <select name="custom_mappings[<?= $idx ?>][direction]" class="form-input" style="font-size: 0.85rem;">
+                                <option value="push" <?= ($cm['direction'] ?? '') === 'push' ? 'selected' : '' ?>>Push</option>
+                                <option value="pull" <?= ($cm['direction'] ?? '') === 'pull' ? 'selected' : '' ?>>Pull</option>
+                                <option value="both" <?= ($cm['direction'] ?? '') === 'both' ? 'selected' : '' ?>>Both</option>
+                            </select>
+                        </td>
+                        <td style="padding: 0.5rem; text-align: center;">
+                            <button type="button" class="btn-remove-mapping" onclick="this.closest('tr').remove()"
+                                    style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1rem;"
+                                    title="Remove mapping">&times;</button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <button type="button" id="add-mapping-btn" class="btn btn-sm" style="margin-top: 0.75rem; font-size: 0.85rem;"
+                    onclick="addCustomMappingRow()">+ Add Mapping</button>
         </div>
     </section>
+
+    <script>
+    function addCustomMappingRow() {
+        var tbody = document.getElementById('custom-mappings-body');
+        var idx = tbody.querySelectorAll('.custom-mapping-row').length;
+        var hasFieldDropdowns = <?= !empty($jira_fields) ? 'true' : 'false' ?>;
+
+        var stratflowOptions = <?= json_encode($stratflowFields, JSON_HEX_TAG | JSON_HEX_APOS) ?>;
+        <?php if (!empty($jira_fields)): ?>
+        var jiraFields = <?= json_encode(array_map(function($f) {
+            return ['id' => $f['id'], 'name' => $f['name']];
+        }, $jira_fields), JSON_HEX_TAG | JSON_HEX_APOS) ?>;
+        <?php else: ?>
+        var jiraFields = [];
+        <?php endif; ?>
+
+        var tr = document.createElement('tr');
+        tr.className = 'custom-mapping-row';
+        tr.style.borderBottom = '1px solid var(--border-color, #dee2e6)';
+
+        // StratFlow field dropdown
+        var sfSelect = '<select name="custom_mappings[' + idx + '][stratflow_field]" class="form-input" style="font-size:0.85rem;">';
+        sfSelect += '<option value="">Select...</option>';
+        for (var key in stratflowOptions) {
+            sfSelect += '<option value="' + key + '">' + stratflowOptions[key] + '</option>';
+        }
+        sfSelect += '</select>';
+
+        // Jira field dropdown or text input
+        var jfInput;
+        if (hasFieldDropdowns && jiraFields.length > 0) {
+            jfInput = '<select name="custom_mappings[' + idx + '][jira_field]" class="form-input" style="font-size:0.85rem;">';
+            jfInput += '<option value="">Select...</option>';
+            for (var i = 0; i < jiraFields.length; i++) {
+                var f = jiraFields[i];
+                jfInput += '<option value="' + f.id + '">' + f.name + ' (' + f.id + ')</option>';
+            }
+            jfInput += '</select>';
+        } else {
+            jfInput = '<input type="text" name="custom_mappings[' + idx + '][jira_field]" class="form-input" placeholder="customfield_XXXXX" style="font-size:0.85rem;">';
+        }
+
+        // Direction dropdown
+        var dirSelect = '<select name="custom_mappings[' + idx + '][direction]" class="form-input" style="font-size:0.85rem;">';
+        dirSelect += '<option value="push">Push</option>';
+        dirSelect += '<option value="pull">Pull</option>';
+        dirSelect += '<option value="both">Both</option>';
+        dirSelect += '</select>';
+
+        tr.innerHTML =
+            '<td style="padding:0.5rem;">' + sfSelect + '</td>' +
+            '<td style="padding:0.5rem;">' + jfInput + '</td>' +
+            '<td style="padding:0.5rem;">' + dirSelect + '</td>' +
+            '<td style="padding:0.5rem;text-align:center;">' +
+                '<button type="button" class="btn-remove-mapping" onclick="this.closest(\'tr\').remove()" ' +
+                'style="background:none;border:none;color:#dc3545;cursor:pointer;font-size:1.1rem;" title="Remove mapping">&times;</button>' +
+            '</td>';
+
+        tbody.appendChild(tr);
+    }
+    </script>
 
     <!-- Priority Mapping -->
     <?php $pr = $fm['priority_ranges'] ?? []; ?>

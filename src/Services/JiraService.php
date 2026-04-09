@@ -261,11 +261,12 @@ class JiraService
      * @param int    $maxResults Maximum results (default 50)
      * @return array             Search results with issues array
      */
-    public function searchIssues(string $jql, array $fields = [], int $maxResults = 50): array
+    public function searchIssues(string $jql, array $fields = [], int $maxResults = 50, int $startAt = 0): array
     {
         $body = [
             'jql'        => $jql,
             'maxResults' => $maxResults,
+            'startAt'    => $startAt,
         ];
         if (!empty($fields)) {
             $body['fields'] = $fields;

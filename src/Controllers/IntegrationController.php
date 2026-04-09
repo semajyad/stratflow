@@ -349,6 +349,31 @@ class IntegrationController
             ],
         ];
 
+        // Save additional custom field mappings
+        $rawMappings = $this->request->post('custom_mappings', []);
+        $validFields = ['title', 'description', 'owner', 'status', 'priority_number',
+                        'estimated_sprints', 'strategic_context', 'size', 'blocked_by'];
+        $validDirections = ['push', 'pull', 'both'];
+        $customMappings = [];
+
+        if (is_array($rawMappings)) {
+            foreach ($rawMappings as $raw) {
+                $sf   = trim((string) ($raw['stratflow_field'] ?? ''));
+                $jf   = trim((string) ($raw['jira_field'] ?? ''));
+                $dir  = trim((string) ($raw['direction'] ?? 'both'));
+
+                if ($sf !== '' && $jf !== '' && in_array($sf, $validFields, true) && in_array($dir, $validDirections, true)) {
+                    $customMappings[] = [
+                        'stratflow_field' => $sf,
+                        'jira_field'      => $jf,
+                        'direction'       => $dir,
+                    ];
+                }
+            }
+        }
+
+        $currentConfig['field_mapping']['custom_mappings'] = $customMappings;
+
         Integration::update($this->db, (int) $integration['id'], [
             'config_json' => json_encode($currentConfig),
         ]);
@@ -405,6 +430,27 @@ class IntegrationController
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
 
         if ($integration) {
+            // Revoke OAuth token at Atlassian before clearing locally
+            if (!empty($integration['access_token'])) {
+                try {
+                    $ch = curl_init('https://auth.atlassian.com/oauth/revoke');
+                    curl_setopt_array($ch, [
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_POST           => true,
+                        CURLOPT_POSTFIELDS     => http_build_query([
+                            'client_id'  => $this->config['jira']['client_id'] ?? '',
+                            'token'      => $integration['access_token'],
+                        ]),
+                        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+                        CURLOPT_TIMEOUT    => 10,
+                    ]);
+                    curl_exec($ch);
+                    curl_close($ch);
+                } catch (\Throwable $e) {
+                    error_log('[JiraDisconnect] Token revocation failed: ' . $e->getMessage());
+                }
+            }
+
             Integration::update($this->db, (int) $integration['id'], [
                 'status'        => 'disconnected',
                 'access_token'  => null,
@@ -419,7 +465,7 @@ class IntegrationController
                 AuditLogger::INTEGRATION_DISCONNECTED,
                 $this->request->ip(),
                 $_SERVER['HTTP_USER_AGENT'] ?? '',
-                ['provider' => 'jira']
+                ['provider' => 'jira', 'token_revoked' => true]
             );
         }
 
@@ -585,7 +631,9 @@ class IntegrationController
     // =========================================================================
 
     /**
-     * Render the sync log page showing recent sync operations.
+     * Render the sync log page with pagination and filters.
+     *
+     * Accepts query params: page (int), direction (push|pull), status (success|error).
      */
     public function syncLog(): void
     {
@@ -593,22 +641,128 @@ class IntegrationController
         $orgId = (int) $user['org_id'];
 
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-        $logs = [];
+
+        // Parse filter / pagination query params
+        $page      = max(1, (int) $this->request->get('page', 1));
+        $perPage   = 50;
+        $direction = $this->request->get('direction');
+        $status    = $this->request->get('status');
+
+        // Normalise filters — only accept known values
+        $direction = in_array($direction, ['push', 'pull'], true) ? $direction : null;
+        $status    = in_array($status, ['success', 'error'], true) ? $status : null;
+
+        $logs       = [];
+        $total      = 0;
+        $totalPages = 1;
 
         if ($integration) {
-            $logs = SyncLog::findByIntegration($this->db, (int) $integration['id'], 50);
+            $result     = SyncLog::findByIntegrationPaginated(
+                $this->db,
+                (int) $integration['id'],
+                $page,
+                $perPage,
+                $direction,
+                $status
+            );
+            $logs       = $result['rows'];
+            $total      = $result['total'];
+            $totalPages = max(1, (int) ceil($total / $perPage));
+
+            // Clamp page to valid range
+            if ($page > $totalPages) {
+                $page = $totalPages;
+            }
         }
 
         $this->response->render('admin/sync-log', [
             'user'          => $user,
             'logs'          => $logs,
             'integration'   => $integration,
+            'page'          => $page,
+            'totalPages'    => $totalPages,
+            'total'         => $total,
+            'direction'     => $direction,
+            'status'        => $status,
             'active_page'   => 'integrations',
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Export all sync log entries as CSV.
+     *
+     * Streams a CSV download with columns: timestamp, direction, action,
+     * type, local_id, external_id, status, details. Respects active
+     * direction/status filters from query params.
+     */
+    public function syncLogExport(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+
+        if (!$integration) {
+            $this->response->redirect('/app/admin/integrations/sync-log');
+            return;
+        }
+
+        // Respect active filters
+        $direction = $this->request->get('direction');
+        $status    = $this->request->get('status');
+        $direction = in_array($direction, ['push', 'pull'], true) ? $direction : null;
+        $status    = in_array($status, ['success', 'error'], true) ? $status : null;
+
+        $logs = SyncLog::findAllByIntegration(
+            $this->db,
+            (int) $integration['id'],
+            $direction,
+            $status
+        );
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'type'       => 'sync_log_export',
+            'row_count'  => count($logs),
+            'filters'    => ['direction' => $direction, 'status' => $status],
+        ]);
+
+        // Build CSV
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, ['Timestamp', 'Direction', 'Action', 'Type', 'Local ID', 'External ID', 'Status', 'Details']);
+
+        foreach ($logs as $log) {
+            $details = json_decode($log['details_json'] ?? '{}', true) ?: [];
+            $detailStr = '';
+            if (!empty($details['error'])) {
+                $detailStr = $details['error'];
+            } elseif (!empty($details['title'])) {
+                $detailStr = $details['title'];
+            } elseif (!empty($details['reason'])) {
+                $detailStr = $details['reason'];
+            }
+
+            fputcsv($handle, [
+                $log['created_at'] ?? '',
+                $log['direction'] ?? '',
+                $log['action'] ?? '',
+                $log['local_type'] ?? '',
+                $log['local_id'] ?? '',
+                $log['external_id'] ?? '',
+                $log['status'] ?? '',
+                $detailStr,
+            ]);
+        }
+
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+
+        $filename = 'sync_log_export_' . date('Y-m-d_His') . '.csv';
+        $this->response->download($content, $filename, 'text/csv');
     }
 
     // =========================================================================
@@ -631,16 +785,26 @@ class IntegrationController
             return;
         }
 
-        // Validate webhook signature if secret is configured
+        // Validate webhook origin
         $signature = $_SERVER['HTTP_X_ATLASSIAN_SIGNATURE'] ?? $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? '';
         $webhookSecret = $this->config['jira']['webhook_secret'] ?? '';
         if ($webhookSecret !== '') {
+            // HMAC signature validation
             $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
             $providedHash = str_replace('sha256=', '', $signature);
             if (!hash_equals($expected, $providedHash)) {
-                error_log('[JiraWebhook] Invalid signature — possible spoofing attempt');
+                error_log('[JiraWebhook] Invalid HMAC signature — rejecting');
                 http_response_code(401);
                 echo json_encode(['error' => 'Invalid signature']);
+                return;
+            }
+        } else {
+            // No secret: verify basic Jira payload structure to prevent trivial spoofing
+            $testPayload = json_decode($rawBody, true);
+            if (!$testPayload || !isset($testPayload['webhookEvent']) || !isset($testPayload['issue'])) {
+                error_log('[JiraWebhook] Malformed payload rejected');
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid payload']);
                 return;
             }
         }
@@ -826,10 +990,15 @@ class IntegrationController
             $totalErrors    = 0;
             $pullUpdated    = 0;
 
+            $pullCreated    = 0;
+            $totalConflicts = 0;
+
             foreach ($results as $type => $counts) {
                 if ($type === 'pull') {
-                    $pullUpdated = $counts['updated'] ?? 0;
-                    $totalErrors += $counts['errors'] ?? 0;
+                    $pullCreated    = $counts['created'] ?? 0;
+                    $pullUpdated    = $counts['updated'] ?? 0;
+                    $totalConflicts = $counts['conflicts'] ?? 0;
+                    $totalErrors   += $counts['errors'] ?? 0;
                 } else {
                     $totalCreated   += $counts['created'] ?? 0;
                     $totalUpdated   += $counts['updated'] ?? 0;
@@ -843,7 +1012,9 @@ class IntegrationController
             if ($totalCreated > 0)   $parts[] = "{$totalCreated} pushed to Jira";
             if ($totalUpdated > 0)   $parts[] = "{$totalUpdated} updated in Jira";
             if ($totalAllocated > 0) $parts[] = "{$totalAllocated} stories allocated to sprints";
+            if ($pullCreated > 0)    $parts[] = "{$pullCreated} imported from Jira";
             if ($pullUpdated > 0)    $parts[] = "{$pullUpdated} pulled from Jira";
+            if ($totalConflicts > 0) $parts[] = "{$totalConflicts} conflicts (review required)";
             if ($totalSkipped > 0)   $parts[] = "{$totalSkipped} already in sync";
             if ($totalErrors > 0)    $parts[] = "{$totalErrors} errors";
 
@@ -873,6 +1044,38 @@ class IntegrationController
      * Jira project as StratFlow teams, plus any team names found in
      * the Team custom field on existing issues.
      */
+
+    /**
+     * Dry-run preview: returns JSON showing what WOULD be synced.
+     */
+    public function syncPreview(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = \StratFlow\Models\Project::findById($this->db, $projectId, $orgId);
+        if (!$project || empty($project['jira_project_key'])) {
+            $this->response->json(['error' => 'No Jira link'], 400);
+            return;
+        }
+
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        if (!$integration || $integration['status'] !== 'active') {
+            $this->response->json(['error' => 'Jira not connected'], 400);
+            return;
+        }
+
+        try {
+            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $sync = new JiraSyncService($this->db, $jira, $integration);
+            $preview = $sync->dryRunPreview($projectId, $project['jira_project_key']);
+            $this->response->json($preview);
+        } catch (\Throwable $e) {
+            $this->response->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function jiraImportTeams(): void
     {
         $user  = $this->auth->user();

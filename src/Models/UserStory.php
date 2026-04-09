@@ -36,10 +36,10 @@ class UserStory
         $db->query(
             "INSERT INTO user_stories
                 (project_id, parent_hl_item_id, priority_number, title, description,
-                 parent_link, team_assigned, size, blocked_by)
+                 parent_link, team_assigned, size, blocked_by, status)
              VALUES
                 (:project_id, :parent_hl_item_id, :priority_number, :title, :description,
-                 :parent_link, :team_assigned, :size, :blocked_by)",
+                 :parent_link, :team_assigned, :size, :blocked_by, :status)",
             [
                 ':project_id'        => $data['project_id'],
                 ':parent_hl_item_id' => $data['parent_hl_item_id'] ?? null,
@@ -50,6 +50,7 @@ class UserStory
                 ':team_assigned'     => $data['team_assigned'] ?? null,
                 ':size'              => $data['size'] ?? null,
                 ':blocked_by'        => $data['blocked_by'] ?? null,
+                ':status'            => $data['status'] ?? 'backlog',
             ]
         );
 
