@@ -57,6 +57,7 @@ class HomeController
             $p['next_step_label'] = $stage['next_label'];
             $p['steps_complete']  = $stage['steps_complete'];
             $p['steps_total']     = $stage['steps_total'];
+            $p['completion']      = $stage['completion'];
         }
         unset($p);
 

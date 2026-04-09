@@ -51,16 +51,16 @@ class GeminiService
      */
     public function generate(string $prompt, string $input): string
     {
-        // Try Gemini first, fall back to OpenAI on rate limit
+        // Try Gemini first, fall back to OpenAI on ANY failure
         try {
             $url  = $this->buildUrl('generateContent');
             $body = $this->buildBody($prompt, $input);
             $response = $this->makeRequest($url, $body);
             return $response['candidates'][0]['content']['parts'][0]['text']
                 ?? throw new \RuntimeException('Unexpected Gemini response format');
-        } catch (\RuntimeException $e) {
-            if ($this->openaiKey !== '' && str_contains($e->getMessage(), 'quota')) {
-                error_log('[StratFlow] Gemini quota hit, falling back to OpenAI');
+        } catch (\Throwable $e) {
+            if ($this->openaiKey !== '') {
+                error_log('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI');
                 return $this->openaiGenerate($prompt, $input);
             }
             throw $e;
@@ -83,9 +83,9 @@ class GeminiService
             $response = $this->makeRequest($url, $body);
             $text = $response['candidates'][0]['content']['parts'][0]['text']
                 ?? throw new \RuntimeException('Unexpected Gemini response format');
-        } catch (\RuntimeException $e) {
-            if ($this->openaiKey !== '' && (str_contains($e->getMessage(), 'quota') || str_contains($e->getMessage(), '429'))) {
-                error_log('[StratFlow] Gemini quota hit, falling back to OpenAI for JSON');
+        } catch (\Throwable $e) {
+            if ($this->openaiKey !== '') {
+                error_log('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI for JSON');
                 $text = $this->openaiGenerate($prompt . "\n\nRespond with valid JSON only. No markdown fences.", $input);
             } else {
                 throw $e;

@@ -95,11 +95,11 @@
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Start</label>
-                    <input type="date" name="start_date" class="form-control">
+                    <input type="date" name="start_date" id="sprint-start-date" class="form-control" onchange="autoSetSprintEndDate()">
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">End</label>
-                    <input type="date" name="end_date" class="form-control">
+                    <input type="date" name="end_date" id="sprint-end-date" class="form-control">
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Capacity (pts)</label>
@@ -110,6 +110,36 @@
         </form>
     </div>
 </div>
+<script>
+(function() {
+    // Default start date to next Monday, end date to 2 weeks later
+    function nextMonday() {
+        var d = new Date();
+        var day = d.getDay();
+        var daysUntilMonday = (day === 1) ? 7 : ((8 - day) % 7 || 7);
+        d.setDate(d.getDate() + daysUntilMonday);
+        return d.toISOString().slice(0, 10);
+    }
+    function addDays(isoDate, days) {
+        var d = new Date(isoDate);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().slice(0, 10);
+    }
+    var startEl = document.getElementById('sprint-start-date');
+    var endEl = document.getElementById('sprint-end-date');
+    if (startEl && !startEl.value) {
+        startEl.value = nextMonday();
+    }
+    if (endEl && !endEl.value && startEl.value) {
+        endEl.value = addDays(startEl.value, 13); // 2-week sprint (Mon-Sun)
+    }
+    window.autoSetSprintEndDate = function() {
+        if (startEl.value) {
+            endEl.value = addDays(startEl.value, 13);
+        }
+    };
+})();
+</script>
 
 <!-- ===========================
      Auto-Generate Sprints

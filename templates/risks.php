@@ -162,7 +162,8 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                             ?>
                             <div class="heatmap-cell <?= $level ?> <?= $count > 0 ? 'has-risks' : '' ?>"
                                  data-likelihood="<?= $l ?>" data-impact="<?= $i ?>"
-                                 title="L<?= $l ?> x I<?= $i ?> = <?= $score ?>">
+                                 title="Likelihood <?= $l ?> &times; Impact <?= $i ?> = <?= $score ?> &middot; <?= $count ?> risk<?= $count !== 1 ? 's' : '' ?> (click to filter)"
+                                 <?php if ($count > 0): ?>onclick="filterHeatmapRisks(<?= $l ?>, <?= $i ?>)" style="cursor:pointer;"<?php endif; ?>>
                                 <?= $count > 0 ? $count : '' ?>
                             </div>
                         <?php endfor; ?>
@@ -186,3 +187,69 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 </div>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
+
+<script>
+var heatmapFilter = { likelihood: null, impact: null };
+
+function filterHeatmapRisks(likelihood, impact) {
+    // Toggle off if clicking the same cell
+    if (heatmapFilter.likelihood === likelihood && heatmapFilter.impact === impact) {
+        clearHeatmapFilter();
+        return;
+    }
+    heatmapFilter.likelihood = likelihood;
+    heatmapFilter.impact = impact;
+
+    // Highlight the selected cell
+    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
+        cell.classList.remove('heatmap-cell--selected');
+    });
+    var selected = document.querySelector('.heatmap-cell[data-likelihood="' + likelihood + '"][data-impact="' + impact + '"]');
+    if (selected) selected.classList.add('heatmap-cell--selected');
+
+    // Filter risk rows
+    document.querySelectorAll('.risk-row').forEach(function(row) {
+        var l = parseInt(row.dataset.likelihood || 0, 10);
+        var i = parseInt(row.dataset.impact || 0, 10);
+        row.style.display = (l === likelihood && i === impact) ? '' : 'none';
+    });
+
+    // Show filter banner
+    var banner = document.getElementById('heatmap-filter-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'heatmap-filter-banner';
+        banner.style.cssText = 'padding:0.75rem 1rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;';
+        var riskList = document.querySelector('.risk-list') || document.querySelector('.risks-list');
+        if (riskList) riskList.parentNode.insertBefore(banner, riskList);
+    }
+    var count = document.querySelectorAll('.risk-row').length;
+    var visible = 0;
+    document.querySelectorAll('.risk-row').forEach(function(r) { if (r.style.display !== 'none') visible++; });
+    banner.innerHTML = '<span>Showing <strong>' + visible + '</strong> risk' + (visible !== 1 ? 's' : '') + ' at Likelihood ' + likelihood + ' &times; Impact ' + impact + '</span>' +
+        '<button type="button" class="btn btn-sm btn-secondary" onclick="clearHeatmapFilter()">Clear filter</button>';
+
+    // Scroll to risk list
+    var firstVisible = document.querySelector('.risk-row[style=""], .risk-row:not([style*="display: none"])');
+    if (firstVisible) firstVisible.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function clearHeatmapFilter() {
+    heatmapFilter = { likelihood: null, impact: null };
+    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
+        cell.classList.remove('heatmap-cell--selected');
+    });
+    document.querySelectorAll('.risk-row').forEach(function(row) { row.style.display = ''; });
+    var banner = document.getElementById('heatmap-filter-banner');
+    if (banner) banner.remove();
+}
+</script>
+
+<style>
+.heatmap-cell--selected {
+    outline: 3px solid var(--primary);
+    outline-offset: -3px;
+    z-index: 2;
+    position: relative;
+}
+</style>

@@ -58,8 +58,13 @@ if ($lastProjectId && !empty($projects)) {
      Your Projects
      =========================== -->
 <section class="card">
-    <div class="card-header">
-        <h2 class="card-title">Your Projects</h2>
+    <div class="card-header flex justify-between items-center">
+        <h2 class="card-title" style="margin:0;">Your Projects <span class="text-muted" style="font-weight:400; font-size:0.85rem;">(<?= count($projects) ?>)</span></h2>
+        <?php if (count($projects) > 3): ?>
+            <input type="search" id="project-search" placeholder="Search projects..."
+                   style="max-width:260px; padding:0.4rem 0.75rem; border:1px solid var(--border); border-radius:6px; font-size:0.875rem;"
+                   oninput="filterProjectList(this.value)">
+        <?php endif; ?>
     </div>
 
     <?php if (empty($projects)): ?>
@@ -72,17 +77,30 @@ if ($lastProjectId && !empty($projects)) {
             <?php foreach ($projects as $project): ?>
                 <div class="project-card">
                     <div class="project-info">
-                        <span class="project-name"><?= htmlspecialchars($project['name']) ?></span>
-                        <span class="status-badge status-<?= htmlspecialchars($project['status']) ?>">
-                            <?= ucfirst(htmlspecialchars($project['status'])) ?>
-                        </span>
-                        <span class="project-date">
-                            Created <?= date('j M Y', strtotime($project['created_at'])) ?>
-                        </span>
-                        <?php if (isset($project['steps_total'])): ?>
-                            <span class="text-muted" style="font-size:0.75rem;">
-                                &middot; <?= (int) $project['steps_complete'] ?>/<?= (int) $project['steps_total'] ?> steps
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <span class="project-name"><?= htmlspecialchars($project['name']) ?></span>
+                            <span class="status-badge status-<?= htmlspecialchars($project['status']) ?>">
+                                <?= ucfirst(htmlspecialchars($project['status'])) ?>
                             </span>
+                            <span class="project-date">
+                                Created <?= date('j M Y', strtotime($project['created_at'])) ?>
+                            </span>
+                        </div>
+                        <?php if (isset($project['steps_total']) && !empty($project['completion'])):
+                            $stepKeys   = ['upload','diagram','work-items','prioritisation','risks','user-stories','sprints','governance'];
+                            $stepLabels = ['Upload','Roadmap','Work Items','Prioritise','Risks','Stories','Sprints','Governance'];
+                        ?>
+                            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.5rem;">
+                                <?php foreach ($stepKeys as $i => $k):
+                                    $done = !empty($project['completion'][$k]);
+                                ?>
+                                    <span title="<?= $stepLabels[$i] ?><?= $done ? ' — complete' : '' ?>"
+                                          style="display:inline-block; width:18px; height:4px; border-radius:2px; background:<?= $done ? '#059669' : '#e2e8f0' ?>;"></span>
+                                <?php endforeach; ?>
+                                <span class="text-muted" style="font-size:0.7rem; margin-left:0.3rem;">
+                                    <?= (int) $project['steps_complete'] ?>/<?= (int) $project['steps_total'] ?> &middot; Next: <?= htmlspecialchars($project['next_step_label'] ?? '') ?>
+                                </span>
+                            </div>
                         <?php endif; ?>
                     </div>
                     <div class="project-actions" style="display: flex; gap: 0.5rem; align-items: center;">
@@ -171,5 +189,13 @@ function renameProject(id, currentName, token) {
         document.body.appendChild(f);
         f.submit();
     }
+}
+
+function filterProjectList(query) {
+    var q = query.trim().toLowerCase();
+    document.querySelectorAll('.project-card').forEach(function(card) {
+        var name = (card.querySelector('.project-name')?.textContent || '').toLowerCase();
+        card.style.display = (q === '' || name.indexOf(q) !== -1) ? '' : 'none';
+    });
 }
 </script>

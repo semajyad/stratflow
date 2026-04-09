@@ -64,13 +64,21 @@ class AdminController
         $teams      = Team::findByOrgId($this->db, $orgId);
         $sub        = Subscription::findByOrgId($this->db, $orgId);
 
+        // Recent activity for this org
+        $recentActivity = [];
+        try {
+            $recentActivity = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, null);
+            $recentActivity = array_slice($recentActivity, 0, 8);
+        } catch (\Throwable $e) { /* non-critical */ }
+
         $this->response->render('admin/index', [
-            'user'          => $user,
-            'user_count'    => $userCount,
-            'seat_limit'    => $seatLimit,
-            'team_count'    => count($teams),
-            'subscription'  => $sub,
-            'active_page'   => 'admin',
+            'user'            => $user,
+            'user_count'      => $userCount,
+            'seat_limit'      => $seatLimit,
+            'team_count'      => count($teams),
+            'subscription'    => $sub,
+            'recent_activity' => $recentActivity,
+            'active_page'     => 'admin',
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
