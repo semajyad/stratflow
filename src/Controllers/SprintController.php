@@ -459,11 +459,15 @@ class SprintController
             return;
         }
 
-        // Build a queue of unallocated stories (by priority order)
-        $storyQueue = $unallocated;
+        // Strict priority-order allocation: take stories in order,
+        // fill each sprint until it can't take the next story, then move to next sprint
         $assigned = 0;
+        $storyIndex = 0;
+        $totalStories = count($unallocated);
 
         foreach ($sprints as $sprint) {
+            if ($storyIndex >= $totalStories) break;
+
             $sprintId    = (int) $sprint['id'];
             $capacity    = (int) ($sprint['team_capacity'] ?? 0);
             $currentLoad = SprintStory::getSprintLoad($this->db, $sprintId);
@@ -471,29 +475,28 @@ class SprintController
 
             if ($remaining <= 0) continue;
 
-            // Try to fit stories into this sprint, keeping priority order
-            $leftover = [];
-            foreach ($storyQueue as $story) {
-                $size = (int) ($story['size'] ?? 1);
+            // Fill this sprint in strict priority order
+            while ($storyIndex < $totalStories) {
+                $story = $unallocated[$storyIndex];
+                $size  = (int) ($story['size'] ?? 1);
 
+                // If this story fits, add it
                 if ($size <= $remaining) {
                     SprintStory::assign($this->db, $sprintId, (int) $story['id']);
                     $remaining -= $size;
                     $assigned++;
+                    $storyIndex++;
                 } else {
-                    // Doesn't fit — carry to next sprint
-                    $leftover[] = $story;
+                    // Story doesn't fit — this sprint is full, move to next sprint
+                    break;
                 }
             }
-            $storyQueue = $leftover;
-
-            if (empty($storyQueue)) break;
         }
 
-        $skipped = count($storyQueue);
+        $skipped = $totalStories - $storyIndex;
         $msg = "{$assigned} stories allocated across sprints by priority.";
         if ($skipped > 0) {
-            $msg .= " {$skipped} stories didn't fit — consider adding more sprints or increasing capacity.";
+            $msg .= " {$skipped} stories didn't fit — add more sprints or increase capacity.";
         }
         $_SESSION['flash_message'] = $msg;
         $this->response->redirect('/app/sprints?project_id=' . $projectId);
