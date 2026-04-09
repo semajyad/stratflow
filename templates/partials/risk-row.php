@@ -39,12 +39,11 @@ $linkedItemIds = $risk['linked_item_ids'] ?? [];
             <button class="btn btn-sm btn-secondary generate-mitigation-btn" data-id="<?= (int) $risk['id'] ?>">Generate Mitigation (AI)</button>
         <?php endif; ?>
     </div>
-    <div class="risk-actions">
-        <button class="btn btn-sm btn-secondary edit-risk-btn" data-id="<?= (int) $risk['id'] ?>">Edit</button>
-        <form method="POST" action="/app/risks/<?= (int) $risk['id'] ?>/delete" class="inline-form">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this risk?')">Delete</button>
-        </form>
-    </div>
+    <?php
+        $row_edit_class     = 'edit-risk-btn';
+        $row_id             = (int) $risk['id'];
+        $row_delete_action  = '/app/risks/' . (int) $risk['id'] . '/delete';
+        $row_delete_confirm = 'Delete this risk?';
+        include __DIR__ . '/row-actions-menu.php';
+    ?>
 </div>

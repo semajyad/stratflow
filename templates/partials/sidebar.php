@@ -54,10 +54,10 @@ $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
 
         <div class="sidebar-section-label">Plan</div>
         <a href="/app/upload<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'upload' ? 'active' : '' ?>">
-            Document Upload <?= $stepDot('upload') ?>
+            Upload <?= $stepDot('upload') ?>
         </a>
         <a href="/app/diagram<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'diagram' ? 'active' : '' ?>">
-            Strategy Roadmap <?= $stepDot('diagram') ?>
+            Roadmap <?= $stepDot('diagram') ?>
         </a>
         <a href="/app/work-items<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
             Work Items <?= $stepDot('work-items') ?>
@@ -68,13 +68,13 @@ $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
             Prioritisation <?= $stepDot('prioritisation') ?>
         </a>
         <a href="/app/risks<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'risks' ? 'active' : '' ?>">
-            Risk Modelling <?= $stepDot('risks') ?>
+            Risks <?= $stepDot('risks') ?>
         </a>
         <a href="/app/user-stories<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'user-stories' ? 'active' : '' ?>">
             User Stories <?= $stepDot('user-stories') ?>
         </a>
         <a href="/app/sprints<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'sprints' ? 'active' : '' ?>">
-            Sprint Allocation <?= $stepDot('sprints') ?>
+            Sprints <?= $stepDot('sprints') ?>
         </a>
 
         <div class="sidebar-section-label">Monitor</div>
@@ -85,7 +85,7 @@ $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
         <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
             <hr class="sidebar-divider">
             <a href="/app/admin" class="nav-link <?= ($active_page ?? '') === 'admin' ? 'active' : '' ?>">
-                &#9881; Administration
+                Admin
             </a>
             <a href="/app/admin/integrations" class="nav-link <?= ($active_page ?? '') === 'integrations' ? 'active' : '' ?>">
                 Integrations

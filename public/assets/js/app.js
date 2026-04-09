@@ -1,4 +1,46 @@
 // ===========================
+// Row Actions Kebab Menu
+// ===========================
+// Exposed globally so inline onclick on the toggle button can reach it.
+window.toggleRowActions = function(event, btn) {
+    event.preventDefault();
+    event.stopPropagation();
+    var menu = btn.closest('.row-actions-menu');
+    if (!menu) return;
+    var isOpen = menu.classList.contains('row-actions-menu--open');
+    // Close any other open menus
+    document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
+        m.classList.remove('row-actions-menu--open');
+        var t = m.querySelector('.row-actions-toggle');
+        if (t) t.setAttribute('aria-expanded', 'false');
+    });
+    if (!isOpen) {
+        menu.classList.add('row-actions-menu--open');
+        btn.setAttribute('aria-expanded', 'true');
+    }
+};
+
+// Global click-outside / Escape handlers to dismiss open kebab menus.
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.row-actions-menu')) {
+        document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
+            m.classList.remove('row-actions-menu--open');
+            var t = m.querySelector('.row-actions-toggle');
+            if (t) t.setAttribute('aria-expanded', 'false');
+        });
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
+            m.classList.remove('row-actions-menu--open');
+            var t = m.querySelector('.row-actions-toggle');
+            if (t) t.setAttribute('aria-expanded', 'false');
+        });
+    }
+});
+
+// ===========================
 // Sidebar Toggle
 // ===========================
 document.addEventListener('DOMContentLoaded', function() {

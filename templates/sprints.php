@@ -19,18 +19,14 @@
      =========================== -->
 <?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
 
-<div class="page-header flex justify-between items-center mb-6">
-    <div>
-        <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Sprint Allocation</h1>
-        <p class="text-muted" style="margin: 0.25rem 0 0; font-size: 0.875rem;">
-            <?= count($sprints) ?> sprint<?= count($sprints) !== 1 ? 's' : '' ?>,
-            <?= count($unallocated) ?> unallocated stor<?= count($unallocated) === 1 ? 'y' : 'ies' ?>
-        </p>
-    </div>
+<div class="page-header flex justify-between items-center">
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Sprint Allocation
+        <span class="page-title-count"><?= count($sprints) ?></span>
+    </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'sprints'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <a href="/app/user-stories?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to User Stories</a>
     </div>
 </div>
 

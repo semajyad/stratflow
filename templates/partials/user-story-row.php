@@ -35,12 +35,11 @@
     </div>
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>
-    <div class="story-actions">
-        <button class="btn btn-sm btn-secondary edit-story-btn" data-id="<?= (int) $story['id'] ?>">Edit</button>
-        <form method="POST" action="/app/user-stories/<?= (int) $story['id'] ?>/delete" class="inline-form">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Delete</button>
-        </form>
-    </div>
+    <?php
+        $row_edit_class     = 'edit-story-btn';
+        $row_id             = (int) $story['id'];
+        $row_delete_action  = '/app/user-stories/' . (int) $story['id'] . '/delete';
+        $row_delete_confirm = 'Delete this user story?';
+        include __DIR__ . '/row-actions-menu.php';
+    ?>
 </div>

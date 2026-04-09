@@ -220,35 +220,27 @@ main.container {
     z-index: 200;
     overflow-y: auto;
     color: #cbd5e1;
-    /* Thin, dark-themed scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.15) transparent;
+    /* Hide scrollbar entirely — scrolling still works, just invisible */
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* IE / legacy Edge */
 }
 
 .sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-.sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 3px;
-}
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+    width: 0;
+    height: 0;
+    display: none;                  /* Chromium, Safari */
 }
 
 .sidebar-brand {
     display: flex;
     align-items: center;
-    height: 56px;
+    height: 48px;
     padding: 0 1.25rem;
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-brand a {
-    font-size: 1.375rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: #ffffff;
     text-decoration: none;
@@ -256,17 +248,17 @@ main.container {
 }
 
 .sidebar-project {
-    padding: 0.625rem 1.25rem;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-project-label {
     display: block;
-    font-size: 0.625rem;
+    font-size: 0.6rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #64748b;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .sidebar-project-name {
@@ -304,16 +296,16 @@ main.container {
 
 .sidebar-nav {
     flex: 1;
-    padding: 0.5rem 0 1rem;
+    padding: 0.25rem 0 0.5rem;
 }
 
 .sidebar-nav a {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.45rem 1.25rem;
+    padding: 0.35rem 1.25rem;
     color: #94a3b8;
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     border-radius: 0;
     text-decoration: none;
@@ -341,15 +333,21 @@ main.container {
 }
 
 .sidebar-section-label {
-    padding: 1rem 1.25rem 0.4rem;
-    font-size: 0.7rem;
+    padding: 0.55rem 1.25rem 0.2rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
 .sidebar-section-label:first-child {
-    padding-top: 0.5rem;
+    padding-top: 0.35rem;
+}
+
+.sidebar-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 0.45rem 1rem;
 }
 
 .nav-dot {
@@ -370,7 +368,8 @@ main.container {
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
     padding: 0 1.5rem;
     position: sticky;
     top: 0;
@@ -450,21 +449,42 @@ main.container {
 /* === Page Headers =========================================================== */
 
 .page-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .page-title {
-    font-size: 1.75rem;
+    font-size: 1.625rem;
     font-weight: 700;
     color: var(--text);
-    margin: 0 0 0.5rem;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    line-height: 1.2;
+}
+
+/* Small neutral count pill shown inside the page title */
+.page-title-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 22px;
+    padding: 0 0.5rem;
+    background: var(--primary-light, #eef2ff);
+    color: var(--primary-dark, #4338ca);
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 11px;
 }
 
 .page-subtitle {
     color: var(--text-light);
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.6;
-    margin: 0;
+    margin: 0.375rem 0 0;
     max-width: 720px;
 }
 
@@ -2566,17 +2586,6 @@ tbody tr:hover {
     color: #fff;
 }
 
-.btn-danger {
-    background: var(--danger);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-danger:hover {
-    background: #b91c1c;
-}
-
 @media (max-width: 768px) {
     .admin-cards {
         grid-template-columns: 1fr;
@@ -2738,33 +2747,28 @@ tbody tr:hover {
     align-items: center;
 }
 
-.btn-sm {
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    line-height: 1.5;
-}
-
 .btn-warning {
     background: var(--warning);
     color: #fff;
+    border-color: var(--warning);
 }
 
-.btn-warning:hover {
+.btn-warning:hover:not(:disabled) {
     background: #b45309;
+    border-color: #b45309;
+    color: #fff;
 }
 
 .btn-success {
     background: var(--success);
     color: #fff;
+    border-color: var(--success);
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
     background: #15803d;
+    border-color: #15803d;
+    color: #fff;
 }
 
 /* === Governance Dashboard ==================================================== */
@@ -3474,4 +3478,262 @@ input[type="number"] {
         background: #f5f5f5 !important;
         color: #000 !important;
     }
+}
+
+/* === View Toggle (Diagram/Executive) ======================================== */
+
+.view-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    background: var(--bg, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    gap: 0;
+}
+
+.view-toggle-btn {
+    padding: 0.3rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-light, #64748b);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.view-toggle-btn:hover {
+    color: var(--text);
+}
+
+.view-toggle-btn.is-active {
+    background: var(--surface, #ffffff);
+    color: var(--primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+/* === Executive Diagram View ================================================ */
+
+.exec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.exec-card {
+    padding: 1rem 1.125rem;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.exec-card:hover {
+    border-color: var(--primary-light, #c7d2fe);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.exec-card--has-okr {
+    border-left: 3px solid var(--success, #16a34a);
+}
+
+.exec-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.exec-card-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    margin: 0 0 0.5rem;
+    line-height: 1.35;
+}
+
+.exec-card-okr {
+    font-size: 0.8125rem;
+    color: var(--text, #1e293b);
+    margin: 0 0 0.5rem;
+    line-height: 1.5;
+}
+
+.exec-card-kr {
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: var(--text-light, #64748b);
+    background: var(--bg, #f8fafc);
+    padding: 0.5rem 0.625rem;
+    border-radius: 6px;
+    margin: 0;
+    white-space: pre-wrap;
+    max-height: 140px;
+    overflow: auto;
+}
+
+.exec-card-placeholder {
+    font-size: 0.8125rem;
+    margin: 0;
+    font-style: italic;
+}
+
+/* === Breadcrumbs (topbar) =================================================== */
+
+.breadcrumbs {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.breadcrumbs-list {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    color: var(--text-light, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.breadcrumbs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+}
+
+.breadcrumbs-item a {
+    color: var(--text-light, #64748b);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.breadcrumbs-item a:hover {
+    color: var(--primary);
+}
+
+.breadcrumbs-item [aria-current="page"] {
+    color: var(--text, #1e293b);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.breadcrumbs-sep {
+    color: var(--border, #cbd5e1);
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .breadcrumbs {
+        display: none;
+    }
+}
+
+/* === Row Actions Kebab Menu ================================================= */
+
+.row-actions-menu {
+    position: relative;
+    flex-shrink: 0;
+    display: inline-flex;
+}
+
+.row-actions-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.row-actions-toggle:hover,
+.row-actions-menu--open .row-actions-toggle {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary);
+    border-color: rgba(79, 70, 229, 0.15);
+}
+
+.row-actions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.06);
+    padding: 0.25rem;
+    z-index: 50;
+    display: none;
+}
+
+.row-actions-menu--open .row-actions-dropdown {
+    display: block;
+}
+
+.row-actions-dropdown .row-actions-form {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.row-actions-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text, #1e293b);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.row-actions-item:hover {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary);
+}
+
+.row-actions-item--danger {
+    color: #b91c1c;
+}
+
+.row-actions-item--danger:hover {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.row-actions-item svg {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+/* Collapse legacy action containers now that they hold a single kebab button */
+.work-item-actions,
+.story-actions,
+.risk-actions {
+    width: auto;
+    min-width: 0;
+    gap: 0;
 }

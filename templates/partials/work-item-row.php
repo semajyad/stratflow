@@ -37,12 +37,11 @@
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>
     <span class="work-item-owner"><?= htmlspecialchars($item['owner'] ?? 'Unassigned') ?></span>
-    <div class="work-item-actions">
-        <button class="btn btn-sm btn-secondary edit-item-btn" data-id="<?= (int) $item['id'] ?>">Edit</button>
-        <form method="POST" action="/app/work-items/<?= (int) $item['id'] ?>/delete" class="inline-form">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this item?')">Delete</button>
-        </form>
-    </div>
+    <?php
+        $row_edit_class     = 'edit-item-btn';
+        $row_id             = (int) $item['id'];
+        $row_delete_action  = '/app/work-items/' . (int) $item['id'] . '/delete';
+        $row_delete_confirm = 'Delete this work item?';
+        include __DIR__ . '/row-actions-menu.php';
+    ?>
 </div>

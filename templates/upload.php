@@ -23,7 +23,7 @@ function formatFileSize(int $bytes): string {
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Document Upload</h1>
     <?php if ($hasSummary): ?>
-        <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary">
+        <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-sm">
             Continue to Strategy Roadmap &rarr;
         </a>
     <?php endif; ?>
@@ -69,7 +69,7 @@ function formatFileSize(int $bytes): string {
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="document_id" value="<?= (int) $latestDoc['id'] ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Generate AI Summary</button>
+            <button type="submit" class="btn btn-primary">Generate AI Summary</button>
         </form>
     </div>
 </section>

@@ -16,12 +16,14 @@
      =========================== -->
 <?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
 
-<div class="page-header flex justify-between items-center mb-6">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Work Items</h1>
+<div class="page-header flex justify-between items-center">
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Work Items
+        <span class="page-title-count"><?= count($work_items) ?></span>
+    </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'work_items'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-secondary btn-sm">Back to Diagram</a>
     </div>
 </div>
 

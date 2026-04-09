@@ -18,22 +18,25 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
      =========================== -->
 <?php require __DIR__ . '/partials/workflow-stepper.php'; ?>
 
-<div class="page-header flex justify-between items-center mb-6">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Risk Modelling</h1>
+<div class="page-header flex justify-between items-center">
+    <h1 class="page-title">
+        <?= htmlspecialchars($project['name']) ?> &mdash; Risk Modelling
+        <span class="page-title-count"><?= count($risks) ?></span>
+    </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'risks'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <form method="POST" action="/app/risks/generate" style="display: inline;"
+        <form method="POST" action="/app/risks/generate" class="inline-form"
               data-loading="Generating risks..."
               data-overlay="AI is identifying project risks from your work items. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('This will use AI to analyse your work items and generate 3-5 project risks. Continue?')">
-                Auto-Generate Risks (AI)
+            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('This will use AI to analyse your work items and generate 3-5 project risks. Continue?')">
+                Generate Risks (AI)
             </button>
         </form>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleRiskModal()">
-            Add Risk Manually
+        <button type="button" class="btn btn-primary btn-sm" onclick="toggleRiskModal()">
+            Add Risk
         </button>
     </div>
 </div>
