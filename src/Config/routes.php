@@ -96,6 +96,9 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
 
+    // Traceability — read-only strategy-to-code chain view
+    $router->add('GET',  '/app/traceability',            'TraceabilityController@index',   ['auth']);
+
     // Governance — drift detection and change control
     $router->add('GET',  '/app/governance',              'DriftController@dashboard',      ['auth']);
     $router->add('POST', '/app/governance/baseline',     'DriftController@createBaseline', ['auth', 'csrf']);

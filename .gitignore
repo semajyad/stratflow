@@ -8,3 +8,8 @@ node_modules/
 *.log
 docker/mysql-data/
 C/
+
+# Claude Code — ephemeral markers
+.claude/.security-audit-ok
+.claude/hooks/__pycache__/
+.claude/bin/__pycache__/

@@ -1,0 +1,37 @@
+# Files and directories Claude Code should not read during grep/glob/explore.
+# Keeps context focused on actual application code.
+
+# === Dependencies ===
+vendor/
+node_modules/
+composer.lock
+package-lock.json
+
+# === Runtime / generated ===
+public/uploads/
+docker/mysql-data/
+storage/
+tmp/
+*.log
+
+# === Build artefacts ===
+build/
+dist/
+coverage/
+
+# === Git internals ===
+.git/
+
+# === Python caches (from hook scripts) ===
+__pycache__/
+*.pyc
+
+# === Test fixtures that dwarf real code ===
+tests/fixtures/**/*.pdf
+tests/fixtures/**/*.json.gold
+
+# === Editor junk ===
+.idea/
+.vscode/
+*.swp
+.DS_Store

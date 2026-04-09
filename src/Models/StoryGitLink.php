@@ -110,6 +110,42 @@ class StoryGitLink
     }
 
     /**
+     * Bulk-fetch all git link rows for a set of local IDs of the same type.
+     *
+     * Returns a map of local_id => array of link rows (newest first).
+     * Use this in the traceability view to avoid N+1 queries when rendering
+     * git links for many items in a single page load.
+     *
+     * @param Database $db        Database instance
+     * @param string   $localType 'user_story' or 'hl_work_item'
+     * @param int[]    $localIds  Array of primary keys to query
+     * @return array<int, array>  Map of local_id => array of link rows
+     */
+    public static function findByLocalItemsBulk(Database $db, string $localType, array $localIds): array
+    {
+        if (empty($localIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($localIds), '?'));
+        $stmt = $db->getPdo()->prepare(
+            "SELECT * FROM story_git_links
+             WHERE local_type = ? AND local_id IN ({$placeholders})
+             ORDER BY created_at DESC"
+        );
+
+        $params = array_merge([$localType], array_values($localIds));
+        $stmt->execute($params);
+
+        $map = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $map[(int) $row['local_id']][] = $row;
+        }
+
+        return $map;
+    }
+
+    /**
      * Bulk-fetch git link counts for a set of local IDs of the same type.
      *
      * Returns an associative array keyed by local_id.
