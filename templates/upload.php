@@ -21,16 +21,16 @@ function formatFileSize(int $bytes): string {
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Document Upload
-        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+            <span class="page-info-btn" aria-hidden="true">i</span>
+            <span class="page-info-popover" role="tooltip">Upload your strategy documents (PDF, DOCX, PPTX, TXT) or paste text directly. StratFlow extracts the content and generates an AI summary — the foundation for your entire roadmap.</span>
+        </span>
     </h1>
     <?php if ($hasSummary): ?>
         <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-sm">
             Continue to Strategy Roadmap &rarr;
         </a>
     <?php endif; ?>
-</div>
-<div class="page-info-panel hidden">
-    Upload your strategy documents (PDF, DOCX, PPTX, TXT) or paste text directly. StratFlow extracts the content and generates an AI summary — the foundation for your entire roadmap.
 </div>
 
 <?php if ($hasSummary): ?>

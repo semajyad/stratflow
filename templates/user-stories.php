@@ -18,16 +18,16 @@
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; User Stories
         <span class="page-title-count"><?= count($stories) ?></span>
-        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+            <span class="page-info-btn" aria-hidden="true">i</span>
+            <span class="page-info-popover" role="tooltip">User stories break down high-level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.</span>
+        </span>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <button type="button" class="btn btn-primary btn-sm" onclick="toggleStoryModal()">Add Story</button>
     </div>
-</div>
-<div class="page-info-panel hidden">
-    User stories break down high-level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.
 </div>
 
 <!-- ===========================

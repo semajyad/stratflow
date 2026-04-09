@@ -16,7 +16,10 @@ $hasSummary = !empty($document_summary);
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap
         <?php if ($hasDiagram): ?>
-            <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+            <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+                <span class="page-info-btn" aria-hidden="true">i</span>
+                <span class="page-info-popover" role="tooltip">Your visual strategy roadmap. Review initiatives and dependencies, set SMART OKRs for each node, then proceed to generate work items.</span>
+            </span>
         <?php endif; ?>
     </h1>
     <div class="flex items-center gap-2">
@@ -31,11 +34,6 @@ $hasSummary = !empty($document_summary);
     </div>
 </div>
 
-<?php if ($hasDiagram): ?>
-<div class="page-info-panel hidden">
-    Your visual strategy roadmap. Review initiatives and dependencies, set SMART OKRs for each node, then proceed to generate work items.
-</div>
-<?php endif; ?>
 
 <!-- Status messages (AJAX + flash) -->
 <div id="generate-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>

@@ -1,20 +1,4 @@
 // ===========================
-// Page Info Popover ("i" icon next to page title)
-// ===========================
-window.togglePageInfo = function(btn) {
-    // The panel is the next .page-info-panel sibling of the page-header div
-    var header = btn.closest('.page-header');
-    if (!header) return;
-    var panel = header.nextElementSibling;
-    while (panel && !panel.classList.contains('page-info-panel')) {
-        panel = panel.nextElementSibling;
-    }
-    if (!panel) return;
-    var isHidden = panel.classList.toggle('hidden');
-    btn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
-};
-
-// ===========================
 // Sidebar Collapse / Expand
 // ===========================
 (function() {

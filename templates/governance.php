@@ -16,7 +16,10 @@
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Governance
-        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+            <span class="page-info-btn" aria-hidden="true">i</span>
+            <span class="page-info-popover" role="tooltip">Monitor strategic drift and manage change control. Run detection to compare the current project state against your baseline, review flagged changes, and approve or reject amendments.</span>
+        </span>
     </h1>
     <div class="flex items-center gap-2">
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
@@ -31,9 +34,6 @@
             <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Create a new baseline snapshot of the current project state?')">Create Baseline</button>
         </form>
     </div>
-</div>
-<div class="page-info-panel hidden">
-    Monitor strategic drift and manage change control. Run detection to compare the current project state against your baseline, review flagged changes, and approve or reject amendments.
 </div>
 
 <!-- ===========================

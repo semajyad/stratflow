@@ -3067,47 +3067,85 @@ tbody tr:hover {
     line-height: 1.6;
 }
 
-/* Info button next to page title + collapsible info panel */
+/* Info button next to page title with hover-triggered popover */
+.page-info {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+    outline: none;
+}
+
 .page-info-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     padding: 0;
-    margin-left: 0.25rem;
     background: transparent;
     color: var(--text-light, #94a3b8);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 50%;
-    cursor: pointer;
-    font-size: 0.75rem;
+    cursor: help;
+    font-size: 0.6875rem;
     font-weight: 700;
     line-height: 1;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
     transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-    vertical-align: middle;
 }
 
-.page-info-btn:hover,
-.page-info-btn[aria-expanded="true"] {
+.page-info:hover .page-info-btn,
+.page-info:focus-within .page-info-btn {
     background: var(--primary-light, #eef2ff);
     color: var(--primary);
     border-color: var(--primary);
 }
 
-.page-info-panel {
-    background: var(--primary-light, #eef2ff);
-    border-left: 3px solid var(--primary);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: 0 6px 6px 0;
-    color: var(--text);
-    line-height: 1.55;
-    font-size: 0.875rem;
-    max-width: 760px;
+/* Hover-revealed popover — never requires a click */
+.page-info-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: -8px;
+    width: max-content;
+    max-width: 380px;
+    padding: 0.75rem 0.9rem;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.25), 0 4px 10px rgba(15, 23, 42, 0.12);
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 140ms, transform 140ms;
+    z-index: 200;
+    white-space: normal;
 }
 
-.page-info-panel.hidden { display: none; }
+/* Small arrow pointing up to the (i) button */
+.page-info-popover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 14px;
+    width: 10px;
+    height: 10px;
+    background: #0f172a;
+    transform: rotate(45deg) translateY(6px);
+    border-radius: 2px;
+}
+
+.page-info:hover .page-info-popover,
+.page-info:focus-within .page-info-popover {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
 
 /* ===========================
    Workflow Navigation
@@ -3236,12 +3274,12 @@ tbody tr:hover {
 /* Compact stepper (sits inside the topbar) */
 .workflow-stepper {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     gap: 0;
     flex: 1;
     min-width: 0;
-    padding: 0 1rem;
+    padding: 0 0.75rem;
     margin: 0;
     background: transparent;
     border: none;
@@ -3254,30 +3292,32 @@ tbody tr:hover {
 
 .stepper-step {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
+    justify-content: flex-start;
+    gap: 3px;
     flex: 0 1 auto;
-    min-width: 0;
+    min-width: 58px;
     padding: 0 0.25rem;
     text-decoration: none;
     color: var(--text-light, #94a3b8);
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     font-weight: 500;
     position: relative;
     transition: color 150ms ease;
     white-space: nowrap;
 }
 
-/* Connector line between steps */
+/* Connector line between steps — horizontal, crossing the circle midline */
 .stepper-step::after {
     content: '';
-    display: inline-block;
-    width: 18px;
+    position: absolute;
+    top: 9px;                       /* vertical centre of the 20px circle */
+    left: calc(50% + 13px);         /* edge of circle (10px) + small gap */
+    right: calc(-50% + 13px);
     height: 2px;
     background: var(--border, #e2e8f0);
-    margin-left: 0.45rem;
-    flex-shrink: 0;
+    z-index: 0;
 }
 .stepper-step:last-child::after { display: none; }
 
@@ -3285,22 +3325,28 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #fff;
     border: 2px solid var(--border, #e2e8f0);
-    font-size: 0.6875rem;
+    font-size: 0.625rem;
     font-weight: 700;
     color: var(--text-light, #94a3b8);
     transition: all 150ms ease;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .stepper-step-label {
+    display: block;
+    font-size: 0.625rem;
+    line-height: 1.1;
     text-align: center;
-    line-height: 1.2;
-    transition: color 150ms ease;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stepper-step--complete .stepper-step-circle {
@@ -3329,11 +3375,6 @@ tbody tr:hover {
     font-weight: 700;
 }
 
-/* Hide labels of non-current steps to save topbar real estate */
-.stepper-step:not(.stepper-step--current) .stepper-step-label {
-    display: none;
-}
-
 .stepper-step--upcoming:hover .stepper-step-circle {
     border-color: var(--primary);
     color: var(--primary);
@@ -3342,10 +3383,15 @@ tbody tr:hover {
     color: var(--text);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+    .stepper-step { min-width: 48px; }
+    .stepper-step-label { max-width: 56px; }
+    .stepper-step::after { left: calc(50% + 12px); right: calc(-50% + 12px); }
+}
+@media (max-width: 860px) {
     .workflow-stepper .stepper-step-label { display: none; }
-    .stepper-step::after { width: 10px; margin-left: 0.25rem; }
-    .stepper-step { padding: 0 0.125rem; }
+    .stepper-step { min-width: 32px; }
+    .stepper-step::after { left: calc(50% + 12px); right: calc(-50% + 12px); }
 }
 @media (max-width: 640px) {
     .workflow-stepper { display: none; }

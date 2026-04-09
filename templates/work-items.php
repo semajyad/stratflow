@@ -18,15 +18,15 @@
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Work Items
         <span class="page-title-count"><?= count($work_items) ?></span>
-        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+            <span class="page-info-btn" aria-hidden="true">i</span>
+            <span class="page-info-popover" role="tooltip">Work items represent approximately one month of effort for a Scrum team — these become Epics when synced to Jira. Drag to reorder, edit details, or generate AI descriptions.</span>
+        </span>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'work_items'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
     </div>
-</div>
-<div class="page-info-panel hidden">
-    Work items represent approximately one month of effort for a Scrum team — these become Epics when synced to Jira. Drag to reorder, edit details, or generate AI descriptions.
 </div>
 
 <!-- ===========================

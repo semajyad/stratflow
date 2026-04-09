@@ -20,7 +20,10 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Risk Modelling
         <span class="page-title-count"><?= count($risks) ?></span>
-        <button type="button" class="page-info-btn" aria-label="About this page" aria-expanded="false" onclick="togglePageInfo(this)">i</button>
+        <span class="page-info" tabindex="0" role="button" aria-label="About this page">
+            <span class="page-info-btn" aria-hidden="true">i</span>
+            <span class="page-info-popover" role="tooltip">Identify and manage project risks. Auto-generate risks from your work items using AI, set likelihood and impact scores, and generate mitigation strategies.</span>
+        </span>
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'risks'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
@@ -40,9 +43,6 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     </div>
 </div>
 
-<div class="page-info-panel hidden">
-    Identify and manage project risks. Auto-generate risks from your work items using AI, set likelihood and impact scores, and generate mitigation strategies.
-</div>
 
 <!-- ===========================
      Add/Edit Risk Modal
