@@ -1453,11 +1453,11 @@ class JiraSyncService
      */
     private function graphqlRequest(string $url, string $query): array
     {
-        $apiToken = $_ENV['JIRA_API_TOKEN'] ?? '';
-        $email = $_ENV['JIRA_EMAIL'] ?? 'jimmybobday@gmail.com';
+        // Use OAuth Bearer token from the integration record (per-org, no global credentials)
+        $accessToken = $this->integration['access_token'] ?? '';
 
-        if ($apiToken === '') {
-            throw new \RuntimeException('JIRA_API_TOKEN env var required for Goals API');
+        if ($accessToken === '') {
+            throw new \RuntimeException('No OAuth access token available for Goals API');
         }
 
         $ch = curl_init($url);
@@ -1467,7 +1467,7 @@ class JiraSyncService
             CURLOPT_POSTFIELDS     => json_encode(['query' => $query]),
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                'Authorization: Basic ' . base64_encode($email . ':' . $apiToken),
+                'Authorization: Bearer ' . $accessToken,
             ],
             CURLOPT_TIMEOUT => 15,
         ]);
@@ -1475,6 +1475,28 @@ class JiraSyncService
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
+        // If OAuth fails (Goals may need different scopes), fall back to API token
+        if ($httpCode === 401 || $httpCode === 403) {
+            $apiToken = $_ENV['JIRA_API_TOKEN'] ?? '';
+            $email    = $_ENV['JIRA_EMAIL'] ?? '';
+            if ($apiToken !== '' && $email !== '') {
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => json_encode(['query' => $query]),
+                    CURLOPT_HTTPHEADER     => [
+                        'Content-Type: application/json',
+                        'Authorization: Basic ' . base64_encode($email . ':' . $apiToken),
+                    ],
+                    CURLOPT_TIMEOUT => 15,
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+            }
+        }
 
         if ($httpCode !== 200 || $response === false) {
             throw new \RuntimeException("Goals GraphQL API returned HTTP {$httpCode}");
