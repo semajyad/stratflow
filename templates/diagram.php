@@ -24,11 +24,6 @@ $hasSummary = !empty($document_summary);
     </h1>
     <div class="flex items-center gap-2">
         <?php if ($hasDiagram): ?>
-            <div class="view-toggle" role="tablist" aria-label="Diagram view mode">
-                <button type="button" class="view-toggle-btn is-active" data-view="diagram" onclick="setDiagramView('diagram')" role="tab" aria-selected="true">Diagram</button>
-                <button type="button" class="view-toggle-btn" data-view="exec" onclick="setDiagramView('exec')" role="tab" aria-selected="false">Executive</button>
-            </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('code-editor-section').classList.toggle('hidden')">Edit Code</button>
             <button type="button" id="generate-diagram-btn" class="btn btn-secondary btn-sm" onclick="generateDiagramAjax()">Regenerate</button>
         <?php endif; ?>
     </div>
@@ -74,61 +69,7 @@ $hasSummary = !empty($document_summary);
     </div>
 </section>
 
-<!-- Executive View — Simplified card grid of strategic initiatives -->
-<?php if ($hasNodes): ?>
-<section class="card mb-6 hidden" id="exec-view">
-    <div class="card-body">
-        <div class="exec-grid">
-            <?php foreach ($nodes as $node):
-                $hasOkr = !empty($node['okr_title']);
-            ?>
-                <div class="exec-card <?= $hasOkr ? 'exec-card--has-okr' : '' ?>">
-                    <div class="exec-card-head">
-                        <span class="badge badge-primary"><?= htmlspecialchars($node['node_key']) ?></span>
-                        <?php if ($hasOkr): ?>
-                            <span class="badge badge-success">OKR set</span>
-                        <?php else: ?>
-                            <span class="badge badge-secondary">No OKR</span>
-                        <?php endif; ?>
-                    </div>
-                    <h4 class="exec-card-title"><?= htmlspecialchars($node['label']) ?></h4>
-                    <?php if ($hasOkr): ?>
-                        <p class="exec-card-okr"><strong>Objective:</strong> <?= htmlspecialchars($node['okr_title']) ?></p>
-                        <?php if (!empty($node['okr_description'])): ?>
-                            <pre class="exec-card-kr"><?= htmlspecialchars($node['okr_description']) ?></pre>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <p class="exec-card-placeholder text-muted">No objective set yet.</p>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<!-- Code Editor — Hidden by default -->
-<section id="code-editor-section" class="card mb-6 hidden">
-    <div class="card-header flex justify-between items-center">
-        <h3 style="margin:0;">Mermaid Code</h3>
-        <span class="text-muted" style="font-size:0.8rem;">
-            Version <?= (int) $diagram['version'] ?> &middot; <?= date('j M Y, g:ia', strtotime($diagram['updated_at'])) ?>
-        </span>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="/app/diagram/save" data-loading="Saving...">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <textarea name="mermaid_code" id="mermaid-code" rows="12" class="form-control" style="font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
-            <div class="flex justify-between items-center mt-2">
-                <small class="text-muted">Edit the Mermaid code and save. The diagram will re-render automatically.</small>
-                <button type="submit" class="btn btn-primary btn-sm">Save Code</button>
-            </div>
-        </form>
-    </div>
-</section>
-
-<!-- Hidden textarea for mermaid rendering when editor is closed -->
+<!-- Hidden textarea for mermaid rendering -->
 <?php if ($hasDiagram): ?>
 <textarea id="mermaid-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
 <?php endif; ?>
@@ -240,35 +181,6 @@ $hasSummary = !empty($document_summary);
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 
 <script>
-function setDiagramView(view) {
-    var diagramView = document.getElementById('diagram-view');
-    var execView    = document.getElementById('exec-view');
-    var btns        = document.querySelectorAll('.view-toggle-btn');
-    btns.forEach(function(b) {
-        var active = (b.dataset.view === view);
-        b.classList.toggle('is-active', active);
-        b.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    if (view === 'exec') {
-        if (diagramView) diagramView.classList.add('hidden');
-        if (execView)    execView.classList.remove('hidden');
-    } else {
-        if (diagramView) diagramView.classList.remove('hidden');
-        if (execView)    execView.classList.add('hidden');
-    }
-    try { localStorage.setItem('stratflow.diagramView', view); } catch (e) {}
-}
-
-// Restore last-used view
-(function() {
-    try {
-        var saved = localStorage.getItem('stratflow.diagramView');
-        if (saved === 'exec') {
-            setTimeout(function() { setDiagramView('exec'); }, 50);
-        }
-    } catch (e) {}
-})();
-
 function generateDiagramAjax() {
     var btn = document.getElementById('generate-diagram-btn');
     // Use whichever status element exists
