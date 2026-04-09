@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS projects (
     status ENUM('draft','active','completed') NOT NULL DEFAULT 'draft',
     selected_framework ENUM('rice','wsjf') NULL,
     created_by INT UNSIGNED NOT NULL,
+    jira_project_key VARCHAR(20) NULL,
+    jira_board_id INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE CASCADE,

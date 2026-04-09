@@ -95,7 +95,9 @@ if ($lastProjectId && !empty($projects)) {
                         </a>
                         <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
-                                onclick="var n=prompt('Rename project:','<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>'); if(n && n.trim()) { var f=document.createElement('form'); f.method='POST'; f.action='/app/projects/<?= (int) $project['id'] ?>/rename'; f.innerHTML='<input type=hidden name=_csrf_token value=<?= htmlspecialchars($csrf_token) ?>><input type=hidden name=name value=\"'+n.trim()+'\">'; document.body.appendChild(f); f.submit(); }">
+                                onclick="renameProject(<?= (int) $project['id'] ?>, this.dataset.name, this.dataset.token)"
+                                data-name="<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>"
+                                data-token="<?= htmlspecialchars($csrf_token, ENT_QUOTES) ?>">
                             Rename
                         </button>
                         <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form"
@@ -133,3 +135,22 @@ if ($lastProjectId && !empty($projects)) {
         </div>
     </form>
 </section>
+
+<script>
+function renameProject(id, currentName, token) {
+    var name = prompt('Rename project:', currentName);
+    if (name && name.trim()) {
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = '/app/projects/' + id + '/rename';
+        var t = document.createElement('input');
+        t.type = 'hidden'; t.name = '_csrf_token'; t.value = token;
+        var n = document.createElement('input');
+        n.type = 'hidden'; n.name = 'name'; n.value = name.trim();
+        f.appendChild(t);
+        f.appendChild(n);
+        document.body.appendChild(f);
+        f.submit();
+    }
+}
+</script>
