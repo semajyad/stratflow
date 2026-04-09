@@ -409,6 +409,7 @@ class IntegrationController
 
             $totalCreated = $wiResult['created'] + $usResult['created'];
             $totalUpdated = $wiResult['updated'] + $usResult['updated'];
+            $totalSkipped = ($wiResult['skipped'] ?? 0) + ($usResult['skipped'] ?? 0);
             $totalErrors  = $wiResult['errors']  + $usResult['errors'];
 
             AuditLogger::log(
@@ -422,11 +423,17 @@ class IntegrationController
                     'direction' => 'push',
                     'created'   => $totalCreated,
                     'updated'   => $totalUpdated,
+                    'skipped'   => $totalSkipped,
                     'errors'    => $totalErrors,
                 ]
             );
 
-            $_SESSION['flash_message'] = "Push complete: {$totalCreated} created, {$totalUpdated} updated, {$totalErrors} errors.";
+            $parts = [];
+            if ($totalCreated > 0) $parts[] = "{$totalCreated} created";
+            if ($totalUpdated > 0) $parts[] = "{$totalUpdated} updated";
+            if ($totalSkipped > 0) $parts[] = "{$totalSkipped} already in sync";
+            if ($totalErrors > 0)  $parts[] = "{$totalErrors} errors";
+            $_SESSION['flash_message'] = 'Push complete: ' . (empty($parts) ? 'no items to push.' : implode(', ', $parts) . '.');
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Push failed: ' . $e->getMessage();
         }
@@ -698,18 +705,39 @@ class IntegrationController
                 'last_sync_at' => date('Y-m-d H:i:s'),
             ]);
 
-            $parts = [];
+            // Build a clear summary message
+            $totalCreated = 0;
+            $totalUpdated = 0;
+            $totalSkipped = 0;
+            $totalErrors  = 0;
+            $pullUpdated  = 0;
+
             foreach ($results as $type => $counts) {
-                $label = str_replace('_', ' ', $type);
-                if (isset($counts['created'])) {
-                    $parts[] = "{$label}: {$counts['created']} created, {$counts['updated']} updated" .
-                        ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+                if ($type === 'pull') {
+                    $pullUpdated = $counts['updated'] ?? 0;
+                    $totalErrors += $counts['errors'] ?? 0;
                 } else {
-                    $parts[] = "{$label}: {$counts['updated']} updated" .
-                        ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+                    $totalCreated += $counts['created'] ?? 0;
+                    $totalUpdated += $counts['updated'] ?? 0;
+                    $totalSkipped += $counts['skipped'] ?? 0;
+                    $totalErrors  += $counts['errors'] ?? 0;
                 }
             }
-            $_SESSION['flash_message'] = 'Jira sync: ' . implode('; ', $parts);
+
+            $parts = [];
+            if ($totalCreated > 0) $parts[] = "{$totalCreated} pushed to Jira";
+            if ($totalUpdated > 0) $parts[] = "{$totalUpdated} updated in Jira";
+            if ($pullUpdated > 0)  $parts[] = "{$pullUpdated} pulled from Jira";
+            if ($totalSkipped > 0) $parts[] = "{$totalSkipped} already in sync";
+            if ($totalErrors > 0)  $parts[] = "{$totalErrors} errors";
+
+            if (empty($parts)) {
+                $_SESSION['flash_message'] = 'Jira sync complete — no items to sync.';
+            } elseif ($totalSkipped > 0 && $totalCreated === 0 && $totalUpdated === 0 && $pullUpdated === 0) {
+                $_SESSION['flash_message'] = "Jira sync complete — all {$totalSkipped} items already in sync.";
+            } else {
+                $_SESSION['flash_message'] = 'Jira sync complete: ' . implode(', ', $parts) . '.';
+            }
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Jira sync failed: ' . $e->getMessage();
         }

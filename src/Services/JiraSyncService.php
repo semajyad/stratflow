@@ -65,13 +65,13 @@ class JiraSyncService
 
         error_log("[JiraPush] pushWorkItems: projectId={$projectId}, jiraKey={$jiraProjectKey}, itemCount=" . count($workItems));
 
-        $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
+        $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
 
         foreach ($workItems as $item) {
             // Bail out after 3 consecutive errors (likely a config issue, not transient)
             if ($consecutiveErrors >= 3) {
-                $counts['errors'] += count($workItems) - $counts['created'] - $counts['updated'] - $counts['errors'];
+                $counts['errors'] += count($workItems) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
                 break;
             }
             try {
@@ -85,47 +85,56 @@ class JiraSyncService
                 $currentHash = $this->computeSyncHash($item);
 
                 if ($mapping) {
-                    // Check if update needed
-                    if ($mapping['sync_hash'] === $currentHash) {
+                    // Verify the Jira issue still exists
+                    $issueExists = true;
+                    try {
+                        $this->jira->getIssue($mapping['external_key'], ['summary']);
+                    } catch (\RuntimeException $e) {
+                        // Issue was deleted in Jira — remove stale mapping, re-create
+                        $issueExists = false;
+                        SyncMapping::delete($this->db, (int) $mapping['id']);
+                        $mapping = null;
+                    }
+
+                    if ($issueExists && $mapping) {
+                        // Check if update needed
+                        if ($mapping['sync_hash'] === $currentHash) {
+                            $counts['skipped']++;
+                            continue;
+                        }
+
+                        // Update existing issue
+                        $description = $this->buildWorkItemDescription($item);
+                        $this->jira->updateIssue($mapping['external_key'], [
+                            'summary'     => $item['title'],
+                            'description' => $this->jira->textToAdf($description),
+                            'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
+                        ]);
+
+                        SyncMapping::update($this->db, (int) $mapping['id'], [
+                            'sync_hash'     => $currentHash,
+                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        ]);
+
                         SyncLog::create($this->db, [
                             'integration_id' => $integrationId,
                             'direction'      => 'push',
-                            'action'         => 'skip',
+                            'action'         => 'update',
                             'local_type'     => 'hl_work_item',
                             'local_id'       => (int) $item['id'],
                             'external_id'    => $mapping['external_key'],
-                            'details_json'   => json_encode(['reason' => 'no changes']),
+                            'details_json'   => json_encode(['title' => $item['title']]),
                             'status'         => 'success',
                         ]);
+
+                        $counts['updated']++;
+                        $consecutiveErrors = 0;
                         continue;
                     }
+                }
 
-                    // Update existing issue
-                    $description = $this->buildWorkItemDescription($item);
-                    $this->jira->updateIssue($mapping['external_key'], [
-                        'summary'     => $item['title'],
-                        'description' => $this->jira->textToAdf($description),
-                        'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
-                    ]);
-
-                    SyncMapping::update($this->db, (int) $mapping['id'], [
-                        'sync_hash'     => $currentHash,
-                        'last_synced_at' => date('Y-m-d H:i:s'),
-                    ]);
-
-                    SyncLog::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'direction'      => 'push',
-                        'action'         => 'update',
-                        'local_type'     => 'hl_work_item',
-                        'local_id'       => (int) $item['id'],
-                        'external_id'    => $mapping['external_key'],
-                        'details_json'   => json_encode(['title' => $item['title']]),
-                        'status'         => 'success',
-                    ]);
-
-                    $counts['updated']++;
-                } else {
+                // Fall through: create new Epic (no mapping or stale mapping cleared)
+                {
                     // Create new Epic
                     $description = $this->buildWorkItemDescription($item);
                     $fields = [
@@ -214,12 +223,12 @@ class JiraSyncService
 
         error_log("[JiraPush] pushUserStories: projectId={$projectId}, jiraKey={$jiraProjectKey}, storyCount=" . count($stories));
 
-        $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
+        $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
 
         foreach ($stories as $story) {
             if ($consecutiveErrors >= 3) {
-                $counts['errors'] += count($stories) - $counts['created'] - $counts['updated'] - $counts['errors'];
+                $counts['errors'] += count($stories) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
                 break;
             }
             try {
@@ -233,48 +242,54 @@ class JiraSyncService
                 $currentHash = $this->computeSyncHash($story);
 
                 if ($mapping) {
-                    // Check if update needed
-                    if ($mapping['sync_hash'] === $currentHash) {
+                    // Verify the Jira issue still exists
+                    $issueExists = true;
+                    try {
+                        $this->jira->getIssue($mapping['external_key'], ['summary']);
+                    } catch (\RuntimeException $e) {
+                        $issueExists = false;
+                        SyncMapping::delete($this->db, (int) $mapping['id']);
+                        $mapping = null;
+                    }
+
+                    if ($issueExists && $mapping) {
+                        if ($mapping['sync_hash'] === $currentHash) {
+                            $counts['skipped']++;
+                            continue;
+                        }
+
+                        $updateFields = [
+                            'summary'     => $story['title'],
+                            'description' => $this->jira->textToAdf($story['description'] ?? ''),
+                            'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
+                        ];
+
+                        $this->jira->updateIssue($mapping['external_key'], $updateFields);
+
+                        SyncMapping::update($this->db, (int) $mapping['id'], [
+                            'sync_hash'     => $currentHash,
+                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        ]);
+
                         SyncLog::create($this->db, [
                             'integration_id' => $integrationId,
                             'direction'      => 'push',
-                            'action'         => 'skip',
+                            'action'         => 'update',
                             'local_type'     => 'user_story',
                             'local_id'       => (int) $story['id'],
                             'external_id'    => $mapping['external_key'],
-                            'details_json'   => json_encode(['reason' => 'no changes']),
+                            'details_json'   => json_encode(['title' => $story['title']]),
                             'status'         => 'success',
                         ]);
+
+                        $counts['updated']++;
+                        $consecutiveErrors = 0;
                         continue;
                     }
+                }
 
-                    // Update existing issue
-                    $updateFields = [
-                        'summary'     => $story['title'],
-                        'description' => $this->jira->textToAdf($story['description'] ?? ''),
-                        'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
-                    ];
-
-                    $this->jira->updateIssue($mapping['external_key'], $updateFields);
-
-                    SyncMapping::update($this->db, (int) $mapping['id'], [
-                        'sync_hash'     => $currentHash,
-                        'last_synced_at' => date('Y-m-d H:i:s'),
-                    ]);
-
-                    SyncLog::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'direction'      => 'push',
-                        'action'         => 'update',
-                        'local_type'     => 'user_story',
-                        'local_id'       => (int) $story['id'],
-                        'external_id'    => $mapping['external_key'],
-                        'details_json'   => json_encode(['title' => $story['title']]),
-                        'status'         => 'success',
-                    ]);
-
-                    $counts['updated']++;
-                } else {
+                // Fall through: create new Story
+                {
                     // Build fields for new Story — minimal fields to avoid 400s
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
