@@ -750,7 +750,7 @@ class AdminController
             'logs'          => $logs,
             'event_types'   => $eventTypes,
             'filter_type'   => $filterType,
-            'active_page'   => 'admin',
+            'active_page'   => 'audit-logs',
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error'] ?? null,
         ], 'app');
