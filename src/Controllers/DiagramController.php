@@ -119,27 +119,40 @@ class DiagramController
         }
 
         if ($aiSummary === null) {
-            $_SESSION['flash_error'] = 'No AI summary found. Please generate a document summary first.';
+            $_SESSION['flash_error'] = 'No AI summary found. Upload a document and click "Generate Summary" on the Document Upload page first.';
             $this->response->redirect('/app/upload?project_id=' . $projectId);
             return;
         }
 
-        // Generate Mermaid code via Gemini
-        try {
-            $gemini      = new GeminiService($this->config);
-            $mermaidCode = $gemini->generate(DiagramPrompt::PROMPT, $aiSummary);
-        } catch (\RuntimeException $e) {
-            $_SESSION['flash_error'] = 'Diagram generation failed: ' . $e->getMessage();
-            $this->response->redirect('/app/diagram?project_id=' . $projectId);
-            return;
+        // Generate Mermaid code via Gemini — retry up to 2 times on bad output
+        $gemini = new GeminiService($this->config);
+        $mermaidCode = null;
+        $lastError = '';
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            try {
+                $prompt = $attempt === 1
+                    ? DiagramPrompt::PROMPT
+                    : DiagramPrompt::PROMPT . "\n\nIMPORTANT: Your previous response was invalid. You MUST output ONLY valid Mermaid.js code starting with 'graph TD'. No explanations, no markdown fences, no extra text.";
+
+                $raw = $gemini->generate($prompt, $aiSummary);
+                $cleaned = $this->cleanMermaidCode($raw);
+
+                if (stripos($cleaned, 'graph') !== false) {
+                    $mermaidCode = $cleaned;
+                    break;
+                }
+
+                $lastError = 'AI did not return valid Mermaid diagram code (attempt ' . $attempt . ')';
+                error_log("[DiagramGen] Attempt {$attempt} failed: no 'graph' keyword. Raw output: " . substr($raw, 0, 200));
+            } catch (\RuntimeException $e) {
+                $lastError = $e->getMessage();
+                error_log("[DiagramGen] Attempt {$attempt} exception: " . $e->getMessage());
+            }
         }
 
-        // Clean response — strip markdown fences if present
-        $mermaidCode = $this->cleanMermaidCode($mermaidCode);
-
-        // Validate the response contains a graph definition
-        if (stripos($mermaidCode, 'graph') === false) {
-            $_SESSION['flash_error'] = 'AI returned invalid diagram code. Please try again.';
+        if ($mermaidCode === null) {
+            $_SESSION['flash_error'] = 'Diagram generation failed: ' . $lastError . '. Please try again.';
             $this->response->redirect('/app/diagram?project_id=' . $projectId);
             return;
         }
@@ -164,7 +177,14 @@ class DiagramController
             DiagramNode::createBatch($this->db, $diagramId, $nodes);
         }
 
-        $_SESSION['flash_message'] = 'Strategy diagram generated successfully.';
+        $nodeCount = count($nodes);
+        if ($nodeCount === 0) {
+            $_SESSION['flash_message'] = 'Diagram generated but no nodes could be parsed. You may need to edit the Mermaid code manually.';
+        } elseif ($nodeCount < 3) {
+            $_SESSION['flash_message'] = "Diagram generated with {$nodeCount} nodes. Consider regenerating for a more detailed roadmap.";
+        } else {
+            $_SESSION['flash_message'] = "Strategy diagram generated with {$nodeCount} nodes.";
+        }
         $this->response->redirect('/app/diagram?project_id=' . $projectId);
     }
 
@@ -395,21 +415,31 @@ class DiagramController
     private function cleanMermaidCode(string $code): string
     {
         $code = trim($code);
-        // Remove ```mermaid ... ``` or ``` ... ``` wrappers
-        $code = preg_replace('/^```(?:mermaid)?\s*/i', '', $code);
-        $code = preg_replace('/\s*```\s*$/', '', $code);
 
-        // Fix parentheses inside square bracket labels — Mermaid can't parse them
-        // e.g., A[Market Expansion (AU Focus)] → A[Market Expansion - AU Focus]
-        $code = preg_replace_callback('/\[([^\]]*)\]/', function($m) {
-            return '[' . str_replace(['(', ')'], [' - ', ''], $m[1]) . ']';
+        // Remove markdown fences (```mermaid ... ``` or ``` ... ```)
+        $code = preg_replace('/^```(?:mermaid)?\s*\n?/im', '', $code);
+        $code = preg_replace('/\n?\s*```\s*$/m', '', $code);
+
+        // Remove any text before the first "graph" line (AI sometimes adds preamble)
+        if (preg_match('/(graph\s+(?:TD|TB|LR|RL|BT))/i', $code, $m, PREG_OFFSET_CAPTURE)) {
+            $code = substr($code, $m[0][1]);
+        }
+
+        // Clean labels in square brackets: remove chars that break Mermaid
+        $code = preg_replace_callback('/\[([^\]]*)\]/', function ($m) {
+            $label = $m[1];
+            $label = str_replace(['(', ')', '&', '<', '>', '"', "'", '#', ';'], [' - ', '', 'and', '', '', '', '', '', ''], $label);
+            $label = preg_replace('/\s+/', ' ', trim($label));
+            return '[' . $label . ']';
         }, $code);
 
-        // Fix special chars that break Mermaid: & → and, < > → removed
-        $code = preg_replace_callback('/\[([^\]]*)\]/', function($m) {
-            $label = str_replace(['&', '<', '>'], ['and', '', ''], $m[1]);
-            return '[' . trim($label) . ']';
-        }, $code);
+        // Fix common AI mistakes: "--->" should be "-->"
+        $code = str_replace('--->', '-->', $code);
+        // Fix "-- text -->" link labels that sometimes break
+        $code = preg_replace('/--\s*\|[^|]*\|\s*>/', '-->', $code);
+
+        // Remove empty lines
+        $code = preg_replace('/\n{3,}/', "\n", $code);
 
         return trim($code);
     }
@@ -427,13 +457,21 @@ class DiagramController
         $nodes = [];
         $seen  = [];
 
-        if (preg_match_all('/([A-Za-z][A-Za-z0-9_]*)\s*[\[\(\{]([^\]\)\}]+)[\]\)\}]/', $code, $matches, PREG_SET_ORDER)) {
+        // Match node definitions: A[Label], B(Label), C{Label}, node_1[Label], etc.
+        // Supports: single letters, multi-char IDs, IDs with underscores/numbers
+        if (preg_match_all('/\b([A-Za-z][A-Za-z0-9_]*)\s*[\[\(\{]([^\]\)\}]+)[\]\)\}]/', $code, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $key   = $match[1];
                 $label = trim($match[2]);
 
-                // Skip the "graph" keyword and duplicates
-                if (strtolower($key) === 'graph' || isset($seen[$key])) {
+                // Skip keywords and duplicates
+                $lower = strtolower($key);
+                if (in_array($lower, ['graph', 'subgraph', 'end', 'style', 'class', 'click', 'td', 'tb', 'lr', 'rl', 'bt']) || isset($seen[$key])) {
+                    continue;
+                }
+
+                // Skip if label is empty or too short
+                if (strlen($label) < 2) {
                     continue;
                 }
 

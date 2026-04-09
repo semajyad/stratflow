@@ -136,7 +136,7 @@ class GeminiService
                 ['parts' => [['text' => $prompt . "\n\n---\n\n" . $input]]]
             ],
             'generationConfig' => [
-                'temperature'     => 0.7,
+                'temperature'     => 0.4,
                 'maxOutputTokens' => 4096,
             ],
         ];
@@ -214,7 +214,7 @@ class GeminiService
                 ['role' => 'system', 'content' => $prompt],
                 ['role' => 'user', 'content' => $input],
             ],
-            'temperature' => 0.7,
+            'temperature' => 0.4,
             'max_tokens' => 4096,
         ]);
 

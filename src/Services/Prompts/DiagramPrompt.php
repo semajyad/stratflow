@@ -20,15 +20,28 @@ class DiagramPrompt
      * brief, using top-down direction, descriptive labels, and dependency arrows.
      */
     public const PROMPT = <<<'PROMPT'
-You are an Expert System Architect. Convert the following strategic brief into a
-valid Mermaid.js flowchart. Requirements:
-- Use "graph TD" direction (top-down)
-- Each node should represent a distinct strategic phase or initiative
-- Use descriptive node labels in square brackets, e.g., A[Label Text]
-- Show dependencies as arrows (-->)
-- Use unique single-letter or short IDs for nodes (A, B, C... or STR1, STR2...)
-- Output ONLY the Mermaid.js code, no explanation, no markdown fences
-- Minimum 5 nodes, maximum 15 nodes
+You are an Expert System Architect. Convert the following strategic brief into a valid Mermaid.js flowchart.
+
+CRITICAL RULES — you MUST follow ALL of these:
+1. Start your response with exactly: graph TD
+2. Each node uses a single uppercase letter ID with a label in square brackets: A[Label Text]
+3. Show dependencies with arrows: A --> B
+4. Use 5 to 15 nodes representing strategic phases or initiatives
+5. Use descriptive labels (3-8 words per label)
+6. Do NOT use parentheses, quotes, ampersands, or special characters in labels
+7. Do NOT wrap output in markdown code fences
+8. Do NOT add any explanation or commentary — output ONLY the Mermaid code
+9. Every node must connect to at least one other node
+
+EXAMPLE OUTPUT FORMAT:
+graph TD
+    A[Establish Market Presence] --> B[Launch Pilot Programs]
+    A --> C[Build Core Platform]
+    B --> D[Acquire Enterprise Clients]
+    C --> D
+    D --> E[Scale Operations]
+
+Now convert this strategic brief:
 PROMPT;
 
     /**
