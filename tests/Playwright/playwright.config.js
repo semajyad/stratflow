@@ -5,6 +5,7 @@ module.exports = defineConfig({
   testDir: '.',
   globalSetup: require.resolve('./global-setup'),
   globalTeardown: require.resolve('./global-teardown'),
+  workers: 1,
   timeout: 30_000,
   retries: 0,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'test-results/report' }]],
