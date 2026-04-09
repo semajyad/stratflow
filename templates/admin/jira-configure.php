@@ -203,6 +203,36 @@ $fm = $current_config['field_mapping'] ?? [];
         </div>
     </section>
 
+    <!-- Priority Mapping -->
+    <?php $pr = $fm['priority_ranges'] ?? []; ?>
+    <section class="card mt-4">
+        <div class="card-header"><h2 class="card-title">Priority Mapping</h2></div>
+        <div class="card-body">
+            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+                Map StratFlow priority numbers (1-10) to Jira priority levels. Items with priority &le; the threshold get that level.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; max-width: 500px;">
+                <div class="form-group">
+                    <label class="form-label">Highest (&le;)</label>
+                    <input type="number" name="priority_highest" class="form-input" value="<?= (int) ($pr['highest'] ?? 2) ?>" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">High (&le;)</label>
+                    <input type="number" name="priority_high" class="form-input" value="<?= (int) ($pr['high'] ?? 4) ?>" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Medium (&le;)</label>
+                    <input type="number" name="priority_medium" class="form-input" value="<?= (int) ($pr['medium'] ?? 6) ?>" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Low (&le;)</label>
+                    <input type="number" name="priority_low" class="form-input" value="<?= (int) ($pr['low'] ?? 8) ?>" min="1" max="10">
+                </div>
+            </div>
+            <small class="text-muted">Items above the Low threshold map to Lowest.</small>
+        </div>
+    </section>
+
     <!-- Connection Details -->
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Connection Details</h2></div>

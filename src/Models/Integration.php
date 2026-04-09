@@ -30,7 +30,41 @@ class Integration
         'display_name', 'cloud_id', 'access_token', 'refresh_token',
         'token_expires_at', 'site_url', 'config_json', 'status',
         'last_sync_at', 'error_message', 'error_count',
+        'token_iv', 'token_tag',
     ];
+
+    /**
+     * Encrypt a token value using AES-256-GCM.
+     * Returns null if no encryption key is configured.
+     */
+    public static function encryptToken(string $plaintext): array
+    {
+        $key = $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '';
+        if ($key === '') {
+            return ['ciphertext' => $plaintext, 'iv' => null, 'tag' => null];
+        }
+        $iv = random_bytes(12);
+        $tag = '';
+        $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, 0, $iv, $tag);
+        return [
+            'ciphertext' => $ciphertext,
+            'iv'         => base64_encode($iv),
+            'tag'        => base64_encode($tag),
+        ];
+    }
+
+    /**
+     * Decrypt a token value. Falls back to plaintext if no encryption key.
+     */
+    public static function decryptToken(string $ciphertext, ?string $iv, ?string $tag): string
+    {
+        $key = $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '';
+        if ($key === '' || $iv === null || $tag === null) {
+            return $ciphertext; // Not encrypted, return as-is
+        }
+        $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, 0, base64_decode($iv), base64_decode($tag));
+        return $plaintext !== false ? $plaintext : $ciphertext;
+    }
 
     // ===========================
     // CREATE

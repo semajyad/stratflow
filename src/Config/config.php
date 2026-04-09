@@ -50,9 +50,13 @@ return [
         'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
     ],
     'jira' => [
-        'client_id'     => $_ENV['JIRA_CLIENT_ID'] ?? '',
-        'client_secret' => $_ENV['JIRA_CLIENT_SECRET'] ?? '',
-        'redirect_uri'  => ($_ENV['APP_URL'] ?? '') . '/app/admin/integrations/jira/callback',
+        'client_id'      => $_ENV['JIRA_CLIENT_ID'] ?? '',
+        'client_secret'  => $_ENV['JIRA_CLIENT_SECRET'] ?? '',
+        'redirect_uri'   => ($_ENV['APP_URL'] ?? '') . '/app/admin/integrations/jira/callback',
+        'webhook_secret' => $_ENV['JIRA_WEBHOOK_SECRET'] ?? '',
+    ],
+    'encryption' => [
+        'token_key' => $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '',
     ],
     'stripe' => [
         'publishable_key' => $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',

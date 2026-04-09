@@ -46,25 +46,41 @@ $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : 
     <div class="card-body">
         <?php if ($jiraActive): ?>
             <!-- Connected state -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <?php $sh = $sync_health ?? []; ?>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Site</span>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Site</span>
                     <strong><?= htmlspecialchars($jira['display_name'] ?? '') ?></strong>
-                    <?php if (!empty($jira['site_url'])): ?>
-                        <br><a href="<?= htmlspecialchars($jira['site_url']) ?>" target="_blank" rel="noopener" style="font-size: 0.85rem;"><?= htmlspecialchars($jira['site_url']) ?></a>
-                    <?php endif; ?>
-                </div>
-                <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Last Sync</span>
-                    <strong><?= $jira['last_sync_at'] ? htmlspecialchars($jira['last_sync_at']) : 'Never' ?></strong>
-                </div>
-                <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Synced Items</span>
-                    <strong><?= (int) $jira_sync_count ?></strong>
                     <?php if (!empty($jiraConfig['project_key'])): ?>
-                        <br><span class="text-muted" style="font-size: 0.85rem;">Project: <?= htmlspecialchars($jiraConfig['project_key']) ?></span>
+                        <br><span class="badge badge-primary" style="font-size: 0.7rem;"><?= htmlspecialchars($jiraConfig['project_key']) ?></span>
                     <?php endif; ?>
                 </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Epics</span>
+                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['epics'] ?? 0) ?></strong>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Stories</span>
+                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['stories'] ?? 0) ?></strong>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Risks</span>
+                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['risks'] ?? 0) ?></strong>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Sprints</span>
+                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['sprints'] ?? 0) ?></strong>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Last Sync</span>
+                    <strong><?= $jira['last_sync_at'] ? date('j M H:i', strtotime($jira['last_sync_at'])) : 'Never' ?></strong>
+                </div>
+                <?php if (($sh['recent_errors'] ?? 0) > 0): ?>
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Errors (24h)</span>
+                    <strong style="font-size: 1.25rem; color: var(--danger);"><?= (int) $sh['recent_errors'] ?></strong>
+                </div>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($jira['error_message'])): ?>

@@ -119,7 +119,7 @@ class HLWorkItem
         'okr_title', 'okr_description', 'owner', 'estimated_sprints',
         'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
         'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
-        'final_score', 'requires_review',
+        'final_score', 'requires_review', 'status',
     ];
 
     public static function update(Database $db, int $id, array $data): void

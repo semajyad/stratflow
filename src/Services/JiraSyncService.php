@@ -102,11 +102,16 @@ class JiraSyncService
                     } else {
                         // Update changed item
                         $description = $this->buildWorkItemDescription($item);
-                        $this->jira->updateIssue($mapping['external_key'], [
+                        $updateFields = [
                             'summary'     => $item['title'],
                             'description' => $this->jira->textToAdf($description),
                             'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
-                        ]);
+                        ];
+                        // Push owner as assignee if configured
+                        if (!empty($item['owner'])) {
+                            $updateFields['assignee'] = ['displayName' => $item['owner']];
+                        }
+                        $this->jira->updateIssue($mapping['external_key'], $updateFields);
 
                         SyncMapping::update($this->db, (int) $mapping['id'], [
                             'sync_hash'     => $currentHash,
@@ -231,11 +236,16 @@ class JiraSyncService
                         $counts['skipped']++;
                         continue;
                     } else {
-                        $this->jira->updateIssue($mapping['external_key'], [
+                        $updateFields = [
                             'summary'     => $story['title'],
                             'description' => $this->jira->textToAdf($story['description'] ?? ''),
                             'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
-                        ]);
+                        ];
+                        $spField = $this->mapping('story_points_field', 'customfield_10016');
+                        if (!empty($story['size']) && $spField) {
+                            $updateFields[$spField] = (float) $story['size'];
+                        }
+                        $this->jira->updateIssue($mapping['external_key'], $updateFields);
 
                         SyncMapping::update($this->db, (int) $mapping['id'], [
                             'sync_hash'     => $currentHash,
@@ -373,11 +383,12 @@ class JiraSyncService
             // Query Jira for all mapped issues
             $keyList = implode(', ', $keys);
             $jql = "key IN ({$keyList}) ORDER BY updated DESC";
-            $result = $this->jira->searchIssues(
-                $jql,
-                ['summary', 'description', 'status', 'priority', $this->mapping('story_points_field', 'customfield_10016')],
-                100
-            );
+            $pullFields = ['summary', 'description', 'status', 'priority', 'assignee',
+                           $this->mapping('story_points_field', 'customfield_10016')];
+            $teamField = $this->mapping('team_field', '');
+            if ($teamField) $pullFields[] = $teamField;
+
+            $result = $this->jira->searchIssues($jql, $pullFields, 100);
 
             $issues = $result['issues'] ?? [];
 
@@ -409,10 +420,38 @@ class JiraSyncService
                         $updateData['description'] = trim($newDescription);
                     }
 
+                    // Pull status from Jira status category
+                    $jiraStatus = $fields['status']['statusCategory']['key'] ?? '';
+                    $statusMap = ['new' => 'backlog', 'indeterminate' => 'in_progress', 'done' => 'done'];
+                    if (isset($statusMap[$jiraStatus])) {
+                        $updateData['status'] = $statusMap[$jiraStatus];
+                    }
+                    // Refine: Jira "In Review" maps specifically
+                    $jiraStatusName = strtolower($fields['status']['name'] ?? '');
+                    if (str_contains($jiraStatusName, 'review')) {
+                        $updateData['status'] = 'in_review';
+                    }
+
+                    // Pull assignee as owner
+                    $assignee = $fields['assignee'] ?? null;
+                    if ($assignee && !empty($assignee['displayName'])) {
+                        $updateData['owner'] = $assignee['displayName'];
+                    }
+
                     // Pull story points for user stories
                     $spField = $this->mapping('story_points_field', 'customfield_10016');
                     if ($mapping['local_type'] === 'user_story' && $spField && isset($fields[$spField])) {
                         $updateData['size'] = (int) $fields[$spField];
+                    }
+
+                    // Pull team field for user stories
+                    $teamField = $this->mapping('team_field', '');
+                    if ($mapping['local_type'] === 'user_story' && $teamField && isset($fields[$teamField])) {
+                        $val = $fields[$teamField];
+                        $teamName = is_string($val) ? $val : ($val['value'] ?? $val['name'] ?? null);
+                        if ($teamName) {
+                            $updateData['team_assigned'] = $teamName;
+                        }
                     }
 
                     // Check if anything actually changed via sync hash
@@ -541,19 +580,21 @@ class JiraSyncService
      */
     public function mapPriority(int $priorityNumber): string
     {
-        if ($priorityNumber <= 2) {
-            return 'Highest';
-        }
-        if ($priorityNumber <= 4) {
-            return 'High';
-        }
-        if ($priorityNumber <= 6) {
-            return 'Medium';
-        }
-        if ($priorityNumber <= 8) {
-            return 'Low';
+        // Use configurable ranges if set, otherwise defaults
+        $ranges = $this->fieldMapping['priority_ranges'] ?? null;
+        if ($ranges) {
+            $highest = (int) ($ranges['highest'] ?? 2);
+            $high    = (int) ($ranges['high'] ?? 4);
+            $medium  = (int) ($ranges['medium'] ?? 6);
+            $low     = (int) ($ranges['low'] ?? 8);
+        } else {
+            $highest = 2; $high = 4; $medium = 6; $low = 8;
         }
 
+        if ($priorityNumber <= $highest) return 'Highest';
+        if ($priorityNumber <= $high)    return 'High';
+        if ($priorityNumber <= $medium)  return 'Medium';
+        if ($priorityNumber <= $low)     return 'Low';
         return 'Lowest';
     }
 

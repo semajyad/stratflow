@@ -64,17 +64,39 @@ class IntegrationController
             $byProvider[$integ['provider']] = $integ;
         }
 
-        // Count synced items for Jira
+        // Build sync health stats for Jira
         $jiraSyncCount = 0;
+        $syncHealth = ['epics' => 0, 'stories' => 0, 'risks' => 0, 'sprints' => 0, 'total' => 0, 'recent_errors' => 0];
         if (isset($byProvider['jira'])) {
-            $mappings = SyncMapping::findByIntegration($this->db, (int) $byProvider['jira']['id']);
+            $integId = (int) $byProvider['jira']['id'];
+            $mappings = SyncMapping::findByIntegration($this->db, $integId);
             $jiraSyncCount = count($mappings);
+
+            foreach ($mappings as $m) {
+                match ($m['local_type']) {
+                    'hl_work_item' => $syncHealth['epics']++,
+                    'user_story'   => $syncHealth['stories']++,
+                    'risk'         => $syncHealth['risks']++,
+                    'sprint'       => $syncHealth['sprints']++,
+                    default        => null,
+                };
+            }
+            $syncHealth['total'] = $jiraSyncCount;
+
+            // Count recent errors (last 24h)
+            $recentLogs = SyncLog::findByIntegration($this->db, $integId, 50);
+            foreach ($recentLogs as $log) {
+                if ($log['status'] === 'error' && strtotime($log['created_at']) > time() - 86400) {
+                    $syncHealth['recent_errors']++;
+                }
+            }
         }
 
         $this->response->render('admin/integrations', [
             'user'            => $user,
             'integrations'    => $byProvider,
             'jira_sync_count' => $jiraSyncCount,
+            'sync_health'     => $syncHealth,
             'active_page'     => 'integrations',
             'flash_message'   => $_SESSION['flash_message'] ?? null,
             'flash_error'     => $_SESSION['flash_error']   ?? null,
@@ -319,6 +341,12 @@ class IntegrationController
             'story_points_field' => trim((string) $this->request->post('story_points_field', 'customfield_10016')),
             'team_field'         => trim((string) $this->request->post('team_field', 'customfield_10001')),
             'board_id'           => (int) $this->request->post('board_id', 0),
+            'priority_ranges'    => [
+                'highest' => (int) $this->request->post('priority_highest', 2),
+                'high'    => (int) $this->request->post('priority_high', 4),
+                'medium'  => (int) $this->request->post('priority_medium', 6),
+                'low'     => (int) $this->request->post('priority_low', 8),
+            ],
         ];
 
         Integration::update($this->db, (int) $integration['id'], [
@@ -923,8 +951,13 @@ class IntegrationController
                     $created++;
                 }
             } catch (\Throwable $e) {
-                error_log('[JiraTeamImport] Board import failed: ' . $e->getMessage());
-                $_SESSION['flash_error'] = 'Board import failed: ' . $e->getMessage();
+                $errMsg = $e->getMessage();
+                error_log('[JiraTeamImport] Board import failed: ' . $errMsg);
+                if (str_contains($errMsg, '401') || str_contains($errMsg, 'Unauthorized') || str_contains($errMsg, 'scope')) {
+                    $_SESSION['flash_error'] = 'Jira board access denied. Please disconnect and reconnect Jira in Integrations to grant updated permissions (board scope required).';
+                } else {
+                    $_SESSION['flash_error'] = 'Board import failed: ' . $errMsg;
+                }
                 $this->response->redirect('/app/admin/teams');
                 return;
             }
