@@ -57,7 +57,7 @@ class HomeController
         if ($integration && $integration['status'] === 'active') {
             $jiraConnected = true;
             try {
-                $jiraService = new \StratFlow\Services\JiraService($this->config, $integration, $this->db);
+                $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
                 $jiraProjects = $jiraService->getProjects();
             } catch (\Throwable $e) {
                 // Jira API failed — just skip project list

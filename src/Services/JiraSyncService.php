@@ -63,6 +63,8 @@ class JiraSyncService
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
 
+        error_log("[JiraPush] pushWorkItems: projectId={$projectId}, jiraKey={$jiraProjectKey}, itemCount=" . count($workItems));
+
         $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
 
@@ -209,6 +211,8 @@ class JiraSyncService
     {
         $stories = UserStory::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
+
+        error_log("[JiraPush] pushUserStories: projectId={$projectId}, jiraKey={$jiraProjectKey}, storyCount=" . count($stories));
 
         $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
         $consecutiveErrors = 0;

@@ -612,7 +612,7 @@ class IntegrationController
                         $updateData['title'] = $newTitle;
                     }
                     if (!empty($issueFields['description'])) {
-                        $jiraService = new \StratFlow\Services\JiraService($this->config, $mapping, $this->db);
+                        $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $mapping, $this->db);
                         $updateData['description'] = $jiraService->adfToText($issueFields['description']);
                     }
 
@@ -673,7 +673,7 @@ class IntegrationController
         }
 
         try {
-            $jiraService = new \StratFlow\Services\JiraService($this->config, $integration, $this->db);
+            $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
             $syncService = new \StratFlow\Services\JiraSyncService($this->db, $jiraService, $integration);
 
             $results = [];
@@ -686,6 +686,9 @@ class IntegrationController
             if ($syncType === 'user_stories' || $syncType === 'all') {
                 $results['push_user_stories'] = $syncService->pushUserStories($projectId, $jiraKey);
             }
+
+            // Log item counts for debugging
+            error_log("[JiraSync] Project {$projectId} ({$jiraKey}): syncType={$syncType}, results=" . json_encode($results));
 
             // Pull Jira changes back to StratFlow
             $pullResult = $syncService->pullChanges($projectId, $jiraKey);
