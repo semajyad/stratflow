@@ -325,7 +325,24 @@ class FileProcessor
      */
     private function extractPdfText(string $filePath): string
     {
-        // Increase memory for large PDFs
+        // Method 1: smalot/pdfparser (fast, local)
+        $text = $this->extractPdfViaSmalot($filePath);
+        if (trim($text) !== '') {
+            return $text;
+        }
+
+        // Method 2: Gemini AI vision (handles scanned/complex PDFs)
+        $text = $this->extractPdfViaGemini($filePath);
+        if (trim($text) !== '') {
+            return $text;
+        }
+
+        error_log("[FileProcessor] All PDF extraction methods failed for: " . basename($filePath));
+        return '';
+    }
+
+    private function extractPdfViaSmalot(string $filePath): string
+    {
         $prevMemory = ini_get('memory_limit');
         ini_set('memory_limit', '512M');
 
@@ -333,7 +350,6 @@ class FileProcessor
             $parser = new \Smalot\PdfParser\Parser();
             $pdf    = $parser->parseFile($filePath);
 
-            // Try page-by-page extraction (more reliable than getText() for large docs)
             $text = '';
             $pages = $pdf->getPages();
             foreach ($pages as $page) {
@@ -343,26 +359,76 @@ class FileProcessor
                         $text .= $pageText . "\n\n";
                     }
                 } catch (\Throwable $e) {
-                    // Skip pages that fail but continue with others
                     continue;
                 }
             }
 
-            // Fallback to full getText if page-by-page got nothing
             if (trim($text) === '') {
                 $text = $pdf->getText();
             }
 
             ini_set('memory_limit', $prevMemory);
-
-            if (trim($text) !== '') {
-                return trim($text);
-            }
-
-            error_log("[FileProcessor] PDF parser returned empty text for: " . basename($filePath));
+            return trim($text);
         } catch (\Throwable $e) {
             ini_set('memory_limit', $prevMemory);
-            error_log("[FileProcessor] PDF extraction failed: " . $e->getMessage());
+            error_log("[FileProcessor] smalot failed: " . $e->getMessage());
+            return '';
+        }
+    }
+
+    private function extractPdfViaGemini(string $filePath): string
+    {
+        $apiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            return '';
+        }
+
+        try {
+            $pdfData = file_get_contents($filePath);
+            if ($pdfData === false) return '';
+
+            $base64 = base64_encode($pdfData);
+            $model  = $_ENV['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
+
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+            $body = json_encode([
+                'contents' => [[
+                    'parts' => [
+                        ['inline_data' => ['mime_type' => 'application/pdf', 'data' => $base64]],
+                        ['text' => 'Extract ALL text content from this PDF document. Output ONLY the extracted text, preserving the original structure, headings, and paragraphs. Do not add commentary or summarise — just extract the raw text exactly as it appears.'],
+                    ],
+                ]],
+                'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 8192],
+            ]);
+
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $body,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                CURLOPT_TIMEOUT        => 60,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || $response === false) {
+                error_log("[FileProcessor] Gemini PDF extraction HTTP {$httpCode}");
+                return '';
+            }
+
+            $data = json_decode($response, true);
+            $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+            if (trim($text) !== '') {
+                error_log("[FileProcessor] Gemini extracted " . strlen($text) . " chars from PDF");
+                return trim($text);
+            }
+        } catch (\Throwable $e) {
+            error_log("[FileProcessor] Gemini PDF extraction failed: " . $e->getMessage());
         }
 
         return '';
