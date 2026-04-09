@@ -87,6 +87,31 @@ class SyncMapping
     }
 
     /**
+     * Find a mapping by its external key (e.g. Jira issue key like "PROJ-42").
+     *
+     * @param Database $db            Database instance
+     * @param int      $integrationId Integration ID
+     * @param string   $externalKey   External issue key
+     * @return array|null             Row or null if not found
+     */
+    public static function findByExternalKey(Database $db, int $integrationId, string $externalKey): ?array
+    {
+        $stmt = $db->query(
+            "SELECT * FROM sync_mappings
+             WHERE integration_id = :integration_id
+               AND external_key = :external_key
+             LIMIT 1",
+            [
+                ':integration_id' => $integrationId,
+                ':external_key'   => $externalKey,
+            ]
+        );
+        $row = $stmt->fetch();
+
+        return $row !== false ? $row : null;
+    }
+
+    /**
      * Find a mapping by its external ID.
      *
      * @param Database $db            Database instance

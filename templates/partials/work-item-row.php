@@ -28,6 +28,14 @@
                 Jira: <?= htmlspecialchars($item['jira_key'] ?? '') ?>
             </a>
         <?php endif; ?>
+        <?php
+            $statusLabels = ['in_progress' => 'In progress', 'in_review' => 'In review', 'done' => 'Done'];
+            $statusBadges = ['in_progress' => 'badge-info', 'in_review' => 'badge-warning', 'done' => 'badge-success'];
+            $itemStatus   = $item['status'] ?? 'backlog';
+            if ($itemStatus !== 'backlog' && isset($statusLabels[$itemStatus])):
+        ?>
+            <span class="badge <?= $statusBadges[$itemStatus] ?>"><?= $statusLabels[$itemStatus] ?></span>
+        <?php endif; ?>
         <?php if (!empty($item['dependencies'])): ?>
             <span class="badge badge-info" title="Depends on: <?= htmlspecialchars($item['dependency_titles']) ?>">
                 &#x2190; Depends on <?= count($item['dependencies']) ?>

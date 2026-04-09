@@ -129,7 +129,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/integrations/jira/pull',       'IntegrationController@jiraPull',         ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/integrations/sync-log/export',  'IntegrationController@syncLogExport',    ['auth', 'admin']);
     $router->add('GET',  '/app/admin/integrations/sync-log',        'IntegrationController@syncLog',          ['auth', 'admin']);
-    $router->add('POST', '/app/admin/integrations/jira/import-teams', 'IntegrationController@jiraImportTeams', ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/integrations/jira/import-teams',    'IntegrationController@jiraImportTeams',    ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/integrations/jira/bulk-pull-status', 'IntegrationController@jiraBulkPullStatus', ['auth', 'admin', 'csrf']);
     $router->add('POST', '/webhook/integration/jira',               'IntegrationController@jiraWebhook');
 
     // Admin — static routes MUST come before {id} routes

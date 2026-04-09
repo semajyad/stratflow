@@ -182,7 +182,7 @@ class UserStory
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'parent_hl_item_id',
-        'parent_link', 'team_assigned', 'size', 'blocked_by', 'requires_review', 'status',
+        'parent_link', 'team_assigned', 'size', 'blocked_by', 'requires_review', 'status', 'last_jira_sync_at',
     ];
 
     public static function update(Database $db, int $id, array $data): void

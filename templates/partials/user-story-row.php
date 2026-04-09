@@ -26,6 +26,14 @@
                 Jira: <?= htmlspecialchars($story['jira_key'] ?? '') ?>
             </a>
         <?php endif; ?>
+        <?php
+            $statusLabels = ['in_progress' => 'In progress', 'in_review' => 'In review', 'done' => 'Done'];
+            $statusBadges = ['in_progress' => 'badge-info', 'in_review' => 'badge-warning', 'done' => 'badge-success'];
+            $storyStatus  = $story['status'] ?? 'backlog';
+            if ($storyStatus !== 'backlog' && isset($statusLabels[$storyStatus])):
+        ?>
+            <span class="badge <?= $statusBadges[$storyStatus] ?>"><?= $statusLabels[$storyStatus] ?></span>
+        <?php endif; ?>
         <?php if ($story['requires_review'] ?? false): ?>
             <span class="badge badge-warning">Requires Review</span>
         <?php endif; ?>

@@ -770,6 +770,162 @@ class JiraSyncService
     }
 
     // ===========================
+    // PULL: STATUS ONLY
+    // ===========================
+
+    /**
+     * Map a Jira status name to the local status enum value.
+     *
+     * Case-insensitive. Returns null if the name is not recognised so the
+     * caller can decide to skip rather than overwrite with a bad value.
+     *
+     * @param string $jiraStatusName Raw status name from Jira (e.g. "In Progress")
+     * @return string|null           Local enum value, or null if unknown
+     */
+    private function mapJiraStatusName(string $jiraStatusName): ?string
+    {
+        $name = strtolower(trim($jiraStatusName));
+
+        $statusMap = [
+            'to do'         => 'backlog',
+            'backlog'       => 'backlog',
+            'open'          => 'backlog',
+            'in progress'   => 'in_progress',
+            'in development' => 'in_progress',
+            'in review'     => 'in_review',
+            'in qa'         => 'in_review',
+            'code review'   => 'in_review',
+            'done'          => 'done',
+            'closed'        => 'done',
+            'resolved'      => 'done',
+        ];
+
+        return $statusMap[$name] ?? null;
+    }
+
+    /**
+     * Pull status for a single Jira issue and apply it to the local item.
+     *
+     * Looks up the local sync mapping by external key, maps the Jira status
+     * name to the local enum, updates the local row if the status changed,
+     * and writes a sync_log entry with action 'status_pull'.
+     *
+     * @param string $issueKey   Jira issue key (e.g. "PROJ-42")
+     * @param array  $issueData  Full Jira issue payload (fields.status.name required)
+     * @return bool              True if a local record was updated, false otherwise
+     */
+    public function pullStatus(string $issueKey, array $issueData): bool
+    {
+        $integrationId = (int) $this->integration['id'];
+
+        $mapping = SyncMapping::findByExternalKey($this->db, $integrationId, $issueKey);
+        if (!$mapping) {
+            return false;
+        }
+
+        $jiraStatusName = $issueData['fields']['status']['name'] ?? '';
+        $newStatus = $this->mapJiraStatusName($jiraStatusName);
+
+        if ($newStatus === null) {
+            error_log("[JiraStatusPull] Unknown Jira status '{$jiraStatusName}' for {$issueKey} — skipping");
+            return false;
+        }
+
+        // Load current local item to check for an actual change
+        $localItem = $mapping['local_type'] === 'hl_work_item'
+            ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
+            : UserStory::findById($this->db, (int) $mapping['local_id']);
+
+        if (!$localItem) {
+            return false;
+        }
+
+        $currentStatus = $localItem['status'] ?? 'backlog';
+        $now = date('Y-m-d H:i:s');
+
+        if ($currentStatus === $newStatus) {
+            // No change — still stamp the sync time and return false
+            if ($mapping['local_type'] === 'hl_work_item') {
+                HLWorkItem::update($this->db, (int) $mapping['local_id'], ['last_jira_sync_at' => $now]);
+            } else {
+                UserStory::update($this->db, (int) $mapping['local_id'], ['last_jira_sync_at' => $now]);
+            }
+            return false;
+        }
+
+        // Apply update
+        $updateData = ['status' => $newStatus, 'last_jira_sync_at' => $now];
+        if ($mapping['local_type'] === 'hl_work_item') {
+            HLWorkItem::update($this->db, (int) $mapping['local_id'], $updateData);
+        } else {
+            UserStory::update($this->db, (int) $mapping['local_id'], $updateData);
+        }
+
+        SyncLog::create($this->db, [
+            'integration_id' => $integrationId,
+            'direction'      => 'pull',
+            'action'         => 'status_pull',
+            'local_type'     => $mapping['local_type'],
+            'local_id'       => (int) $mapping['local_id'],
+            'external_id'    => $issueKey,
+            'details_json'   => json_encode([
+                'status_old' => $currentStatus,
+                'status_new' => $newStatus,
+                'jira_status' => $jiraStatusName,
+            ]),
+            'status'         => 'success',
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Bulk-pull status for multiple Jira issues by fetching each from the API.
+     *
+     * Fetches the issue data for each key via JiraService::searchIssues and
+     * delegates to pullStatus for each. Issues that have no local mapping are
+     * silently skipped.
+     *
+     * @param array $issueKeys List of Jira issue keys (e.g. ["PROJ-1","PROJ-2"])
+     * @return int             Number of local records that were actually updated
+     */
+    public function pullStatusBulk(array $issueKeys): int
+    {
+        if (empty($issueKeys)) {
+            return 0;
+        }
+
+        $updated = 0;
+
+        // Fetch all issues in a single JQL query to minimise API calls
+        $keyList = implode(',', array_map(fn($k) => '"' . addslashes($k) . '"', $issueKeys));
+        $jql = "issueKey in ({$keyList})";
+
+        try {
+            $pageSize = 100;
+            $startAt  = 0;
+            do {
+                $result = $this->jira->searchIssues($jql, ['status'], $pageSize, $startAt);
+                $page   = $result['issues'] ?? [];
+                foreach ($page as $issue) {
+                    try {
+                        if ($this->pullStatus($issue['key'], $issue)) {
+                            $updated++;
+                        }
+                    } catch (\Throwable $e) {
+                        error_log("[JiraStatusBulk] Error pulling status for {$issue['key']}: " . $e->getMessage());
+                    }
+                }
+                $startAt += $pageSize;
+            } while (count($page) === $pageSize && $startAt < 2000);
+        } catch (\Throwable $e) {
+            error_log('[JiraStatusBulk] JQL fetch failed: ' . $e->getMessage());
+        }
+
+        return $updated;
+    }
+
+    // ===========================
     // HELPERS
     // ===========================
 

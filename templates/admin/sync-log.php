@@ -17,9 +17,19 @@
      =========================== -->
 <div class="page-header">
     <h1 class="page-title">Sync History</h1>
-    <p class="page-subtitle">
-        <a href="/app/admin/integrations">&larr; Back to Integrations</a>
-    </p>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <p class="page-subtitle mb-0">
+            <a href="/app/admin/integrations">&larr; Back to Integrations</a>
+        </p>
+        <?php if ($integration && ($integration['status'] ?? '') === 'active'): ?>
+            <form method="POST" action="/app/admin/integrations/jira/bulk-pull-status" style="margin: 0;">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                    Pull latest status from Jira
+                </button>
+            </form>
+        <?php endif; ?>
+    </div>
 </div>
 
 <!-- ===========================
@@ -106,11 +116,12 @@
                             <td>
                                 <?php
                                 $actionBadge = match ($log['action'] ?? '') {
-                                    'create' => 'badge-success',
-                                    'update' => 'badge-warning',
-                                    'delete' => 'badge-danger',
-                                    'skip'   => 'badge-secondary',
-                                    default  => 'badge-secondary',
+                                    'create'      => 'badge-success',
+                                    'update'      => 'badge-warning',
+                                    'delete'      => 'badge-danger',
+                                    'skip'        => 'badge-secondary',
+                                    'status_pull' => 'badge-info',
+                                    default       => 'badge-secondary',
                                 };
                                 ?>
                                 <span class="badge <?= $actionBadge ?>"><?= htmlspecialchars(ucfirst($log['action'] ?? '')) ?></span>

@@ -627,6 +627,61 @@ class IntegrationController
     }
 
     // =========================================================================
+    // JIRA BULK STATUS PULL
+    // =========================================================================
+
+    /**
+     * Pull the latest Jira status for every mapped item in the org's integration.
+     *
+     * Loads all sync_mappings for the active Jira integration, collects their
+     * external keys, calls JiraSyncService::pullStatusBulk, and redirects back
+     * to the sync log page with a flash message reporting how many items changed.
+     */
+    public function jiraBulkPullStatus(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+
+        if (!$integration || $integration['status'] !== 'active') {
+            $_SESSION['flash_error'] = 'Jira integration is not active.';
+            $this->response->redirect('/app/admin/integrations/sync-log');
+            return;
+        }
+
+        $integrationId = (int) $integration['id'];
+        $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
+
+        // Collect external keys for all hl_work_item and user_story mappings
+        $issueKeys = [];
+        foreach ($mappings as $m) {
+            if (in_array($m['local_type'], ['hl_work_item', 'user_story'], true) && !empty($m['external_key'])) {
+                $issueKeys[] = $m['external_key'];
+            }
+        }
+
+        if (empty($issueKeys)) {
+            $_SESSION['flash_message'] = 'No mapped items found to pull status for.';
+            $this->response->redirect('/app/admin/integrations/sync-log');
+            return;
+        }
+
+        try {
+            $jira    = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $sync    = new JiraSyncService($this->db, $jira, $integration);
+            $updated = $sync->pullStatusBulk($issueKeys);
+
+            $_SESSION['flash_message'] = "Pulled status for " . count($issueKeys) . " items — {$updated} updated.";
+        } catch (\Throwable $e) {
+            error_log('[BulkPullStatus] ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Bulk status pull failed: ' . $e->getMessage();
+        }
+
+        $this->response->redirect('/app/admin/integrations/sync-log');
+    }
+
+    // =========================================================================
     // SYNC LOG
     // =========================================================================
 
@@ -879,6 +934,48 @@ class IntegrationController
                             \StratFlow\Models\UserStory::update($this->db, (int) $mapping['local_id'], $updateData);
                         }
                     }
+
+                    // Pull status — prefer the changelog status entry if present,
+                    // otherwise fall back to the full issue fields.
+                    try {
+                        $changelogItems  = $payload['changelog']['items'] ?? [];
+                        $statusChangelog = null;
+                        foreach ($changelogItems as $cl) {
+                            if (($cl['field'] ?? '') === 'status') {
+                                $statusChangelog = $cl;
+                                break;
+                            }
+                        }
+
+                        if ($statusChangelog !== null) {
+                            // Changelog gives us the new status name directly — build a
+                            // minimal issue payload so pullStatus can do the mapping.
+                            $syntheticIssue = [
+                                'fields' => [
+                                    'status' => ['name' => $statusChangelog['toString'] ?? ''],
+                                ],
+                            ];
+                            $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
+                            if ($integration) {
+                                $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
+                                $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
+                                $syncSvc->pullStatus($issueKey, $syntheticIssue);
+                            }
+                        } elseif (
+                            in_array($event, ['jira:issue_updated', 'jira:issue_created'], true)
+                            && !empty($issueFields['status'])
+                        ) {
+                            // No changelog — use whatever status is in the full issue payload
+                            $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
+                            if ($integration) {
+                                $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
+                                $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
+                                $syncSvc->pullStatus($issueKey, $payload['issue']);
+                            }
+                        }
+                    } catch (\Throwable $statusEx) {
+                        error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
+                    }
                 }
 
                 SyncLog::create($this->db, [
@@ -889,7 +986,7 @@ class IntegrationController
                     'local_id'       => (int) $mapping['local_id'],
                     'external_id'    => $issueKey,
                     'details_json'   => json_encode([
-                        'webhook_event' => $event,
+                        'webhook_event'  => $event,
                         'fields_updated' => array_keys($updateData),
                     ]),
                     'status'         => 'success',
