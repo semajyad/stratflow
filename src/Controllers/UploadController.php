@@ -100,7 +100,7 @@ class UploadController
 
         // Rate limit file uploads: 10 per hour per user
         $userId = (string) $user['id'];
-        if (!RateLimiter::check($this->db, RateLimiter::FILE_UPLOAD, $userId, 10, 3600)) {
+        if (!RateLimiter::check($this->db, RateLimiter::FILE_UPLOAD, $userId, 50, 3600)) {
             $_SESSION['flash_error'] = 'Upload rate limit reached. Please try again later.';
             $this->response->redirect('/app/upload?project_id=' . $projectId);
             return;
@@ -119,6 +119,7 @@ class UploadController
         }
 
         $processor     = new FileProcessor();
+        $processor->setConfig($this->config);
         $uploadDir     = dirname(__DIR__, 3) . '/public/uploads/';
         $extractedText = '';
         $filename      = 'pasted-text';

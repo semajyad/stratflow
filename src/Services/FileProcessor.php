@@ -170,6 +170,14 @@ class FileProcessor
      * @param string $mimeType MIME type string
      * @return string          Extracted plain text
      */
+    /** @var array App config, set via setConfig() for AI-powered extraction */
+    private array $appConfig = [];
+
+    public function setConfig(array $config): void
+    {
+        $this->appConfig = $config;
+    }
+
     public function extractText(string $filePath, string $mimeType): string
     {
         // Also check by file extension as a fallback
@@ -378,17 +386,29 @@ class FileProcessor
 
     private function extractPdfViaGemini(string $filePath): string
     {
-        $apiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+        // Try multiple sources for the API key
+        $apiKey = $this->appConfig['gemini']['api_key']
+               ?? $_ENV['GEMINI_API_KEY']
+               ?? getenv('GEMINI_API_KEY')
+               ?: '';
+
         if ($apiKey === '') {
+            error_log("[FileProcessor] No Gemini API key available for PDF fallback");
             return '';
         }
 
         try {
+            $fileSize = filesize($filePath);
+            error_log("[FileProcessor] Attempting Gemini PDF extraction for " . basename($filePath) . " ({$fileSize} bytes)");
+
             $pdfData = file_get_contents($filePath);
             if ($pdfData === false) return '';
 
             $base64 = base64_encode($pdfData);
-            $model  = $_ENV['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
+            $model  = $this->appConfig['gemini']['model']
+                   ?? $_ENV['GEMINI_MODEL']
+                   ?? getenv('GEMINI_MODEL')
+                   ?: 'gemini-2.5-flash';
 
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
@@ -399,7 +419,7 @@ class FileProcessor
                         ['text' => 'Extract ALL text content from this PDF document. Output ONLY the extracted text, preserving the original structure, headings, and paragraphs. Do not add commentary or summarise — just extract the raw text exactly as it appears.'],
                     ],
                 ]],
-                'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 8192],
+                'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 65536],
             ]);
 
             $ch = curl_init($url);
@@ -408,25 +428,39 @@ class FileProcessor
                 CURLOPT_POSTFIELDS     => $body,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-                CURLOPT_TIMEOUT        => 60,
+                CURLOPT_TIMEOUT        => 120,
             ]);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $response  = curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
-            if ($httpCode !== 200 || $response === false) {
-                error_log("[FileProcessor] Gemini PDF extraction HTTP {$httpCode}");
+            if ($response === false) {
+                error_log("[FileProcessor] Gemini PDF extraction: curl failed - " . $curlError);
+                return '';
+            }
+
+            if ($httpCode !== 200) {
+                error_log("[FileProcessor] Gemini PDF extraction HTTP {$httpCode}: " . substr($response, 0, 500));
                 return '';
             }
 
             $data = json_decode($response, true);
+
+            if (!empty($data['error'])) {
+                error_log("[FileProcessor] Gemini API error: " . ($data['error']['message'] ?? json_encode($data['error'])));
+                return '';
+            }
+
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
             if (trim($text) !== '') {
                 error_log("[FileProcessor] Gemini extracted " . strlen($text) . " chars from PDF");
                 return trim($text);
             }
+
+            error_log("[FileProcessor] Gemini returned empty text. Response: " . substr($response, 0, 300));
         } catch (\Throwable $e) {
             error_log("[FileProcessor] Gemini PDF extraction failed: " . $e->getMessage());
         }
