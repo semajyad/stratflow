@@ -33,10 +33,45 @@
 </div>
 
 <!-- ===========================
+     Team / Board Selector (Required)
+     =========================== -->
+<?php if (empty($teams ?? [])): ?>
+<div class="card mb-6" style="border-left: 4px solid var(--danger);">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem;">
+        <div>
+            <strong>No teams configured</strong>
+            <p class="text-muted" style="margin: 0.25rem 0 0; font-size: 0.875rem;">
+                Sprint allocation requires a team (Jira board). Create a team or import boards from Jira first.
+            </p>
+        </div>
+        <a href="/app/admin/teams" class="btn btn-primary">Manage Teams</a>
+    </div>
+</div>
+<?php else: ?>
+
+<div class="card mb-6" style="border-left: 4px solid var(--primary);">
+    <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;">
+        <label class="form-label" style="margin: 0; white-space: nowrap; font-weight: 600;">Team (Board):</label>
+        <select id="active-team-selector" class="form-control" style="max-width: 300px;"
+                onchange="filterSprintsByTeam(this.value)">
+            <?php foreach ($teams as $t): ?>
+                <option value="<?= (int) $t['id'] ?>"
+                        data-capacity="<?= (int) ($t['capacity'] ?? 0) ?>"
+                        <?= ((int) ($t['id'] ?? 0)) === (int) ($teams[0]['id'] ?? 0) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($t['name']) ?>
+                    <?= !empty($t['jira_board_id']) ? ' (Board #' . (int) $t['jira_board_id'] . ')' : '' ?>
+                    <?php if (($t['capacity'] ?? 0) > 0): ?> — <?= (int) $t['capacity'] ?> pts/sprint<?php endif; ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+</div>
+
+<!-- ===========================
      Page Description
      =========================== -->
 <div class="page-description">
-    Allocate user stories into time-boxed sprints. Drag stories from the backlog into sprint buckets, monitor capacity utilisation, and use AI for automatic allocation.
+    Allocate user stories into time-boxed sprints for the selected team. Drag stories from the backlog into sprint buckets, monitor capacity utilisation, and use AI for automatic allocation.
 </div>
 
 <!-- ===========================
@@ -50,19 +85,8 @@
         <form method="POST" action="/app/sprints/store">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <input type="hidden" name="team_id" id="sprint-team-id" value="<?= (int) ($teams[0]['id'] ?? 0) ?>">
             <div class="sprint-creation-form" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end;">
-                <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Team (Board)</label>
-                    <select name="team_id" class="form-control" style="min-width: 160px;">
-                        <option value="">No team</option>
-                        <?php foreach ($teams ?? [] as $t): ?>
-                            <option value="<?= (int) $t['id'] ?>">
-                                <?= htmlspecialchars($t['name']) ?>
-                                <?= !empty($t['jira_board_id']) ? ' (Board #' . (int) $t['jira_board_id'] . ')' : '' ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Sprint Name</label>
                     <input type="text" name="name" placeholder="e.g. Sprint 1" class="form-control" required>
@@ -76,16 +100,11 @@
                     <input type="date" name="end_date" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Capacity</label>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Capacity (pts)</label>
                     <input type="number" name="team_capacity" placeholder="pts" class="form-control" min="1" style="width: 100px;">
                 </div>
                 <button type="submit" class="btn btn-primary">Create Sprint</button>
             </div>
-            <?php if (empty($teams ?? [])): ?>
-                <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem;">
-                    No teams configured. <a href="/app/admin/teams">Create teams</a> or <a href="/app/admin/teams">import from Jira</a> to assign sprints to boards.
-                </p>
-            <?php endif; ?>
         </form>
     </div>
 </div>
@@ -190,4 +209,25 @@
     </div>
 </div>
 
+<?php endif; /* end teams check */ ?>
+
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
+
+<script>
+function filterSprintsByTeam(teamId) {
+    // Update hidden team_id in sprint creation form
+    var hidden = document.getElementById('sprint-team-id');
+    if (hidden) hidden.value = teamId;
+
+    // Show/hide sprint cards by team
+    document.querySelectorAll('.sprint-card').forEach(function(card) {
+        var cardTeamId = card.dataset.teamId || '';
+        // Show all if no team filter, or show matching + unassigned
+        if (!teamId || cardTeamId === teamId || cardTeamId === '' || cardTeamId === '0') {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>

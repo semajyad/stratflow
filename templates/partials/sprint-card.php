@@ -8,7 +8,7 @@
  * Variables: $sprint (array with stories), $project (array), $csrf_token (string)
  */
 ?>
-<div class="sprint-card" data-sprint-id="<?= (int) $sprint['id'] ?>" data-capacity="<?= (int) ($sprint['team_capacity'] ?? 0) ?>">
+<div class="sprint-card" data-sprint-id="<?= (int) $sprint['id'] ?>" data-team-id="<?= (int) ($sprint['team_id'] ?? 0) ?>" data-capacity="<?= (int) ($sprint['team_capacity'] ?? 0) ?>">
     <div class="sprint-header">
         <div class="sprint-title-row">
             <h4><?= htmlspecialchars($sprint['name']) ?></h4>
