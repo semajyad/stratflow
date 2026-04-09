@@ -71,9 +71,11 @@ class UserStory
     public static function findByProjectId(Database $db, int $projectId): array
     {
         $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title
+            "SELECT us.*, hw.title AS parent_title,
+                    sm.external_key AS jira_key, sm.external_url AS jira_url
              FROM user_stories us
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
+             LEFT JOIN sync_mappings sm ON sm.local_type = 'user_story' AND sm.local_id = us.id
              WHERE us.project_id = :project_id
              ORDER BY us.priority_number ASC",
             [':project_id' => $projectId]

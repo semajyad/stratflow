@@ -599,14 +599,43 @@ class IntegrationController
                     ]
                 );
 
+                // Actually pull the changed fields from the webhook payload
+                $issueFields = $payload['issue']['fields'] ?? [];
+                $newTitle = $issueFields['summary'] ?? null;
+                $action = 'update';
+                $updateData = [];
+
+                if ($event === 'jira:issue_deleted') {
+                    $action = 'delete';
+                } else {
+                    if ($newTitle !== null) {
+                        $updateData['title'] = $newTitle;
+                    }
+                    if (!empty($issueFields['description'])) {
+                        $jiraService = new \StratFlow\Services\JiraService($this->config, $mapping, $this->db);
+                        $updateData['description'] = $jiraService->adfToText($issueFields['description']);
+                    }
+
+                    if (!empty($updateData)) {
+                        if ($mapping['local_type'] === 'hl_work_item') {
+                            \StratFlow\Models\HLWorkItem::update($this->db, (int) $mapping['local_id'], $updateData);
+                        } elseif ($mapping['local_type'] === 'user_story') {
+                            \StratFlow\Models\UserStory::update($this->db, (int) $mapping['local_id'], $updateData);
+                        }
+                    }
+                }
+
                 SyncLog::create($this->db, [
                     'integration_id' => $integrationId,
                     'direction'      => 'pull',
-                    'action'         => 'update',
+                    'action'         => $action,
                     'local_type'     => $mapping['local_type'],
                     'local_id'       => (int) $mapping['local_id'],
                     'external_id'    => $issueKey,
-                    'details_json'   => json_encode(['webhook_event' => $event]),
+                    'details_json'   => json_encode([
+                        'webhook_event' => $event,
+                        'fields_updated' => array_keys($updateData),
+                    ]),
                     'status'         => 'success',
                 ]);
             }
@@ -650,12 +679,17 @@ class IntegrationController
             $results = [];
             $jiraKey = $project['jira_project_key'];
 
+            // Push local changes to Jira
             if ($syncType === 'work_items' || $syncType === 'all') {
-                $results['work_items'] = $syncService->pushWorkItems($projectId, $jiraKey);
+                $results['push_work_items'] = $syncService->pushWorkItems($projectId, $jiraKey);
             }
             if ($syncType === 'user_stories' || $syncType === 'all') {
-                $results['user_stories'] = $syncService->pushUserStories($projectId, $jiraKey);
+                $results['push_user_stories'] = $syncService->pushUserStories($projectId, $jiraKey);
             }
+
+            // Pull Jira changes back to StratFlow
+            $pullResult = $syncService->pullChanges($projectId, $jiraKey);
+            $results['pull'] = $pullResult;
 
             \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], [
                 'last_sync_at' => date('Y-m-d H:i:s'),
@@ -664,8 +698,13 @@ class IntegrationController
             $parts = [];
             foreach ($results as $type => $counts) {
                 $label = str_replace('_', ' ', $type);
-                $parts[] = "{$label}: {$counts['created']} created, {$counts['updated']} updated" .
-                    ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+                if (isset($counts['created'])) {
+                    $parts[] = "{$label}: {$counts['created']} created, {$counts['updated']} updated" .
+                        ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+                } else {
+                    $parts[] = "{$label}: {$counts['updated']} updated" .
+                        ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+                }
             }
             $_SESSION['flash_message'] = 'Jira sync: ' . implode('; ', $parts);
         } catch (\Throwable $e) {

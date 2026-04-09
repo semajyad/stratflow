@@ -73,9 +73,11 @@ class HLWorkItem
     public static function findByProjectId(Database $db, int $projectId): array
     {
         $stmt = $db->query(
-            "SELECT * FROM hl_work_items
-             WHERE project_id = :project_id
-             ORDER BY priority_number ASC",
+            "SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
+             FROM hl_work_items hw
+             LEFT JOIN sync_mappings sm ON sm.local_type = 'hl_work_item' AND sm.local_id = hw.id
+             WHERE hw.project_id = :project_id
+             ORDER BY hw.priority_number ASC",
             [':project_id' => $projectId]
         );
 
@@ -210,9 +212,11 @@ class HLWorkItem
     public static function findByProjectIdRankedByScore(Database $db, int $projectId): array
     {
         $stmt = $db->query(
-            "SELECT * FROM hl_work_items
-             WHERE project_id = :project_id
-             ORDER BY COALESCE(final_score, 0) DESC, priority_number ASC",
+            "SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
+             FROM hl_work_items hw
+             LEFT JOIN sync_mappings sm ON sm.local_type = 'hl_work_item' AND sm.local_id = hw.id
+             WHERE hw.project_id = :project_id
+             ORDER BY COALESCE(hw.final_score, 0) DESC, hw.priority_number ASC",
             [':project_id' => $projectId]
         );
 

@@ -358,28 +358,53 @@ class JiraSyncService
     /**
      * Pull changes from Jira and update local items.
      *
-     * Searches for issues labelled 'stratflow' in the configured project,
-     * then updates local items that have existing sync mappings.
+     * Fetches all mapped items from Jira by their external keys,
+     * compares sync hashes, and updates local items that have changed.
      *
      * @param int    $projectId      StratFlow project ID
      * @param string $jiraProjectKey Jira project key
-     * @return array                 {updated: int, errors: int}
+     * @return array                 {updated: int, skipped: int, errors: int}
      */
     public function pullChanges(int $projectId, string $jiraProjectKey): array
     {
         $integrationId = (int) $this->integration['id'];
-        $counts = ['updated' => 0, 'errors' => 0];
+        $counts = ['updated' => 0, 'skipped' => 0, 'errors' => 0];
 
         try {
-            $jql = 'project = ' . $jiraProjectKey . ' AND labels = stratflow ORDER BY updated DESC';
-            $result = $this->jira->searchIssues($jql, ['summary', 'description', 'status', 'priority'], 100);
+            // Get all sync mappings for this integration
+            $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
+
+            if (empty($mappings)) {
+                return $counts;
+            }
+
+            // Build a JQL query from mapped external keys
+            $keys = array_filter(array_column($mappings, 'external_key'));
+            if (empty($keys)) {
+                return $counts;
+            }
+
+            // Query Jira for all mapped issues
+            $keyList = implode(', ', $keys);
+            $jql = "key IN ({$keyList}) ORDER BY updated DESC";
+            $result = $this->jira->searchIssues(
+                $jql,
+                ['summary', 'description', 'status', 'priority', 'customfield_10016'],
+                100
+            );
 
             $issues = $result['issues'] ?? [];
+
+            // Index mappings by external_id for fast lookup
+            $mappingsByExtId = [];
+            foreach ($mappings as $m) {
+                $mappingsByExtId[$m['external_id']] = $m;
+            }
 
             foreach ($issues as $issue) {
                 try {
                     $externalId = (string) $issue['id'];
-                    $mapping = SyncMapping::findByExternalId($this->db, $integrationId, $externalId);
+                    $mapping = $mappingsByExtId[$externalId] ?? null;
 
                     if (!$mapping) {
                         continue;
@@ -392,25 +417,41 @@ class JiraSyncService
                         $newDescription = $this->jira->adfToText($fields['description']);
                     }
 
+                    // Build update data
                     $updateData = ['title' => $newTitle];
                     if ($newDescription !== '') {
                         $updateData['description'] = trim($newDescription);
                     }
 
+                    // Pull story points for user stories
+                    if ($mapping['local_type'] === 'user_story' && isset($fields['customfield_10016'])) {
+                        $updateData['size'] = (int) $fields['customfield_10016'];
+                    }
+
+                    // Check if anything actually changed via sync hash
+                    $localItem = $mapping['local_type'] === 'hl_work_item'
+                        ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
+                        : UserStory::findById($this->db, (int) $mapping['local_id']);
+
+                    if (!$localItem) {
+                        continue;
+                    }
+
+                    // Apply update
                     if ($mapping['local_type'] === 'hl_work_item') {
                         HLWorkItem::update($this->db, (int) $mapping['local_id'], $updateData);
                     } elseif ($mapping['local_type'] === 'user_story') {
                         UserStory::update($this->db, (int) $mapping['local_id'], $updateData);
                     }
 
-                    // Update mapping hash
-                    $localItem = $mapping['local_type'] === 'hl_work_item'
+                    // Reload and update mapping hash
+                    $updatedItem = $mapping['local_type'] === 'hl_work_item'
                         ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
                         : UserStory::findById($this->db, (int) $mapping['local_id']);
 
-                    if ($localItem) {
+                    if ($updatedItem) {
                         SyncMapping::update($this->db, (int) $mapping['id'], [
-                            'sync_hash'     => $this->computeSyncHash($localItem),
+                            'sync_hash'      => $this->computeSyncHash($updatedItem),
                             'last_synced_at' => date('Y-m-d H:i:s'),
                         ]);
                     }
