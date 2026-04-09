@@ -25,6 +25,9 @@
     Your strategy diagram visually maps the initiatives and dependencies from your uploaded documents. Click nodes to add OKRs, edit the Mermaid code directly, or regenerate from your summary.
 </div>
 
+<!-- Inline error/success banner (stays on page) -->
+<div id="diagram-alert" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
+
 <!-- ===========================
      Document Summary Context
      =========================== -->
@@ -32,6 +35,18 @@
     <div class="info-box mb-6">
         <strong>AI Summary:</strong>
         <p><?= htmlspecialchars($document_summary) ?></p>
+    </div>
+<?php elseif (empty($diagram)): ?>
+    <div class="card mb-6" style="border-left: 4px solid var(--primary); background: var(--bg-subtle, #f8f9ff);">
+        <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1rem 1.5rem;">
+            <div>
+                <strong>Getting started</strong>
+                <p class="text-muted" style="margin:0.25rem 0 0; font-size:0.875rem;">
+                    Upload a strategy document and generate an AI summary first, then come back here to create your roadmap diagram.
+                </p>
+            </div>
+            <a href="/app/upload?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary">Upload Document</a>
+        </div>
     </div>
 <?php endif; ?>
 
@@ -81,16 +96,14 @@
                 </div>
             </form>
 
-            <!-- Regenerate Form -->
-            <form method="POST" action="/app/diagram/generate" class="mt-4"
-                  data-loading="Generating strategy diagram..."
-                  data-overlay="Generating strategy diagram from your summary. This may take 15-30 seconds.">
-                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-secondary btn-block">
-                    <?= empty($diagram) ? 'Generate from Summary' : 'Regenerate from Summary' ?>
+            <!-- Generate / Regenerate Button (AJAX — stays on page) -->
+            <div class="mt-4">
+                <button type="button" id="generate-diagram-btn" class="btn <?= empty($diagram) ? 'btn-primary' : 'btn-secondary' ?> btn-block"
+                        onclick="generateDiagramAjax()">
+                    <?= empty($diagram) ? 'Generate Roadmap from Summary' : 'Regenerate Roadmap' ?>
                 </button>
-            </form>
+                <div id="generate-status" style="display:none; margin-top:0.75rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
+            </div>
 
             <?php if (!empty($diagram)): ?>
                 <p class="text-muted mt-4" style="font-size: 0.8rem;">
@@ -205,3 +218,60 @@
 
 <!-- Mermaid.js CDN -->
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<script>
+function generateDiagramAjax() {
+    var btn = document.getElementById('generate-diagram-btn');
+    var status = document.getElementById('generate-status');
+    var alert = document.getElementById('diagram-alert');
+    var codeEl = document.getElementById('mermaid-code');
+
+    // Disable button, show progress
+    btn.disabled = true;
+    btn.textContent = 'Generating roadmap...';
+    status.style.display = 'block';
+    status.style.background = '#e8f0fe';
+    status.style.color = '#1a56db';
+    status.innerHTML = '<strong>Generating...</strong> AI is analysing your strategy document and building a visual roadmap. This usually takes 10-20 seconds.';
+    if (alert) alert.style.display = 'none';
+
+    var formData = new FormData();
+    formData.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
+    formData.append('project_id', '<?= (int) $project['id'] ?>');
+
+    fetch('/app/diagram/generate', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+        if (res.ok && res.data.success) {
+            // Success — update code editor and re-render
+            if (codeEl) {
+                codeEl.value = res.data.mermaid_code;
+                codeEl.dispatchEvent(new Event('input'));
+            }
+            status.style.background = '#d4edda';
+            status.style.color = '#155724';
+            status.innerHTML = '<strong>Done!</strong> ' + res.data.message + ' Reloading page...';
+            // Reload to get updated nodes/OKRs
+            setTimeout(function() { window.location.reload(); }, 1500);
+        } else {
+            // Error from server
+            status.style.background = '#f8d7da';
+            status.style.color = '#721c24';
+            status.innerHTML = '<strong>Failed:</strong> ' + (res.data.error || 'Unknown error') + '<br><button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-top:0.5rem;">Try Again</button>';
+            btn.disabled = false;
+            btn.textContent = 'Try Again';
+        }
+    })
+    .catch(function(err) {
+        status.style.background = '#f8d7da';
+        status.style.color = '#721c24';
+        status.innerHTML = '<strong>Connection error:</strong> ' + err.message + '<br><button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-top:0.5rem;">Try Again</button>';
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+    });
+}
+</script>

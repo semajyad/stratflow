@@ -118,8 +118,15 @@ class DiagramController
             }
         }
 
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
         if ($aiSummary === null) {
-            $_SESSION['flash_error'] = 'No AI summary found. Upload a document and click "Generate Summary" on the Document Upload page first.';
+            $msg = 'No AI summary found. Upload a document and generate a summary first.';
+            if ($isAjax) {
+                $this->response->json(['error' => $msg], 400);
+                return;
+            }
+            $_SESSION['flash_error'] = $msg;
             $this->response->redirect('/app/upload?project_id=' . $projectId);
             return;
         }
@@ -152,7 +159,12 @@ class DiagramController
         }
 
         if ($mermaidCode === null) {
-            $_SESSION['flash_error'] = 'Diagram generation failed: ' . $lastError . '. Please try again.';
+            $msg = 'Diagram generation failed: ' . $lastError . '. Please try again.';
+            if ($isAjax) {
+                $this->response->json(['error' => $msg], 400);
+                return;
+            }
+            $_SESSION['flash_error'] = $msg;
             $this->response->redirect('/app/diagram?project_id=' . $projectId);
             return;
         }
@@ -178,13 +190,21 @@ class DiagramController
         }
 
         $nodeCount = count($nodes);
-        if ($nodeCount === 0) {
-            $_SESSION['flash_message'] = 'Diagram generated but no nodes could be parsed. You may need to edit the Mermaid code manually.';
-        } elseif ($nodeCount < 3) {
-            $_SESSION['flash_message'] = "Diagram generated with {$nodeCount} nodes. Consider regenerating for a more detailed roadmap.";
-        } else {
-            $_SESSION['flash_message'] = "Strategy diagram generated with {$nodeCount} nodes.";
+        $msg = $nodeCount === 0
+            ? 'Diagram generated but no nodes could be parsed. You may need to edit the Mermaid code.'
+            : "Strategy diagram generated with {$nodeCount} nodes.";
+
+        if ($isAjax) {
+            $this->response->json([
+                'success'      => true,
+                'message'      => $msg,
+                'mermaid_code' => $mermaidCode,
+                'node_count'   => $nodeCount,
+            ]);
+            return;
         }
+
+        $_SESSION['flash_message'] = $msg;
         $this->response->redirect('/app/diagram?project_id=' . $projectId);
     }
 
