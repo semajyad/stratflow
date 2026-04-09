@@ -112,24 +112,33 @@ class GitLinkController
         $service = new GitLinkService($this->db);
         $classified = $service->classifyRef($refUrl);
 
-        $newId = StoryGitLink::create($this->db, [
-            'local_type' => $localType,
-            'local_id'   => $localId,
-            'provider'   => 'manual',
-            'ref_type'   => $classified['ref_type'],
-            'ref_url'    => $refUrl,
-            'ref_label'  => $classified['ref_label'],
-            'status'     => 'unknown',
-        ]);
+        try {
+            $newId = StoryGitLink::create($this->db, [
+                'local_type' => $localType,
+                'local_id'   => $localId,
+                'provider'   => 'manual',
+                'ref_type'   => $classified['ref_type'],
+                'ref_url'    => $refUrl,
+                'ref_label'  => $classified['ref_label'],
+                'status'     => 'unknown',
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[GitLink] create failed: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Database error']);
+            return;
+        }
 
         if ($newId === 0) {
-            // Unique constraint triggered — link already exists
+            // Unique constraint triggered — link already exists for this (local_type, local_id, ref_url)
             http_response_code(409);
             echo json_encode(['error' => 'This ref is already linked']);
             return;
         }
 
-        $link = StoryGitLink::findByRefUrl($this->db, $refUrl);
+        // Load by primary key so we cannot accidentally return a row from a different
+        // (local_type, local_id) that happens to share the same URL.
+        $link = StoryGitLink::findById($this->db, $newId);
 
         echo json_encode(['ok' => true, 'link' => $link]);
     }

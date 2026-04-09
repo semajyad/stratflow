@@ -20,6 +20,11 @@ use StratFlow\Models\UserStory;
 
 class GitLinkService
 {
+    // Guards against pathological PR bodies: we cap the size we regex over
+    // and the number of distinct IDs we'll actually write to the database.
+    private const MAX_BODY_LENGTH = 65536;
+    private const MAX_MATCHES     = 20;
+
     // ===========================
     // PROPERTIES
     // ===========================
@@ -62,6 +67,12 @@ class GitLinkService
         string  $status = 'open',
         ?string $author = null
     ): int {
+        // Guard against pathological inputs — an adversarial or bot-generated
+        // PR body should never cause unbounded regex work or DB writes.
+        if ($body === '' || strlen($body) > self::MAX_BODY_LENGTH) {
+            return 0;
+        }
+
         $matches = [];
         preg_match_all('/\b(SF|StratFlow)[-_\s]?(\d+)\b/i', $body, $matches);
 
@@ -70,38 +81,50 @@ class GitLinkService
         }
 
         $ids = array_unique(array_map('intval', $matches[2]));
+        if (count($ids) > self::MAX_MATCHES) {
+            $ids = array_slice($ids, 0, self::MAX_MATCHES);
+        }
+
         $affected = 0;
 
         foreach ($ids as $numericId) {
-            [$localType, $localId] = $this->resolveLocalItem($numericId);
-            if ($localId === null) {
-                continue;
-            }
-
-            $refLabel = $this->buildRefLabel($prUrl, $prTitle);
-            $existing = $this->findExistingLink($localType, $localId, $prUrl);
-
-            if ($existing !== null) {
-                if ($existing['status'] !== $status) {
-                    StoryGitLink::updateStatus($this->db, (int) $existing['id'], $status);
+            try {
+                [$localType, $localId] = $this->resolveLocalItem($numericId);
+                if ($localId === null) {
+                    continue;
                 }
-                $affected++;
+
+                $refLabel = $this->buildRefLabel($prUrl, $prTitle);
+                $existing = $this->findExistingLink($localType, $localId, $prUrl);
+
+                if ($existing !== null) {
+                    if ($existing['status'] !== $status) {
+                        StoryGitLink::updateStatus($this->db, (int) $existing['id'], $status);
+                    }
+                    $affected++;
+                    continue;
+                }
+
+                $id = StoryGitLink::create($this->db, [
+                    'local_type' => $localType,
+                    'local_id'   => $localId,
+                    'provider'   => $provider,
+                    'ref_type'   => 'pr',
+                    'ref_url'    => $prUrl,
+                    'ref_label'  => $refLabel,
+                    'status'     => $status,
+                    'author'     => $author,
+                ]);
+
+                if ($id > 0) {
+                    $affected++;
+                }
+            } catch (\Throwable $e) {
+                // Don't let a transient DB error abort the whole webhook —
+                // log and keep processing the remaining matches. The webhook
+                // handler still returns 200 so the provider doesn't retry.
+                error_log('[GitLink] linkFromPrBody per-id failure (id=' . $numericId . '): ' . $e->getMessage());
                 continue;
-            }
-
-            $id = StoryGitLink::create($this->db, [
-                'local_type' => $localType,
-                'local_id'   => $localId,
-                'provider'   => $provider,
-                'ref_type'   => 'pr',
-                'ref_url'    => $prUrl,
-                'ref_label'  => $refLabel,
-                'status'     => $status,
-                'author'     => $author,
-            ]);
-
-            if ($id > 0) {
-                $affected++;
             }
         }
 

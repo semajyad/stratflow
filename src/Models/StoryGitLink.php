@@ -47,6 +47,27 @@ class StoryGitLink
     }
 
     /**
+     * Find a single link by its primary key.
+     *
+     * Prefer this over findByRefUrl when you know the id, because ref_url
+     * is not unique across rows — it is only unique per (local_type, local_id).
+     *
+     * @param Database $db Database instance
+     * @param int      $id Link primary key
+     * @return array|null  Row as associative array, or null if not found
+     */
+    public static function findById(Database $db, int $id): ?array
+    {
+        $stmt = $db->query(
+            "SELECT * FROM story_git_links WHERE id = :id LIMIT 1",
+            [':id' => $id]
+        );
+        $row = $stmt->fetch();
+
+        return $row !== false ? $row : null;
+    }
+
+    /**
      * Find a single link by its ref URL (used for webhook deduplication).
      *
      * @param Database $db    Database instance
