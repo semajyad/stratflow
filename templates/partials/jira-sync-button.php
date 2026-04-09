@@ -1,14 +1,15 @@
 <?php
 // Jira sync button — shown only when project has a Jira link and integration is active
 // Expects: $project, $csrf_token, $sync_type ('work_items' or 'user_stories')
-$jiraKey = $project['jira_project_key'] ?? '';
-if ($jiraKey !== ''):
-    $integration = \StratFlow\Models\Integration::findByOrgAndProvider(
-        \StratFlow\Core\Database::getInstance(),
-        (int) ($project['org_id'] ?? 0),
-        'jira'
-    );
-    if ($integration && $integration['status'] === 'active'):
+try {
+    $jiraKey = $project['jira_project_key'] ?? '';
+    if ($jiraKey !== '') {
+        $integration = \StratFlow\Models\Integration::findByOrgAndProvider(
+            \StratFlow\Core\Database::getInstance(),
+            (int) ($project['org_id'] ?? 0),
+            'jira'
+        );
+        if ($integration && $integration['status'] === 'active') {
 ?>
 <form method="POST" action="/app/jira/sync" class="inline-form"
       data-loading="Syncing to Jira..."
@@ -19,7 +20,14 @@ if ($jiraKey !== ''):
     <button type="submit" class="btn btn-sm btn-secondary" style="gap:0.25rem;"
             onclick="return confirm('Sync to Jira project <?= htmlspecialchars($jiraKey) ?>?')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
-        Sync to Jira
+        Sync to Jira (<?= htmlspecialchars($jiraKey) ?>)
     </button>
 </form>
-<?php endif; endif; ?>
+<?php
+        }
+    }
+} catch (\Throwable $e) {
+    // Silently skip — don't break the page if Jira check fails
+    error_log('Jira sync button error: ' . $e->getMessage());
+}
+?>
