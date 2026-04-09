@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "php scripts/init-db.php 2>&1 || true; php -S 0.0.0.0:${PORT:-8080} -t public public/router.php"
+startCommand = "php scripts/init-db.php 2>&1 || true; php -d upload_max_filesize=50M -d post_max_size=55M -d memory_limit=256M -d max_execution_time=120 -d file_uploads=On -S 0.0.0.0:${PORT:-8080} -t public public/router.php"
 healthcheckPath = "/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

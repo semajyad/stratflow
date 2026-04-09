@@ -75,7 +75,7 @@ class FileProcessor
 
         // Hard file size limit at PHP level
         if ($file['size'] > self::MAX_FILE_SIZE) {
-            return ['valid' => false, 'error' => 'File exceeds the maximum allowed size of 10 MB.'];
+            return ['valid' => false, 'error' => 'File exceeds the maximum allowed size of 50 MB.'];
         }
 
         if ($file['size'] > $uploadConfig['max_size']) {
