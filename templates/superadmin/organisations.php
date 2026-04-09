@@ -75,7 +75,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Status</th>
-                            <th>Users</th>
+                            <th>Users / Seats</th>
                             <th>Subscription</th>
                             <th>Jira</th>
                             <th>Created</th>
@@ -98,7 +98,16 @@
                                         <span class="badge badge-warning">Suspended</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= (int) ($org['user_count'] ?? 0) ?></td>
+                                <td>
+                                    <?= (int) ($org['user_count'] ?? 0) ?> / <?= (int) ($sub['user_seat_limit'] ?? 5) ?>
+                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline; margin-left:0.5rem;">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <input type="hidden" name="action" value="update_seats">
+                                        <input type="number" name="seat_limit" value="<?= (int) ($sub['user_seat_limit'] ?? 5) ?>"
+                                               min="1" max="10000" style="width:55px; padding:0.15rem 0.3rem; font-size:0.8rem; border:1px solid var(--border); border-radius:3px;">
+                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size:0.7rem; padding:0.15rem 0.4rem;">Set</button>
+                                    </form>
+                                </td>
                                 <td>
                                     <?php if ($sub): ?>
                                         <span class="badge badge-primary"><?= htmlspecialchars(ucfirst($sub['plan_type'] ?? 'Unknown')) ?></span>

@@ -95,6 +95,17 @@ class Subscription
     }
 
     /**
+     * Update the seat limit for an organisation's active subscription.
+     */
+    public static function updateSeatLimit(Database $db, int $orgId, int $seatLimit): void
+    {
+        $db->query(
+            "UPDATE subscriptions SET user_seat_limit = :limit WHERE org_id = :org_id AND status = 'active' ORDER BY id DESC LIMIT 1",
+            [':limit' => $seatLimit, ':org_id' => $orgId]
+        );
+    }
+
+    /**
      * Get the user seat limit for an organisation's active subscription.
      *
      * Falls back to 5 if no active subscription exists or if the column is null.

@@ -237,6 +237,26 @@ class SuperadminController
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" deleted.';
                 break;
 
+            case 'update_seats':
+                $newLimit = max(1, (int) $this->request->post('seat_limit', 5));
+                Subscription::updateSeatLimit($this->db, $orgId, $newLimit);
+                AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                    'action' => 'seat_limit_changed', 'org_id' => $orgId, 'org_name' => $org['name'], 'new_limit' => $newLimit,
+                ]);
+                $_SESSION['flash_message'] = 'Seat limit for "' . $org['name'] . '" updated to ' . $newLimit . '.';
+                break;
+
+            case 'rename':
+                $newName = trim((string) $this->request->post('org_name', ''));
+                if ($newName !== '') {
+                    Organisation::update($this->db, $orgId, ['name' => $newName]);
+                    AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                        'action' => 'org_renamed', 'org_id' => $orgId, 'old_name' => $org['name'], 'new_name' => $newName,
+                    ]);
+                    $_SESSION['flash_message'] = 'Organisation renamed to "' . $newName . '".';
+                }
+                break;
+
             default:
                 $_SESSION['flash_error'] = 'Unknown action.';
         }
