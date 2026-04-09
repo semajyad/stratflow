@@ -125,11 +125,20 @@ class JiraSyncService
                         'issuetype'   => ['name' => 'Epic'],
                         'summary'     => $item['title'],
                         'description' => $this->jira->textToAdf($description),
-                        'labels'      => ['stratflow'],
-                        'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
                     ];
 
-                    $result = $this->jira->createIssue($fields);
+                    // Epic Name field (required for classic Jira projects)
+                    // Common custom field IDs: customfield_10011 or customfield_10004
+                    $fields['customfield_10011'] = $item['title'];
+
+                    // Try to create — if it fails, retry without optional fields
+                    try {
+                        $result = $this->jira->createIssue($fields);
+                    } catch (\RuntimeException $e) {
+                        // Retry with minimal fields (no Epic Name custom field)
+                        unset($fields['customfield_10011']);
+                        $result = $this->jira->createIssue($fields);
+                    }
 
                     $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
                     $externalUrl = $siteUrl . '/browse/' . $result['key'];
@@ -249,17 +258,15 @@ class JiraSyncService
 
                     $counts['updated']++;
                 } else {
-                    // Build fields for new Story
+                    // Build fields for new Story — minimal fields to avoid 400s
                     $fields = [
                         'project'     => ['key' => $jiraProjectKey],
                         'issuetype'   => ['name' => 'Story'],
                         'summary'     => $story['title'],
                         'description' => $this->jira->textToAdf($story['description'] ?? ''),
-                        'labels'      => ['stratflow'],
-                        'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
                     ];
 
-                    // Link to parent Epic if the parent HL item has a mapping
+                    // Link to parent Epic if available
                     if (!empty($story['parent_hl_item_id'])) {
                         $parentMapping = SyncMapping::findByLocalItem(
                             $this->db,
@@ -272,12 +279,13 @@ class JiraSyncService
                         }
                     }
 
-                    // Set story points if available
-                    if (!empty($story['size'])) {
-                        $fields['story_points'] = (int) $story['size'];
+                    // Try create — retry without parent link if it fails
+                    try {
+                        $result = $this->jira->createIssue($fields);
+                    } catch (\RuntimeException $e) {
+                        unset($fields['parent']);
+                        $result = $this->jira->createIssue($fields);
                     }
-
-                    $result = $this->jira->createIssue($fields);
 
                     $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
                     $externalUrl = $siteUrl . '/browse/' . $result['key'];

@@ -80,12 +80,22 @@ $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : 
 
                 <form method="POST" action="/app/admin/integrations/jira/push" class="inline-form"
                       data-loading="Pushing to Jira..."
-                      data-overlay="Pushing work items and user stories to Jira. This may take a moment.">
+                      data-overlay="Pushing work items and user stories to Jira. This may take a moment."
+                      style="display: flex; align-items: center; gap: 0.375rem;">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
+                    <select name="project_id" class="form-control" style="font-size:0.8125rem; padding:0.25rem 0.5rem; min-width:150px;" required>
+                        <option value="">Project...</option>
+                        <?php if (!empty($all_projects)): ?>
+                            <?php foreach ($all_projects as $ap): ?>
+                                <option value="<?= (int) $ap['id'] ?>" <?= ((int)($ap['id'] ?? 0)) === (int)($_SESSION['_last_project_id'] ?? 0) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($ap['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
                     <button type="submit" class="btn btn-sm btn-primary"
-                            onclick="return confirm('Push all work items and user stories to Jira?')">
-                        Push All
+                            onclick="return this.form.project_id.value ? confirm('Push work items and stories to Jira?') : (alert('Select a project first'), false)">
+                        Push
                     </button>
                 </form>
 
