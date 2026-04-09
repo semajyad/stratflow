@@ -362,7 +362,7 @@ class JiraService
             $opts = [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => $headers,
-                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_TIMEOUT        => 15,
                 CURLOPT_CUSTOMREQUEST  => $method,
             ];
 

@@ -64,8 +64,14 @@ class JiraSyncService
         $integrationId = (int) $this->integration['id'];
 
         $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
+        $consecutiveErrors = 0;
 
         foreach ($workItems as $item) {
+            // Bail out after 3 consecutive errors (likely a config issue, not transient)
+            if ($consecutiveErrors >= 3) {
+                $counts['errors'] += count($workItems) - $counts['created'] - $counts['updated'] - $counts['errors'];
+                break;
+            }
             try {
                 $mapping = SyncMapping::findByLocalItem(
                     $this->db,
@@ -166,7 +172,9 @@ class JiraSyncService
 
                     $counts['created']++;
                 }
+                $consecutiveErrors = 0;
             } catch (\Throwable $e) {
+                $consecutiveErrors++;
                 SyncLog::create($this->db, [
                     'integration_id' => $integrationId,
                     'direction'      => 'push',
@@ -203,8 +211,13 @@ class JiraSyncService
         $integrationId = (int) $this->integration['id'];
 
         $counts = ['created' => 0, 'updated' => 0, 'errors' => 0];
+        $consecutiveErrors = 0;
 
         foreach ($stories as $story) {
+            if ($consecutiveErrors >= 3) {
+                $counts['errors'] += count($stories) - $counts['created'] - $counts['updated'] - $counts['errors'];
+                break;
+            }
             try {
                 $mapping = SyncMapping::findByLocalItem(
                     $this->db,
@@ -266,6 +279,11 @@ class JiraSyncService
                         'description' => $this->jira->textToAdf($story['description'] ?? ''),
                     ];
 
+                    // Story points (customfield_10016 is the most common Jira field)
+                    if (!empty($story['size'])) {
+                        $fields['customfield_10016'] = (float) $story['size'];
+                    }
+
                     // Link to parent Epic if available
                     if (!empty($story['parent_hl_item_id'])) {
                         $parentMapping = SyncMapping::findByLocalItem(
@@ -313,7 +331,9 @@ class JiraSyncService
 
                     $counts['created']++;
                 }
+                $consecutiveErrors = 0;
             } catch (\Throwable $e) {
+                $consecutiveErrors++;
                 SyncLog::create($this->db, [
                     'integration_id' => $integrationId,
                     'direction'      => 'push',
