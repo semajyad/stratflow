@@ -76,20 +76,31 @@
               data-loading="Creating sprints...">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="sprint-creation-form">
-                <input type="number" name="num_sprints" placeholder="Number of sprints" class="form-control" min="1" max="20" required style="width: 170px;" value="5">
-                <div style="display:flex;flex-direction:column;gap:0.25rem;">
-                    <label style="font-size:0.75rem;color:var(--text-muted);">First sprint starts</label>
+            <div class="sprint-gen-grid">
+                <div class="sprint-gen-field">
+                    <label>Number of sprints</label>
+                    <input type="number" name="num_sprints" class="form-control" min="1" max="20" required value="5">
+                </div>
+                <div class="sprint-gen-field">
+                    <label>First sprint starts</label>
                     <input type="date" name="start_date" class="form-control" required>
                 </div>
-                <select name="sprint_length" class="form-control" style="width: 160px;" required>
-                    <option value="7">1 week</option>
-                    <option value="14" selected>2 weeks</option>
-                    <option value="21">3 weeks</option>
-                    <option value="28">4 weeks</option>
-                </select>
-                <input type="number" name="capacity" placeholder="Default capacity (pts)" class="form-control" min="1" required style="width: 190px;">
-                <button type="submit" class="btn btn-primary">Generate Sprints</button>
+                <div class="sprint-gen-field">
+                    <label>Sprint length</label>
+                    <select name="sprint_length" class="form-control" required>
+                        <option value="7">1 week</option>
+                        <option value="14" selected>2 weeks</option>
+                        <option value="21">3 weeks</option>
+                        <option value="28">4 weeks</option>
+                    </select>
+                </div>
+                <div class="sprint-gen-field">
+                    <label>Default capacity (pts)</label>
+                    <input type="number" name="capacity" class="form-control" min="1" required placeholder="e.g. 50">
+                </div>
+                <div class="sprint-gen-field" style="align-self: end;">
+                    <button type="submit" class="btn btn-primary">Generate Sprints</button>
+                </div>
             </div>
         </form>
     </div>
