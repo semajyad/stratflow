@@ -102,7 +102,7 @@ class Project
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'name', 'status', 'selected_framework',
+        'name', 'status', 'selected_framework', 'jira_project_key', 'jira_board_id',
     ];
 
     public static function update(Database $db, int $id, array $data, ?int $orgId = null): void

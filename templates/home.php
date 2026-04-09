@@ -71,11 +71,39 @@ if ($lastProjectId && !empty($projects)) {
                             Created <?= date('j M Y', strtotime($project['created_at'])) ?>
                         </span>
                     </div>
-                    <div class="project-actions" style="display: flex; gap: 0.5rem;">
+                    <div class="project-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <?php if (!empty($jira_connected) && !empty($jira_projects)): ?>
+                            <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/jira-link" class="inline-form" style="display:flex; align-items:center; gap:0.25rem;">
+                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <select name="jira_project_key" class="form-control" style="font-size:0.75rem; padding:0.2rem 0.4rem; min-width:120px;"
+                                        onchange="this.form.submit()">
+                                    <option value="">Jira: None</option>
+                                    <?php foreach ($jira_projects as $jp): ?>
+                                        <option value="<?= htmlspecialchars($jp['key']) ?>"
+                                            <?= ($project['jira_project_key'] ?? '') === $jp['key'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($jp['key'] . ' - ' . $jp['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
+                        <?php elseif (!empty($project['jira_project_key'])): ?>
+                            <span class="badge badge-primary" style="font-size:0.7rem;"><?= htmlspecialchars($project['jira_project_key']) ?></span>
+                        <?php endif; ?>
                         <a href="/app/upload?project_id=<?= (int) $project['id'] ?>"
                            class="btn btn-primary btn-sm">
                             Open Project
                         </a>
+                        <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
+                        <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                                onclick="var n=prompt('Rename project:','<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>'); if(n && n.trim()) { var f=document.createElement('form'); f.method='POST'; f.action='/app/projects/<?= (int) $project['id'] ?>/rename'; f.innerHTML='<input type=hidden name=_csrf_token value=<?= htmlspecialchars($csrf_token) ?>><input type=hidden name=name value=\"'+n.trim()+'\">'; document.body.appendChild(f); f.submit(); }">
+                            Rename
+                        </button>
+                        <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form"
+                              onsubmit="return confirm('Delete project &quot;<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>&quot;? This cannot be undone.')">
+                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <button type="submit" class="btn btn-sm btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Delete</button>
+                        </form>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

@@ -109,6 +109,14 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth']);
     $router->add('GET',  '/app/sounding-board/history',               'SoundingBoardController@history',  ['auth']);
 
+    // Jira sync from workflow pages
+    $router->add('POST', '/app/jira/sync', 'IntegrationController@contextualSync', ['auth', 'csrf']);
+
+    // Project management
+    $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira', ['auth', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/rename',    'HomeController@renameProject', ['auth', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/delete',    'HomeController@deleteProject', ['auth', 'admin', 'csrf']);
+
     // Integrations (static routes BEFORE {id})
     $router->add('GET',  '/app/admin/integrations',                 'IntegrationController@index',            ['auth', 'admin']);
     $router->add('GET',  '/app/admin/integrations/jira/connect',    'IntegrationController@jiraConnect',      ['auth', 'admin']);

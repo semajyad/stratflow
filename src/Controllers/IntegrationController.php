@@ -617,4 +617,61 @@ class IntegrationController
         http_response_code(200);
         echo json_encode(['status' => 'ok']);
     }
+
+    /**
+     * Contextual sync from workflow pages (work items or user stories).
+     * Uses the project's linked Jira project key.
+     */
+    public function contextualSync(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+        $syncType  = (string) $this->request->post('sync_type', 'all');
+
+        $project = \StratFlow\Models\Project::findById($this->db, $projectId, $orgId);
+        if (!$project || empty($project['jira_project_key'])) {
+            $_SESSION['flash_error'] = 'Project has no Jira link. Set one on the Home page.';
+            $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
+            return;
+        }
+
+        $integration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        if (!$integration || $integration['status'] !== 'active') {
+            $_SESSION['flash_error'] = 'Jira is not connected. Go to Administration → Integrations.';
+            $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
+            return;
+        }
+
+        try {
+            $jiraService = new \StratFlow\Services\JiraService($this->config, $integration, $this->db);
+            $syncService = new \StratFlow\Services\JiraSyncService($this->db, $jiraService, $integration);
+
+            $results = [];
+            $jiraKey = $project['jira_project_key'];
+
+            if ($syncType === 'work_items' || $syncType === 'all') {
+                $results['work_items'] = $syncService->pushWorkItems($projectId, $jiraKey);
+            }
+            if ($syncType === 'user_stories' || $syncType === 'all') {
+                $results['user_stories'] = $syncService->pushUserStories($projectId, $jiraKey);
+            }
+
+            \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], [
+                'last_sync_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $parts = [];
+            foreach ($results as $type => $counts) {
+                $label = str_replace('_', ' ', $type);
+                $parts[] = "{$label}: {$counts['created']} created, {$counts['updated']} updated" .
+                    ($counts['errors'] > 0 ? ", {$counts['errors']} errors" : '');
+            }
+            $_SESSION['flash_message'] = 'Jira sync: ' . implode('; ', $parts);
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Jira sync failed: ' . $e->getMessage();
+        }
+
+        $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
+    }
 }
