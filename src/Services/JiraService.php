@@ -33,7 +33,7 @@ class JiraService
     private const AUTH_URL  = 'https://auth.atlassian.com/authorize';
     private const TOKEN_URL = 'https://auth.atlassian.com/oauth/token';
     private const API_BASE  = 'https://api.atlassian.com';
-    private const SCOPES    = 'read:jira-work write:jira-work manage:jira-webhook offline_access read:sprint:jira-software write:sprint:jira-software read:board-scope:jira-software';
+    private const SCOPES    = 'read:jira-work write:jira-work manage:jira-webhook offline_access read:jira-software write:jira-software read:sprint:jira-software write:sprint:jira-software read:board-scope:jira-software';
 
     // ===========================
     // CONSTRUCTOR
