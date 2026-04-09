@@ -1,9 +1,8 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 
 const BASE        = 'http://localhost:8890';
-const ADMIN_EMAIL = 'admin@stratflow.test';
-const ADMIN_PASS  = 'password123';
 
 async function loginAsAdmin(page) {
   await page.goto(`${BASE}/login`);

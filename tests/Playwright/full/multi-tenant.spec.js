@@ -1,13 +1,9 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const mysql = require('mysql2/promise');
-const { DB_CONFIG } = require('../test-constants');
+const { DB_CONFIG, ADMIN_EMAIL, ADMIN_PASS, REGULAR_EMAIL, REGULAR_PASS } = require('../test-constants');
 
 const BASE           = 'http://localhost:8890';
-const ADMIN_EMAIL    = 'admin@stratflow.test';
-const ADMIN_PASS     = 'password123';
-const REGULAR_EMAIL  = 'pw_regular@test.invalid';
-const REGULAR_PASS   = 'password123';
 
 async function loginAs(page, email, password) {
   await page.goto(`${BASE}/login`);
@@ -24,8 +20,9 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   let project2Id;
 
   test.beforeAll(async () => {
-    const conn = await mysql.createConnection(DB_CONFIG);
+    let conn;
     try {
+      conn = await mysql.createConnection(DB_CONFIG);
       const [orgResult] = await conn.execute(
         "INSERT INTO organisations (name) VALUES ('Playwright Org 2')"
       );
@@ -38,17 +35,20 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
       );
       project2Id = projResult.insertId;
     } finally {
-      await conn.end();
+      if (conn) await conn.end();
     }
   });
 
   test.afterAll(async () => {
-    const conn = await mysql.createConnection(DB_CONFIG);
+    let conn;
     try {
+      conn = await mysql.createConnection(DB_CONFIG);
       await conn.execute('DELETE FROM projects WHERE org_id = ?', [org2Id]);
       await conn.execute('DELETE FROM organisations WHERE id = ?', [org2Id]);
+    } catch (err) {
+      console.error(`[multi-tenant afterAll] DB cleanup failed: ${err.message}`);
     } finally {
-      await conn.end();
+      if (conn) await conn.end();
     }
   });
 

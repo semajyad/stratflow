@@ -1,9 +1,8 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 
 const BASE        = 'http://localhost:8890';
-const ADMIN_EMAIL = 'admin@stratflow.test';
-const ADMIN_PASS  = 'password123';
 
 async function loginAsAdmin(page) {
   await page.goto(`${BASE}/login`);
@@ -60,9 +59,8 @@ test.describe('Strategy E2E flow', () => {
       }
     }
 
-    // If we couldn't extract the project ID, fall back to the seed project
     if (!projectId) {
-      projectId = '1';
+      throw new Error('Project creation failed — could not extract project_id from URL or page. Check the create-project modal flow.');
     }
 
     await page.goto(`${BASE}/app/upload?project_id=${projectId}`);
@@ -89,6 +87,6 @@ Key results: Ship v2 by Q3. Hire 10 engineers. Close 5 enterprise deals.`;
     // --- Step 4: Visit work items page — should load without 500 ---
     await page.goto(`${BASE}/app/work-items?project_id=${projectId}`);
     await expect(page.locator('body')).not.toContainText(/500|Fatal error/i);
-  });
+  }, { timeout: 60_000 });
 
 });

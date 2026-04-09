@@ -1,12 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 
 const BASE        = 'http://localhost:8890';
-const ADMIN_EMAIL = 'admin@stratflow.test';
-const ADMIN_PASS  = 'password123';
 // Seed project — always exists
 const SEED_PROJECT_ID = '1';
 

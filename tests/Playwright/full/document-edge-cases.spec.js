@@ -1,12 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 
 const BASE        = 'http://localhost:8890';
-const ADMIN_EMAIL = 'admin@stratflow.test';
-const ADMIN_PASS  = 'password123';
 // Seed project — always exists
 const SEED_PROJECT_ID = '1';
 
@@ -36,6 +35,10 @@ test.describe('Document upload — edge cases', () => {
     await page.waitForLoadState('networkidle');
     // Should stay on upload page (redirect back) with an error message, not a 500
     await expect(page.locator('body')).not.toContainText(/500|Fatal error/i);
+    // The server should reject and show an error, not silently accept
+    const bodyText = await page.locator('body').textContent();
+    const hasError = /invalid|not allowed|rejected|error|failed|unsupported|too large|required/i.test(bodyText ?? '');
+    expect(hasError, 'Expected a user-visible rejection message').toBe(true);
   });
 
   test('uploading a file with wrong MIME type (.exe) is rejected gracefully', async ({ page }) => {
@@ -52,6 +55,10 @@ test.describe('Document upload — edge cases', () => {
 
       await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).not.toContainText(/500|Fatal error/i);
+      // The server should reject and show an error, not silently accept
+      const bodyText = await page.locator('body').textContent();
+      const hasError = /invalid|not allowed|rejected|error|failed|unsupported|too large|required/i.test(bodyText ?? '');
+      expect(hasError, 'Expected a user-visible rejection message').toBe(true);
     } finally {
       fs.unlinkSync(tmpFile);
     }
@@ -70,6 +77,10 @@ test.describe('Document upload — edge cases', () => {
 
       await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).not.toContainText(/500|Fatal error/i);
+      // The server should reject and show an error, not silently accept
+      const bodyText = await page.locator('body').textContent();
+      const hasError = /invalid|not allowed|rejected|error|failed|unsupported|too large|required/i.test(bodyText ?? '');
+      expect(hasError, 'Expected a user-visible rejection message').toBe(true);
     } finally {
       fs.unlinkSync(tmpFile);
     }

@@ -1,11 +1,8 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS, REGULAR_EMAIL, REGULAR_PASS } = require('../test-constants');
 
 const BASE           = 'http://localhost:8890';
-const ADMIN_EMAIL    = 'admin@stratflow.test';
-const ADMIN_PASS     = 'password123';
-const REGULAR_EMAIL  = 'pw_regular@test.invalid';
-const REGULAR_PASS   = 'password123';
 
 // Helper: log in as a given user and return the page at /app/home
 async function loginAs(page, email, password) {

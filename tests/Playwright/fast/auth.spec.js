@@ -1,9 +1,8 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 
 const BASE = 'http://localhost:8890';
-const ADMIN_EMAIL = 'admin@stratflow.test';
-const ADMIN_PASS  = 'password123';
 
 test.describe('Auth — login / logout / session', () => {
 
@@ -42,10 +41,7 @@ test.describe('Auth — login / logout / session', () => {
     await expect(page).toHaveURL(`${BASE}/app/home`);
 
     // Dismiss onboarding wizard if present (shown on first login, intercepts clicks)
-    const onboardingModal = page.locator('#onboarding-wizard');
-    if (await onboardingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await page.evaluate(() => { if (typeof dismissOnboarding === 'function') dismissOnboarding(); });
-    }
+    await page.evaluate(() => { if (typeof dismissOnboarding === 'function') dismissOnboarding(); }).catch(() => false);
 
     // Submit logout form
     await page.click('form[action="/logout"] button[type="submit"]');

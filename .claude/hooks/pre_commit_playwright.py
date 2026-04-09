@@ -40,7 +40,16 @@ def main() -> int:
     if "--dry-run" in command:
         return 0
 
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+    if not project_dir:
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, check=True
+            )
+            project_dir = result.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            project_dir = os.getcwd()
 
     # Skip merge commits — MERGE_HEAD indicates an in-progress merge
     merge_head = os.path.join(project_dir, ".git", "MERGE_HEAD")
