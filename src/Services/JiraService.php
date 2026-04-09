@@ -429,9 +429,24 @@ class JiraService
                 continue;
             }
 
-            // Non-retryable error
+            // Non-retryable error — extract detailed Jira error info
             $errorDetail = json_decode($responseBody, true);
-            $errorMsg = $errorDetail['message'] ?? $errorDetail['errorMessages'][0] ?? ('HTTP ' . $httpCode);
+            $errorParts = [];
+            if (!empty($errorDetail['errorMessages'])) {
+                $errorParts = array_merge($errorParts, $errorDetail['errorMessages']);
+            }
+            if (!empty($errorDetail['errors']) && is_array($errorDetail['errors'])) {
+                foreach ($errorDetail['errors'] as $field => $msg) {
+                    $errorParts[] = "{$field}: {$msg}";
+                }
+            }
+            if (!empty($errorDetail['message'])) {
+                $errorParts[] = $errorDetail['message'];
+            }
+            $errorMsg = !empty($errorParts) ? implode('; ', $errorParts) : ('HTTP ' . $httpCode);
+
+            error_log("[StratFlow] Jira API error ($httpCode): $errorMsg");
+            error_log("[StratFlow] Jira request body: " . ($body ? json_encode($body) : 'none'));
 
             if ($this->db && $this->integration) {
                 Integration::recordError($this->db, (int) $this->integration['id'], $errorMsg);

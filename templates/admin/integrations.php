@@ -75,38 +75,41 @@ $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : 
             <?php endif; ?>
 
             <!-- Action buttons -->
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="/app/admin/integrations/jira/configure" class="btn btn-secondary">Configure</a>
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <a href="/app/admin/integrations/jira/configure" class="btn btn-sm btn-secondary">Configure</a>
 
-                <form method="POST" action="/app/admin/integrations/jira/push" style="display: inline;">
+                <form method="POST" action="/app/admin/integrations/jira/push" class="inline-form"
+                      data-loading="Pushing to Jira..."
+                      data-overlay="Pushing work items and user stories to Jira. This may take a moment.">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
-                    <button type="submit" class="btn btn-primary"
-                            data-loading="Pushing..."
+                    <button type="submit" class="btn btn-sm btn-primary"
                             onclick="return confirm('Push all work items and user stories to Jira?')">
                         Push All
                     </button>
                 </form>
 
-                <form method="POST" action="/app/admin/integrations/jira/pull" style="display: inline;">
+                <form method="POST" action="/app/admin/integrations/jira/pull" class="inline-form"
+                      data-loading="Pulling from Jira...">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
-                    <button type="submit" class="btn btn-secondary"
-                            data-loading="Pulling..."
+                    <button type="submit" class="btn btn-sm btn-secondary"
                             onclick="return confirm('Pull changes from Jira?')">
                         Pull Changes
                     </button>
                 </form>
 
-                <a href="/app/admin/integrations/sync-log" class="btn btn-secondary">View Sync Log</a>
+                <a href="/app/admin/integrations/sync-log" class="btn btn-sm btn-secondary">Sync Log</a>
 
-                <form method="POST" action="/app/admin/integrations/jira/disconnect" style="display: inline; margin-left: auto;">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('Disconnect Jira Cloud? Sync mappings will be preserved.')">
-                        Disconnect
-                    </button>
-                </form>
+                <div style="margin-left: auto;">
+                    <form method="POST" action="/app/admin/integrations/jira/disconnect" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Disconnect Jira Cloud? Sync mappings will be preserved.')">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
             </div>
         <?php else: ?>
             <!-- Disconnected state -->
