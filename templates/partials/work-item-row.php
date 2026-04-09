@@ -41,6 +41,9 @@
                 &#x2190; Depends on <?= count($item['dependencies']) ?>
             </span>
         <?php endif; ?>
+        <?php if (!empty($item['git_link_count'])): ?>
+            <span class="badge badge-secondary git-link-badge">Git: <?= (int) $item['git_link_count'] ?></span>
+        <?php endif; ?>
         <p class="work-item-desc-preview"><?= htmlspecialchars(substr($item['description'] ?? '', 0, 120)) ?><?= strlen($item['description'] ?? '') > 120 ? '...' : '' ?></p>
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>

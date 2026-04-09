@@ -133,6 +133,20 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/integrations/jira/bulk-pull-status', 'IntegrationController@jiraBulkPullStatus', ['auth', 'admin', 'csrf']);
     $router->add('POST', '/webhook/integration/jira',               'IntegrationController@jiraWebhook');
 
+    // Git webhooks — NO middleware (public, HMAC-verified in controller)
+    $router->add('POST', '/webhook/git/github', 'GitWebhookController@receiveGitHub');
+    $router->add('POST', '/webhook/git/gitlab', 'GitWebhookController@receiveGitLab');
+
+    // Git links — manual CRUD (static routes BEFORE {id} routes)
+    $router->add('GET',  '/app/git-links',            'GitLinkController@index',  ['auth']);
+    $router->add('POST', '/app/git-links',            'GitLinkController@create', ['auth', 'csrf']);
+    $router->add('POST', '/app/git-links/{id}/delete','GitLinkController@delete', ['auth', 'csrf']);
+
+    // Git integrations — admin management
+    $router->add('POST', '/app/admin/integrations/git/{provider}/connect',           'GitIntegrationController@connect',          ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/integrations/git/{provider}/disconnect',        'GitIntegrationController@disconnect',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/integrations/git/{provider}/regenerate-secret', 'GitIntegrationController@regenerateSecret', ['auth', 'admin', 'csrf']);
+
     // Admin — static routes MUST come before {id} routes
     $router->add('GET',  '/app/admin',                       'AdminController@index',            ['auth', 'admin']);
     $router->add('GET',  '/app/admin/users',                 'AdminController@users',            ['auth', 'admin']);

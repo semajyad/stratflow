@@ -56,6 +56,8 @@
                         Generate Description (AI)
                     </button>
                 </div>
+
+                <?php require __DIR__ . '/git-links-field.php'; ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>

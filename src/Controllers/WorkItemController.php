@@ -21,6 +21,7 @@ use StratFlow\Models\Document;
 use StratFlow\Models\HLItemDependency;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
+use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\StrategyDiagram;
 use StratFlow\Models\Subscription;
 use StratFlow\Services\GeminiService;
@@ -77,6 +78,14 @@ class WorkItemController
             $deps = HLItemDependency::findByItemId($this->db, (int) $item['id']);
             $item['dependencies']       = $deps;
             $item['dependency_titles']  = implode(', ', array_column($deps, 'depends_on_title'));
+        }
+        unset($item);
+
+        // Inject git link counts in bulk to avoid N+1 queries
+        $itemIds   = array_column($workItems, 'id');
+        $gitCounts = StoryGitLink::countsByLocalIds($this->db, 'hl_work_item', array_map('intval', $itemIds));
+        foreach ($workItems as &$item) {
+            $item['git_link_count'] = $gitCounts[(int) $item['id']] ?? 0;
         }
         unset($item);
 

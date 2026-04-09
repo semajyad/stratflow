@@ -2,7 +2,7 @@
 /**
  * Integration Hub Template
  *
- * Lists all available integrations (Jira Cloud, Azure DevOps) with
+ * Lists all available integrations (Jira Cloud, Azure DevOps, GitHub, GitLab) with
  * connection status, sync controls, and configuration links.
  *
  * Variables: $user (array), $integrations (array keyed by provider),
@@ -12,6 +12,14 @@
 $jira = $integrations['jira'] ?? null;
 $jiraActive = $jira && $jira['status'] === 'active';
 $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : [];
+
+$github = $integrations['github'] ?? null;
+$githubActive = $github && $github['status'] === 'active';
+$githubConfig = $github ? (json_decode($github['config_json'] ?? '{}', true) ?: []) : [];
+
+$gitlab = $integrations['gitlab'] ?? null;
+$gitlabActive = $gitlab && $gitlab['status'] === 'active';
+$gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: []) : [];
 ?>
 
 <!-- ===========================
@@ -149,6 +157,179 @@ $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : 
         <?php endif; ?>
     </div>
 </section>
+
+<!-- ===========================
+     GitHub Webhook Integration
+     =========================== -->
+<section class="card mt-4">
+    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h2 class="card-title" style="margin: 0;">GitHub</h2>
+            <small class="text-muted">Auto-link PRs to user stories and work items via webhook</small>
+        </div>
+        <div>
+            <?php if ($githubActive): ?>
+                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+            <?php else: ?>
+                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Disconnected</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="card-body">
+        <?php if ($githubActive): ?>
+            <!-- Connected state -->
+            <div style="margin-bottom: 1rem;">
+                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook URL</span>
+                <code style="font-size: 0.85rem; word-break: break-all;"><?= htmlspecialchars(($_SERVER['HTTP_HOST'] ?? '') ? 'https://' . $_SERVER['HTTP_HOST'] . '/webhook/git/github' : '/webhook/git/github') ?></code>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret</span>
+                <?php $ghSecret = $githubConfig['webhook_secret'] ?? ''; ?>
+                <?php if ($ghSecret): ?>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <code id="github-secret-display" style="font-size: 0.85rem; letter-spacing: 0.05em;">
+                            <?= str_repeat('*', max(0, strlen($ghSecret) - 4)) . htmlspecialchars(substr($ghSecret, -4)) ?>
+                        </code>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick="toggleGitSecret('github', <?= htmlspecialchars(json_encode($ghSecret), ENT_QUOTES) ?>)"
+                                id="github-secret-reveal-btn">Reveal</button>
+                    </div>
+                <?php else: ?>
+                    <span class="text-muted">No secret set.</span>
+                <?php endif; ?>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <form method="POST" action="/app/admin/integrations/git/github/regenerate-secret" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <button type="submit" class="btn btn-sm btn-secondary"
+                            onclick="return confirm('Regenerate GitHub webhook secret? You must update your repository webhook settings with the new secret.')">
+                        Regenerate Secret
+                    </button>
+                </form>
+
+                <div style="margin-left: auto;">
+                    <form method="POST" action="/app/admin/integrations/git/github/disconnect" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Disconnect GitHub webhook?')">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Disconnected state -->
+            <p class="text-muted" style="margin-bottom: 1rem;">
+                Connect a GitHub webhook to automatically link pull requests to user stories and work items.
+                Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your PR description.
+            </p>
+            <form method="POST" action="/app/admin/integrations/git/github/connect" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <button type="submit" class="btn btn-primary">Connect GitHub</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- ===========================
+     GitLab Webhook Integration
+     =========================== -->
+<section class="card mt-4">
+    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h2 class="card-title" style="margin: 0;">GitLab</h2>
+            <small class="text-muted">Auto-link merge requests to user stories and work items via webhook</small>
+        </div>
+        <div>
+            <?php if ($gitlabActive): ?>
+                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+            <?php else: ?>
+                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Disconnected</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="card-body">
+        <?php if ($gitlabActive): ?>
+            <!-- Connected state -->
+            <div style="margin-bottom: 1rem;">
+                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook URL</span>
+                <code style="font-size: 0.85rem; word-break: break-all;"><?= htmlspecialchars(($_SERVER['HTTP_HOST'] ?? '') ? 'https://' . $_SERVER['HTTP_HOST'] . '/webhook/git/gitlab' : '/webhook/git/gitlab') ?></code>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret Token</span>
+                <?php $glSecret = $gitlabConfig['webhook_secret'] ?? ''; ?>
+                <?php if ($glSecret): ?>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <code id="gitlab-secret-display" style="font-size: 0.85rem; letter-spacing: 0.05em;">
+                            <?= str_repeat('*', max(0, strlen($glSecret) - 4)) . htmlspecialchars(substr($glSecret, -4)) ?>
+                        </code>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick="toggleGitSecret('gitlab', <?= htmlspecialchars(json_encode($glSecret), ENT_QUOTES) ?>)"
+                                id="gitlab-secret-reveal-btn">Reveal</button>
+                    </div>
+                <?php else: ?>
+                    <span class="text-muted">No secret set.</span>
+                <?php endif; ?>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <form method="POST" action="/app/admin/integrations/git/gitlab/regenerate-secret" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <button type="submit" class="btn btn-sm btn-secondary"
+                            onclick="return confirm('Regenerate GitLab webhook secret? You must update your repository webhook settings with the new secret token.')">
+                        Regenerate Secret
+                    </button>
+                </form>
+
+                <div style="margin-left: auto;">
+                    <form method="POST" action="/app/admin/integrations/git/gitlab/disconnect" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Disconnect GitLab webhook?')">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Disconnected state -->
+            <p class="text-muted" style="margin-bottom: 1rem;">
+                Connect a GitLab webhook to automatically link merge requests to user stories and work items.
+                Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your MR description.
+            </p>
+            <form method="POST" action="/app/admin/integrations/git/gitlab/connect" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <button type="submit" class="btn btn-primary">Connect GitLab</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</section>
+
+<script>
+/**
+ * Toggle reveal/mask of a Git webhook secret.
+ *
+ * @param {string} provider 'github' or 'gitlab'
+ * @param {string} secret   Plain-text secret value (never written to DOM until revealed)
+ */
+function toggleGitSecret(provider, secret) {
+    var display = document.getElementById(provider + '-secret-display');
+    var btn     = document.getElementById(provider + '-secret-reveal-btn');
+    if (!display || !btn) { return; }
+
+    if (btn.textContent === 'Reveal') {
+        display.textContent = secret;
+        btn.textContent     = 'Hide';
+    } else {
+        var masked = secret.slice(-4).padStart(secret.length, '*');
+        display.textContent = masked;
+        btn.textContent     = 'Reveal';
+    }
+}
+</script>
 
 <!-- ===========================
      Azure DevOps (Coming Soon)

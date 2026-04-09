@@ -40,6 +40,9 @@
         <?php if ($story['blocked_by']): ?>
             <span class="badge badge-warning">Blocked</span>
         <?php endif; ?>
+        <?php if (!empty($story['git_link_count'])): ?>
+            <span class="badge badge-secondary git-link-badge">Git: <?= (int) $story['git_link_count'] ?></span>
+        <?php endif; ?>
     </div>
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>

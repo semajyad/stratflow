@@ -317,6 +317,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('edit-form').action = '/app/work-items/' + currentEditId;
             document.getElementById('edit-modal').classList.remove('hidden');
+
+            // Load git links for this work item
+            if (typeof loadGitLinks === 'function') {
+                loadGitLinks('hl_work_item', parseInt(currentEditId, 10));
+            }
         });
     });
 
@@ -541,6 +546,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('ai-size-reasoning').style.display = 'none';
             document.getElementById('story-modal').classList.remove('hidden');
+
+            // Load git links for this story
+            if (typeof loadGitLinks === 'function') {
+                loadGitLinks('user_story', parseInt(currentStoryId, 10));
+            }
         });
     });
 

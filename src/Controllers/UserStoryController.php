@@ -17,6 +17,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
+use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
 use StratFlow\Models\GovernanceItem;
@@ -70,6 +71,14 @@ class UserStoryController
         $stories   = UserStory::findByProjectId($this->db, $projectId);
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $teams     = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
+
+        // Inject git link counts in bulk to avoid N+1 queries
+        $storyIds   = array_column($stories, 'id');
+        $gitCounts  = StoryGitLink::countsByLocalIds($this->db, 'user_story', array_map('intval', $storyIds));
+        foreach ($stories as &$story) {
+            $story['git_link_count'] = $gitCounts[(int) $story['id']] ?? 0;
+        }
+        unset($story);
 
         $this->response->render('user-stories', [
             'user'                 => $user,
