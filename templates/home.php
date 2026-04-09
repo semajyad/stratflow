@@ -57,7 +57,10 @@ if ($lastProjectId && !empty($projects)) {
     </div>
 
     <?php if (empty($projects)): ?>
-        <p class="empty-state">No projects yet. Create one below to get started.</p>
+        <div class="empty-state" style="padding: 2rem; text-align: center;">
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Create your first project to get started</p>
+            <p class="text-muted" style="font-size: 0.875rem;">Each project takes a strategy document through the full workflow: upload, roadmap, work items, stories, sprints, and governance.</p>
+        </div>
     <?php else: ?>
         <div class="project-list">
             <?php foreach ($projects as $project): ?>

@@ -1,18 +1,20 @@
 <?php
-// Build project query string if we're in a project context
-$pid = isset($project) ? (int) $project['id'] : 0;
+// Build project query string — persist across pages
+$pid = isset($project) ? (int) $project['id'] : (int) ($_SESSION['_last_project_id'] ?? 0);
 $pq = $pid ? "?project_id={$pid}" : '';
-// Persist last project for home page "Continue Working" section
 if ($pid) { $_SESSION['_last_project_id'] = $pid; }
+
+// Determine current page path for project switcher (stay on same page)
+$currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <a href="/app/home">StratFlow</a>
     </div>
     <div class="sidebar-project">
-        <span class="sidebar-project-label">Current Project</span>
+        <span class="sidebar-project-label">CURRENT PROJECT</span>
         <?php if (!empty($all_projects)): ?>
-        <select class="sidebar-project-select" onchange="if(this.value) window.location='/app/upload?project_id='+this.value">
+        <select class="sidebar-project-select" onchange="if(this.value) window.location='<?= htmlspecialchars($currentPath) ?>?project_id='+this.value">
             <option value="">Select a project...</option>
             <?php foreach ($all_projects as $ap): ?>
                 <option value="<?= (int) $ap['id'] ?>" <?= $pid === (int) $ap['id'] ? 'selected' : '' ?>>
@@ -37,7 +39,7 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
             Strategy Roadmap
         </a>
         <a href="/app/work-items<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'work-items' ? 'active' : '' ?>">
-            High-Level Work Items
+            Work Items
         </a>
         <a href="/app/prioritisation<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'prioritisation' ? 'active' : '' ?>">
             Prioritisation

@@ -37,6 +37,10 @@ $nextStep     = ($currentIndex !== false && $currentIndex < count($stepKeys) - 1
         <span></span>
     <?php endif; ?>
 
+    <span class="text-muted" style="font-size: 0.8rem;">
+        Step <?= ($currentIndex !== false ? $currentIndex + 1 : '?') ?> of <?= count($stepKeys) ?>
+    </span>
+
     <?php if ($nextStep): ?>
         <a href="<?= $nextStep['url'] ?>?project_id=<?= (int) ($project['id'] ?? 0) ?>" class="btn btn-primary">
             <?= htmlspecialchars($nextStep['label']) ?> &rarr;
