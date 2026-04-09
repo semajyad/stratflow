@@ -73,8 +73,6 @@
     <?php endif; ?>
 </div>
 
-<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
-
 <!-- ===========================
      Baseline History
      =========================== -->
@@ -107,3 +105,5 @@
         </table>
     <?php endif; ?>
 </div>
+
+<?php require __DIR__ . '/partials/workflow-nav.php'; ?>
