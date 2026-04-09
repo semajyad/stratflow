@@ -521,19 +521,71 @@ class AdminController
         $activeUsers = User::findByOrgId($this->db, $orgId);
         $activeCount = count(array_filter($activeUsers, fn($u) => (bool) $u['is_active']));
 
+        // Fetch live Stripe subscription details if available
+        $stripeDetails = null;
+        if ($sub && !empty($sub['stripe_subscription_id']) && $sub['stripe_subscription_id'] !== 'prod_manual_setup') {
+            try {
+                $stripe = new StripeService($this->config['stripe']);
+                $stripeDetails = $stripe->getSubscription($sub['stripe_subscription_id']);
+            } catch (\Throwable $e) {
+                // Non-critical — show local data
+            }
+        }
+
+        $hasStripeCustomer = !empty($org['stripe_customer_id']);
+
         $this->response->render('admin/billing', [
-            'user'          => $user,
-            'org'           => $org,
-            'subscription'  => $sub,
-            'seat_limit'    => $seatLimit,
-            'active_users'  => $activeCount,
-            'total_users'   => count($activeUsers),
-            'active_page'   => 'billing',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'              => $user,
+            'org'               => $org,
+            'subscription'      => $sub,
+            'stripe_details'    => $stripeDetails,
+            'seat_limit'        => $seatLimit,
+            'active_users'      => $activeCount,
+            'total_users'       => count($activeUsers),
+            'has_stripe'        => $hasStripeCustomer,
+            'active_page'       => 'billing',
+            'flash_message'     => $_SESSION['flash_message'] ?? null,
+            'flash_error'       => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Redirect to Stripe Customer Portal for self-service billing management.
+     */
+    public function billingPortal(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+        $org   = Organisation::findById($this->db, $orgId);
+
+        if (!$org || empty($org['stripe_customer_id'])) {
+            $_SESSION['flash_error'] = 'No billing account linked. Contact support.';
+            $this->response->redirect('/app/admin/billing');
+            return;
+        }
+
+        try {
+            $stripe = new StripeService($this->config['stripe']);
+            $appUrl = rtrim($this->config['app']['url'] ?? '', '/');
+            $portalUrl = $stripe->createPortalSession(
+                $org['stripe_customer_id'],
+                $appUrl . '/app/admin/billing'
+            );
+
+            \StratFlow\Services\AuditLogger::log(
+                $this->db, (int) $user['id'],
+                \StratFlow\Services\AuditLogger::ADMIN_ACTION,
+                $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+                ['action' => 'billing_portal_access']
+            );
+
+            $this->response->redirect($portalUrl);
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Could not open billing portal: ' . $e->getMessage();
+            $this->response->redirect('/app/admin/billing');
+        }
     }
 
     public function invoices(): void

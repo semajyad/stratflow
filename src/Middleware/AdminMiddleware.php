@@ -24,7 +24,7 @@ class AdminMiddleware
     public function handle(Auth $auth, Response $response): bool
     {
         $user = $auth->user();
-        if (!$user || !in_array($user['role'], ['org_admin', 'billing_admin', 'superadmin'])) {
+        if (!$user || !in_array($user['role'], ['org_admin', 'superadmin'])) {
             $response->redirect('/app/home');
             return false;
         }

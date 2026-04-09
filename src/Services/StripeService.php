@@ -180,4 +180,51 @@ class StripeService
 
         return $invoice->invoice_pdf;
     }
+
+    /**
+     * Create a Stripe Customer Portal session for self-service billing.
+     *
+     * Allows customers to update payment methods, view invoices,
+     * cancel subscriptions, and change seat quantities.
+     *
+     * @param string $customerId Stripe customer ID
+     * @param string $returnUrl  URL to return to after portal session
+     * @return string            Portal session URL to redirect to
+     */
+    public function createPortalSession(string $customerId, string $returnUrl): string
+    {
+        \Stripe\Stripe::setApiKey($this->config['secret_key']);
+
+        $session = \Stripe\BillingPortal\Session::create([
+            'customer'   => $customerId,
+            'return_url' => $returnUrl,
+        ]);
+
+        return $session->url;
+    }
+
+    /**
+     * Retrieve subscription details including current quantity (seats).
+     *
+     * @param string $subscriptionId Stripe subscription ID
+     * @return array Subscription data
+     */
+    public function getSubscription(string $subscriptionId): array
+    {
+        \Stripe\Stripe::setApiKey($this->config['secret_key']);
+        $sub = \Stripe\Subscription::retrieve($subscriptionId);
+
+        return [
+            'id'              => $sub->id,
+            'status'          => $sub->status,
+            'current_period_start' => date('Y-m-d', $sub->current_period_start),
+            'current_period_end'   => date('Y-m-d', $sub->current_period_end),
+            'cancel_at_period_end' => $sub->cancel_at_period_end,
+            'quantity'        => $sub->items->data[0]->quantity ?? 1,
+            'price_id'        => $sub->items->data[0]->price->id ?? '',
+            'unit_amount'     => $sub->items->data[0]->price->unit_amount ?? 0,
+            'currency'        => $sub->items->data[0]->price->currency ?? 'usd',
+            'interval'        => $sub->items->data[0]->price->recurring->interval ?? 'month',
+        ];
+    }
 }

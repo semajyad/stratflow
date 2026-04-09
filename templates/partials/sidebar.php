@@ -68,7 +68,20 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
             </a>
         <?php endif; ?>
 
-        <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin']) || ($user['has_billing_access'] ?? false)): ?>
+        <?php
+        // Billing visible to: superadmin, explicit billing flag, or org_admin when no dedicated billing user exists
+        $showBilling = ($user['role'] ?? '') === 'superadmin' || ($user['has_billing_access'] ?? false);
+        if (!$showBilling && ($user['role'] ?? '') === 'org_admin') {
+            try {
+                $billingUsers = \StratFlow\Core\Database::getInstance()->query(
+                    "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :oid AND has_billing_access = 1",
+                    [':oid' => $user['org_id']]
+                )->fetch();
+                $showBilling = ((int) ($billingUsers['cnt'] ?? 0) === 0);
+            } catch (\Throwable $e) { $showBilling = true; }
+        }
+        ?>
+        <?php if ($showBilling): ?>
             <a href="/app/admin/billing" class="nav-link <?= ($active_page ?? '') === 'billing' ? 'active' : '' ?>">
                 Billing
             </a>

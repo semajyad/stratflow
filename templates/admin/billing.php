@@ -2,14 +2,15 @@
 /**
  * Billing Dashboard Template
  *
- * Shows subscription status, seat usage, plan details, and links
- * to invoices and plan management. Restricted to users with billing access.
- *
- * Variables: $user, $org, $subscription, $seat_limit, $active_users, $total_users
+ * Subscription overview, seat usage, Stripe portal access, invoices.
+ * Only visible to users with has_billing_access flag or superadmin.
  */
 $sub = $subscription;
+$sd  = $stripe_details;
 $plan = $sub['plan_type'] ?? 'none';
 $status = $sub['status'] ?? 'none';
+$seatPct = $seat_limit > 0 ? min(100, ($active_users / $seat_limit) * 100) : 0;
+$seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'var(--primary)');
 ?>
 
 <div class="page-header">
@@ -17,108 +18,145 @@ $status = $sub['status'] ?? 'none';
     <p class="page-subtitle"><a href="/app/admin">&larr; Back to Administration</a></p>
 </div>
 
-<!-- Subscription Overview -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+<!-- Overview Cards -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
     <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.5rem;">
-            <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Plan</span>
-            <strong style="font-size: 1.5rem; display: block; margin: 0.5rem 0;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Plan</span>
+            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?= $sub ? htmlspecialchars(ucfirst($plan)) : 'No Plan' ?>
-            </strong>
+            </div>
             <?php if ($sub): ?>
                 <span class="badge <?= $status === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= ucfirst($status) ?></span>
+                <?php if ($sd && $sd['cancel_at_period_end']): ?>
+                    <br><small class="text-muted" style="color: var(--danger);">Cancels at period end</small>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
 
     <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.5rem;">
-            <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Seats Used</span>
-            <strong style="font-size: 1.5rem; display: block; margin: 0.5rem 0;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Seats</span>
+            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?= (int) $active_users ?> / <?= (int) $seat_limit ?>
-            </strong>
-            <?php
-                $pct = $seat_limit > 0 ? ($active_users / $seat_limit) * 100 : 0;
-                $color = $pct >= 90 ? 'var(--danger)' : ($pct >= 70 ? '#f0ad4e' : 'var(--primary)');
-            ?>
-            <div style="background: var(--border); border-radius: 4px; height: 8px; margin-top: 0.5rem;">
-                <div style="background: <?= $color ?>; border-radius: 4px; height: 100%; width: <?= min(100, $pct) ?>%;"></div>
             </div>
+            <div style="background: var(--border); border-radius: 4px; height: 6px; margin-top: 0.4rem;">
+                <div style="background: <?= $seatColor ?>; border-radius: 4px; height: 100%; width: <?= $seatPct ?>%; transition: width 0.3s;"></div>
+            </div>
+            <small class="text-muted"><?= (int) $total_users ?> total users</small>
         </div>
     </section>
 
     <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.5rem;">
-            <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Started</span>
-            <strong style="font-size: 1.5rem; display: block; margin: 0.5rem 0;">
-                <?= $sub ? date('j M Y', strtotime($sub['started_at'])) : '—' ?>
-            </strong>
-            <?php if ($sub && $sub['expires_at']): ?>
-                <span class="text-muted" style="font-size: 0.85rem;">Renews <?= date('j M Y', strtotime($sub['expires_at'])) ?></span>
-            <?php endif; ?>
-        </div>
-    </section>
-
-    <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.5rem;">
-            <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Features</span>
-            <div style="margin: 0.5rem 0; font-size: 0.9rem;">
-                <?php if ($sub && $sub['has_evaluation_board']): ?>
-                    <span class="badge badge-success">Sounding Board</span>
+        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                <?php if ($sd): ?>Cost<?php else: ?>Started<?php endif; ?>
+            </span>
+            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
+                <?php if ($sd): ?>
+                    <?= strtoupper($sd['currency']) ?> <?= number_format($sd['unit_amount'] / 100, 2) ?>
+                    <small style="font-weight: 400; font-size: 0.85rem;">/seat/<?= $sd['interval'] ?></small>
                 <?php else: ?>
-                    <span class="badge badge-secondary">Standard</span>
+                    <?= $sub ? date('j M Y', strtotime($sub['started_at'])) : '—' ?>
                 <?php endif; ?>
             </div>
+            <?php if ($sd): ?>
+                <small class="text-muted"><?= (int) ($sd['quantity'] ?? 1) ?> seats billed</small>
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Period</span>
+            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
+                <?php if ($sd): ?>
+                    <?= date('j M', strtotime($sd['current_period_end'])) ?>
+                <?php elseif ($sub && $sub['expires_at']): ?>
+                    <?= date('j M Y', strtotime($sub['expires_at'])) ?>
+                <?php else: ?>
+                    —
+                <?php endif; ?>
+            </div>
+            <small class="text-muted"><?= $sd ? 'Next renewal' : ($sub ? 'Expires' : '') ?></small>
         </div>
     </section>
 </div>
 
 <!-- Plan Details -->
-<section class="card mb-6">
-    <div class="card-header"><h2 class="card-title">Plan Details</h2></div>
-    <div class="card-body">
-        <table style="width: 100%; max-width: 500px;">
-            <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 0.75rem 0; color: var(--text-muted);">Organisation</td>
-                <td style="padding: 0.75rem 0; font-weight: 600;"><?= htmlspecialchars($org['name'] ?? '') ?></td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 0.75rem 0; color: var(--text-muted);">Plan Type</td>
-                <td style="padding: 0.75rem 0;"><?= $sub ? ucfirst(htmlspecialchars($plan)) : 'No active plan' ?></td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 0.75rem 0; color: var(--text-muted);">User Seats</td>
-                <td style="padding: 0.75rem 0;"><?= (int) $active_users ?> active of <?= (int) $seat_limit ?> allowed (<?= (int) $total_users ?> total)</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 0.75rem 0; color: var(--text-muted);">Stripe Customer</td>
-                <td style="padding: 0.75rem 0; font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($org['stripe_customer_id'] ?? 'Not configured') ?></td>
-            </tr>
-            <?php if ($sub): ?>
-            <tr>
-                <td style="padding: 0.75rem 0; color: var(--text-muted);">Subscription ID</td>
-                <td style="padding: 0.75rem 0; font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($sub['stripe_subscription_id'] ?? '') ?></td>
-            </tr>
-            <?php endif; ?>
-        </table>
-    </div>
-</section>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;">
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Plan Details</h2></div>
+        <div class="card-body">
+            <table style="width: 100%;">
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.6rem 0; color: var(--text-muted); width: 40%;">Organisation</td>
+                    <td style="padding: 0.6rem 0; font-weight: 600;"><?= htmlspecialchars($org['name'] ?? '') ?></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.6rem 0; color: var(--text-muted);">Plan Type</td>
+                    <td style="padding: 0.6rem 0;"><?= $sub ? ucfirst(htmlspecialchars($plan)) : 'No active plan' ?></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.6rem 0; color: var(--text-muted);">User Seats</td>
+                    <td style="padding: 0.6rem 0;"><?= (int) $active_users ?> active of <?= (int) $seat_limit ?> allowed</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.6rem 0; color: var(--text-muted);">Features</td>
+                    <td style="padding: 0.6rem 0;">
+                        <?php if ($sub && $sub['has_evaluation_board']): ?>
+                            <span class="badge badge-success">Sounding Board</span>
+                        <?php endif; ?>
+                        <span class="badge badge-info">Jira Integration</span>
+                        <span class="badge badge-secondary">Standard</span>
+                    </td>
+                </tr>
+                <?php if ($sd): ?>
+                <tr>
+                    <td style="padding: 0.6rem 0; color: var(--text-muted);">Billing Period</td>
+                    <td style="padding: 0.6rem 0;"><?= $sd['current_period_start'] ?> to <?= $sd['current_period_end'] ?></td>
+                </tr>
+                <?php endif; ?>
+            </table>
+        </div>
+    </section>
 
-<!-- Actions -->
-<section class="card">
-    <div class="card-header"><h2 class="card-title">Billing Actions</h2></div>
-    <div class="card-body">
-        <div class="flex items-center gap-3" style="flex-wrap: wrap;">
-            <a href="/app/admin/invoices" class="btn btn-secondary">View Invoices</a>
-            <?php if (!empty($org['stripe_customer_id'])): ?>
-                <span class="text-muted" style="font-size: 0.85rem;">
-                    To update your plan, add seats, or change payment method, contact <a href="mailto:support@stratflow.io">support@stratflow.io</a> or your account manager.
-                </span>
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Manage Subscription</h2></div>
+        <div class="card-body">
+            <?php if ($has_stripe): ?>
+                <p style="font-size: 0.9rem; margin-bottom: 1.25rem; color: var(--text-secondary);">
+                    Use the Stripe Customer Portal to manage your subscription, update payment methods, change seat quantities, or cancel.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <form method="POST" action="/app/admin/billing/portal" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            Open Billing Portal
+                        </button>
+                    </form>
+                    <a href="/app/admin/invoices" class="btn btn-secondary" style="width: 100%; text-align: center;">
+                        View Invoices
+                    </a>
+                </div>
+                <p class="text-muted" style="font-size: 0.8rem; margin-top: 1rem;">
+                    In the portal you can:
+                </p>
+                <ul style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0; padding-left: 1.25rem;">
+                    <li>Add or remove user seats</li>
+                    <li>Update payment method</li>
+                    <li>Download invoices and receipts</li>
+                    <li>Cancel subscription</li>
+                </ul>
             <?php else: ?>
-                <span class="text-muted" style="font-size: 0.85rem;">
-                    No billing account linked. Contact support to set up your subscription.
-                </span>
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                    No billing account is linked to this organisation.
+                </p>
+                <p class="text-muted" style="font-size: 0.85rem;">
+                    Contact your account manager or <a href="mailto:support@stratflow.io">support@stratflow.io</a> to set up billing.
+                </p>
             <?php endif; ?>
         </div>
-    </div>
-</section>
+    </section>
+</div>
