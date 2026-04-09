@@ -176,11 +176,9 @@ class SuperadminController
             $_SESSION['flash_message'] = "Jira integration enabled for \"{$org['name']}\". They can now connect from their admin panel.";
         } elseif ($action === 'disable') {
             if ($integration) {
-                \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], [
-                    'status' => 'disconnected',
-                    'access_token' => '',
-                    'refresh_token' => '',
-                ]);
+                // Delete sync mappings and the integration record entirely
+                \StratFlow\Models\SyncMapping::deleteByIntegration($this->db, (int) $integration['id']);
+                \StratFlow\Models\Integration::delete($this->db, (int) $integration['id']);
             }
             $_SESSION['flash_message'] = "Jira integration disabled for \"{$org['name']}\".";
         }

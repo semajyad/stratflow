@@ -69,12 +69,14 @@ class UserStoryController
 
         $stories   = UserStory::findByProjectId($this->db, $projectId);
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
+        $teams     = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
 
         $this->response->render('user-stories', [
             'user'                 => $user,
             'project'              => $project,
             'stories'              => $stories,
             'work_items'           => $workItems,
+            'teams'                => $teams,
             'active_page'          => 'user-stories',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,

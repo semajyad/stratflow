@@ -45,8 +45,14 @@
 
                 <div class="form-group">
                     <label for="story-team">Team Assigned</label>
-                    <input type="text" id="story-team" name="team_assigned" class="form-control"
-                           placeholder="e.g. Team Alpha">
+                    <select id="story-team" name="team_assigned" class="form-control">
+                        <option value="">-- Unassigned --</option>
+                        <?php if (!empty($teams)): ?>
+                            <?php foreach ($teams as $team): ?>
+                                <option value="<?= htmlspecialchars($team['name']) ?>"><?= htmlspecialchars($team['name']) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
                 </div>
 
                 <div class="flex gap-4">
