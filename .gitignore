@@ -9,7 +9,12 @@ node_modules/
 docker/mysql-data/
 C/
 
+# Playwright
+tests/Playwright/node_modules/
+tests/Playwright/test-results/
+
 # Claude Code — ephemeral markers
 .claude/.security-audit-ok
+.claude/.playwright-ok
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/

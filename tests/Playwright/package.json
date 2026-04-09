@@ -1,0 +1,14 @@
+{
+  "name": "stratflow-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:fast": "npx playwright test --project=fast",
+    "test:full": "npx playwright test --project=fast --project=full",
+    "test": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "mysql2": "^3.11.0"
+  }
+}
