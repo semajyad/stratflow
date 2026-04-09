@@ -7,6 +7,9 @@ async function globalTeardown() {
     conn = await mysql.createConnection(DB_CONFIG);
     await conn.execute('DELETE FROM users WHERE email = ?', [REGULAR_USER_EMAIL]);
     console.log('[globalTeardown] regular test user removed');
+    await conn.execute("DELETE FROM login_attempts WHERE identifier = ?", ['pw_regular@test.invalid']);
+    await conn.execute("DELETE FROM login_attempts WHERE identifier = ?", ['admin@stratflow.test']);
+    console.log('[globalTeardown] login_attempts cleared for test users');
   } catch (err) {
     console.error(`[globalTeardown] DB teardown failed: ${err.message}`);
     // Don't throw — test results are already recorded; teardown failure shouldn't mask them
