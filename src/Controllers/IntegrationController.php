@@ -937,15 +937,19 @@ class IntegrationController
 
                     // Pull status — prefer the changelog status entry if present,
                     // otherwise fall back to the full issue fields.
-                    try {
-                        $changelogItems  = $payload['changelog']['items'] ?? [];
-                        $statusChangelog = null;
-                        foreach ($changelogItems as $cl) {
-                            if (($cl['field'] ?? '') === 'status') {
-                                $statusChangelog = $cl;
-                                break;
-                            }
+                    $changelogItems  = $payload['changelog']['items'] ?? [];
+                    $statusChangelog = null;
+                    foreach ($changelogItems as $cl) {
+                        if (($cl['field'] ?? '') === 'status') {
+                            $statusChangelog = $cl;
+                            break;
                         }
+                    }
+
+                    $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
+                    if ($integration) {
+                        $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
+                        $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
 
                         if ($statusChangelog !== null) {
                             // Changelog gives us the new status name directly — build a
@@ -955,26 +959,22 @@ class IntegrationController
                                     'status' => ['name' => $statusChangelog['toString'] ?? ''],
                                 ],
                             ];
-                            $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
-                            if ($integration) {
-                                $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
-                                $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
+                            try {
                                 $syncSvc->pullStatus($issueKey, $syntheticIssue);
+                            } catch (\Throwable $statusEx) {
+                                error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                             }
                         } elseif (
                             in_array($event, ['jira:issue_updated', 'jira:issue_created'], true)
                             && !empty($issueFields['status'])
                         ) {
                             // No changelog — use whatever status is in the full issue payload
-                            $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
-                            if ($integration) {
-                                $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
-                                $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
+                            try {
                                 $syncSvc->pullStatus($issueKey, $payload['issue']);
+                            } catch (\Throwable $statusEx) {
+                                error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                             }
                         }
-                    } catch (\Throwable $statusEx) {
-                        error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                     }
                 }
 

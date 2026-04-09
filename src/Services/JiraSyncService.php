@@ -844,12 +844,6 @@ class JiraSyncService
         $now = date('Y-m-d H:i:s');
 
         if ($currentStatus === $newStatus) {
-            // No change — still stamp the sync time and return false
-            if ($mapping['local_type'] === 'hl_work_item') {
-                HLWorkItem::update($this->db, (int) $mapping['local_id'], ['last_jira_sync_at' => $now]);
-            } else {
-                UserStory::update($this->db, (int) $mapping['local_id'], ['last_jira_sync_at' => $now]);
-            }
             return false;
         }
 
