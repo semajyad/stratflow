@@ -45,9 +45,11 @@ try {
             $sql = file_get_contents($file);
             // Split on semicolons, run each statement separately so
             // "duplicate column" errors don't block subsequent statements
+            // Strip SQL comment lines, then split on semicolons
+            $sql = preg_replace('/^\s*--.*$/m', '', $sql);
             $statements = array_filter(array_map('trim', explode(';', $sql)));
             foreach ($statements as $stmt) {
-                if ($stmt === '' || str_starts_with($stmt, '--')) continue;
+                if ($stmt === '') continue;
                 try {
                     $pdo->exec($stmt);
                 } catch (PDOException $e) {
