@@ -402,15 +402,16 @@ class IntegrationController
 
             $wiResult = $sync->pushWorkItems($projectId, $jiraProjectKey);
             $usResult = $sync->pushUserStories($projectId, $jiraProjectKey);
+            $rkResult = $sync->pushRisks($projectId, $jiraProjectKey);
 
             Integration::update($this->db, (int) $integration['id'], [
                 'last_sync_at' => date('Y-m-d H:i:s'),
             ]);
 
-            $totalCreated = $wiResult['created'] + $usResult['created'];
-            $totalUpdated = $wiResult['updated'] + $usResult['updated'];
-            $totalSkipped = ($wiResult['skipped'] ?? 0) + ($usResult['skipped'] ?? 0);
-            $totalErrors  = $wiResult['errors']  + $usResult['errors'];
+            $totalCreated = $wiResult['created'] + $usResult['created'] + $rkResult['created'];
+            $totalUpdated = $wiResult['updated'] + $usResult['updated'] + $rkResult['updated'];
+            $totalSkipped = ($wiResult['skipped'] ?? 0) + ($usResult['skipped'] ?? 0) + ($rkResult['skipped'] ?? 0);
+            $totalErrors  = $wiResult['errors']  + $usResult['errors'] + $rkResult['errors'];
 
             AuditLogger::log(
                 $this->db,
@@ -692,6 +693,9 @@ class IntegrationController
             }
             if ($syncType === 'user_stories' || $syncType === 'all') {
                 $results['push_user_stories'] = $syncService->pushUserStories($projectId, $jiraKey);
+            }
+            if ($syncType === 'risks' || $syncType === 'all') {
+                $results['push_risks'] = $syncService->pushRisks($projectId, $jiraKey);
             }
 
             // Log item counts for debugging

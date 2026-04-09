@@ -19,6 +19,7 @@ namespace StratFlow\Services;
 use StratFlow\Core\Database;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\UserStory;
+use StratFlow\Models\Risk;
 use StratFlow\Models\SyncMapping;
 use StratFlow\Models\SyncLog;
 
@@ -63,47 +64,31 @@ class JiraSyncService
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
 
-        error_log("[JiraPush] pushWorkItems: projectId={$projectId}, jiraKey={$jiraProjectKey}, itemCount=" . count($workItems));
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
 
+        // Bulk-validate existing mappings in one API call
+        $validKeys = $this->validateMappedKeys($integrationId, 'hl_work_item');
+
         foreach ($workItems as $item) {
-            // Bail out after 3 consecutive errors (likely a config issue, not transient)
             if ($consecutiveErrors >= 3) {
                 $counts['errors'] += count($workItems) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
                 break;
             }
             try {
-                $mapping = SyncMapping::findByLocalItem(
-                    $this->db,
-                    $integrationId,
-                    'hl_work_item',
-                    (int) $item['id']
-                );
-
+                $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'hl_work_item', (int) $item['id']);
                 $currentHash = $this->computeSyncHash($item);
 
                 if ($mapping) {
-                    // Verify the Jira issue still exists
-                    $issueExists = true;
-                    try {
-                        $this->jira->getIssue($mapping['external_key'], ['summary']);
-                    } catch (\RuntimeException $e) {
-                        // Issue was deleted in Jira — remove stale mapping, re-create
-                        $issueExists = false;
+                    // Check if Jira issue still exists (from bulk check)
+                    if (!isset($validKeys[$mapping['external_key']])) {
                         SyncMapping::delete($this->db, (int) $mapping['id']);
                         $mapping = null;
-                    }
-
-                    if ($issueExists && $mapping) {
-                        // Check if update needed
-                        if ($mapping['sync_hash'] === $currentHash) {
-                            $counts['skipped']++;
-                            continue;
-                        }
-
-                        // Update existing issue
+                    } elseif ($mapping['sync_hash'] === $currentHash) {
+                        $counts['skipped']++;
+                        continue;
+                    } else {
+                        // Update changed item
                         $description = $this->buildWorkItemDescription($item);
                         $this->jira->updateIssue($mapping['external_key'], [
                             'summary'     => $item['title'],
@@ -116,24 +101,13 @@ class JiraSyncService
                             'last_synced_at' => date('Y-m-d H:i:s'),
                         ]);
 
-                        SyncLog::create($this->db, [
-                            'integration_id' => $integrationId,
-                            'direction'      => 'push',
-                            'action'         => 'update',
-                            'local_type'     => 'hl_work_item',
-                            'local_id'       => (int) $item['id'],
-                            'external_id'    => $mapping['external_key'],
-                            'details_json'   => json_encode(['title' => $item['title']]),
-                            'status'         => 'success',
-                        ]);
-
                         $counts['updated']++;
                         $consecutiveErrors = 0;
                         continue;
                     }
                 }
 
-                // Fall through: create new Epic (no mapping or stale mapping cleared)
+                // Create new Epic
                 {
                     // Create new Epic
                     $description = $this->buildWorkItemDescription($item);
@@ -221,10 +195,11 @@ class JiraSyncService
         $stories = UserStory::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
 
-        error_log("[JiraPush] pushUserStories: projectId={$projectId}, jiraKey={$jiraProjectKey}, storyCount=" . count($stories));
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
+
+        // Bulk-validate existing mappings in one API call
+        $validKeys = $this->validateMappedKeys($integrationId, 'user_story');
 
         foreach ($stories as $story) {
             if ($consecutiveErrors >= 3) {
@@ -232,54 +207,26 @@ class JiraSyncService
                 break;
             }
             try {
-                $mapping = SyncMapping::findByLocalItem(
-                    $this->db,
-                    $integrationId,
-                    'user_story',
-                    (int) $story['id']
-                );
-
+                $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'user_story', (int) $story['id']);
                 $currentHash = $this->computeSyncHash($story);
 
                 if ($mapping) {
-                    // Verify the Jira issue still exists
-                    $issueExists = true;
-                    try {
-                        $this->jira->getIssue($mapping['external_key'], ['summary']);
-                    } catch (\RuntimeException $e) {
-                        $issueExists = false;
+                    if (!isset($validKeys[$mapping['external_key']])) {
                         SyncMapping::delete($this->db, (int) $mapping['id']);
                         $mapping = null;
-                    }
-
-                    if ($issueExists && $mapping) {
-                        if ($mapping['sync_hash'] === $currentHash) {
-                            $counts['skipped']++;
-                            continue;
-                        }
-
-                        $updateFields = [
+                    } elseif ($mapping['sync_hash'] === $currentHash) {
+                        $counts['skipped']++;
+                        continue;
+                    } else {
+                        $this->jira->updateIssue($mapping['external_key'], [
                             'summary'     => $story['title'],
                             'description' => $this->jira->textToAdf($story['description'] ?? ''),
                             'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
-                        ];
-
-                        $this->jira->updateIssue($mapping['external_key'], $updateFields);
+                        ]);
 
                         SyncMapping::update($this->db, (int) $mapping['id'], [
                             'sync_hash'     => $currentHash,
                             'last_synced_at' => date('Y-m-d H:i:s'),
-                        ]);
-
-                        SyncLog::create($this->db, [
-                            'integration_id' => $integrationId,
-                            'direction'      => 'push',
-                            'action'         => 'update',
-                            'local_type'     => 'user_story',
-                            'local_id'       => (int) $story['id'],
-                            'external_id'    => $mapping['external_key'],
-                            'details_json'   => json_encode(['title' => $story['title']]),
-                            'status'         => 'success',
                         ]);
 
                         $counts['updated']++;
@@ -288,7 +235,7 @@ class JiraSyncService
                     }
                 }
 
-                // Fall through: create new Story
+                // Create new Story
                 {
                     // Build fields for new Story — minimal fields to avoid 400s
                     $fields = [
@@ -585,5 +532,151 @@ class JiraSyncService
         }
 
         return trim($description);
+    }
+
+    /**
+     * Bulk-validate which mapped Jira keys still exist.
+     *
+     * Makes a single JQL query instead of N individual GETs.
+     * Returns a set of valid keys for O(1) lookup.
+     */
+    private function validateMappedKeys(int $integrationId, string $localType): array
+    {
+        $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
+        $keys = [];
+        foreach ($mappings as $m) {
+            if ($m['local_type'] === $localType && !empty($m['external_key'])) {
+                $keys[] = $m['external_key'];
+            }
+        }
+
+        if (empty($keys)) {
+            return [];
+        }
+
+        try {
+            $keyList = implode(', ', $keys);
+            $result = $this->jira->searchIssues("key IN ({$keyList})", ['summary'], 100);
+            $validKeys = [];
+            foreach ($result['issues'] ?? [] as $issue) {
+                $validKeys[$issue['key']] = true;
+            }
+            return $validKeys;
+        } catch (\Throwable $e) {
+            // If search fails, assume all exist (will catch 404 individually as fallback)
+            return array_fill_keys($keys, true);
+        }
+    }
+
+    // ===========================
+    // PUSH: RISKS -> JIRA TASKS
+    // ===========================
+
+    /**
+     * Push risks to Jira as Task issues with "Risk" label.
+     */
+    public function pushRisks(int $projectId, string $jiraProjectKey): array
+    {
+        $risks = Risk::findByProjectId($this->db, $projectId);
+        $integrationId = (int) $this->integration['id'];
+
+        $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
+        $consecutiveErrors = 0;
+
+        $validKeys = $this->validateMappedKeys($integrationId, 'risk');
+
+        foreach ($risks as $risk) {
+            if ($consecutiveErrors >= 3) {
+                $counts['errors'] += count($risks) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
+                break;
+            }
+            try {
+                $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'risk', (int) $risk['id']);
+                $currentHash = hash('sha256', strtolower($risk['title'] ?? '') . '|' . ($risk['description'] ?? '') . '|' . ($risk['likelihood'] ?? 0) . '|' . ($risk['impact'] ?? 0));
+
+                if ($mapping) {
+                    if (!isset($validKeys[$mapping['external_key']])) {
+                        SyncMapping::delete($this->db, (int) $mapping['id']);
+                        $mapping = null;
+                    } elseif ($mapping['sync_hash'] === $currentHash) {
+                        $counts['skipped']++;
+                        continue;
+                    } else {
+                        $desc = $this->buildRiskDescription($risk);
+                        $this->jira->updateIssue($mapping['external_key'], [
+                            'summary'     => '[Risk] ' . $risk['title'],
+                            'description' => $this->jira->textToAdf($desc),
+                        ]);
+                        SyncMapping::update($this->db, (int) $mapping['id'], [
+                            'sync_hash'     => $currentHash,
+                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        ]);
+                        $counts['updated']++;
+                        $consecutiveErrors = 0;
+                        continue;
+                    }
+                }
+
+                // Create new Task for risk
+                {
+                    $desc = $this->buildRiskDescription($risk);
+                    $riskScore = ($risk['likelihood'] ?? 3) * ($risk['impact'] ?? 3);
+                    $priority = $riskScore >= 15 ? 'Highest' : ($riskScore >= 9 ? 'High' : ($riskScore >= 5 ? 'Medium' : 'Low'));
+
+                    $fields = [
+                        'project'     => ['key' => $jiraProjectKey],
+                        'issuetype'   => ['name' => 'Risk'],
+                        'summary'     => '[Risk] ' . $risk['title'],
+                        'description' => $this->jira->textToAdf($desc),
+                        'priority'    => ['name' => $priority],
+                    ];
+
+                    // Fallback to Task if Risk issue type doesn't exist
+                    try {
+                        $result = $this->jira->createIssue($fields);
+                    } catch (\RuntimeException $e) {
+                        $fields['issuetype'] = ['name' => 'Task'];
+                        $result = $this->jira->createIssue($fields);
+                    }
+
+                    $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
+                    $externalUrl = $siteUrl . '/browse/' . $result['key'];
+
+                    SyncMapping::create($this->db, [
+                        'integration_id' => $integrationId,
+                        'local_type'     => 'risk',
+                        'local_id'       => (int) $risk['id'],
+                        'external_id'    => $result['id'],
+                        'external_key'   => $result['key'],
+                        'external_url'   => $externalUrl,
+                        'sync_hash'      => $currentHash,
+                    ]);
+
+                    $counts['created']++;
+                }
+                $consecutiveErrors = 0;
+            } catch (\Throwable $e) {
+                $consecutiveErrors++;
+                $counts['errors']++;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Build description text for a risk being pushed to Jira.
+     */
+    private function buildRiskDescription(array $risk): string
+    {
+        $parts = [];
+        if (!empty($risk['description'])) {
+            $parts[] = $risk['description'];
+        }
+        $parts[] = "Likelihood: {$risk['likelihood']}/5 | Impact: {$risk['impact']}/5 | Risk Score: " . ($risk['likelihood'] * $risk['impact']);
+        if (!empty($risk['mitigation'])) {
+            $parts[] = "Mitigation: " . $risk['mitigation'];
+        }
+        return implode("\n\n", $parts);
     }
 }

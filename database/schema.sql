@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS integrations (
 CREATE TABLE IF NOT EXISTS sync_mappings (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     integration_id INT UNSIGNED NOT NULL,
-    local_type ENUM('hl_work_item','user_story','sprint') NOT NULL,
+    local_type ENUM('hl_work_item','user_story','sprint','risk') NOT NULL,
     local_id INT UNSIGNED NOT NULL,
     external_id VARCHAR(255) NOT NULL,
     external_key VARCHAR(100) NULL,
