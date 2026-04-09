@@ -185,14 +185,19 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 
             <div style="margin-bottom: 1rem;">
                 <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret</span>
-                <?php $ghSecret = $githubConfig['webhook_secret'] ?? ''; ?>
-                <?php if ($ghSecret): ?>
+                <?php
+                    $ghSecret = $githubConfig['webhook_secret'] ?? '';
+                    $ghMasked = $ghSecret !== ''
+                        ? str_repeat('*', max(0, strlen($ghSecret) - 4)) . substr($ghSecret, -4)
+                        : '';
+                ?>
+                <?php if ($ghSecret !== ''): ?>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <code id="github-secret-display" style="font-size: 0.85rem; letter-spacing: 0.05em;">
-                            <?= str_repeat('*', max(0, strlen($ghSecret) - 4)) . htmlspecialchars(substr($ghSecret, -4)) ?>
-                        </code>
+                        <code id="github-secret-display"
+                              data-masked="<?= htmlspecialchars($ghMasked) ?>"
+                              style="font-size: 0.85rem; letter-spacing: 0.05em;"><?= htmlspecialchars($ghMasked) ?></code>
                         <button type="button" class="btn btn-sm btn-secondary"
-                                onclick="toggleGitSecret('github', <?= htmlspecialchars(json_encode($ghSecret), ENT_QUOTES) ?>)"
+                                onclick="toggleGitSecret('github')"
                                 id="github-secret-reveal-btn">Reveal</button>
                     </div>
                 <?php else: ?>
@@ -260,14 +265,19 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 
             <div style="margin-bottom: 1rem;">
                 <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret Token</span>
-                <?php $glSecret = $gitlabConfig['webhook_secret'] ?? ''; ?>
-                <?php if ($glSecret): ?>
+                <?php
+                    $glSecret = $gitlabConfig['webhook_secret'] ?? '';
+                    $glMasked = $glSecret !== ''
+                        ? str_repeat('*', max(0, strlen($glSecret) - 4)) . substr($glSecret, -4)
+                        : '';
+                ?>
+                <?php if ($glSecret !== ''): ?>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <code id="gitlab-secret-display" style="font-size: 0.85rem; letter-spacing: 0.05em;">
-                            <?= str_repeat('*', max(0, strlen($glSecret) - 4)) . htmlspecialchars(substr($glSecret, -4)) ?>
-                        </code>
+                        <code id="gitlab-secret-display"
+                              data-masked="<?= htmlspecialchars($glMasked) ?>"
+                              style="font-size: 0.85rem; letter-spacing: 0.05em;"><?= htmlspecialchars($glMasked) ?></code>
                         <button type="button" class="btn btn-sm btn-secondary"
-                                onclick="toggleGitSecret('gitlab', <?= htmlspecialchars(json_encode($glSecret), ENT_QUOTES) ?>)"
+                                onclick="toggleGitSecret('gitlab')"
                                 id="gitlab-secret-reveal-btn">Reveal</button>
                     </div>
                 <?php else: ?>
@@ -312,22 +322,53 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 /**
  * Toggle reveal/mask of a Git webhook secret.
  *
+ * The plaintext secret is NOT embedded in the HTML source. On reveal, it
+ * is fetched from a CSRF-protected admin endpoint and written to the DOM
+ * only after the user explicitly clicks Reveal. On hide, we restore the
+ * masked value from the element's data-masked attribute and drop the
+ * plaintext from the DOM.
+ *
  * @param {string} provider 'github' or 'gitlab'
- * @param {string} secret   Plain-text secret value (never written to DOM until revealed)
  */
-function toggleGitSecret(provider, secret) {
+function toggleGitSecret(provider) {
     var display = document.getElementById(provider + '-secret-display');
     var btn     = document.getElementById(provider + '-secret-reveal-btn');
     if (!display || !btn) { return; }
 
-    if (btn.textContent === 'Reveal') {
-        display.textContent = secret;
-        btn.textContent     = 'Hide';
-    } else {
-        var masked = secret.slice(-4).padStart(secret.length, '*');
-        display.textContent = masked;
+    if (btn.textContent === 'Hide') {
+        display.textContent = display.getAttribute('data-masked') || '';
         btn.textContent     = 'Reveal';
+        return;
     }
+
+    btn.disabled    = true;
+    btn.textContent = 'Loading...';
+
+    var form = new FormData();
+    form.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
+
+    fetch('/app/admin/integrations/git/' + encodeURIComponent(provider) + '/reveal-secret', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form,
+        credentials: 'same-origin'
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+        btn.disabled = false;
+        if (res.ok && res.data && res.data.secret) {
+            display.textContent = res.data.secret;
+            btn.textContent     = 'Hide';
+        } else {
+            btn.textContent = 'Reveal';
+            alert((res.data && res.data.error) || 'Could not reveal secret.');
+        }
+    })
+    .catch(function() {
+        btn.disabled    = false;
+        btn.textContent = 'Reveal';
+        alert('Network error revealing secret.');
+    });
 }
 </script>
 

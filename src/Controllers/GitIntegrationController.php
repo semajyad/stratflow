@@ -158,6 +158,43 @@ class GitIntegrationController
         $this->response->redirect('/app/admin/integrations');
     }
 
+    /**
+     * Return the plaintext webhook secret as JSON for an admin user.
+     *
+     * Used by the admin UI's "Reveal" button instead of embedding the
+     * secret in the HTML source on first paint. Requires auth+admin+csrf
+     * middleware so only a logged-in org admin for the same org can fetch it.
+     *
+     * POST /app/admin/integrations/git/{provider}/reveal-secret
+     */
+    public function revealSecret(string $provider): void
+    {
+        if (!$this->isValidProvider($provider)) {
+            $this->response->json(['error' => 'Unknown Git provider.'], 400);
+            return;
+        }
+
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $existing = Integration::findByOrgAndProvider($this->db, $orgId, $provider);
+
+        if (!$existing) {
+            $this->response->json(['error' => ucfirst($provider) . ' is not connected.'], 404);
+            return;
+        }
+
+        $config = json_decode($existing['config_json'] ?? '{}', true) ?: [];
+        $secret = $config['webhook_secret'] ?? '';
+
+        if ($secret === '') {
+            $this->response->json(['error' => 'No secret set.'], 404);
+            return;
+        }
+
+        $this->response->json(['secret' => $secret]);
+    }
+
     // ===========================
     // PRIVATE HELPERS
     // ===========================
