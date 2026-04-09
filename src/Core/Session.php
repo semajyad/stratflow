@@ -22,18 +22,22 @@ class Session
     /** @var int Session ID regeneration interval in seconds (default: 15 minutes) */
     private const REGEN_INTERVAL = 900;
 
-    public function __construct(int $timeout = 1800)
+    public function __construct(int $timeout = 1800, ?\PDO $pdo = null)
     {
         $this->timeout = $timeout;
 
         if (session_status() === PHP_SESSION_NONE) {
             $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
+            // Use database session handler if PDO available
+            if ($pdo !== null) {
+                $handler = new DatabaseSessionHandler($pdo);
+                session_set_save_handler($handler, true);
+            }
+
             // Hardened session configuration (SOC 2 / PCI-DSS)
             ini_set('session.use_strict_mode', '1');
             ini_set('session.use_only_cookies', '1');
-            // sid_length and sid_bits_per_character deprecated in PHP 8.4
-            // Defaults (48 length, 6 bits/char) are already secure
 
             session_set_cookie_params([
                 'lifetime' => 0,           // Browser session only

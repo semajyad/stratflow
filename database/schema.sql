@@ -1,6 +1,13 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(128) NOT NULL PRIMARY KEY,
+    data MEDIUMBLOB NOT NULL,
+    last_accessed INT UNSIGNED NOT NULL,
+    INDEX idx_last_accessed (last_accessed)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS organisations (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
