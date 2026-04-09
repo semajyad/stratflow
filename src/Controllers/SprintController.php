@@ -459,14 +459,14 @@ class SprintController
             return;
         }
 
-        // Strict priority-order allocation: take stories in order,
-        // fill each sprint until it can't take the next story, then move to next sprint
+        // Priority-first packing: fill each sprint as close to capacity as possible.
+        // Takes stories in priority order but if the next story doesn't fit,
+        // tries smaller stories further down the queue to maximise utilisation.
         $assigned = 0;
-        $storyIndex = 0;
-        $totalStories = count($unallocated);
+        $remaining_stories = $unallocated; // Copy — we'll remove assigned ones
 
         foreach ($sprints as $sprint) {
-            if ($storyIndex >= $totalStories) break;
+            if (empty($remaining_stories)) break;
 
             $sprintId    = (int) $sprint['id'];
             $capacity    = (int) ($sprint['team_capacity'] ?? 0);
@@ -475,26 +475,27 @@ class SprintController
 
             if ($remaining <= 0) continue;
 
-            // Fill this sprint in strict priority order
-            while ($storyIndex < $totalStories) {
-                $story = $unallocated[$storyIndex];
-                $size  = (int) ($story['size'] ?? 1);
+            // Take stories in priority order; skip ones that don't fit
+            // (they'll be tried in the next sprint)
+            $still_remaining = [];
+            foreach ($remaining_stories as $story) {
+                $size = (int) ($story['size'] ?? 1);
 
-                // If this story fits, add it
-                if ($size <= $remaining) {
+                if ($remaining > 0 && $size <= $remaining) {
                     SprintStory::assign($this->db, $sprintId, (int) $story['id']);
                     $remaining -= $size;
                     $assigned++;
-                    $storyIndex++;
                 } else {
-                    // Story doesn't fit — this sprint is full, move to next sprint
-                    break;
+                    // Doesn't fit this sprint — keep for next sprint
+                    $still_remaining[] = $story;
                 }
             }
+
+            $remaining_stories = $still_remaining;
         }
 
-        $skipped = $totalStories - $storyIndex;
-        $msg = "{$assigned} stories allocated across sprints by priority.";
+        $skipped = count($remaining_stories);
+        $msg = "{$assigned} stories allocated across sprints.";
         if ($skipped > 0) {
             $msg .= " {$skipped} stories didn't fit — add more sprints or increase capacity.";
         }
