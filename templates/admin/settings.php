@@ -60,6 +60,45 @@
     </section>
 
     <!-- ===========================
+         AI Model
+         =========================== -->
+    <section class="card settings-section mt-4">
+        <div class="card-header">
+            <h2 class="card-title">AI Model</h2>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+                Override the platform default AI model and API key for your organisation.
+                Leave blank to use the StratFlow default (<code>gemini-3-flash-preview</code>).
+            </p>
+            <div class="form-row gap-4">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Gemini Model</label>
+                    <select name="ai_model" class="form-input">
+                        <option value="" <?= empty($settings['ai']['model']) ? 'selected' : '' ?>>
+                            Platform default (gemini-3-flash-preview)
+                        </option>
+                        <option value="gemini-3-flash-preview" <?= ($settings['ai']['model'] ?? '') === 'gemini-3-flash-preview' ? 'selected' : '' ?>>gemini-3-flash-preview</option>
+                        <option value="gemini-2.5-flash" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.5-flash' ? 'selected' : '' ?>>gemini-2.5-flash</option>
+                        <option value="gemini-2.5-pro" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.5-pro' ? 'selected' : '' ?>>gemini-2.5-pro (slower, higher quality)</option>
+                        <option value="gemini-2.0-flash" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.0-flash' ? 'selected' : '' ?>>gemini-2.0-flash</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">API Key <span class="text-muted" style="font-weight:400;">(optional)</span></label>
+                    <input type="password"
+                           name="ai_api_key"
+                           class="form-input"
+                           autocomplete="new-password"
+                           placeholder="<?= empty($settings['ai']['api_key']) ? 'Using platform key' : '••••••••••••' ?>"
+                           value="">
+                    <small class="text-muted">Your Google AI Studio API key. Leave blank to use the StratFlow shared key.</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================
          Defaults
          =========================== -->
     <section class="card settings-section mt-4">

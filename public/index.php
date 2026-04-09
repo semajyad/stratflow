@@ -88,6 +88,29 @@ $auth = new \StratFlow\Core\Auth($session, $db);
 $request = new \StratFlow\Core\Request();
 $response = new \StratFlow\Core\Response($csrf);
 
+// === Merge org-level AI settings into config (if user is logged in) ===
+// Allows admins to override the platform default Gemini model and API key
+// via Organisation Settings → AI. Falls back to platform defaults when empty.
+if (!empty($_SESSION['user']['org_id'])) {
+    try {
+        $orgRow = $db->query(
+            "SELECT settings_json FROM organisations WHERE id = :id LIMIT 1",
+            [':id' => (int) $_SESSION['user']['org_id']]
+        )->fetch();
+        if ($orgRow && !empty($orgRow['settings_json'])) {
+            $orgSettings = json_decode($orgRow['settings_json'], true) ?? [];
+            if (!empty($orgSettings['ai']['model'])) {
+                $config['gemini']['model'] = $orgSettings['ai']['model'];
+            }
+            if (!empty($orgSettings['ai']['api_key'])) {
+                $config['gemini']['api_key'] = $orgSettings['ai']['api_key'];
+            }
+        }
+    } catch (\Throwable) {
+        // Non-fatal: fall back to platform defaults
+    }
+}
+
 // === Register Routes ===
 $router = new \StratFlow\Core\Router($request, $response, $auth, $csrf, $db, $config);
 

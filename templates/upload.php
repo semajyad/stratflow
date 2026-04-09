@@ -164,28 +164,42 @@ function formatFileSize(int $bytes): string {
     </div>
     <div id="doc-list" class="hidden">
         <?php foreach ($documents as $doc): ?>
-            <div style="padding:0.75rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <strong style="font-size:0.9rem;"><?= htmlspecialchars($doc['original_name']) ?></strong>
-                    <span class="text-muted" style="font-size:0.8rem; margin-left:0.5rem;">
-                        <?= formatFileSize((int) $doc['file_size']) ?> &middot; <?= date('j M Y', strtotime($doc['created_at'])) ?>
-                    </span>
+            <div style="border-bottom:1px solid var(--border);">
+                <div style="padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <strong style="font-size:0.9rem;"><?= htmlspecialchars($doc['original_name']) ?></strong>
+                        <span class="text-muted" style="font-size:0.8rem; margin-left:0.5rem;">
+                            <?= formatFileSize((int) $doc['file_size']) ?> &middot; <?= date('j M Y', strtotime($doc['created_at'])) ?>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <?php if (!empty($doc['ai_summary'])): ?>
+                            <button type="button"
+                                    class="badge badge-success doc-summary-toggle"
+                                    style="font-size:0.7rem; cursor:pointer; border:none; background:none; padding:0;"
+                                    data-doc-id="<?= (int) $doc['id'] ?>"
+                                    aria-expanded="false">
+                                Summarised &#9660;
+                            </button>
+                        <?php elseif (!empty($doc['extracted_text'])): ?>
+                            <form method="POST" action="/app/upload/summarise" class="inline-form"
+                                  data-loading="Summarising...">
+                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
+                                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-primary" style="font-size:0.75rem;">Summarise</button>
+                            </form>
+                        <?php else: ?>
+                            <span class="badge badge-secondary" style="font-size:0.7rem;">No text extracted</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <?php if (!empty($doc['ai_summary'])): ?>
-                        <span class="badge badge-success" style="font-size:0.7rem;">Summarised</span>
-                    <?php elseif (!empty($doc['extracted_text'])): ?>
-                        <form method="POST" action="/app/upload/summarise" class="inline-form"
-                              data-loading="Summarising...">
-                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                            <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
-                            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                            <button type="submit" class="btn btn-sm btn-primary" style="font-size:0.75rem;">Summarise</button>
-                        </form>
-                    <?php else: ?>
-                        <span class="badge badge-secondary" style="font-size:0.7rem;">No text extracted</span>
-                    <?php endif; ?>
-                </div>
+                <?php if (!empty($doc['ai_summary'])): ?>
+                    <div id="doc-summary-<?= (int) $doc['id'] ?>"
+                         style="display:none; padding:0.75rem 1.5rem 1rem; background:#f8fafc; border-top:1px solid var(--border); font-size:0.875rem; line-height:1.6; white-space:pre-wrap; color:var(--text-secondary);">
+                        <?= htmlspecialchars($doc['ai_summary']) ?>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>

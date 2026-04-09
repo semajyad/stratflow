@@ -165,7 +165,16 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/billing',               'AdminController@billing',          ['auth', 'billing']);
     $router->add('POST', '/app/admin/billing/portal',        'AdminController@billingPortal',    ['auth', 'billing', 'csrf']);
-    $router->add('GET',  '/app/admin/invoices',              'AdminController@invoices',         ['auth', 'billing']);
+
+    // Xero OAuth — callback is GET with no CSRF (Xero redirects back)
+    $router->add('GET',  '/app/admin/xero/connect',          'XeroController@connect',           ['auth', 'billing']);
+    $router->add('GET',  '/app/admin/xero/callback',         'XeroController@callback',          ['auth', 'billing']);
+    $router->add('POST', '/app/admin/xero/disconnect',       'XeroController@disconnect',        ['auth', 'billing', 'csrf']);
+
+    // Invoices — Xero primary, Stripe fallback (static routes BEFORE {id})
+    $router->add('GET',  '/app/admin/invoices',              'XeroController@invoices',          ['auth', 'billing']);
+    $router->add('POST', '/app/admin/invoices/create',       'XeroController@createInvoice',     ['auth', 'billing', 'csrf']);
+    $router->add('POST', '/app/admin/invoices/sync',         'XeroController@syncInvoices',      ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);

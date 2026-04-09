@@ -18,6 +18,7 @@ use StratFlow\Core\Database;
 use StratFlow\Core\PasswordPolicy;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Models\Integration;
 use StratFlow\Models\Organisation;
 use StratFlow\Models\PasswordToken;
 use StratFlow\Models\Subscription;
@@ -542,6 +543,13 @@ class AdminController
 
         $hasStripeCustomer = !empty($org['stripe_customer_id']);
 
+        // Xero integration status for billing page
+        $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
+        $xeroConnected   = $xeroIntegration && $xeroIntegration['status'] === 'active';
+        $xeroTenantName  = $xeroConnected
+            ? (json_decode($xeroIntegration['config_json'] ?? '{}', true)['tenant_name'] ?? 'Xero')
+            : null;
+
         $this->response->render('admin/billing', [
             'user'              => $user,
             'org'               => $org,
@@ -551,6 +559,9 @@ class AdminController
             'active_users'      => $activeCount,
             'total_users'       => count($activeUsers),
             'has_stripe'        => $hasStripeCustomer,
+            'xero_connected'    => $xeroConnected,
+            'xero_tenant_name'  => $xeroTenantName,
+            'csrf_token'        => $_SESSION['csrf_token'] ?? '',
             'active_page'       => 'billing',
             'flash_message'     => $_SESSION['flash_message'] ?? null,
             'flash_error'       => $_SESSION['flash_error']   ?? null,
@@ -695,6 +706,10 @@ class AdminController
             'user_story_max_size'          => 13,
             'capacity_tripwire_percent'    => 20,
             'dependency_tripwire_enabled'  => true,
+            'ai' => [
+                'model'   => '',   // empty = use platform default (gemini-3-flash-preview)
+                'api_key' => '',   // empty = use platform default key
+            ],
         ];
     }
 
@@ -829,6 +844,19 @@ class AdminController
             'user_story_max_size'         => (int) $this->request->post('user_story_max_size', '13'),
             'capacity_tripwire_percent'   => (int) $this->request->post('capacity_tripwire_percent', '20'),
             'dependency_tripwire_enabled' => $this->request->post('dependency_tripwire_enabled') === '1',
+        ];
+
+        // Preserve the existing API key if the form was submitted with a blank field
+        // (password inputs render blank for security; blank = "keep current")
+        $submittedKey = trim((string) $this->request->post('ai_api_key', ''));
+        $org          = Organisation::findById($this->db, $orgId);
+        $existing     = [];
+        if ($org && !empty($org['settings_json'])) {
+            $existing = json_decode($org['settings_json'], true) ?? [];
+        }
+        $settings['ai'] = [
+            'model'   => trim((string) $this->request->post('ai_model', '')),
+            'api_key' => $submittedKey !== '' ? $submittedKey : ($existing['ai']['api_key'] ?? ''),
         ];
 
         Organisation::update($this->db, $orgId, [

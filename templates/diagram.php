@@ -182,7 +182,9 @@ $hasSummary = !empty($document_summary);
                 // Expand first node by default, collapse others
                 $isOpen = ($idx === 0);
             ?>
-                <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?>">
+                <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?>"
+                     id="okr-node-<?= htmlspecialchars($node['node_key']) ?>"
+                     data-node-key="<?= htmlspecialchars($node['node_key']) ?>">
                     <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
                     <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open');">
                         <span class="badge badge-primary" style="flex-shrink:0;"><?= htmlspecialchars($node['node_key']) ?></span>

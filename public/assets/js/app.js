@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var id = 'mermaid-' + Date.now();
         mermaid.render(id, code).then(function(result) {
             outputEl.innerHTML = result.svg;
+            attachDiagramNodeClicks(outputEl);
         }).catch(function(err) {
             outputEl.innerHTML = '<p class="error">Invalid Mermaid syntax: ' + escapeHtml(err.message) + '</p>';
         });
@@ -1401,3 +1402,66 @@ function showJiraSyncPreview(form) {
     });
 }
 
+
+
+// ===========================
+// Document Summary Toggle (upload page)
+// ===========================
+document.querySelectorAll('.doc-summary-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var docId   = btn.getAttribute('data-doc-id');
+        var panel   = document.getElementById('doc-summary-' + docId);
+        if (!panel) return;
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+            panel.style.display = 'none';
+            btn.setAttribute('aria-expanded', 'false');
+            btn.innerHTML = 'Summarised &#9660;';
+        } else {
+            panel.style.display = 'block';
+            btn.setAttribute('aria-expanded', 'true');
+            btn.innerHTML = 'Summarised &#9650;';
+        }
+    });
+});
+
+// ===========================
+// Mermaid Node Click → OKR Scroll
+// ===========================
+/**
+ * After the Mermaid SVG renders, find every node element and wire up a click
+ * that opens and scrolls to the matching OKR accordion item.
+ *
+ * Mermaid renders nodes as <g> elements whose id attribute matches the node
+ * key defined in the flowchart code (e.g. "flowchart-A-123" where "A" is the
+ * key). We strip the "flowchart-" prefix and trailing "-NNN" index to recover
+ * the key, then look for data-node-key on the accordion items.
+ */
+function attachDiagramNodeClicks(container) {
+    if (!container) return;
+    var nodes = container.querySelectorAll('.node, .label-container, [id^="flowchart-"]');
+    nodes.forEach(function(el) {
+        // Resolve the node key from the element or its closest ancestor with an id
+        var src = el.id || (el.closest('[id^="flowchart-"]') || {}).id || '';
+        // Mermaid uses ids like "flowchart-NodeKey-42"; strip prefix and suffix index
+        var match = src.match(/^flowchart-(.+)-\d+$/);
+        if (!match) return;
+        var nodeKey = match[1];
+
+        var accordion = document.querySelector('[data-node-key="' + nodeKey + '"]');
+        if (!accordion) return;
+
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Open the accordion
+            accordion.classList.add('accordion-item--open');
+            // Scroll into view smoothly
+            accordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Brief highlight flash
+            accordion.style.transition = 'outline 0.1s';
+            accordion.style.outline = '2px solid var(--primary, #4f46e5)';
+            setTimeout(function() { accordion.style.outline = ''; }, 1200);
+        });
+    });
+}

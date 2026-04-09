@@ -27,7 +27,7 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
                 <?= $sub ? htmlspecialchars(ucfirst($plan)) : 'No Plan' ?>
             </div>
             <?php if ($sub): ?>
-                <span class="badge <?= $status === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= ucfirst($status) ?></span>
+                <span class="badge <?= $status === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= htmlspecialchars(ucfirst($status)) ?></span>
                 <?php if ($sd && $sd['cancel_at_period_end']): ?>
                     <br><small class="text-muted" style="color: var(--danger);">Cancels at period end</small>
                 <?php endif; ?>
@@ -55,8 +55,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
             </span>
             <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?php if ($sd): ?>
-                    <?= strtoupper($sd['currency']) ?> <?= number_format($sd['unit_amount'] / 100, 2) ?>
-                    <small style="font-weight: 400; font-size: 0.85rem;">/seat/<?= $sd['interval'] ?></small>
+                    <?= htmlspecialchars(strtoupper($sd['currency'])) ?> <?= number_format($sd['unit_amount'] / 100, 2) ?>
+                    <small style="font-weight: 400; font-size: 0.85rem;">/seat/<?= htmlspecialchars($sd['interval']) ?></small>
                 <?php else: ?>
                     <?= $sub ? date('j M Y', strtotime($sub['started_at'])) : '—' ?>
                 <?php endif; ?>
@@ -83,6 +83,14 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 </div>
+
+<!-- Flash messages -->
+<?php if (!empty($flash_error)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($flash_error) ?></div>
+<?php endif; ?>
+<?php if (!empty($flash_message)): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($flash_message) ?></div>
+<?php endif; ?>
 
 <!-- Plan Details -->
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;">
@@ -115,7 +123,7 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
                 <?php if ($sd): ?>
                 <tr>
                     <td style="padding: 0.6rem 0; color: var(--text-muted);">Billing Period</td>
-                    <td style="padding: 0.6rem 0;"><?= $sd['current_period_start'] ?> to <?= $sd['current_period_end'] ?></td>
+                    <td style="padding: 0.6rem 0;"><?= htmlspecialchars($sd['current_period_start']) ?> to <?= htmlspecialchars($sd['current_period_end']) ?></td>
                 </tr>
                 <?php endif; ?>
             </table>
@@ -160,3 +168,54 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 </div>
+
+<!-- ===========================
+     Xero Invoicing
+     =========================== -->
+<section class="card mt-4">
+    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h2 class="card-title" style="margin: 0;">Xero Invoicing</h2>
+            <small class="text-muted">Connect Xero to create and manage invoices for enterprise clients</small>
+        </div>
+        <div>
+            <?php if ($xero_connected): ?>
+                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+            <?php else: ?>
+                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Not Connected</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="card-body">
+        <?php if ($xero_connected): ?>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Connected Organisation</span>
+                    <strong><?= htmlspecialchars($xero_tenant_name ?? 'Xero') ?></strong>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <a href="/app/admin/invoices" class="btn btn-primary">View &amp; Create Invoices</a>
+                <form method="POST" action="/app/admin/invoices/sync" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <button type="submit" class="btn btn-secondary">Sync from Xero</button>
+                </form>
+                <div style="margin-left: auto;">
+                    <form method="POST" action="/app/admin/xero/disconnect" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Disconnect Xero? Cached invoices will be removed.')">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php else: ?>
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem; color: var(--text-secondary);">
+                Connect your Xero account to generate and track invoices for enterprise clients directly from StratFlow.
+                Enterprise clients often require Xero-compatible invoices rather than Stripe receipts.
+            </p>
+            <a href="/app/admin/xero/connect" class="btn btn-primary">Connect to Xero</a>
+        <?php endif; ?>
+    </div>
+</section>

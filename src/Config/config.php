@@ -44,7 +44,7 @@ return [
     'db' => $dbConfig,
     'gemini' => [
         'api_key' => $_ENV['GEMINI_API_KEY'] ?? '',
-        'model' => $_ENV['GEMINI_MODEL'] ?? 'gemini-2.5-flash',
+        'model' => $_ENV['GEMINI_MODEL'] ?? 'gemini-3-flash-preview',
     ],
     'openai' => [
         'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
@@ -54,6 +54,11 @@ return [
         'client_secret'  => $_ENV['JIRA_CLIENT_SECRET'] ?? '',
         'redirect_uri'   => ($_ENV['APP_URL'] ?? '') . '/app/admin/integrations/jira/callback',
         'webhook_secret' => $_ENV['JIRA_WEBHOOK_SECRET'] ?? '',
+    ],
+    'xero' => [
+        'client_id'     => $_ENV['XERO_CLIENT_ID'] ?? '',
+        'client_secret' => $_ENV['XERO_CLIENT_SECRET'] ?? '',
+        'redirect_uri'  => ($_ENV['APP_URL'] ?? '') . '/app/admin/xero/callback',
     ],
     'encryption' => [
         'token_key' => $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '',
