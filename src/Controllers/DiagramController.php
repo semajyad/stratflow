@@ -75,6 +75,13 @@ class DiagramController
             }
         }
 
+        // If no diagram AND no summary, redirect to upload with guidance
+        if ($diagram === null && $documentSummary === null) {
+            $_SESSION['flash_error'] = 'To build a strategy roadmap, upload a strategy document and generate an AI summary first.';
+            $this->response->redirect('/app/upload?project_id=' . $projectId);
+            return;
+        }
+
         $this->response->render('diagram', [
             'user'             => $user,
             'project'          => $project,

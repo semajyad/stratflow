@@ -38,24 +38,14 @@ $hasSummary = !empty($document_summary);
             <line x1="17.5" y1="14" x2="12" y2="14"/>
         </svg>
 
-        <?php if ($hasSummary): ?>
-            <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Ready to build your roadmap</h2>
-            <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 420px; margin-left: auto; margin-right: auto;">
-                We'll analyse your strategy summary and generate a visual roadmap showing initiatives, dependencies, and strategic phases.
-            </p>
-            <button type="button" id="generate-diagram-btn" class="btn btn-primary btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
-                Generate Strategy Roadmap
-            </button>
-            <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
-        <?php else: ?>
-            <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Upload a strategy document first</h2>
-            <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 420px; margin-left: auto; margin-right: auto;">
-                To generate a roadmap, you need to upload a strategy document and generate an AI summary on the Document Upload page.
-            </p>
-            <a href="/app/upload?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-lg" style="padding: 0.75rem 2rem; font-size: 1rem;">
-                Go to Document Upload
-            </a>
-        <?php endif; ?>
+        <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Ready to build your roadmap</h2>
+        <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+            We'll analyse your strategy summary and generate a visual roadmap showing initiatives, dependencies, and strategic phases.
+        </p>
+        <button type="button" id="generate-diagram-btn" class="btn btn-primary btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
+            Generate Strategy Roadmap
+        </button>
+        <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
     </div>
 </section>
 
