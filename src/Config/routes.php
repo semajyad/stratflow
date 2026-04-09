@@ -96,6 +96,9 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
 
+    // Executive Dashboard — org-wide rollup (gated by has_executive_access flag or superadmin)
+    $router->add('GET',  '/app/executive',               'ExecutiveController@dashboard',  ['auth', 'executive']);
+
     // Traceability — read-only strategy-to-code chain view
     $router->add('GET',  '/app/traceability',            'TraceabilityController@index',   ['auth']);
 

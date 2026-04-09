@@ -241,9 +241,11 @@ class AdminController
         }
 
         $data = [
-            'full_name' => $fullName,
-            'email'     => $email,
-            'role'      => $role,
+            'full_name'            => $fullName,
+            'email'                => $email,
+            'role'                 => $role,
+            'has_billing_access'   => $this->request->post('has_billing_access')   === '1' ? 1 : 0,
+            'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
         ];
 
         // Enforce password policy if a new password is provided

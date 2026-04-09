@@ -47,6 +47,7 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
+                        <th>Flags</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -84,6 +85,14 @@
                                 <?php endif; ?>
                             </td>
                             <td>
+                                <?php if ($u['has_billing_access']): ?>
+                                    <span class="badge badge-secondary" title="Billing access">Billing</span>
+                                <?php endif; ?>
+                                <?php if ($u['has_executive_access']): ?>
+                                    <span class="badge badge-info" title="Executive dashboard access">Exec</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
                                 <div class="flex gap-2">
                                     <button class="btn btn-sm btn-secondary"
                                             onclick="toggleEditUser(<?= (int) $u['id'] ?>)">Edit</button>
@@ -99,7 +108,7 @@
                         </tr>
                         <!-- Inline edit row -->
                         <tr id="edit-user-<?= (int) $u['id'] ?>" class="hidden">
-                            <td colspan="5">
+                            <td colspan="6">
                                 <form method="POST" action="/app/admin/users/<?= (int) $u['id'] ?>" class="admin-inline-form">
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <div class="form-row gap-4">
@@ -133,6 +142,23 @@
                                                     <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                                     <svg class="eye-off-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                                                 </button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Access Flags</label>
+                                            <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
+                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                                    <input type="hidden" name="has_billing_access" value="0">
+                                                    <input type="checkbox" name="has_billing_access" value="1"
+                                                           <?= $u['has_billing_access'] ? 'checked' : '' ?>>
+                                                    Billing access
+                                                </label>
+                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                                    <input type="hidden" name="has_executive_access" value="0">
+                                                    <input type="checkbox" name="has_executive_access" value="1"
+                                                           <?= $u['has_executive_access'] ? 'checked' : '' ?>>
+                                                    Executive dashboard
+                                                </label>
                                             </div>
                                         </div>
                                         <div class="form-group" style="align-self: flex-end;">

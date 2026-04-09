@@ -31,6 +31,8 @@ $icon = function (string $name): string {
             return "<svg $attrs><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/><polyline points='9 12 11 14 15 10'/></svg>";
         case 'traceability':
             return "<svg $attrs><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/><line x1='8' y1='8' x2='16' y2='16'/></svg>";
+        case 'executive':
+            return "<svg $attrs><rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/><path d='M14 17.5h7M17.5 14v7'/></svg>";
         case 'admin':
             return "<svg $attrs><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>";
         case 'integrations':
@@ -125,6 +127,12 @@ $icon = function (string $name): string {
         <a href="/app/traceability<?= $pq ?>" class="nav-link <?= ($active_page ?? '') === 'traceability' ? 'active' : '' ?>" data-label="Traceability">
             <?= $icon('traceability') ?><span class="nav-label">Traceability</span>
         </a>
+
+        <?php if (($user['role'] ?? '') === 'superadmin' || !empty($user['has_executive_access'])): ?>
+        <a href="/app/executive" class="nav-link <?= ($active_page ?? '') === 'executive' ? 'active' : '' ?>" data-label="Executive">
+            <?= $icon('executive') ?><span class="nav-label">Executive</span>
+        </a>
+        <?php endif; ?>
 
         <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
             <hr class="sidebar-divider">

@@ -62,7 +62,8 @@ class Auth
             'name' => $user['full_name'],
             'email' => $user['email'],
             'role' => $user['role'],
-            'has_billing_access' => (bool) ($user['has_billing_access'] ?? false),
+            'has_billing_access'   => (bool) ($user['has_billing_access']   ?? false),
+            'has_executive_access' => (bool) ($user['has_executive_access'] ?? false),
         ]);
     }
 
