@@ -2,193 +2,167 @@
 /**
  * Document Upload Template
  *
- * Upload page for a specific project. Supports drag-and-drop file upload
- * (TXT, PDF, DOCX) and manual text paste. Lists previously uploaded documents
- * with extracted text previews and AI summary status.
- *
- * Variables: $project (array), $documents (array), $csrf_token (string)
+ * Clean, guided flow: upload → extract → summarise → next step.
+ * Shows the right action at each stage.
  */
+$hasDocuments = !empty($documents);
+$latestDoc    = $hasDocuments ? $documents[0] : null;
+$hasSummary   = $latestDoc && !empty($latestDoc['ai_summary']);
+$hasText      = $latestDoc && !empty($latestDoc['extracted_text']);
+
+function formatFileSize(int $bytes): string {
+    if ($bytes === 0) return '—';
+    if ($bytes < 1024) return $bytes . ' B';
+    if ($bytes < 1048576) return round($bytes / 1024, 1) . ' KB';
+    return round($bytes / 1048576, 1) . ' MB';
+}
 ?>
 
-<!-- ===========================
-     Page Header
-     =========================== -->
-<div class="page-header">
-    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?></h1>
+<div class="page-header flex justify-between items-center">
+    <h1 class="page-title"><?= htmlspecialchars($project['name']) ?> &mdash; Document Upload</h1>
+    <?php if ($hasSummary): ?>
+        <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary">
+            Continue to Strategy Roadmap &rarr;
+        </a>
+    <?php endif; ?>
 </div>
 
 <!-- ===========================
-     Page Description
+     Step Indicator
      =========================== -->
-<div class="page-description">
-    Upload your strategy documents, meeting notes, or transcripts. StratFlow will extract the text and generate an AI summary to prepare for strategic mapping.
+<div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; align-items:center;">
+    <span class="badge <?= $hasDocuments ? 'badge-success' : 'badge-primary' ?>" style="padding:0.35rem 0.75rem;">
+        1. Upload
+    </span>
+    <span style="color:var(--text-muted);">&rarr;</span>
+    <span class="badge <?= $hasText ? ($hasSummary ? 'badge-success' : 'badge-primary') : 'badge-secondary' ?>" style="padding:0.35rem 0.75rem;">
+        2. AI Summary
+    </span>
+    <span style="color:var(--text-muted);">&rarr;</span>
+    <span class="badge <?= $hasSummary ? 'badge-primary' : 'badge-secondary' ?>" style="padding:0.35rem 0.75rem;">
+        3. Strategy Roadmap
+    </span>
 </div>
 
+<?php if ($hasSummary): ?>
 <!-- ===========================
-     Instructions
+     Summary Ready — Show summary + next step prominently
      =========================== -->
-<div class="info-box">
-    <p>Upload your meeting notes, strategy documents, or other files. Supported formats: TXT, PDF, DOCX. You can also paste text directly.</p>
-</div>
-
-<!-- ===========================
-     Upload Form
-     =========================== -->
-<section class="card">
-    <div class="card-header">
-        <h2 class="card-title">Upload Document</h2>
+<section class="card mb-6" style="border-left: 4px solid var(--success, #28a745);">
+    <div class="card-body">
+        <div style="display:flex; align-items:start; gap:1rem;">
+            <div style="flex:1;">
+                <h3 style="margin:0 0 0.5rem; color:var(--success, #28a745);">Summary Ready</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin:0;">
+                    <?= htmlspecialchars(mb_substr($latestDoc['ai_summary'], 0, 400)) ?>
+                    <?= mb_strlen($latestDoc['ai_summary']) > 400 ? '...' : '' ?>
+                </p>
+            </div>
+        </div>
     </div>
+</section>
+<?php endif; ?>
 
-    <form
-        method="POST"
-        action="/app/upload"
-        enctype="multipart/form-data"
-        class="upload-form"
-        id="upload-form"
-        data-loading="Uploading &amp; extracting text..."
-        data-overlay="Uploading and extracting text from your document. This may take a moment."
-    >
+<?php if ($hasText && !$hasSummary): ?>
+<!-- ===========================
+     Text Extracted — Prompt to generate summary
+     =========================== -->
+<section class="card mb-6" style="border-left: 4px solid var(--primary);">
+    <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem;">
+        <div>
+            <h3 style="margin:0 0 0.25rem;">Document uploaded successfully</h3>
+            <p class="text-muted" style="margin:0; font-size:0.875rem;">
+                Text extracted from <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>.
+                Generate an AI summary to proceed to the strategy roadmap.
+            </p>
+        </div>
+        <form method="POST" action="/app/upload/summarise"
+              data-loading="Generating summary..."
+              data-overlay="AI is analysing your document and generating a strategic summary. This typically takes 15-30 seconds.">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="document_id" value="<?= (int) $latestDoc['id'] ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Generate AI Summary</button>
+        </form>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     Upload Section
+     =========================== -->
+<section class="card mb-6">
+    <div class="card-header">
+        <h2 class="card-title"><?= $hasDocuments ? 'Upload Another Document' : 'Upload Strategy Document' ?></h2>
+    </div>
+    <form method="POST" action="/app/upload" enctype="multipart/form-data" id="upload-form"
+          data-loading="Uploading..." data-overlay="Uploading and extracting text from your document.">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <input type="hidden" name="MAX_FILE_SIZE" value="52428800">
-        <input type="hidden" name="project_id"  value="<?= (int) $project['id'] ?>">
+        <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
 
-        <!-- Drag-and-drop zone -->
         <div class="drop-zone" id="drop-zone">
             <div class="drop-zone-icon">&#128196;</div>
-            <p class="drop-zone-label">Drop files here or click to browse</p>
-            <p class="drop-zone-hint">TXT, PDF, DOCX &mdash; max 50 MB</p>
-            <input
-                type="file"
-                name="document"
-                id="file-input"
-                accept=".txt,.pdf,.doc,.docx"
-                class="file-input-hidden"
-            >
+            <p class="drop-zone-label">Drop file here or click to browse</p>
+            <p class="drop-zone-hint">PDF, DOCX, TXT &mdash; up to 50 MB</p>
+            <input type="file" name="document" id="file-input" accept=".txt,.pdf,.doc,.docx" class="file-input-hidden">
         </div>
         <div class="selected-file" id="selected-file" style="display:none;">
             <span id="selected-file-name"></span>
             <button type="button" class="btn btn-sm btn-secondary" id="clear-file">Remove</button>
         </div>
 
-        <!-- Divider -->
-        <div class="upload-divider">
-            <span>or paste text below</span>
-        </div>
+        <div class="upload-divider"><span>or paste text directly</span></div>
 
-        <!-- Text paste area -->
         <div class="form-group">
-            <textarea
-                name="paste_text"
-                id="paste-text"
-                class="form-input"
-                rows="6"
-                placeholder="Paste your document text here..."
-            ></textarea>
+            <textarea name="paste_text" id="paste-text" class="form-input" rows="4"
+                      placeholder="Paste meeting notes, strategy briefs, or any strategic content here..."></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg">Upload &amp; Extract Text</button>
+        <button type="submit" class="btn btn-primary">Upload & Extract</button>
     </form>
 </section>
 
+<?php if ($hasDocuments): ?>
 <!-- ===========================
-     Uploaded Documents List
+     Previous Documents (collapsed)
      =========================== -->
 <section class="card">
-    <div class="card-header">
-        <h2 class="card-title">Uploaded Documents</h2>
+    <div class="card-header flex justify-between items-center" style="cursor:pointer;"
+         onclick="document.getElementById('doc-list').classList.toggle('hidden'); this.querySelector('.toggle-icon').textContent = document.getElementById('doc-list').classList.contains('hidden') ? '+' : '-';">
+        <h2 class="card-title" style="margin:0;">
+            Documents (<?= count($documents) ?>)
+            <span class="toggle-icon" style="font-weight:400; margin-left:0.5rem;">+</span>
+        </h2>
     </div>
-
-    <?php if (empty($documents)): ?>
-        <p class="empty-state">No documents uploaded yet.</p>
-    <?php else: ?>
-        <div class="document-list">
-            <?php foreach ($documents as $doc): ?>
-                <div class="document-item">
-                    <div class="document-meta">
-                        <span class="document-name"><?= htmlspecialchars($doc['original_name']) ?></span>
-                        <span class="document-size"><?= formatFileSize((int) $doc['file_size']) ?></span>
-                        <span class="document-date">
-                            <?= date('j M Y, g:ia', strtotime($doc['created_at'])) ?>
-                        </span>
-                    </div>
-
+    <div id="doc-list" class="hidden">
+        <?php foreach ($documents as $doc): ?>
+            <div style="padding:0.75rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <strong style="font-size:0.9rem;"><?= htmlspecialchars($doc['original_name']) ?></strong>
+                    <span class="text-muted" style="font-size:0.8rem; margin-left:0.5rem;">
+                        <?= formatFileSize((int) $doc['file_size']) ?> &middot; <?= date('j M Y', strtotime($doc['created_at'])) ?>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
                     <?php if (!empty($doc['ai_summary'])): ?>
-                        <!-- AI summary available -->
-                        <div class="ai-summary-box">
-                            <strong>AI Summary:</strong>
-                            <p><?= htmlspecialchars($doc['ai_summary']) ?></p>
-                            <a
-                                href="/app/diagram?project_id=<?= (int) $project['id'] ?>"
-                                class="btn btn-primary btn-sm"
-                            >Proceed to Strategy Diagram</a>
-                        </div>
+                        <span class="badge badge-success" style="font-size:0.7rem;">Summarised</span>
+                    <?php elseif (!empty($doc['extracted_text'])): ?>
+                        <form method="POST" action="/app/upload/summarise" class="inline-form"
+                              data-loading="Summarising...">
+                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
+                            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                            <button type="submit" class="btn btn-sm btn-primary" style="font-size:0.75rem;">Summarise</button>
+                        </form>
                     <?php else: ?>
-                        <!-- No summary yet — show generate button when extracted text is available -->
-                        <div class="document-actions">
-                            <?php if (!empty($doc['extracted_text'])): ?>
-                                <form method="POST" action="/app/upload/summarise"
-                                      data-loading="Generating AI summary..."
-                                      data-overlay="Generating AI summary from your document. This typically takes 15-30 seconds.">
-                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                    <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
-                                    <input type="hidden" name="project_id"  value="<?= (int) $project['id'] ?>">
-                                    <button type="submit" class="btn btn-primary btn-sm">Generate AI Summary</button>
-                                </form>
-                            <?php else: ?>
-                                <button
-                                    class="btn btn-secondary btn-sm"
-                                    disabled
-                                    title="No extracted text available to summarise"
-                                >Generate AI Summary</button>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($doc['extracted_text'])): ?>
-                        <!-- Extracted text preview with toggle -->
-                        <div class="extracted-text-preview">
-                            <p class="text-preview" id="preview-<?= (int) $doc['id'] ?>">
-                                <?= htmlspecialchars(mb_substr($doc['extracted_text'], 0, 200)) ?>
-                                <?= mb_strlen($doc['extracted_text']) > 200 ? '...' : '' ?>
-                            </p>
-                            <?php if (mb_strlen($doc['extracted_text']) > 200): ?>
-                                <div class="text-full" id="full-<?= (int) $doc['id'] ?>" style="display:none;">
-                                    <pre class="text-full-content"><?= htmlspecialchars($doc['extracted_text']) ?></pre>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-secondary toggle-text"
-                                    data-doc-id="<?= (int) $doc['id'] ?>"
-                                >View Full Text</button>
-                            <?php endif; ?>
-                        </div>
+                        <span class="badge badge-secondary" style="font-size:0.7rem;">No text extracted</span>
                     <?php endif; ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
 </section>
+<?php endif; ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
-
-<?php
-/**
- * Format a file size in bytes to a human-readable string.
- *
- * @param int $bytes File size in bytes
- * @return string    Formatted string (e.g. "1.2 MB", "340 KB")
- */
-function formatFileSize(int $bytes): string
-{
-    if ($bytes === 0) {
-        return '—';
-    }
-    if ($bytes < 1024) {
-        return $bytes . ' B';
-    }
-    if ($bytes < 1048576) {
-        return round($bytes / 1024, 1) . ' KB';
-    }
-    return round($bytes / 1048576, 1) . ' MB';
-}
-?>
