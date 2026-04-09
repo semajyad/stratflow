@@ -93,7 +93,7 @@ if ($lastProjectId && !empty($projects)) {
                            class="btn btn-primary btn-sm">
                             Open Project
                         </a>
-                        <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
+                        <?php if (in_array($user['role'] ?? '', ['project_manager', 'org_admin', 'superadmin'])): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
                                 onclick="renameProject(<?= (int) $project['id'] ?>, this.dataset.name, this.dataset.token)"
                                 data-name="<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>"

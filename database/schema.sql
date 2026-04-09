@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    role ENUM('user','org_admin','superadmin') NOT NULL DEFAULT 'user',
+    role ENUM('viewer','user','project_manager','org_admin','billing_admin','superadmin') NOT NULL DEFAULT 'user',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     password_changed_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

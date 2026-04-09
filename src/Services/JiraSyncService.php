@@ -1283,17 +1283,41 @@ class JiraSyncService
             return $counts;
         }
 
-        // Get OKRs from work items (they have okr_title/okr_description)
-        $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
-
-        // Deduplicate OKRs by title
+        // Collect OKRs from both diagram nodes AND work items
         $okrs = [];
+
+        // 1. From diagram nodes (primary source — the strategy map)
+        $stmt = $this->db->query(
+            "SELECT dn.okr_title, dn.okr_description, dn.label
+             FROM diagram_nodes dn
+             JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
+             WHERE sd.project_id = :pid AND dn.okr_title IS NOT NULL AND dn.okr_title != ''",
+            [':pid' => $projectId]
+        );
+        foreach ($stmt->fetchAll() as $node) {
+            $title = trim($node['okr_title']);
+            if ($title !== '' && !isset($okrs[$title])) {
+                $okrs[$title] = [
+                    'title'       => $title,
+                    'description' => trim($node['okr_description'] ?? ''),
+                    'nodes'       => [],
+                    'work_items'  => [],
+                ];
+            }
+            if ($title !== '') {
+                $okrs[$title]['nodes'][] = $node['label'];
+            }
+        }
+
+        // 2. From work items (may have additional OKRs or linked context)
+        $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         foreach ($workItems as $item) {
             $title = trim($item['okr_title'] ?? '');
             if ($title !== '' && !isset($okrs[$title])) {
                 $okrs[$title] = [
                     'title'       => $title,
                     'description' => trim($item['okr_description'] ?? ''),
+                    'nodes'       => [],
                     'work_items'  => [],
                 ];
             }
@@ -1320,8 +1344,11 @@ class JiraSyncService
                     continue;
                 }
 
-                // Build description with linked work items
+                // Build description with strategy context and linked work items
                 $desc = $okr['description'];
+                if (!empty($okr['nodes'])) {
+                    $desc .= ($desc ? "\n\n" : '') . "Strategy Nodes:\n- " . implode("\n- ", $okr['nodes']);
+                }
                 if (!empty($okr['work_items'])) {
                     $desc .= ($desc ? "\n\n" : '') . "Linked Work Items:\n- " . implode("\n- ", $okr['work_items']);
                 }

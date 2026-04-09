@@ -112,16 +112,42 @@
             <h3 style="margin:0;">Node OKRs</h3>
             <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> nodes — SMART objectives with measurable key results</span>
         </div>
-        <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
-              data-loading="Generating SMART OKRs..."
-              data-overlay="AI is generating SMART objectives and key results for each node. This may take 15-30 seconds.">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary btn-sm"
-                    onclick="return confirm('Generate AI-powered SMART OKRs for all nodes? This will replace any existing OKRs.')">
-                Generate SMART OKRs (AI)
-            </button>
-        </form>
+        <div class="flex items-center gap-2">
+            <?php
+            // Show "Sync OKRs to Goals" if Jira is connected
+            try {
+                $jiraKey = $project['jira_project_key'] ?? '';
+                if ($jiraKey !== '') {
+                    $goalsIntegration = \StratFlow\Models\Integration::findByOrgAndProvider(
+                        \StratFlow\Core\Database::getInstance(),
+                        (int) ($project['org_id'] ?? 0),
+                        'jira'
+                    );
+                    if ($goalsIntegration && $goalsIntegration['status'] === 'active') {
+            ?>
+                <form method="POST" action="/app/jira/sync" class="inline-form"
+                      data-loading="Syncing OKRs to Goals..."
+                      data-overlay="Pushing OKRs to Atlassian Goals. This may take a moment.">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                    <input type="hidden" name="sync_type" value="work_items">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            onclick="return confirm('Sync OKRs to Atlassian Goals?')">
+                        Sync OKRs to Goals
+                    </button>
+                </form>
+            <?php } } } catch (\Throwable $e) { /* skip */ } ?>
+            <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
+                  data-loading="Generating SMART OKRs..."
+                  data-overlay="AI is generating SMART objectives and key results for each node. This may take 15-30 seconds.">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-primary btn-sm"
+                        onclick="return confirm('Generate AI-powered SMART OKRs for all nodes? This will replace any existing OKRs.')">
+                    Generate SMART OKRs (AI)
+                </button>
+            </form>
+        </div>
     </div>
     <div class="card-body">
         <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
@@ -173,14 +199,6 @@
     </div>
 </section>
 
-<!-- ===========================
-     Next Step
-     =========================== -->
-<div class="flex justify-between items-center">
-    <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-lg">
-        Work Items
-    </a>
-</div>
 <?php endif; ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>

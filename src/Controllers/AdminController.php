@@ -612,6 +612,81 @@ class AdminController
      *
      * Loads settings_json from the org row, merging with defaults for any missing keys.
      */
+
+    /**
+     * View audit logs for this organisation.
+     */
+    public function auditLogs(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+        $filterType = $this->request->get('type', '') ?: null;
+
+        $logs = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, $filterType);
+
+        $eventTypes = [
+            \StratFlow\Services\AuditLogger::LOGIN_SUCCESS,
+            \StratFlow\Services\AuditLogger::LOGIN_FAILURE,
+            \StratFlow\Services\AuditLogger::PASSWORD_CHANGE,
+            \StratFlow\Services\AuditLogger::USER_CREATED,
+            \StratFlow\Services\AuditLogger::USER_DELETED,
+            \StratFlow\Services\AuditLogger::ADMIN_ACTION,
+            \StratFlow\Services\AuditLogger::SETTINGS_CHANGED,
+            \StratFlow\Services\AuditLogger::PROJECT_CREATED,
+            \StratFlow\Services\AuditLogger::DOCUMENT_UPLOADED,
+            \StratFlow\Services\AuditLogger::INTEGRATION_SYNC,
+        ];
+
+        $this->response->render('admin/audit-logs', [
+            'user'          => $user,
+            'logs'          => $logs,
+            'event_types'   => $eventTypes,
+            'filter_type'   => $filterType,
+            'active_page'   => 'admin',
+            'flash_message' => $_SESSION['flash_message'] ?? null,
+            'flash_error'   => $_SESSION['flash_error'] ?? null,
+        ], 'app');
+
+        unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Export org audit logs as CSV.
+     */
+    public function exportAuditLogs(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+        $filterType = $this->request->get('type', '') ?: null;
+        $dateFrom   = $this->request->get('from', '') ?: null;
+        $dateTo     = $this->request->get('to', '') ?: null;
+
+        $logs = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, $filterType, $dateFrom, $dateTo);
+
+        \StratFlow\Services\AuditLogger::log($this->db, (int) $user['id'], \StratFlow\Services\AuditLogger::DATA_EXPORT,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['type' => 'audit_logs', 'count' => count($logs)]
+        );
+
+        $csv = fopen('php://temp', 'r+');
+        fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details']);
+        foreach ($logs as $log) {
+            fputcsv($csv, [
+                $log['created_at'],
+                $log['event_type'],
+                $log['full_name'] ?? 'System',
+                $log['email'] ?? '',
+                $log['ip_address'],
+                $log['details_json'] ?? '',
+            ]);
+        }
+        rewind($csv);
+        $content = stream_get_contents($csv);
+        fclose($csv);
+
+        $this->response->download($content, 'audit-logs-' . date('Y-m-d') . '.csv', 'text/csv');
+    }
+
     public function settings(): void
     {
         $user  = $this->auth->user();

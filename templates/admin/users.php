@@ -56,8 +56,26 @@
                             <td><?= htmlspecialchars($u['full_name']) ?></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td>
-                                <span class="badge <?= $u['role'] === 'org_admin' ? 'badge-primary' : ($u['role'] === 'superadmin' ? 'badge-warning' : 'badge-secondary') ?>">
-                                    <?= htmlspecialchars($u['role']) ?>
+                                <?php
+                                    $roleBadge = match($u['role']) {
+                                        'superadmin' => 'badge-warning',
+                                        'org_admin' => 'badge-primary',
+                                        'project_manager' => 'badge-info',
+                                        'billing_admin' => 'badge-success',
+                                        'viewer' => 'badge-secondary',
+                                        default => 'badge-secondary',
+                                    };
+                                    $roleLabel = match($u['role']) {
+                                        'superadmin' => 'Superadmin',
+                                        'org_admin' => 'Org Admin',
+                                        'project_manager' => 'Project Manager',
+                                        'billing_admin' => 'Billing Admin',
+                                        'viewer' => 'Viewer',
+                                        default => 'User',
+                                    };
+                                ?>
+                                <span class="badge <?= $roleBadge ?>">
+                                    <?= $roleLabel ?>
                                 </span>
                             </td>
                             <td>
@@ -100,8 +118,11 @@
                                         <div class="form-group">
                                             <label class="form-label">Role</label>
                                             <select name="role" class="form-input">
-                                                <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>User</option>
-                                                <option value="org_admin" <?= $u['role'] === 'org_admin' ? 'selected' : '' ?>>Admin</option>
+                                                <option value="viewer" <?= $u['role'] === 'viewer' ? 'selected' : '' ?>>Viewer (read-only)</option>
+                                                <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>User (edit items)</option>
+                                                <option value="project_manager" <?= $u['role'] === 'project_manager' ? 'selected' : '' ?>>Project Manager</option>
+                                                <option value="org_admin" <?= $u['role'] === 'org_admin' ? 'selected' : '' ?>>Organisation Admin</option>
+                                                <option value="billing_admin" <?= $u['role'] === 'billing_admin' ? 'selected' : '' ?>>Billing Admin</option>
                                                 <?php if (($user['role'] ?? '') === 'superadmin'): ?>
                                                 <option value="superadmin" <?= $u['role'] === 'superadmin' ? 'selected' : '' ?>>Superadmin</option>
                                                 <?php endif; ?>
@@ -154,8 +175,11 @@
             <div class="form-group">
                 <label class="form-label">Role</label>
                 <select name="role" class="form-input">
-                    <option value="user">User</option>
-                    <option value="org_admin">Admin</option>
+                    <option value="viewer">Viewer (read-only)</option>
+                    <option value="user" selected>User (edit items)</option>
+                    <option value="project_manager">Project Manager</option>
+                    <option value="org_admin">Organisation Admin</option>
+                    <option value="billing_admin">Billing Admin</option>
                     <?php if (($user['role'] ?? '') === 'superadmin'): ?>
                     <option value="superadmin">Superadmin</option>
                     <?php endif; ?>

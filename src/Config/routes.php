@@ -140,6 +140,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/teams',                 'AdminController@createTeam',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/add-member',      'AdminController@addTeamMember',    ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/remove-member',   'AdminController@removeTeamMember', ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/audit-logs/export',     'AdminController@exportAuditLogs',  ['auth', 'admin']);
+    $router->add('GET',  '/app/admin/audit-logs',            'AdminController@auditLogs',        ['auth', 'admin']);
     $router->add('GET',  '/app/admin/settings',              'AdminController@settings',         ['auth', 'admin']);
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/invoices',              'AdminController@invoices',         ['auth', 'admin']);
@@ -158,6 +160,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/organisations/{id}',        'SuperadminController@updateOrg',      ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
+    $router->add('GET',  '/superadmin/audit-logs/export',          'SuperadminController@exportAuditLogs',  ['auth', 'superadmin']);
     $router->add('GET',  '/superadmin/audit-logs',                'SuperadminController@auditLogs',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);
 };

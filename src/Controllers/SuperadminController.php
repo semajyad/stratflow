@@ -426,6 +426,42 @@ class SuperadminController
         ], 'app');
     }
 
+    /**
+     * Export audit logs as CSV.
+     */
+    public function exportAuditLogs(): void
+    {
+        $user       = $this->auth->user();
+        $filterType = $this->request->get('type', '') ?: null;
+        $dateFrom   = $this->request->get('from', '') ?: null;
+        $dateTo     = $this->request->get('to', '') ?: null;
+
+        $logs = AuditLog::findFiltered($this->db, null, $filterType, $dateFrom, $dateTo);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['type' => 'audit_logs', 'count' => count($logs)]
+        );
+
+        $csv = fopen('php://temp', 'r+');
+        fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details']);
+        foreach ($logs as $log) {
+            fputcsv($csv, [
+                $log['created_at'],
+                $log['event_type'],
+                $log['full_name'] ?? 'System',
+                $log['email'] ?? '',
+                $log['ip_address'],
+                $log['details_json'] ?? '',
+            ]);
+        }
+        rewind($csv);
+        $content = stream_get_contents($csv);
+        fclose($csv);
+
+        $this->response->download($content, 'audit-logs-' . date('Y-m-d') . '.csv', 'text/csv');
+    }
+
     // =========================================================================
     // HELPERS
     // =========================================================================
