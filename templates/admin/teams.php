@@ -25,9 +25,9 @@
           data-overlay="Importing teams from Jira project roles and team fields.">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <button type="submit" class="btn btn-secondary btn-sm"
-                onclick="return confirm('Import teams from Jira? This will create new teams from Jira project roles and team field values.')">
+                onclick="return confirm('Import boards from Jira as teams? Each Jira board will create a team with its board ID linked for sprint sync.')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
-            Import Teams from Jira
+            Import Boards from Jira
         </button>
     </form>
 </div>
@@ -84,6 +84,11 @@
                         <span class="badge badge-secondary" style="font-weight: normal; margin-left: 0.5rem;">
                             <?= (int) $team['member_count'] ?> member<?= (int) $team['member_count'] !== 1 ? 's' : '' ?>
                         </span>
+                        <?php if (!empty($team['jira_board_id'])): ?>
+                            <span class="badge badge-info" style="font-weight: normal; margin-left: 0.25rem;">
+                                Jira Board #<?= (int) $team['jira_board_id'] ?>
+                            </span>
+                        <?php endif; ?>
                     </h3>
                     <?php if (!empty($team['description'])): ?>
                         <p class="text-muted mt-1" style="margin-bottom: 0; font-size: 0.875rem;">

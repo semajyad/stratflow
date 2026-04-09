@@ -50,21 +50,42 @@
         <form method="POST" action="/app/sprints/store">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="sprint-creation-form">
-                <?php if (!empty($teams)): ?>
-                <select name="team_id" class="form-control" style="min-width: 140px;">
-                    <option value="">No team</option>
-                    <?php foreach ($teams as $t): ?>
-                        <option value="<?= (int) $t['id'] ?>"><?= htmlspecialchars($t['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php endif; ?>
-                <input type="text" name="name" placeholder="Sprint name (e.g. Sprint 1)" class="form-control" required>
-                <input type="date" name="start_date" class="form-control">
-                <input type="date" name="end_date" class="form-control">
-                <input type="number" name="team_capacity" placeholder="Capacity (pts)" class="form-control" min="1" style="width: 140px;">
+            <div class="sprint-creation-form" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end;">
+                <div>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Team (Board)</label>
+                    <select name="team_id" class="form-control" style="min-width: 160px;">
+                        <option value="">No team</option>
+                        <?php foreach ($teams ?? [] as $t): ?>
+                            <option value="<?= (int) $t['id'] ?>">
+                                <?= htmlspecialchars($t['name']) ?>
+                                <?= !empty($t['jira_board_id']) ? ' (Board #' . (int) $t['jira_board_id'] . ')' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Sprint Name</label>
+                    <input type="text" name="name" placeholder="e.g. Sprint 1" class="form-control" required>
+                </div>
+                <div>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Start</label>
+                    <input type="date" name="start_date" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">End</label>
+                    <input type="date" name="end_date" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Capacity</label>
+                    <input type="number" name="team_capacity" placeholder="pts" class="form-control" min="1" style="width: 100px;">
+                </div>
                 <button type="submit" class="btn btn-primary">Create Sprint</button>
             </div>
+            <?php if (empty($teams ?? [])): ?>
+                <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem;">
+                    No teams configured. <a href="/app/admin/teams">Create teams</a> or <a href="/app/admin/teams">import from Jira</a> to assign sprints to boards.
+                </p>
+            <?php endif; ?>
         </form>
     </div>
 </div>

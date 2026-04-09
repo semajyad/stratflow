@@ -856,16 +856,13 @@ class IntegrationController
             try {
                 $boardsResult = $jira->getBoards($projectKey);
                 foreach ($boardsResult['values'] ?? [] as $board) {
-                    $boardName = $board['name'] ?? 'Board ' . $board['id'];
-                    // Clean up board name — remove project key prefix if present
-                    $teamName = preg_replace('/^' . preg_quote($projectKey, '/') . '\s*/', '', $boardName);
-                    $teamName = trim($teamName) ?: $boardName;
+                    $teamName = $board['name'] ?? 'Board ' . $board['id'];
 
                     if (!in_array(strtolower($teamName), $existingNames)) {
                         \StratFlow\Models\Team::create($this->db, [
                             'org_id'        => $orgId,
                             'name'          => $teamName,
-                            'description'   => "Jira board: {$boardName} (ID: {$board['id']})",
+                            'description'   => "Jira board (ID: {$board['id']}, type: {$board['type']})",
                             'capacity'      => 0,
                             'jira_board_id' => (int) $board['id'],
                         ]);
@@ -873,8 +870,7 @@ class IntegrationController
                         $created++;
                     } else {
                         // Update existing team's board_id if not set
-                        $existingTeams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
-                        foreach ($existingTeams as $et) {
+                        foreach (\StratFlow\Models\Team::findByOrgId($this->db, $orgId) as $et) {
                             if (strtolower($et['name']) === strtolower($teamName) && empty($et['jira_board_id'])) {
                                 \StratFlow\Models\Team::update($this->db, (int) $et['id'], [
                                     'jira_board_id' => (int) $board['id'],
@@ -921,26 +917,6 @@ class IntegrationController
                 } catch (\Throwable $e) {
                     // Non-critical
                 }
-            }
-
-            // 3. Import project roles as teams
-            try {
-                $roles = $jira->getProjectRoles($projectKey);
-                foreach ($roles as $roleName => $roleUrl) {
-                    if (in_array($roleName, ['atlassian-addons-project-access'])) continue;
-                    if (!in_array(strtolower($roleName), $existingNames)) {
-                        \StratFlow\Models\Team::create($this->db, [
-                            'org_id'      => $orgId,
-                            'name'        => $roleName,
-                            'description' => "Jira project role",
-                            'capacity'    => 0,
-                        ]);
-                        $existingNames[] = strtolower($roleName);
-                        $created++;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // Non-critical
             }
 
             $_SESSION['flash_message'] = "Jira team import: {$created} created" . ($skipped > 0 ? ", {$skipped} already existed" : '') . '.';
