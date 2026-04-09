@@ -904,11 +904,19 @@ class IntegrationController
 
             // 1. Import boards as teams (board = team in Jira)
             $boardCount = 0;
+            $boards = [];
             try {
                 $boardsResult = $jira->getBoards($projectKey);
                 $boards = $boardsResult['values'] ?? [];
-                $boardCount = count($boards);
+            } catch (\Throwable $e) {
+                // Board API may fail on team-managed projects or missing scopes.
+                // Fallback: create one team from the project itself.
+                error_log('[JiraTeamImport] Board API failed, using project fallback: ' . $e->getMessage());
+                $boards = [['id' => 1, 'name' => $projectKey . ' Team', 'type' => 'project']];
+            }
+            $boardCount = count($boards);
 
+            try {
                 foreach ($boards as $board) {
                     $teamName = $board['name'] ?? 'Board ' . $board['id'];
                     $boardId  = (int) $board['id'];
