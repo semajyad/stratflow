@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mermaid Diagram Rendering
     // ===========================
     if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
     }
 
     /**
@@ -1477,7 +1477,6 @@ function attachDiagramNodeClicks(container) {
         if (/^(graph|edge|label|cluster|flowchart|root|mermaid)$/i.test(nodeKey)) return;
 
         var accordion = document.querySelector('[data-node-key="' + nodeKey + '"]');
-        if (!accordion) return;
 
         // Make the whole <g> clickable with a pointer cursor
         el.style.cursor = 'pointer';
@@ -1489,7 +1488,7 @@ function attachDiagramNodeClicks(container) {
             e.stopPropagation();
             if (typeof openNodeOkrPanel === 'function') {
                 openNodeOkrPanel(nodeKey);
-            } else {
+            } else if (accordion) {
                 // Fallback: scroll to accordion
                 accordion.classList.add('accordion-item--open');
                 accordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
