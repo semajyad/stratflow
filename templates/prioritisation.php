@@ -149,9 +149,15 @@ $formula = $isRice
                             <td class="text-center">
                                 <select class="score-dropdown" data-field="<?= $field ?>">
                                     <option value="0" <?= $vals[$i] === 0 ? 'selected' : '' ?>>-</option>
-                                    <?php for ($n = 1; $n <= 10; $n++): ?>
-                                        <option value="<?= $n ?>" <?= $vals[$i] === $n ? 'selected' : '' ?>><?= $n ?></option>
-                                    <?php endfor; ?>
+                                    <?php if ($isRice): ?>
+                                        <?php for ($n = 1; $n <= 10; $n++): ?>
+                                            <option value="<?= $n ?>" <?= $vals[$i] === $n ? 'selected' : '' ?>><?= $n ?></option>
+                                        <?php endfor; ?>
+                                    <?php else: ?>
+                                        <?php foreach ([1, 2, 3, 5, 8, 13, 20] as $n): ?>
+                                            <option value="<?= $n ?>" <?= $vals[$i] === $n ? 'selected' : '' ?>><?= $n ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </select>
                             </td>
                         <?php endforeach; ?>
