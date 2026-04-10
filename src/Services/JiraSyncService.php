@@ -1507,6 +1507,43 @@ class JiraSyncService
                 $result = $this->createAtlassianGoal($cloudId, $siteUrl, $okr['title'], $desc, $goalTypeId);
                 if ($result) {
                     $counts['created']++;
+                    $newGoalId = $result['id'] ?? null;
+
+                    // Push KRs as child goals under this OKR goal
+                    $krRows = $this->db->query(
+                        "SELECT kr.id, kr.title, kr.baseline_value, kr.target_value, kr.unit
+                           FROM key_results kr
+                           JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
+                          WHERE hwi.project_id = :pid
+                            AND hwi.okr_title = :okr_title",
+                        [':pid' => $projectId, ':okr_title' => $okr['title']]
+                    )->fetchAll();
+
+                    foreach ($krRows as $kr) {
+                        try {
+                            $krDesc = $kr['unit']
+                                ? "Target: {$kr['target_value']} {$kr['unit']} (baseline: {$kr['baseline_value']} {$kr['unit']})"
+                                : ($kr['target_value'] ? "Target: {$kr['target_value']}" : '');
+
+                            $krGoalResult = $this->createAtlassianGoal(
+                                $cloudId,
+                                $siteUrl,
+                                $kr['title'],
+                                $krDesc,
+                                $goalTypeId,
+                                $newGoalId
+                            );
+
+                            if ($krGoalResult !== null) {
+                                $this->db->query(
+                                    "UPDATE key_results SET jira_goal_id = :gid WHERE id = :id",
+                                    [':gid' => $krGoalResult['id'], ':id' => $kr['id']]
+                                );
+                            }
+                        } catch (\Throwable $e) {
+                            error_log('[JiraSyncService] KR child goal error: ' . $e->getMessage());
+                        }
+                    }
 
                     SyncLog::create($this->db, [
                         'integration_id' => (int) $this->integration['id'],
@@ -1565,8 +1602,16 @@ class JiraSyncService
 
     /**
      * Create a goal via the Atlassian GraphQL API.
+     *
+     * @param string      $cloudId      Atlassian cloud ID
+     * @param string      $siteUrl      Atlassian site base URL
+     * @param string      $name         Goal name
+     * @param string      $description  Goal description (ADF paragraph)
+     * @param string|null $goalTypeId   Optional goal type ID
+     * @param string|null $parentGoalId Optional parent goal ID (for child/KR goals)
+     * @return array|null               Created goal node (id, name, url, key) or null on failure
      */
-    private function createAtlassianGoal(string $cloudId, string $siteUrl, string $name, string $description, ?string $goalTypeId): ?array
+    private function createAtlassianGoal(string $cloudId, string $siteUrl, string $name, string $description, ?string $goalTypeId, ?string $parentGoalId = null): ?array
     {
         $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
         $containerId = "ari:cloud:townsquare::site/{$cloudId}";
@@ -1574,6 +1619,9 @@ class JiraSyncService
         $input = 'containerId: "' . $containerId . '", name: "' . addslashes($name) . '"';
         if ($goalTypeId) {
             $input .= ', goalTypeId: "' . $goalTypeId . '"';
+        }
+        if ($parentGoalId !== null) {
+            $input .= ', parentGoalId: "' . addslashes($parentGoalId) . '"';
         }
 
         $mutation = 'mutation CG { goals_create(input: { ' . $input . ' }) { goal { id name url key } } }';
@@ -1596,6 +1644,97 @@ class JiraSyncService
         }
 
         return $goal;
+    }
+
+    // ===========================
+    // PULL: ATLASSIAN GOALS -> KEY RESULTS STATUS
+    // ===========================
+
+    /**
+     * Pull KR status updates from Atlassian Goals back into key_results.
+     *
+     * Reads each key_results row that has a jira_goal_id set, calls the
+     * Atlassian Goals API to get current state, and updates key_results.status
+     * if the remote status differs.
+     *
+     * @param int $projectId StratFlow project ID
+     * @return array{updated: int, skipped: int, errors: int}
+     */
+    public function pullKrStatusFromGoals(int $projectId): array
+    {
+        $counts  = ['updated' => 0, 'skipped' => 0, 'errors' => 0];
+        $siteUrl = $this->integration['site_url'] ?? '';
+        $cloudId = $this->integration['cloud_id'] ?? '';
+
+        if (!$cloudId || !$siteUrl) {
+            return $counts;
+        }
+
+        $krs = $this->db->query(
+            "SELECT kr.id, kr.jira_goal_id, kr.status
+               FROM key_results kr
+               JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
+              WHERE hwi.project_id = :pid
+                AND kr.jira_goal_id IS NOT NULL",
+            [':pid' => $projectId]
+        )->fetchAll();
+
+        $stateMap = [
+            'ON_TRACK'    => 'on_track',
+            'AT_RISK'     => 'at_risk',
+            'OFF_TRACK'   => 'off_track',
+            'DONE'        => 'achieved',
+            'NOT_STARTED' => 'not_started',
+        ];
+
+        foreach ($krs as $kr) {
+            try {
+                $goalState = $this->fetchAtlassianGoalState($cloudId, $siteUrl, $kr['jira_goal_id']);
+                if ($goalState === null) {
+                    $counts['skipped']++;
+                    continue;
+                }
+                $newStatus = $stateMap[strtoupper($goalState)] ?? null;
+                if ($newStatus === null || $newStatus === $kr['status']) {
+                    $counts['skipped']++;
+                    continue;
+                }
+                $this->db->query(
+                    "UPDATE key_results SET status = :s WHERE id = :id",
+                    [':s' => $newStatus, ':id' => $kr['id']]
+                );
+                $counts['updated']++;
+            } catch (\Throwable $e) {
+                error_log('[JiraSyncService] pullKrStatus error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
+                $counts['errors']++;
+            }
+        }
+        return $counts;
+    }
+
+    /**
+     * Fetch the current state of an Atlassian Goal via GraphQL.
+     *
+     * Queries the goals_byId GraphQL field and returns the raw state string
+     * (e.g. "ON_TRACK", "AT_RISK") or null if the goal cannot be retrieved.
+     *
+     * @param string $cloudId Atlassian cloud ID
+     * @param string $siteUrl Atlassian site base URL
+     * @param string $goalId  Atlassian goal ID
+     * @return string|null    Raw state value from the Goals API, or null
+     */
+    private function fetchAtlassianGoalState(string $cloudId, string $siteUrl, string $goalId): ?string
+    {
+        $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
+        $query = 'query GS { goals_byId(goalId: "' . addslashes($goalId) . '") { state } }';
+
+        try {
+            $response = $this->graphqlRequest($graphqlUrl, $query);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $response['data']['goals_byId']['state'] ?? null;
     }
 
     /**
