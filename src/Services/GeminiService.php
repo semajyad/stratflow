@@ -98,6 +98,21 @@ class GeminiService
             $text = preg_replace('/\s*```$/', '', $text);
         }
 
+        // Sanitise literal control characters inside JSON string values.
+        // Gemini occasionally embeds literal LF/CR inside string values (e.g. multi-line
+        // acceptance criteria), which json_decode rejects as JSON_ERROR_CTRL_CHAR.
+        // We find every JSON string token and replace any literal control chars with
+        // their escape-sequence equivalents; already-escaped sequences are unaffected.
+        $text = preg_replace_callback(
+            '/"((?:[^"\\\\]|\\\\.)*)"/s',
+            static function (array $m): string {
+                $inner = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $m[1]);
+                $inner = str_replace(["\r\n", "\r", "\n", "\t"], ['\\n', '\\n', '\\n', '\\t'], $inner);
+                return '"' . $inner . '"';
+            },
+            $text
+        ) ?? $text;
+
         $decoded = json_decode($text, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
