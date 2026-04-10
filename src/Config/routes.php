@@ -66,6 +66,11 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
     $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
 
+    // Key Results — KR CRUD (static /delete route MUST come before {id} catch-all)
+    $router->add('POST', '/app/key-results',             'KrController@store',  ['auth', 'csrf']);
+    $router->add('POST', '/app/key-results/{id}/delete', 'KrController@delete', ['auth', 'csrf']);
+    $router->add('POST', '/app/key-results/{id}',        'KrController@update', ['auth', 'csrf']);
+
     // Risk modelling — static routes MUST come before {id} routes
     $router->add('GET',  '/app/risks',                'RiskController@index',              ['auth']);
     $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'csrf']);
@@ -98,6 +103,9 @@ return function (\StratFlow\Core\Router $router) {
 
     // Executive Dashboard — org-wide rollup (gated by has_executive_access flag or superadmin)
     $router->add('GET',  '/app/executive',               'ExecutiveController@dashboard',  ['auth', 'executive']);
+
+    // Per-project OKR executive view
+    $router->add('GET', '/app/projects/{id}/executive', 'ExecutiveController@projectDashboard', ['auth', 'executive']);
 
     // Traceability — read-only strategy-to-code chain view
     $router->add('GET',  '/app/traceability',            'TraceabilityController@index',   ['auth']);
