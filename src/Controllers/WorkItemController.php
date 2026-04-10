@@ -25,6 +25,7 @@ use StratFlow\Models\Project;
 use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\StrategyDiagram;
 use StratFlow\Models\Subscription;
+use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\WorkItemPrompt;
 
@@ -164,6 +165,33 @@ class WorkItemController
         // Build combined input for AI
         $input = $this->buildGenerationInput($diagram, $nodes, $documentSummary);
 
+        // Inject org quality rules (splitting patterns + mandatory conditions)
+        try {
+            $input .= StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {
+            // Table may not exist on a fresh deploy — proceed without config
+        }
+
+        // Inject KR data so AI can generate accurate kr_hypothesis values
+        try {
+            $krRows = $this->db->query(
+                "SELECT kr.title, kr.current_value, kr.target_value, kr.unit
+                   FROM key_results kr
+                   JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
+                  WHERE hwi.project_id = :pid",
+                [':pid' => $projectId]
+            )->fetchAll();
+            if (!empty($krRows)) {
+                $input .= "\n--- KEY RESULTS ---\n";
+                foreach ($krRows as $kr) {
+                    $input .= "- {$kr['title']}: current={$kr['current_value']}, target={$kr['target_value']} {$kr['unit']}\n";
+                }
+                $input .= "-------------------\n";
+            }
+        } catch (\Throwable) {
+            // key_results table may not exist on a fresh deploy — proceed without KR data
+        }
+
         // Generate work items via Gemini
         try {
             $gemini    = new GeminiService($this->config);
@@ -188,16 +216,29 @@ class WorkItemController
         $priorityToId = [];
         foreach ($itemsData as $index => $item) {
             $priorityNumber = (int) ($item['priority_number'] ?? ($index + 1));
+            // Normalise acceptance_criteria: AI may return array or newline-delimited string
+            $acRaw = $item['acceptance_criteria'] ?? null;
+            $ac = null;
+            if (is_array($acRaw)) {
+                $ac = implode("\n", $acRaw);
+            } elseif (is_string($acRaw) && $acRaw !== '') {
+                $ac = $acRaw;
+            }
+
             $newId = HLWorkItem::create($this->db, [
-                'project_id'        => $projectId,
-                'diagram_id'        => (int) $diagram['id'],
-                'priority_number'   => $priorityNumber,
-                'title'             => $item['title'] ?? 'Untitled Work Item',
-                'description'       => $item['description'] ?? null,
-                'strategic_context' => $item['strategic_context'] ?? null,
-                'okr_title'         => $item['okr_title'] ?? null,
-                'okr_description'   => $item['okr_description'] ?? null,
-                'estimated_sprints' => $item['estimated_sprints'] ?? 2,
+                'project_id'          => $projectId,
+                'diagram_id'          => (int) $diagram['id'],
+                'priority_number'     => $priorityNumber,
+                'title'               => $item['title'] ?? 'Untitled Work Item',
+                'description'         => $item['description'] ?? null,
+                'strategic_context'   => $item['strategic_context'] ?? null,
+                'okr_title'           => $item['okr_title'] ?? null,
+                'okr_description'     => $item['okr_description'] ?? null,
+                'estimated_sprints'   => $item['estimated_sprints'] ?? 2,
+                'acceptance_criteria' => $ac,
+                'kr_hypothesis'       => isset($item['kr_hypothesis']) && $item['kr_hypothesis'] !== ''
+                                         ? mb_substr((string) $item['kr_hypothesis'], 0, 500)
+                                         : null,
             ]);
             $priorityToId[$priorityNumber] = $newId;
         }
@@ -365,11 +406,16 @@ class WorkItemController
         $newEstimatedSprints = $this->request->post('estimated_sprints', '');
 
         $updateData = [
-            'title'           => trim((string) $this->request->post('title', $item['title'])),
-            'description'     => $newDescription,
-            'okr_title'       => trim((string) $this->request->post('okr_title', $item['okr_title'] ?? '')),
-            'okr_description' => trim((string) $this->request->post('okr_description', $item['okr_description'] ?? '')),
-            'owner'           => trim((string) $this->request->post('owner', $item['owner'] ?? '')),
+            'title'               => trim((string) $this->request->post('title', $item['title'])),
+            'description'         => $newDescription,
+            'okr_title'           => trim((string) $this->request->post('okr_title', $item['okr_title'] ?? '')),
+            'okr_description'     => trim((string) $this->request->post('okr_description', $item['okr_description'] ?? '')),
+            'owner'               => trim((string) $this->request->post('owner', $item['owner'] ?? '')),
+            'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $item['acceptance_criteria'] ?? '')) ?: null,
+            'kr_hypothesis'       => mb_substr(
+                trim((string) $this->request->post('kr_hypothesis', $item['kr_hypothesis'] ?? '')),
+                0, 500
+            ) ?: null,
         ];
 
         if ($newEstimatedSprints !== '') {
