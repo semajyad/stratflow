@@ -1464,12 +1464,12 @@ function attachDiagramNodeClicks(container) {
     var ns = 'http://www.w3.org/2000/svg';
     var badgedKeys = {};
 
-    // Select the canonical node <g> elements only — those with id="flowchart-KEY-N".
-    // Mermaid v11 uses this pattern for every flowchart node.
-    var nodeEls = container.querySelectorAll('[id^="flowchart-"]');
+    // Select the canonical node <g> elements only — those with id containing "flowchart-KEY-N".
+    // Mermaid v11 prefixes IDs with the diagram instance id: "mermaid-{ts}-flowchart-KEY-N".
+    var nodeEls = container.querySelectorAll('[id*="flowchart-"]');
     nodeEls.forEach(function(el) {
-        // Only process <g> elements that match the "flowchart-KEY-N" id pattern.
-        var match = (el.id || '').match(/^flowchart-(.+)-\d+$/);
+        // Only process <g> elements that match the "flowchart-KEY-N" id pattern (with optional prefix).
+        var match = (el.id || '').match(/flowchart-(.+)-\d+$/);
         if (!match || el.tagName.toLowerCase() !== 'g') return;
         var nodeKey = match[1];
 
