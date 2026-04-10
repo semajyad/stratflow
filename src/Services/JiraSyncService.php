@@ -406,7 +406,7 @@ class JiraSyncService
                     } else {
                         $updateFields = [
                             'summary'     => $story['title'],
-                            'description' => $this->jira->textToAdf($story['description'] ?? ''),
+                            'description' => $this->jira->textToAdf($this->buildStoryDescription($story)),
                             'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
                         ];
                         $spField = $this->mapping('story_points_field', 'customfield_10016');
@@ -941,6 +941,8 @@ class JiraSyncService
             $item['team_assigned'] ?? '',
             (string) ($item['parent_hl_item_id'] ?? 0),
             (string) ($item['estimated_sprints'] ?? 0),
+            $item['acceptance_criteria'] ?? '',
+            $item['kr_hypothesis'] ?? '',
         ];
 
         return hash('sha256', implode('|', $parts));
@@ -989,6 +991,36 @@ class JiraSyncService
             if (!empty($item['okr_description'])) {
                 $description .= "\n" . $item['okr_description'];
             }
+        }
+
+        if (!empty($item['acceptance_criteria'])) {
+            $description .= "\n\nAcceptance Criteria:\n" . $item['acceptance_criteria'];
+        }
+
+        if (!empty($item['kr_hypothesis'])) {
+            $description .= "\n\nKR Hypothesis: " . $item['kr_hypothesis'];
+        }
+
+        return trim($description);
+    }
+
+    /**
+     * Build the Jira description string for a user story.
+     * Appends acceptance criteria and KR hypothesis when present.
+     *
+     * @param array $story User story record
+     * @return string      Combined description text
+     */
+    private function buildStoryDescription(array $story): string
+    {
+        $description = $story['description'] ?? '';
+
+        if (!empty($story['acceptance_criteria'])) {
+            $description .= "\n\nAcceptance Criteria:\n" . $story['acceptance_criteria'];
+        }
+
+        if (!empty($story['kr_hypothesis'])) {
+            $description .= "\n\nKR Hypothesis: " . $story['kr_hypothesis'];
         }
 
         return trim($description);
