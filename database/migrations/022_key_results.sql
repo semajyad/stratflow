@@ -11,7 +11,7 @@ ALTER TABLE story_git_links
 -- Step 2: Key results table.
 CREATE TABLE IF NOT EXISTS key_results (
   id                 INT UNSIGNED  NOT NULL AUTO_INCREMENT,
-  org_id             INT UNSIGNED  NOT NULL,        -- denormalised; tenant scope enforced via hl_work_items cascade
+  org_id             INT UNSIGNED  NOT NULL,        -- denormalised, tenant scope enforced via hl_work_items cascade
   hl_work_item_id    INT UNSIGNED  NOT NULL,
   title              VARCHAR(500)  NOT NULL,
   metric_description TEXT          NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS key_result_contributions (
   id                  INT UNSIGNED     NOT NULL AUTO_INCREMENT,
   key_result_id       INT UNSIGNED     NOT NULL,
   story_git_link_id   INT UNSIGNED     NOT NULL,
-  org_id              INT UNSIGNED     NOT NULL,        -- denormalised; tenant scope enforced via hl_work_items cascade
+  org_id              INT UNSIGNED     NOT NULL,        -- denormalised, tenant scope enforced via hl_work_items cascade
   ai_relevance_score  TINYINT UNSIGNED NOT NULL DEFAULT 0,
   ai_rationale        TEXT             NULL,
   scored_at           DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,

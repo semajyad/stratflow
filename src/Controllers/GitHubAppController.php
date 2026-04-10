@@ -217,8 +217,9 @@ class GitHubAppController
      *
      * POST /app/admin/integrations/github/{id}/disconnect
      */
-    public function disconnect(int $id): void
+    public function disconnect(string|int $id): void
     {
+        $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
