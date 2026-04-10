@@ -196,7 +196,7 @@ class DriftController
         $action = $this->request->post('action', 'acknowledge');
         $status = $action === 'resolve' ? 'resolved' : 'acknowledged';
 
-        DriftAlert::updateStatus($this->db, $id, $status);
+        DriftAlert::updateStatus($this->db, (int) $id, $status);
 
         $_SESSION['flash_message'] = 'Alert ' . $status . '.';
         $this->response->redirect('/app/governance?project_id=' . $alert['project_id']);
@@ -230,7 +230,7 @@ class DriftController
         $action = $this->request->post('action', 'approve');
         $status = $action === 'reject' ? 'rejected' : 'approved';
 
-        GovernanceItem::updateStatus($this->db, $id, $status, (int) $user['id']);
+        GovernanceItem::updateStatus($this->db, (int) $id, $status, (int) $user['id']);
 
         // If approved and it's a scope change, clear requires_review on the related item
         if ($status === 'approved') {
