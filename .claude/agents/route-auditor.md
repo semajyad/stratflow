@@ -73,6 +73,27 @@ cat C:/Users/James/Scripts/stratflow/src/routes.php 2>/dev/null || find C:/Users
 
 5. **Missing rate limiting on auth endpoints**: Login/register/password-reset routes should have rate limiting middleware.
 
+## Step 4b: Query Performance Checks
+
+For any DB queries in staged controllers:
+
+**N+1 risk:**
+```bash
+# Look for queries inside loops
+grep -n "foreach\|while\|for (" C:/Users/James/Scripts/stratflow/<file>.php
+grep -n "prepare\|query\|execute" C:/Users/James/Scripts/stratflow/<file>.php
+```
+Flag if a query appears inside a loop body — warn as IMPORTANT.
+
+**Unbounded queries:**
+- `SELECT *` or `SELECT ... FROM table` with no `LIMIT` on a table that grows per-tenant — warn
+- List endpoints returning all records with no pagination — warn
+
+**Missing timeout on external calls:**
+- `curl_init()` without `CURLOPT_TIMEOUT` set — warn (a hung Gemini/Stripe call blocks a PHP-FPM worker)
+
+These are warnings (🟡), not blockers — note them in the summary.
+
 ## Step 5: Decision
 
 **If ANY critical issue:**
