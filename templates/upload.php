@@ -33,90 +33,8 @@ function formatFileSize(int $bytes): string {
     <?php endif; ?>
 </div>
 
-<?php if ($hasSummary): ?>
 <!-- ===========================
-     Summary Ready — Show summary + next step prominently
-     =========================== -->
-<section class="card mb-6" style="border-left: 4px solid var(--success, #28a745);">
-    <div class="card-body">
-        <div style="display:flex; align-items:start; gap:1rem;">
-            <div style="flex:1;">
-                <h3 style="margin:0 0 0.5rem; color:var(--success, #28a745);">Summary Ready</h3>
-                <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin:0;">
-                    <?= htmlspecialchars(mb_substr($latestDoc['ai_summary'], 0, 400)) ?>
-                    <?= mb_strlen($latestDoc['ai_summary']) > 400 ? '...' : '' ?>
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<?php if ($hasText && !$hasSummary): ?>
-<!-- Text Extracted — Prompt to generate summary -->
-<section class="card mb-6" style="border-left: 4px solid var(--primary);">
-    <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem;">
-        <div>
-            <h3 style="margin:0 0 0.25rem;">Document uploaded successfully</h3>
-            <p class="text-muted" style="margin:0; font-size:0.875rem;">
-                Text extracted from <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>.
-                Generate an AI summary to proceed to the strategy roadmap.
-            </p>
-        </div>
-        <form method="POST" action="/app/upload/summarise"
-              data-loading="Generating summary..."
-              data-overlay="AI is analysing your document and generating a strategic summary. This typically takes 15-30 seconds.">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="document_id" value="<?= (int) $latestDoc['id'] ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary">Generate AI Summary</button>
-        </form>
-    </div>
-</section>
-<?php endif; ?>
-
-<?php if ($latestDoc && empty($latestDoc['extracted_text']) && !$hasSummary): ?>
-<!-- Extraction Failure — Actionable recovery -->
-<section class="card mb-6" style="border-left: 4px solid var(--danger, #dc2626);">
-    <div class="card-body" style="padding:1.25rem 1.5rem;">
-        <div style="display:flex; align-items:start; gap:1rem;">
-            <div style="flex-shrink:0; width:40px; height:40px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-            </div>
-            <div style="flex:1;">
-                <h3 style="margin:0 0 0.35rem; color:#991b1b;">Could not extract text from this document</h3>
-                <p class="text-muted" style="margin:0 0 1rem; font-size:0.875rem;">
-                    We couldn't read <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>. This usually happens with scanned PDFs, image-heavy documents, or encrypted files.
-                </p>
-                <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.875rem;">
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">1.</span>
-                        <span>Upload a different format — <strong>DOCX works best</strong></span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">2.</span>
-                        <span>Paste the text directly into the form below</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">3.</span>
-                        <span>Try a different version of the PDF (re-saved or re-exported)</span>
-                    </div>
-                </div>
-                <div style="margin-top:1rem;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('paste-text').focus(); document.getElementById('paste-text').scrollIntoView({behavior:'smooth',block:'center'});">
-                        Paste Text Instead
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<!-- ===========================
-     Upload Section
+     1. Upload Section (always first)
      =========================== -->
 <section class="card mb-6">
     <div class="card-header">
@@ -152,10 +70,96 @@ function formatFileSize(int $bytes): string {
     </form>
 </section>
 
-<?php if ($hasDocuments): ?>
 <!-- ===========================
-     Previous Documents (collapsed)
+     2. Extraction Failure (contextual — shown below upload)
      =========================== -->
+<?php if ($latestDoc && empty($latestDoc['extracted_text']) && !$hasSummary): ?>
+<section class="card mb-6" style="border-left: 4px solid var(--danger, #dc2626);">
+    <div class="card-body" style="padding:1.25rem 1.5rem;">
+        <div style="display:flex; align-items:start; gap:1rem;">
+            <div style="flex-shrink:0; width:40px; height:40px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div style="flex:1;">
+                <h3 style="margin:0 0 0.35rem; color:#991b1b;">Could not extract text from this document</h3>
+                <p class="text-muted" style="margin:0 0 1rem; font-size:0.875rem;">
+                    We couldn't read <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>. This usually happens with scanned PDFs, image-heavy documents, or encrypted files.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.875rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">1.</span>
+                        <span>Upload a different format — <strong>DOCX works best</strong></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">2.</span>
+                        <span>Paste the text directly into the form above</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="color:var(--primary); font-weight:600;">3.</span>
+                        <span>Try a different version of the PDF (re-saved or re-exported)</span>
+                    </div>
+                </div>
+                <div style="margin-top:1rem;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('paste-text').focus(); document.getElementById('paste-text').scrollIntoView({behavior:'smooth',block:'center'});">
+                        Paste Text Instead
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     3. Generate AI Summary (below upload — shown when text extracted, no summary yet)
+     =========================== -->
+<?php if ($hasText && !$hasSummary): ?>
+<section class="card mb-6" style="border-left: 4px solid var(--primary);">
+    <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem;">
+        <div>
+            <h3 style="margin:0 0 0.25rem;">Document uploaded successfully</h3>
+            <p class="text-muted" style="margin:0; font-size:0.875rem;">
+                Text extracted from <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>.
+                Generate an AI summary to proceed to the strategy roadmap.
+            </p>
+        </div>
+        <form method="POST" action="/app/upload/summarise"
+              data-loading="Generating summary..."
+              data-overlay="AI is analysing your document and generating a strategic summary. This typically takes 15-30 seconds.">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="document_id" value="<?= (int) $latestDoc['id'] ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="btn btn-ai">Generate AI Summary</button>
+        </form>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     4. Summary Ready (below generate prompt)
+     =========================== -->
+<?php if ($hasSummary): ?>
+<section class="card mb-6" style="border-left: 4px solid var(--success, #28a745);">
+    <div class="card-body">
+        <div style="display:flex; align-items:start; gap:1rem;">
+            <div style="flex:1;">
+                <h3 style="margin:0 0 0.5rem; color:var(--success, #28a745);">Summary Ready</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin:0;">
+                    <?= htmlspecialchars(mb_substr($latestDoc['ai_summary'], 0, 400)) ?>
+                    <?= mb_strlen($latestDoc['ai_summary']) > 400 ? '...' : '' ?>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     5. Previous Documents (collapsed, always last)
+     =========================== -->
+<?php if ($hasDocuments): ?>
 <section class="card">
     <div class="card-header flex justify-between items-center" style="cursor:pointer;"
          onclick="document.getElementById('doc-list').classList.toggle('hidden'); this.querySelector('.toggle-icon').textContent = document.getElementById('doc-list').classList.contains('hidden') ? '+' : '-';">
@@ -199,7 +203,7 @@ function formatFileSize(int $bytes): string {
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
                                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-primary" style="font-size:0.75rem;">Summarise</button>
+                                    <button type="submit" class="btn btn-sm btn-ai" style="font-size:0.75rem;">Summarise</button>
                                 </form>
                             <?php else: ?>
                                 <span class="badge badge-secondary" style="font-size:0.7rem;">No text extracted</span>
