@@ -9,7 +9,7 @@
  */
 ?>
 <div class="modal-overlay hidden" id="edit-modal">
-    <div class="modal">
+    <div class="modal" style="max-width: 760px;">
         <div class="modal-header">
             <h3>Edit Work Item</h3>
             <button class="modal-close" onclick="closeEditModal()">&times;</button>

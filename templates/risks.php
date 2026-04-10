@@ -33,7 +33,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
               data-overlay="AI is identifying project risks from your work items. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('This will use AI to analyse your work items and generate 3-5 project risks. Continue?')">
+            <button type="submit" class="btn btn-ai btn-sm" onclick="return confirm('This will use AI to analyse your work items and generate 3-5 project risks. Continue?')">
                 Generate Risks (AI)
             </button>
         </form>

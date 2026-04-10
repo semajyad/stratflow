@@ -36,7 +36,7 @@ $linkedItemIds = $risk['linked_item_ids'] ?? [];
         <?php if (!empty($risk['mitigation'])): ?>
             <p class="mitigation-text"><?= htmlspecialchars($risk['mitigation']) ?></p>
         <?php else: ?>
-            <button class="btn btn-sm btn-secondary generate-mitigation-btn" data-id="<?= (int) $risk['id'] ?>">Generate Mitigation (AI)</button>
+            <button class="btn btn-sm btn-ai generate-mitigation-btn" data-id="<?= (int) $risk['id'] ?>">Generate Mitigation (AI)</button>
         <?php endif; ?>
     </div>
     <?php
