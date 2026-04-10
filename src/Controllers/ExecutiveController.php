@@ -198,13 +198,41 @@ class ExecutiveController
         $seatsUsed  = (int) ($seatUsedRow['cnt'] ?? 0);
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
 
-        // ── Projects with OKRs (for per-project KR links) ────────────────────
-        $orgProjects = $this->db->query(
-            "SELECT id, name FROM projects
-              WHERE org_id = :oid AND status != 'deleted'
-              ORDER BY name ASC",
-            [':oid' => $orgId]
-        )->fetchAll();
+        // ── OKR / KR health across all projects ──────────────────────────────
+        // key_results may not exist on a fresh deploy — degrade gracefully.
+        $okrItems  = [];
+        $okrHealth = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
+        try {
+            $okrRows = $this->db->query(
+                "SELECT hwi.id AS item_id, hwi.title AS item_title, hwi.okr_title,
+                        hwi.priority_number,
+                        p.id AS project_id, p.name AS project_name,
+                        COALESCE(SUM(CASE WHEN kr.status = 'on_track'    THEN 1 ELSE 0 END), 0) AS on_track,
+                        COALESCE(SUM(CASE WHEN kr.status = 'at_risk'     THEN 1 ELSE 0 END), 0) AS at_risk,
+                        COALESCE(SUM(CASE WHEN kr.status = 'off_track'   THEN 1 ELSE 0 END), 0) AS off_track,
+                        COALESCE(SUM(CASE WHEN kr.status = 'not_started' THEN 1 ELSE 0 END), 0) AS not_started,
+                        COALESCE(SUM(CASE WHEN kr.status = 'achieved'    THEN 1 ELSE 0 END), 0) AS achieved,
+                        COUNT(kr.id) AS kr_count
+                   FROM hl_work_items hwi
+                   JOIN projects p ON hwi.project_id = p.id
+                   LEFT JOIN key_results kr ON kr.hl_work_item_id = hwi.id
+                  WHERE p.org_id = :oid
+                    AND hwi.okr_title IS NOT NULL
+                    AND hwi.okr_title != ''
+                  GROUP BY hwi.id, hwi.title, hwi.okr_title, hwi.priority_number, p.id, p.name
+                  ORDER BY p.name ASC, hwi.priority_number ASC",
+                [':oid' => $orgId]
+            )->fetchAll();
+
+            $okrItems = $okrRows;
+            foreach ($okrRows as $okr) {
+                $okrHealth['on_track']  += (int) $okr['on_track'];
+                $okrHealth['at_risk']   += (int) $okr['at_risk'];
+                $okrHealth['off_track'] += (int) $okr['off_track'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] OKR health query failed: ' . $e->getMessage());
+        }
 
         // ── Table A: Top 10 active risks ──────────────────────────────────────
         $topRisks = $this->db->query(
@@ -244,31 +272,22 @@ class ExecutiveController
         )->fetchAll();
 
         $this->response->render('executive', [
-            'user'                 => $user,
-            'active_page'          => 'executive',
-            // KPI cards
-            'portfolio'            => $portfolio,
-            'backlog'              => $backlog,
-            'top_items'            => $topItems,
-            'velocity'             => $velocity,
-            'active_sprints'       => $activeSprints,
-            'risk_summary'         => $riskSummary,
-            'drift_alerts'         => $driftAlerts,
-            'governance_queue'     => $governanceQueueDepth,
-            'integrations'         => $integrations,
-            // Subscription banner
-            'subscription'         => $subscription,
-            'seats_used'           => $seatsUsed,
-            'seat_limit'           => $seatLimit,
-            // Per-project OKR/KR links
-            'org_projects'         => $orgProjects,
-            // Detail tables
-            'top_risks'            => $topRisks,
-            'critical_alerts'      => $criticalAlerts,
-            'recent_audit'         => $recentAudit,
+            'user'             => $user,
+            'active_page'      => 'executive',
+            // Status bar
+            'portfolio'        => $portfolio,
+            'risk_summary'     => $riskSummary,
+            'governance_queue' => $governanceQueueDepth,
+            'drift_alerts'     => $driftAlerts,
+            // OKR health
+            'okr_health'       => $okrHealth,
+            'okr_items'        => $okrItems,
+            // Risk detail
+            'top_risks'        => $topRisks,
+            'critical_alerts'  => $criticalAlerts,
             // Flash
-            'flash_message'        => $_SESSION['flash_message'] ?? null,
-            'flash_error'          => $_SESSION['flash_error']   ?? null,
+            'flash_message'    => $_SESSION['flash_message'] ?? null,
+            'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
@@ -319,18 +338,23 @@ class ExecutiveController
             [':pid' => $id]
         )->fetchAll();
 
-        // KRs per work item
-        $krRows = KeyResult::findByProjectOkrs($this->db, $id, $orgId);
-        $krsByItemId = [];
-        foreach ($krRows as $kr) {
-            $krsByItemId[(int) $kr['work_item_id']][] = $kr;
+        // KRs per work item — key_results may not exist on fresh deploy
+        $krsByItemId        = [];
+        $contributionsByKrId = [];
+        try {
+            $krRows = KeyResult::findByProjectOkrs($this->db, $id, $orgId);
+            foreach ($krRows as $kr) {
+                $krsByItemId[(int) $kr['work_item_id']][] = $kr;
+            }
+            $krIds = array_map(fn($kr) => (int) $kr['id'], $krRows);
+            if (!empty($krIds)) {
+                $contributionsByKrId = \StratFlow\Models\KeyResultContribution::findByKeyResultIds(
+                    $this->db, $krIds, $orgId
+                );
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] projectDashboard KR query failed: ' . $e->getMessage());
         }
-
-        // Contributions per KR (for the expandable PR list)
-        $krIds = array_map(fn($kr) => (int) $kr['id'], $krRows);
-        $contributionsByKrId = \StratFlow\Models\KeyResultContribution::findByKeyResultIds(
-            $this->db, $krIds, $orgId
-        );
 
         // Risks per work item (via risk_item_links)
         $riskRows = $this->db->query(
