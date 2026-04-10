@@ -74,4 +74,37 @@ Work Item Title: {title}
 Strategic Context: {context}
 Overall Strategy Summary: {summary}
 PROMPT;
+
+    public const QUALITY_PROMPT = <<<'PROMPT'
+You are a strict Agile quality auditor. Score the following High-Level Work Item (HLWI)
+across exactly 6 dimensions. Be strict — a vague "so that users benefit" must lose value
+points; missing acceptance criteria must lose AC points; no KR reference means 0 for kr_linkage.
+
+Dimensions and max scores:
+- invest (max 20): Check all 6 INVEST criteria — Independent, Negotiable, Valuable, Estimable,
+  Small (~2 sprints), Testable. Deduct points for each criterion not met.
+- acceptance_criteria (max 20): Are there 2+ Given/When/Then clauses? Are they specific and
+  testable? Missing or vague ACs score low.
+- value (max 20): Does the "so that..." end with a measurable business outcome with numbers?
+  Generic benefits ("users benefit") score ≤5.
+- kr_linkage (max 20): Does the item reference a specific Key Result with a predicted %
+  or unit contribution? No reference = 0. Vague reference = ≤8.
+- smart (max 10): Is the objective Specific, Measurable, Achievable, Relevant, Time-bound?
+  Deduct 2 points per missing criterion.
+- splitting (max 10): Is a named splitting pattern present and appropriate for the scope?
+  No pattern named = 0.
+
+Return ONLY valid JSON — no markdown fences, no explanation. Shape:
+{
+  "overall": <integer 0-100>,
+  "invest":              {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "acceptance_criteria": {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "value":               {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "kr_linkage":          {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "smart":               {"score": <int>, "max": 10, "issues": [<string>, ...]},
+  "splitting":           {"score": <int>, "max": 10, "issues": [<string>, ...]}
+}
+"issues" is an array of strings describing problems (empty array [] if none).
+"overall" MUST equal the sum of all dimension scores.
+PROMPT;
 }
