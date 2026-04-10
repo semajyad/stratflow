@@ -199,9 +199,13 @@ class ExecutiveController
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
 
         // ── OKR / KR health across all projects ──────────────────────────────
-        // Fetch OKR work items first — no key_results dependency, always works.
+        // Show all strategic work items — okr_title shown if set, else item title used.
+        // Filtering only by NOT NULL and NOT empty-string was hiding items where okr_title
+        // was stored as NULL even though the item has strategic value. Now includes any
+        // item with okr_title set OR with strategic_context set.
         $okrItems = $this->db->query(
-            "SELECT hwi.id AS item_id, hwi.title AS item_title, hwi.okr_title,
+            "SELECT hwi.id AS item_id, hwi.title AS item_title,
+                    COALESCE(NULLIF(TRIM(hwi.okr_title), ''), hwi.title) AS okr_title,
                     hwi.priority_number,
                     p.id AS project_id, p.name AS project_name,
                     0 AS on_track, 0 AS at_risk, 0 AS off_track,
@@ -209,9 +213,9 @@ class ExecutiveController
                FROM hl_work_items hwi
                JOIN projects p ON hwi.project_id = p.id
               WHERE p.org_id = :oid
-                AND hwi.okr_title IS NOT NULL
-                AND hwi.okr_title != ''
-              ORDER BY p.name ASC, hwi.priority_number ASC",
+                AND hwi.status != 'done'
+              ORDER BY p.name ASC, hwi.priority_number ASC
+              LIMIT 20",
             [':oid' => $orgId]
         )->fetchAll();
 

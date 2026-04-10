@@ -19,9 +19,9 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
 </div>
 
 <!-- Overview Cards -->
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
-    <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; align-items: stretch;">
+    <section class="card" style="display:flex; flex-direction:column;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Plan</span>
             <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?= $sub ? htmlspecialchars(ucfirst($plan)) : 'No Plan' ?>
@@ -35,8 +35,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 
-    <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+    <section class="card" style="display:flex; flex-direction:column;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Seats</span>
             <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?= (int) $active_users ?> / <?= (int) $seat_limit ?>
@@ -48,8 +48,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 
-    <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+    <section class="card" style="display:flex; flex-direction:column;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">
                 <?php if ($sd): ?>Cost<?php else: ?>Started<?php endif; ?>
             </span>
@@ -67,8 +67,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 
-    <section class="card">
-        <div class="card-body" style="text-align: center; padding: 1.25rem;">
+    <section class="card" style="display:flex; flex-direction:column;">
+        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Period</span>
             <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
                 <?php if ($sd): ?>
