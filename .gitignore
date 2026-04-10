@@ -18,3 +18,9 @@ tests/Playwright/test-results/
 .claude/.playwright-ok
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
