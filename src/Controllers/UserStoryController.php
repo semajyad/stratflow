@@ -90,6 +90,11 @@ class UserStoryController
         $defaultStOrder = ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'];
         $fieldOrderSt = $orgSettings['field_order_story'] ?? $defaultStOrder;
 
+        // Quality visibility: off when disabled at system level OR at org level
+        $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
+        $showQuality    = !empty($systemSettings['feature_story_quality'])
+                          && ($orgSettings['quality']['enabled'] ?? true);
+
         $this->response->render('user-stories', [
             'user'                 => $user,
             'project'              => $project,
@@ -97,6 +102,7 @@ class UserStoryController
             'work_items'           => $workItems,
             'teams'                => $teams,
             'field_order_st'       => $fieldOrderSt,
+            'show_quality'         => $showQuality,
             'active_page'          => 'user-stories',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,
