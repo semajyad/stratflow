@@ -9,7 +9,6 @@
  * Expects $csrf_token (string), $project (array), $teams (array),
  * $hl_sizing_method (string) from the parent scope.
  */
-<?php
 $sizingMethod = $hl_sizing_method ?? 'sprints';
 $sizingLabels = [
     'sprints' => 'Estimated Sprints',
