@@ -4274,14 +4274,22 @@ details[open] > summary .trace-chevron {
 
 /* Tighter padding on all cells to reclaim column space */
 #prioritisation-table thead th {
-    padding: 0.5rem 0.375rem;
+    padding: 0.5rem 0.5rem;
     white-space: normal;      /* allow header text to wrap rather than force width */
     line-height: 1.2;
     font-size: 0.7rem;
+    min-width: 68px;          /* prevent collapse on narrow screens without table-layout:fixed */
+}
+
+/* Title column: doesn't need a min-width, just shouldn't overflow */
+#prioritisation-table thead th:nth-child(2) {
+    min-width: 160px;
+    max-width: 400px;
+    width: auto;
 }
 
 #prioritisation-table tbody td {
-    padding: 0.5rem 0.375rem;
+    padding: 0.5rem 0.5rem;
 }
 
 /* Tighter title cell */

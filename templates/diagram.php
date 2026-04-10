@@ -102,6 +102,9 @@ $hasSummary = !empty($document_summary);
                     <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Sync OKRs to Atlassian Goals?')">Sync to Goals</button>
                 </form>
             <?php } } } catch (\Throwable $e) {} ?>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('add-okr-modal').classList.remove('hidden')">
+                + Add OKR
+            </button>
             <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
                   data-loading="Generating OKRs..." data-overlay="AI is generating SMART objectives and key results. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -175,6 +178,44 @@ $hasSummary = !empty($document_summary);
 <?php endif; ?>
 
 <?php endif; /* end hasDiagram */ ?>
+
+<!-- ===========================
+     Add OKR Modal
+     =========================== -->
+<div id="add-okr-modal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add OKR Manually</h3>
+            <button class="modal-close" onclick="document.getElementById('add-okr-modal').classList.add('hidden')">&times;</button>
+        </div>
+        <form method="POST" action="/app/diagram/add-okr">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Strategic Initiative <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="label" class="form-control" required maxlength="200"
+                           placeholder="e.g. Expand into New Markets">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Objective</label>
+                    <input type="text" name="okr_title" class="form-control" maxlength="500"
+                           placeholder="e.g. Establish presence in AU market by Q3 2026">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Key Results</label>
+                    <textarea name="okr_description" class="form-control" rows="4"
+                              placeholder="KR1: Sign 3 pilot agreements by Q2&#10;KR2: Generate $500k pipeline by Q3&#10;KR3: ..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm"
+                        onclick="document.getElementById('add-okr-modal').classList.add('hidden')">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm">Add OKR</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 

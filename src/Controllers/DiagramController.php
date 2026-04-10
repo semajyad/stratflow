@@ -396,6 +396,87 @@ class DiagramController
     /**
      * Save all OKRs in a single form POST.
      */
+    /**
+     * Manually add a new OKR (creates a new diagram node).
+     */
+    public function addOkr(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $label          = trim((string) $this->request->post('label', ''));
+        $okrTitle       = trim((string) $this->request->post('okr_title', ''));
+        $okrDescription = trim((string) $this->request->post('okr_description', ''));
+
+        if ($label === '') {
+            $_SESSION['flash_message'] = 'Initiative name is required.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        $diagram = StrategyDiagram::findByProjectId($this->db, $projectId);
+        if ($diagram === null) {
+            $_SESSION['flash_message'] = 'Generate a strategy diagram first before adding OKRs.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        // Generate the next node key (A, B, C … Z, AA, AB …)
+        $existingNodes = DiagramNode::findByDiagramId($this->db, (int) $diagram['id']);
+        $usedKeys = array_map(fn($n) => strtoupper($n['node_key']), $existingNodes);
+        $nextKey = $this->nextNodeKey($usedKeys);
+
+        $this->db->query(
+            "INSERT INTO diagram_nodes (diagram_id, node_key, label, okr_title, okr_description)
+             VALUES (:diagram_id, :node_key, :label, :okr_title, :okr_description)",
+            [
+                ':diagram_id'     => (int) $diagram['id'],
+                ':node_key'       => $nextKey,
+                ':label'          => $label,
+                ':okr_title'      => $okrTitle,
+                ':okr_description' => $okrDescription,
+            ]
+        );
+
+        $_SESSION['flash_message'] = 'OKR added.';
+        $this->response->redirect('/app/diagram?project_id=' . $projectId);
+    }
+
+    /**
+     * Generate the next node key after the existing set.
+     * Follows Excel-column-style progression: A … Z, AA, AB …
+     *
+     * @param string[] $usedKeys Uppercase existing node keys
+     */
+    private function nextNodeKey(array $usedKeys): string
+    {
+        $candidate = 'A';
+        while (in_array($candidate, $usedKeys, true)) {
+            // Increment like spreadsheet columns
+            $len = strlen($candidate);
+            $i = $len - 1;
+            while ($i >= 0) {
+                if ($candidate[$i] < 'Z') {
+                    $candidate[$i] = chr(ord($candidate[$i]) + 1);
+                    break;
+                }
+                $candidate[$i] = 'A';
+                $i--;
+            }
+            if ($i < 0) {
+                $candidate = 'A' . $candidate;
+            }
+        }
+        return $candidate;
+    }
+
     public function saveAllOkrs(): void
     {
         $user      = $this->auth->user();

@@ -90,7 +90,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
         $epicHasStories = !empty($epicStories);
         ?>
         <div class="card mb-4">
-            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; background:var(--surface-2, #f1f5f9);">
                 <div style="display:flex; align-items:center; gap:0.75rem;">
                     <span class="priority-number" style="flex-shrink:0;"><?= $epicIndex + 1 ?></span>
                     <div>
