@@ -317,15 +317,10 @@ class ExecutiveController
         }
 
         // Contributions per KR (for the expandable PR list)
-        $contributionsByKrId = [];
-        foreach ($krRows as $kr) {
-            $contribs = \StratFlow\Models\KeyResultContribution::findByKeyResultId(
-                $this->db, (int) $kr['id'], $orgId
-            );
-            if (!empty($contribs)) {
-                $contributionsByKrId[(int) $kr['id']] = $contribs;
-            }
-        }
+        $krIds = array_map(fn($kr) => (int) $kr['id'], $krRows);
+        $contributionsByKrId = \StratFlow\Models\KeyResultContribution::findByKeyResultIds(
+            $this->db, $krIds, $orgId
+        );
 
         // Risks per work item (via risk_item_links)
         $riskRows = $this->db->query(

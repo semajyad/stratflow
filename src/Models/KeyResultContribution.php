@@ -74,6 +74,36 @@ class KeyResultContribution
     }
 
     /**
+     * Load all contributions for a set of KR IDs in one query.
+     * Returns an array keyed by key_result_id.
+     *
+     * @param  int[] $krIds
+     * @return array<int, array<int, array<string, mixed>>>  keyed by key_result_id
+     */
+    public static function findByKeyResultIds(Database $db, array $krIds, int $orgId): array
+    {
+        if (empty($krIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($krIds), '?'));
+        $rows = $db->query(
+            "SELECT krc.*, sgl.ref_url, sgl.ref_label
+               FROM key_result_contributions krc
+               JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
+              WHERE krc.key_result_id IN ({$placeholders})
+                AND krc.org_id = ?
+              ORDER BY krc.scored_at DESC",
+            [...$krIds, $orgId]
+        )->fetchAll();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[(int) $row['key_result_id']][] = $row;
+        }
+        return $grouped;
+    }
+
+    /**
      * Last N contributions for a KR — used to build ai_momentum summary.
      *
      * @param Database $db
