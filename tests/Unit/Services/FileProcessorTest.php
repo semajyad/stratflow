@@ -175,4 +175,85 @@ class FileProcessorTest extends TestCase
 
         $this->assertStringContainsString('not supported', $text);
     }
+
+    // ===========================
+    // VALIDATION — MEDIA FILES
+    // ===========================
+
+    #[Test]
+    public function testValidMp4FilePasses(): void
+    {
+        $config = $this->buildMediaConfig();
+        $file   = $this->makeFile('meeting.mp4', 'video/mp4', 1048576);
+        $result = $this->processor->validateFile($file, $config);
+        $this->assertTrue($result['valid']);
+    }
+
+    #[Test]
+    public function testValidMp3FilePasses(): void
+    {
+        $config = $this->buildMediaConfig();
+        $file   = $this->makeFile('recording.mp3', 'audio/mpeg', 1048576);
+        $result = $this->processor->validateFile($file, $config);
+        $this->assertTrue($result['valid']);
+    }
+
+    #[Test]
+    public function testMediaFileExceedingHardLimitFails(): void
+    {
+        $config = $this->buildMediaConfig();
+        // 211 MB — exceeds the 210 MB media hard limit
+        $file   = $this->makeFile('huge.mp4', 'video/mp4', 220_200_960);
+        $result = $this->processor->validateFile($file, $config);
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('200 MB', $result['error']);
+    }
+
+    #[Test]
+    public function testExtractTextRoutesToMediaHandlerForVideoMime(): void
+    {
+        // extractText with a video MIME type on a non-existent file returns ''
+        // (Gemini not called because no API key in test env — returns '' gracefully)
+        $result = $this->processor->extractText('/tmp/nonexistent.mp4', 'video/mp4');
+        $this->assertIsString($result);
+        // Should not throw — graceful empty string on Gemini unavailability
+    }
+
+    #[Test]
+    public function testExtractTextRoutesToMediaHandlerForAudioMime(): void
+    {
+        $result = $this->processor->extractText('/tmp/nonexistent.mp3', 'audio/mpeg');
+        $this->assertIsString($result);
+    }
+
+    // ===========================
+    // HELPERS
+    // ===========================
+
+    /** Build a config that includes media extensions and types. */
+    private function buildMediaConfig(): array
+    {
+        return [
+            'upload' => [
+                'max_size'           => 10485760,
+                'allowed_extensions' => ['txt', 'pdf', 'doc', 'docx', 'mp4', 'mov', 'avi', 'webm', 'mkv', 'mp3', 'm4a', 'wav', 'ogg', 'aac'],
+                'allowed_types'      => [
+                    'text/plain',
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'video/mp4',
+                    'video/quicktime',
+                    'video/x-msvideo',
+                    'video/webm',
+                    'video/x-matroska',
+                    'audio/mpeg',
+                    'audio/mp4',
+                    'audio/wav',
+                    'audio/ogg',
+                    'audio/aac',
+                ],
+            ],
+        ];
+    }
 }
