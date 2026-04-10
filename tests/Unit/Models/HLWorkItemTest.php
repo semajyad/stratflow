@@ -245,4 +245,25 @@ class HLWorkItemTest extends TestCase
         $items = HLWorkItem::findByProjectId(self::$db, self::$projectId);
         $this->assertCount(0, $items);
     }
+
+    #[Test]
+    public function canStoreAndRetrieveQualityScore(): void
+    {
+        $id = HLWorkItem::create(self::$db, [
+            'project_id'       => self::$projectId,
+            'priority_number'  => 98,
+            'title'            => 'Quality Score Test Item',
+            'quality_score'    => 75,
+            'quality_breakdown' => json_encode([
+                'invest' => ['score' => 15, 'max' => 20, 'issues' => []],
+            ]),
+        ]);
+
+        $row = HLWorkItem::findById(self::$db, $id);
+        $this->assertNotNull($row);
+        $this->assertSame(75, (int) $row['quality_score']);
+        $this->assertStringContainsString('invest', $row['quality_breakdown']);
+
+        HLWorkItem::delete(self::$db, $id);
+    }
 }
