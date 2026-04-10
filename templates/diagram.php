@@ -178,6 +178,122 @@ $hasSummary = !empty($document_summary);
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
+<!-- ===========================
+     Node OKR Side Panel
+     =========================== -->
+<?php if ($hasDiagram && $hasNodes): ?>
+<div id="node-okr-panel" style="
+    position: fixed; top: 0; right: -380px; width: 360px; height: 100vh;
+    background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+    z-index: 1000; transition: right 0.25s ease; display: flex; flex-direction: column;
+    border-left: 1px solid var(--border, #e5e7eb);
+">
+    <div style="padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--border, #e5e7eb); display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem;">
+        <div>
+            <div style="font-size:0.75rem; font-weight:600; color:var(--primary, #4f46e5); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">OKRs for:</div>
+            <h3 id="node-okr-title" style="margin:0; font-size:1.0625rem; font-weight:700; color:var(--text, #111827); line-height:1.3;"></h3>
+        </div>
+        <button onclick="closeNodeOkrPanel()" style="background:none; border:none; cursor:pointer; font-size:1.375rem; color:var(--text-secondary, #6b7280); line-height:1; padding:0; flex-shrink:0;">&times;</button>
+    </div>
+    <div style="padding: 1.25rem; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
+        <input type="hidden" id="node-okr-node-id">
+        <div class="form-group" style="margin:0;">
+            <label for="node-okr-objective" style="font-weight:600;">Objective:</label>
+            <input type="text" id="node-okr-objective" class="form-control"
+                   placeholder="e.g. Launch AU market presence with 3 pilots by Q3">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label for="node-okr-keyresults" style="font-weight:600;">Key Results:</label>
+            <textarea id="node-okr-keyresults" class="form-control" rows="5"
+                      placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2"></textarea>
+        </div>
+    </div>
+    <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border, #e5e7eb);">
+        <span id="node-okr-save-status" style="font-size:0.8125rem; display:block; margin-bottom:0.5rem; min-height:1.2em;"></span>
+        <button type="button" id="node-okr-save-btn" onclick="saveNodeOkr()"
+                class="btn btn-primary" style="width:100%;">Save OKRs to Node</button>
+    </div>
+</div>
+
+<script>
+var _nodeOkrData = <?= json_encode(array_values($nodes), JSON_HEX_TAG) ?>;
+var _csrfToken   = <?= json_encode($csrf_token) ?>;
+
+function openNodeOkrPanel(nodeKey) {
+    var node = _nodeOkrData.find(function(n) { return n.node_key === nodeKey; });
+    if (!node) return;
+    document.getElementById('node-okr-node-id').value    = node.id;
+    document.getElementById('node-okr-title').textContent = node.label;
+    document.getElementById('node-okr-objective').value  = node.okr_title || '';
+    document.getElementById('node-okr-keyresults').value = node.okr_description || '';
+    document.getElementById('node-okr-save-status').textContent = '';
+    document.getElementById('node-okr-save-btn').disabled = false;
+    document.getElementById('node-okr-save-btn').textContent = 'Save OKRs to Node';
+    document.getElementById('node-okr-panel').style.right = '0';
+}
+
+function closeNodeOkrPanel() {
+    document.getElementById('node-okr-panel').style.right = '-380px';
+}
+
+function saveNodeOkr() {
+    var nodeId  = document.getElementById('node-okr-node-id').value;
+    var title   = document.getElementById('node-okr-objective').value;
+    var desc    = document.getElementById('node-okr-keyresults').value;
+    var btn     = document.getElementById('node-okr-save-btn');
+    var status  = document.getElementById('node-okr-save-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    status.textContent = '';
+
+    var form = new FormData();
+    form.append('_csrf_token',     _csrfToken);
+    form.append('node_id',         nodeId);
+    form.append('okr_title',       title);
+    form.append('okr_description', desc);
+
+    fetch('/app/diagram/save-okr', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Save OKRs to Node';
+        if (data.status === 'ok') {
+            var node = _nodeOkrData.find(function(n) { return n.id == nodeId; });
+            if (node) { node.okr_title = title; node.okr_description = desc; }
+            // Keep accordion in sync if visible
+            if (node) {
+                var accordion = document.querySelector('[data-node-key="' + node.node_key + '"]');
+                if (accordion) {
+                    var objInput = accordion.querySelector('input[name*="okr_title"]');
+                    var krInput  = accordion.querySelector('textarea[name*="okr_description"]');
+                    if (objInput) objInput.value = title;
+                    if (krInput)  krInput.value  = desc;
+                    accordion.classList.toggle('accordion-item--complete', !!title);
+                }
+            }
+            status.style.color = '#16a34a';
+            status.textContent = 'Saved successfully';
+            setTimeout(closeNodeOkrPanel, 800);
+        } else {
+            status.style.color = '#dc2626';
+            status.textContent = 'Save failed — please try again';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Save OKRs to Node';
+        status.style.color = '#dc2626';
+        status.textContent = 'Connection error';
+    });
+}
+</script>
+<?php endif; ?>
+
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 
 <script>

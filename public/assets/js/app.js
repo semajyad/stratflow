@@ -1483,15 +1483,17 @@ function attachDiagramNodeClicks(container) {
         el.style.cursor = 'pointer';
         el.setAttribute('pointer-events', 'all');
         el.setAttribute('role', 'button');
-        el.setAttribute('title', 'View OKR: ' + nodeKey);
+        el.setAttribute('title', 'Click to set OKR for ' + nodeKey);
 
         el.addEventListener('click', function(e) {
             e.stopPropagation();
-            accordion.classList.add('accordion-item--open');
-            accordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            accordion.style.transition = 'outline 0.15s';
-            accordion.style.outline = '2px solid var(--primary, #4f46e5)';
-            setTimeout(function() { accordion.style.outline = ''; }, 1400);
+            if (typeof openNodeOkrPanel === 'function') {
+                openNodeOkrPanel(nodeKey);
+            } else {
+                // Fallback: scroll to accordion
+                accordion.classList.add('accordion-item--open');
+                accordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         });
 
         // Inject key badge into top-left corner — only once per key.
