@@ -8,8 +8,8 @@
  * level by verifying the project's org_id.
  *
  * Columns: id, project_id, diagram_id, priority_number, title, description,
- *          strategic_context, okr_title, okr_description, owner,
- *          estimated_sprints, created_at, updated_at
+ *          strategic_context, okr_title, okr_description, acceptance_criteria,
+ *          kr_hypothesis, owner, estimated_sprints, created_at, updated_at
  */
 
 declare(strict_types=1);
@@ -30,7 +30,8 @@ class HLWorkItem
      * @param Database $db   Database instance
      * @param array    $data Keys: project_id, priority_number, title, description,
      *                       strategic_context, okr_title, okr_description, owner,
-     *                       estimated_sprints, diagram_id (optional)
+     *                       estimated_sprints, acceptance_criteria, kr_hypothesis,
+     *                       diagram_id (optional)
      * @return int           ID of the inserted row
      */
     public static function create(Database $db, array $data): int
@@ -38,22 +39,26 @@ class HLWorkItem
         $db->query(
             "INSERT INTO hl_work_items
                 (project_id, diagram_id, priority_number, title, description,
-                 strategic_context, okr_title, okr_description, owner, estimated_sprints, status)
+                 strategic_context, okr_title, okr_description, owner, estimated_sprints,
+                 acceptance_criteria, kr_hypothesis, status)
              VALUES
                 (:project_id, :diagram_id, :priority_number, :title, :description,
-                 :strategic_context, :okr_title, :okr_description, :owner, :estimated_sprints, :status)",
+                 :strategic_context, :okr_title, :okr_description, :owner, :estimated_sprints,
+                 :acceptance_criteria, :kr_hypothesis, :status)",
             [
-                ':project_id'        => $data['project_id'],
-                ':diagram_id'        => $data['diagram_id'] ?? null,
-                ':priority_number'   => $data['priority_number'],
-                ':title'             => $data['title'],
-                ':description'       => $data['description'] ?? null,
-                ':strategic_context' => $data['strategic_context'] ?? null,
-                ':okr_title'         => $data['okr_title'] ?? null,
-                ':okr_description'   => $data['okr_description'] ?? null,
-                ':owner'             => $data['owner'] ?? null,
-                ':estimated_sprints' => $data['estimated_sprints'] ?? 2,
-                ':status'            => $data['status'] ?? 'backlog',
+                ':project_id'          => $data['project_id'],
+                ':diagram_id'          => $data['diagram_id'] ?? null,
+                ':priority_number'     => $data['priority_number'],
+                ':title'               => $data['title'],
+                ':description'         => $data['description'] ?? null,
+                ':strategic_context'   => $data['strategic_context'] ?? null,
+                ':okr_title'           => $data['okr_title'] ?? null,
+                ':okr_description'     => $data['okr_description'] ?? null,
+                ':owner'               => $data['owner'] ?? null,
+                ':estimated_sprints'   => $data['estimated_sprints'] ?? 2,
+                ':acceptance_criteria' => $data['acceptance_criteria'] ?? null,
+                ':kr_hypothesis'       => $data['kr_hypothesis'] ?? null,
+                ':status'              => $data['status'] ?? 'backlog',
             ]
         );
 
@@ -117,7 +122,7 @@ class HLWorkItem
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'strategic_context',
-        'okr_title', 'okr_description', 'owner', 'estimated_sprints',
+        'okr_title', 'okr_description', 'acceptance_criteria', 'kr_hypothesis', 'owner', 'estimated_sprints',
         'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
         'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
         'final_score', 'requires_review', 'status', 'last_jira_sync_at',
