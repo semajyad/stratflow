@@ -140,7 +140,7 @@ class SprintController
 
         if ($boardId > 0) {
             $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-            if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'connected') {
+            if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'active') {
                 try {
                     $intConfig = json_decode($jiraIntegration['config_json'] ?? '{}', true) ?? [];
                     $spField   = $intConfig['field_mapping']['story_points_field'] ?? 'story_points';
