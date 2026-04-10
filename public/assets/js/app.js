@@ -477,34 +477,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===========================
     // User Stories: SortableJS Drag & Drop
+    // Supports multiple .user-stories-list containers (one per epic).
+    // onEnd collects all story rows across all lists in DOM order
+    // to maintain a single global priority numbering.
     // ===========================
-    var storyList = document.getElementById('user-stories-list');
-    if (storyList && typeof Sortable !== 'undefined') {
-        Sortable.create(storyList, {
-            handle: '.drag-handle',
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: function() {
-                var items = storyList.querySelectorAll('.story-row');
-                var order = [];
-                items.forEach(function(el, index) {
-                    order.push({ id: parseInt(el.dataset.id), position: index + 1 });
-                    el.querySelector('.priority-number').textContent = index + 1;
-                });
+    var storyLists = document.querySelectorAll('.user-stories-list');
+    if (storyLists.length > 0 && typeof Sortable !== 'undefined') {
+        storyLists.forEach(function(list) {
+            Sortable.create(list, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function() {
+                    // Collect ALL story rows across ALL epic lists in DOM order
+                    var allRows = document.querySelectorAll('.user-stories-list .story-row');
+                    var order = [];
+                    allRows.forEach(function(el, index) {
+                        order.push({ id: parseInt(el.dataset.id), position: index + 1 });
+                        el.querySelector('.priority-number').textContent = index + 1;
+                    });
 
-                var csrfToken = document.querySelector('input[name="_csrf_token"]');
-                fetch('/app/user-stories/reorder', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        order: order,
-                        _csrf_token: csrfToken ? csrfToken.value : ''
-                    })
-                });
-            }
+                    var csrfToken = document.querySelector('input[name="_csrf_token"]');
+                    fetch('/app/user-stories/reorder', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            order: order,
+                            _csrf_token: csrfToken ? csrfToken.value : ''
+                        })
+                    });
+                }
+            });
         });
     }
 

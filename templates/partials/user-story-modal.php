@@ -11,7 +11,7 @@
  */
 ?>
 <div class="modal-overlay hidden" id="story-modal">
-    <div class="modal">
+    <div class="modal" style="max-width: 760px;">
         <div class="modal-header">
             <h3 id="story-modal-title">Add User Story</h3>
             <button class="modal-close" onclick="toggleStoryModal()">&times;</button>

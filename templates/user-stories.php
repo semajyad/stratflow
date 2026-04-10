@@ -2,13 +2,21 @@
 /**
  * User Stories Template
  *
- * Displays user stories decomposed from HL work items, with AI generation,
- * drag-and-drop reordering, edit modal, dependency tracking, and
- * CSV/JSON/Jira export.
+ * Displays user stories grouped under their parent work item (epic),
+ * with per-epic AI generation, drag-and-drop reordering, edit modal,
+ * dependency tracking, and CSV/JSON/Jira export.
  *
  * Variables: $project (array), $stories (array), $work_items (array),
  *            $csrf_token (string)
  */
+
+// Group stories by parent work item id (0 = unlinked)
+$storiesByItem = [];
+foreach ($stories as $story) {
+    $pid = (int) ($story['parent_hl_item_id'] ?? 0);
+    $storiesByItem[$pid][] = $story;
+}
+$unlinkedStories = $storiesByItem[0] ?? [];
 ?>
 
 <!-- ===========================
@@ -26,12 +34,20 @@
     <div class="flex items-center gap-2">
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
+        <?php if (!empty($stories)): ?>
+        <form method="POST" action="/app/user-stories/delete-all" class="inline-form"
+              onsubmit="return confirm('Delete all <?= count($stories) ?> stories for this project? This cannot be undone.')">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="btn btn-sm btn-danger">Delete All</button>
+        </form>
+        <?php endif; ?>
         <button type="button" class="btn btn-primary btn-sm" onclick="toggleStoryModal()">Add Story</button>
     </div>
 </div>
 
 <!-- ===========================
-     HL Item Selector — AI Decomposition
+     HL Item Selector — Batch AI Decomposition
      =========================== -->
 <?php if (!empty($work_items)): ?>
 <div class="card mb-6">
@@ -65,31 +81,89 @@
 <?php endif; ?>
 
 <!-- ===========================
-     User Stories List
+     Per-Epic Story Sections
      =========================== -->
-<?php if (!empty($stories)): ?>
-<div class="card mb-6">
-    <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
-        <h3>User Stories (<?= count($stories) ?>)</h3>
-        <form method="POST" action="/app/user-stories/delete-all" class="inline-form"
-              onsubmit="return confirm('Delete all <?= count($stories) ?> stories for this project? This cannot be undone.')">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-sm btn-danger">Delete All</button>
-        </form>
+<?php if (!empty($work_items)): ?>
+    <?php foreach ($work_items as $epicIndex => $wi): ?>
+        <?php
+        $epicStories    = $storiesByItem[(int) $wi['id']] ?? [];
+        $epicHasStories = !empty($epicStories);
+        ?>
+        <div class="card mb-4">
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <span class="priority-number" style="flex-shrink:0;"><?= $epicIndex + 1 ?></span>
+                    <div>
+                        <strong style="font-size:0.9375rem;"><?= htmlspecialchars($wi['title']) ?></strong>
+                        <div class="text-muted" style="font-size:0.8rem; margin-top:0.1rem;">
+                            Owner: <?= htmlspecialchars($wi['owner'] ?? 'Unassigned') ?>
+                        </div>
+                    </div>
+                </div>
+                <form method="POST" action="/app/user-stories/generate"
+                      data-loading="Generating user stories...">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                    <input type="hidden" name="hl_item_ids[]" value="<?= (int) $wi['id'] ?>">
+                    <button type="submit" class="btn btn-ai btn-sm">
+                        <?= $epicHasStories ? '✨ Generate More Stories' : '✨ Generate User Stories' ?>
+                    </button>
+                </form>
+            </div>
+            <?php if ($epicHasStories): ?>
+            <div class="card-body" style="padding:0;">
+                <div class="user-stories-list">
+                    <?php foreach ($epicStories as $story): ?>
+                        <?php require __DIR__ . '/partials/user-story-row.php'; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="card-body">
+                <p style="color:var(--text-secondary); font-style:italic; margin:0; font-size:0.875rem;">
+                    No User Stories generated yet. Click the button to decompose this epic.
+                </p>
+            </div>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
+<!-- ===========================
+     Unlinked Stories (no parent work item)
+     =========================== -->
+<?php if (!empty($unlinkedStories)): ?>
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Unlinked Stories</h3>
     </div>
     <div class="card-body" style="padding:0;">
-        <div id="user-stories-list">
-            <?php foreach ($stories as $story): ?>
+        <div class="user-stories-list">
+            <?php foreach ($unlinkedStories as $story): ?>
                 <?php require __DIR__ . '/partials/user-story-row.php'; ?>
             <?php endforeach; ?>
         </div>
     </div>
 </div>
+<?php endif; ?>
+
+<!-- ===========================
+     Empty state (no work items defined yet)
+     =========================== -->
+<?php if (empty($work_items) && empty($stories)): ?>
+<div class="card mb-6">
+    <div class="card-body text-center" style="padding:3rem;">
+        <p class="text-muted" style="font-size:1.125rem;">
+            No user stories yet. Select work items above to decompose with AI, or add stories manually.
+        </p>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ===========================
      Export + Regenerate Sizing Section
      =========================== -->
+<?php if (!empty($stories)): ?>
 <div class="card mb-6">
     <div class="card-body export-section">
         <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
@@ -118,15 +192,6 @@
                 </button>
             </form>
         </div>
-    </div>
-</div>
-
-<?php else: ?>
-<div class="card mb-6">
-    <div class="card-body text-center" style="padding:3rem;">
-        <p class="text-muted" style="font-size:1.125rem;">
-            No user stories yet. Select work items above to decompose with AI, or add stories manually.
-        </p>
     </div>
 </div>
 <?php endif; ?>
