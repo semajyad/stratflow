@@ -183,7 +183,11 @@ class GitLinkService
     /**
      * Check whether a local item (user_story or hl_work_item) belongs to $this->orgId.
      *
-     * Used to scope updateStatusByRefUrl when org_id is set.
+     * Both user_stories and hl_work_items carry org membership through their
+     * project_id → projects.org_id relationship (neither table has a direct
+     * org_id column). We JOIN through projects to enforce tenancy.
+     *
+     * Used to scope updateStatusByRefUrl and linkAiMatched when org_id is set.
      *
      * @param string $localType 'user_story' or 'hl_work_item'
      * @param int    $localId   Local item primary key
@@ -202,7 +206,9 @@ class GitLinkService
         }
 
         $stmt = $this->db->query(
-            "SELECT 1 FROM `{$table}` WHERE id = :id AND org_id = :org_id LIMIT 1",
+            "SELECT 1 FROM `{$table}` t
+               JOIN projects p ON p.id = t.project_id
+              WHERE t.id = :id AND p.org_id = :org_id LIMIT 1",
             [':id' => $localId, ':org_id' => $this->orgId]
         );
 
@@ -255,6 +261,58 @@ class GitLinkService
 
         // Plain branch name
         return ['ref_type' => 'branch', 'ref_label' => $input];
+    }
+
+    /**
+     * Insert AI-matched links for a set of resolved local items.
+     *
+     * Called by GitPrMatcherService after Gemini identifies high-confidence
+     * matches. Skips items that don't belong to the current org or already
+     * have a link for the given ref URL. Sets ai_matched = 1.
+     *
+     * @param array  $items    Array of ['local_type' => string, 'local_id' => int]
+     * @param string $refUrl   Canonical PR/MR URL
+     * @param string $refTitle PR title used to build the display label
+     * @param string $provider 'github' or 'gitlab'
+     * @return int             Number of new links inserted
+     */
+    public function linkAiMatched(array $items, string $refUrl, string $refTitle, string $provider): int
+    {
+        $count = 0;
+        foreach ($items as $item) {
+            $localType = (string) ($item['local_type'] ?? '');
+            $localId   = (int) ($item['local_id'] ?? 0);
+
+            if ($localId === 0) {
+                continue;
+            }
+
+            if (!$this->localItemBelongsToOrg($localType, $localId)) {
+                continue;
+            }
+
+            $existing = $this->findExistingLink($localType, $localId, $refUrl);
+            if ($existing !== null) {
+                continue;
+            }
+
+            $refLabel = $this->buildRefLabel($refUrl, $refTitle);
+            $this->db->query(
+                "INSERT INTO story_git_links
+                    (local_type, local_id, provider, ref_type, ref_url, ref_label, status, ai_matched)
+                 VALUES
+                    (:lt, :lid, :prov, 'pr', :ref_url, :ref_label, 'open', 1)",
+                [
+                    ':lt'        => $localType,
+                    ':lid'       => $localId,
+                    ':prov'      => $provider,
+                    ':ref_url'   => $refUrl,
+                    ':ref_label' => $refLabel,
+                ]
+            );
+            $count++;
+        }
+        return $count;
     }
 
     // ===========================
