@@ -24,7 +24,7 @@ $hasSummary = !empty($document_summary);
     </h1>
     <div class="flex items-center gap-2">
         <?php if ($hasDiagram): ?>
-            <button type="button" id="generate-diagram-btn" class="btn btn-secondary btn-sm" onclick="generateDiagramAjax()">Regenerate</button>
+            <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-sm" onclick="generateDiagramAjax()">Regenerate</button>
         <?php endif; ?>
     </div>
 </div>
@@ -50,7 +50,7 @@ $hasSummary = !empty($document_summary);
         <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 460px; margin-left: auto; margin-right: auto;">
             AI will analyse your document and create a visual roadmap showing strategic initiatives, dependencies, and phases. This takes about 10-20 seconds.
         </p>
-        <button type="button" id="generate-diagram-btn" class="btn btn-primary btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
+        <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
             Generate Roadmap
         </button>
         <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
@@ -106,7 +106,7 @@ $hasSummary = !empty($document_summary);
                   data-loading="Generating OKRs..." data-overlay="AI is generating SMART objectives and key results. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-primary btn-sm"
+                <button type="submit" class="btn btn-ai btn-sm"
                         onclick="return confirm('Generate SMART OKRs for all nodes? This will replace existing OKRs.')">
                     Generate OKRs (AI)
                 </button>

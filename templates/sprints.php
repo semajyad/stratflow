@@ -172,7 +172,7 @@
                     <input type="number" name="capacity" class="form-control" min="1" required placeholder="e.g. 50">
                 </div>
                 <div class="sprint-gen-field" style="align-self: end;">
-                    <button type="submit" class="btn btn-primary">Generate Sprints</button>
+                    <button type="submit" class="btn btn-ai">Generate Sprints</button>
                 </div>
             </div>
         </form>
@@ -218,7 +218,7 @@
                       data-overlay="Allocating stories to sprints by priority, packing each sprint as close to capacity as possible.">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Auto-fill sprints with backlog stories by priority?')">Auto-Fill Sprints</button>
+                    <button type="submit" class="btn btn-ai btn-sm" onclick="return confirm('Auto-fill sprints with backlog stories by priority?')">Auto-Fill Sprints</button>
                 </form>
             <?php endif; ?>
         </div>

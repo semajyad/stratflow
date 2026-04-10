@@ -54,13 +54,13 @@
                 <?php endif; ?>
             </p>
         </div>
-        <div class="flex items-center gap-2" style="flex-wrap: wrap;">
+        <div class="flex items-center gap-2" style="flex-wrap: wrap; margin-left: auto;">
             <form method="POST" action="/app/work-items/generate"
                   data-loading="Generating work items..."
                   data-overlay="Generating work items from diagram. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-primary"
+                <button type="submit" class="btn btn-ai"
                         <?php if (!empty($work_items)): ?>
                         onclick="return confirm('This will replace all existing work items. Continue?')"
                         <?php endif; ?>>
@@ -73,7 +73,7 @@
                   data-overlay="Re-estimating sprint sizing for all work items using AI.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-secondary"
+                <button type="submit" class="btn btn-ai"
                         onclick="return confirm('Re-estimate sprint sizing for all work items using AI?')">
                     Regenerate Sizing
                 </button>

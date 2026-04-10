@@ -56,7 +56,7 @@ $formula = $isRice
             <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFrameworkInfo()">
                 Formula Info
             </button>
-            <button type="button" id="ai-suggest-btn" class="btn btn-primary btn-sm ai-suggest-btn" onclick="requestAiBaseline()">
+            <button type="button" id="ai-suggest-btn" class="btn btn-ai btn-sm ai-suggest-btn" onclick="requestAiBaseline()">
                 AI Suggest Scores
             </button>
         </div>

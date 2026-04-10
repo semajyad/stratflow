@@ -26,7 +26,7 @@
         <form method="POST" action="/app/governance/detect" class="inline-form" data-loading="Analysing for strategic drift…">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-primary btn-sm">Run Detection</button>
+            <button type="submit" class="btn btn-ai btn-sm">Run Detection</button>
         </form>
         <form method="POST" action="/app/governance/baseline" class="inline-form" data-loading="Creating baseline snapshot…">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">

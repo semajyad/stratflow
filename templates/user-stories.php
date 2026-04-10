@@ -56,7 +56,7 @@
                     </label>
                 <?php endforeach; ?>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm mt-2" onclick="return document.querySelectorAll('input[name=\'hl_item_ids[]\']:checked').length > 0 || (alert('Select at least one work item.'), false)">
+            <button type="submit" class="btn btn-ai btn-sm mt-2" onclick="return document.querySelectorAll('input[name=\'hl_item_ids[]\']:checked').length > 0 || (alert('Select at least one work item.'), false)">
                 Split to User Stories
             </button>
         </form>
@@ -112,7 +112,7 @@
                   data-overlay="Re-estimating story point sizes for all user stories using AI.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-secondary btn-sm"
+                <button type="submit" class="btn btn-ai btn-sm"
                         onclick="return confirm('Re-estimate story point sizes for all user stories using AI?')">
                     Regenerate Sizing
                 </button>
