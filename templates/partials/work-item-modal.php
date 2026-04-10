@@ -57,6 +57,9 @@
                     </button>
                 </div>
 
+                <!-- KR editor is injected here by openWorkItemModal() -->
+                <div id="kr-editor-mount"></div>
+
                 <?php require __DIR__ . '/git-links-field.php'; ?>
             </div>
             <div class="modal-footer">

@@ -20,6 +20,7 @@ use StratFlow\Models\DiagramNode;
 use StratFlow\Models\Document;
 use StratFlow\Models\HLItemDependency;
 use StratFlow\Models\HLWorkItem;
+use StratFlow\Models\KeyResult;
 use StratFlow\Models\Project;
 use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\StrategyDiagram;
@@ -89,10 +90,20 @@ class WorkItemController
         }
         unset($item);
 
+        // Build KR map: item_id => [kr rows]
+        $krsByItemId = [];
+        foreach ($workItems as $item) {
+            $itemKrs = KeyResult::findByWorkItemId($this->db, (int) $item['id'], $orgId);
+            if (!empty($itemKrs)) {
+                $krsByItemId[(int) $item['id']] = $itemKrs;
+            }
+        }
+
         $this->response->render('work-items', [
             'user'                 => $user,
             'project'              => $project,
             'work_items'           => $workItems,
+            'krs_by_item_id'       => $krsByItemId,
             'diagram'              => $diagram,
             'active_page'          => 'work-items',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),

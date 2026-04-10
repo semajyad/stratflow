@@ -127,6 +127,23 @@
      =========================== -->
 <?php require __DIR__ . '/partials/work-item-modal.php'; ?>
 
+<!-- ===========================
+     KR Editor Stash (hidden)
+     Pre-rendered per item; JS moves the matching one into the modal
+     when it opens, and returns it here when it closes.
+     =========================== -->
+<div id="kr-editor-stash" style="display:none;" aria-hidden="true">
+    <?php foreach ($work_items as $item): ?>
+        <div class="kr-editor-wrapper" data-item-id="<?= (int) $item['id'] ?>">
+            <?php
+                $work_item   = $item;
+                $key_results = $krs_by_item_id[(int) $item['id']] ?? [];
+                include __DIR__ . '/partials/kr-editor.php';
+            ?>
+        </div>
+    <?php endforeach; ?>
+</div>
+
 <?php else: ?>
 <div class="card">
     <div class="card-body text-center" style="padding:3rem;">
