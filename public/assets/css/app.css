@@ -4231,3 +4231,30 @@ details[open] > summary .trace-chevron {
     width: auto;
     display: inline-block;
 }
+
+/* === AI Action Buttons ==================================================== */
+
+.btn-ai {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-ai:hover,
+.btn-ai:focus {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+/* === Prioritisation — Sticky Score Column ================================= */
+
+#prioritisation-table th:last-child,
+#prioritisation-table td:last-child {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    z-index: 1;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.06);
+}
