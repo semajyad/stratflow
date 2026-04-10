@@ -257,4 +257,25 @@ class UserStoryTest extends TestCase
         $stories = UserStory::findByProjectId(self::$db, self::$projectId);
         $this->assertCount(0, $stories);
     }
+
+    #[Test]
+    public function canStoreAndRetrieveQualityScore(): void
+    {
+        $id = UserStory::create(self::$db, [
+            'project_id'        => self::$projectId,
+            'priority_number'   => 98,
+            'title'             => 'As a user I want quality scored, so that stories improve',
+            'quality_score'     => 62,
+            'quality_breakdown' => json_encode([
+                'value' => ['score' => 10, 'max' => 20, 'issues' => ['Outcome is vague']],
+            ]),
+        ]);
+
+        $row = UserStory::findById(self::$db, $id);
+        $this->assertNotNull($row);
+        $this->assertSame(62, (int) $row['quality_score']);
+        $this->assertStringContainsString('vague', $row['quality_breakdown']);
+
+        UserStory::delete(self::$db, $id);
+    }
 }

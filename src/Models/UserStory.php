@@ -38,11 +38,11 @@ class UserStory
             "INSERT INTO user_stories
                 (project_id, parent_hl_item_id, priority_number, title, description,
                  parent_link, team_assigned, size, blocked_by,
-                 acceptance_criteria, kr_hypothesis, status)
+                 acceptance_criteria, kr_hypothesis, quality_score, quality_breakdown, status)
              VALUES
                 (:project_id, :parent_hl_item_id, :priority_number, :title, :description,
                  :parent_link, :team_assigned, :size, :blocked_by,
-                 :acceptance_criteria, :kr_hypothesis, :status)",
+                 :acceptance_criteria, :kr_hypothesis, :quality_score, :quality_breakdown, :status)",
             [
                 ':project_id'          => $data['project_id'],
                 ':parent_hl_item_id'   => $data['parent_hl_item_id'] ?? null,
@@ -55,6 +55,8 @@ class UserStory
                 ':blocked_by'          => $data['blocked_by'] ?? null,
                 ':acceptance_criteria' => $data['acceptance_criteria'] ?? null,
                 ':kr_hypothesis'       => $data['kr_hypothesis'] ?? null,
+                ':quality_score'       => $data['quality_score'] ?? null,
+                ':quality_breakdown'   => $data['quality_breakdown'] ?? null,
                 ':status'              => $data['status'] ?? 'backlog',
             ]
         );
@@ -188,7 +190,8 @@ class UserStory
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'parent_hl_item_id',
         'parent_link', 'team_assigned', 'size', 'blocked_by',
-        'acceptance_criteria', 'kr_hypothesis', 'requires_review', 'status', 'last_jira_sync_at',
+        'acceptance_criteria', 'kr_hypothesis', 'quality_score', 'quality_breakdown',
+        'requires_review', 'status', 'last_jira_sync_at',
     ];
 
     public static function update(Database $db, int $id, array $data): void
