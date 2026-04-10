@@ -109,33 +109,6 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 </div>
 
 <!-- ===========================
-     Risk List
-     =========================== -->
-<?php if (!empty($risks)): ?>
-<div class="card mb-6">
-    <div class="card-header">
-        <h3>Project Risks (<?= count($risks) ?>)</h3>
-    </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="risk-list">
-            <?php foreach ($risks as $risk): ?>
-                <?php require __DIR__ . '/partials/risk-row.php'; ?>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
-<?php else: ?>
-<div class="card mb-6">
-    <div class="card-body text-center" style="padding: 3rem;">
-        <p class="text-muted" style="font-size: 1.125rem;">
-            No risks identified yet. Use <strong>Auto-Generate Risks</strong> to analyse your work items,
-            or <strong>Add Risk Manually</strong>.
-        </p>
-    </div>
-</div>
-<?php endif; ?>
-
-<!-- ===========================
      5x5 Heatmap
      =========================== -->
 <div class="card mb-6">
@@ -184,6 +157,33 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
         </div>
     </div>
 </div>
+
+<!-- ===========================
+     Risk List
+     =========================== -->
+<?php if (!empty($risks)): ?>
+<div class="card mb-6">
+    <div class="card-header">
+        <h3>Project Risks (<?= count($risks) ?>)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="risk-list">
+            <?php foreach ($risks as $risk): ?>
+                <?php require __DIR__ . '/partials/risk-row.php'; ?>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+<?php else: ?>
+<div class="card mb-6">
+    <div class="card-body text-center" style="padding: 3rem;">
+        <p class="text-muted" style="font-size: 1.125rem;">
+            No risks identified yet. Use <strong>Auto-Generate Risks</strong> to analyse your work items,
+            or <strong>Add Risk Manually</strong>.
+        </p>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
@@ -241,6 +241,8 @@ function clearHeatmapFilter() {
     document.querySelectorAll('.risk-row').forEach(function(row) { row.style.display = ''; });
     var banner = document.getElementById('heatmap-filter-banner');
     if (banner) banner.remove();
+    var riskList = document.querySelector('.risk-list');
+    if (riskList) riskList.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 </script>
 

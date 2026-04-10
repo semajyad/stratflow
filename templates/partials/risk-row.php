@@ -17,7 +17,10 @@ $linkedItemIds = $risk['linked_item_ids'] ?? [];
      data-impact="<?= (int) $risk['impact'] ?>"
      data-linked-ids="<?= htmlspecialchars(json_encode(array_map('intval', $linkedItemIds))) ?>">
     <div class="risk-info">
-        <strong><?= htmlspecialchars($risk['title']) ?></strong>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <span class="risk-rpn">RPN: <?= $rpn ?></span>
+            <strong><?= htmlspecialchars($risk['title']) ?></strong>
+        </div>
         <?php if (!empty($risk['description'])): ?>
             <p class="risk-desc-preview"><?= htmlspecialchars(mb_substr($risk['description'], 0, 150)) ?><?= mb_strlen($risk['description']) > 150 ? '...' : '' ?></p>
         <?php endif; ?>
@@ -30,7 +33,6 @@ $linkedItemIds = $risk['linked_item_ids'] ?? [];
     <div class="risk-scores">
         <span class="risk-badge likelihood-<?= (int) $risk['likelihood'] ?>">L: <?= (int) $risk['likelihood'] ?></span>
         <span class="risk-badge impact-<?= (int) $risk['impact'] ?>">I: <?= (int) $risk['impact'] ?></span>
-        <span class="risk-rpn">RPN: <?= $rpn ?></span>
     </div>
     <div class="risk-mitigation">
         <?php if (!empty($risk['mitigation'])): ?>
