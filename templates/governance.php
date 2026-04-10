@@ -23,12 +23,12 @@
     </h1>
     <div class="flex items-center gap-2">
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <form method="POST" action="/app/governance/detect" class="inline-form">
+        <form method="POST" action="/app/governance/detect" class="inline-form" data-loading="Analysing for strategic drift…">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <button type="submit" class="btn btn-primary btn-sm">Run Detection</button>
         </form>
-        <form method="POST" action="/app/governance/baseline" class="inline-form">
+        <form method="POST" action="/app/governance/baseline" class="inline-form" data-loading="Creating baseline snapshot…">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Create a new baseline snapshot of the current project state?')">Create Baseline</button>
