@@ -103,7 +103,7 @@ function copyToken() {
     <div class="card-body">
         <h2 class="card-title" style="font-size:1rem;margin-bottom:1rem;">Create new token</h2>
         <form method="POST" action="/app/account/tokens" style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
             <div style="flex:1;min-width:200px;">
                 <label for="token-name" style="display:block;font-size:0.875rem;font-weight:600;margin-bottom:0.25rem;">Token name</label>
                 <input
@@ -161,7 +161,7 @@ function copyToken() {
                             <td style="padding:0.5rem 0.75rem;text-align:right;">
                                 <form method="POST" action="/app/account/tokens/<?= (int) $token['id'] ?>/revoke"
                                       onsubmit="return confirm('Revoke this token? Any tools using it will stop working immediately.');">
-                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
                                     <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
                                 </form>
                             </td>
