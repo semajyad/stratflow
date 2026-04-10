@@ -96,6 +96,13 @@ class IntegrationController
         // GitHub App installations (multiple per org are allowed)
         $githubInstalls = Integration::findActiveGithubByOrg($this->db, $orgId);
 
+        // Attach repo names to each install for the hover tooltip
+        foreach ($githubInstalls as &$install) {
+            $repos = IntegrationRepo::findByIntegration($this->db, (int) $install['id']);
+            $install['repo_names'] = array_column($repos, 'repo_full_name');
+        }
+        unset($install);
+
         $githubAppSlug = $_ENV['GITHUB_APP_SLUG'] ?? '';
 
         $this->response->render('admin/integrations', [

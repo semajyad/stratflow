@@ -194,8 +194,32 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                         <td style="padding: 0.6rem 0.5rem;">
                             <strong>@<?= htmlspecialchars($install['account_login'] ?? '') ?></strong>
                         </td>
-                        <td style="padding: 0.6rem 0.5rem; color: var(--text-muted);">
-                            <?= (int) $install['repo_count'] ?> repo<?= (int) $install['repo_count'] === 1 ? '' : 's' ?>
+                        <td style="padding: 0.6rem 0.5rem;">
+                            <?php
+                                $repoCount = (int) $install['repo_count'];
+                                $repoNames = $install['repo_names'] ?? [];
+                            ?>
+                            <?php if ($repoCount > 0 && !empty($repoNames)): ?>
+                            <span class="repo-count-badge" tabindex="0"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; cursor: default;
+                                         background: var(--primary-light, #e8f0fe); color: var(--primary, #1a73e8);
+                                         border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600;
+                                         position: relative; user-select: none;">
+                                <?= $repoCount ?> repo<?= $repoCount === 1 ? '' : 's' ?>
+                                <span class="repo-tooltip"
+                                      style="display: none; position: absolute; top: calc(100% + 6px); left: 0;
+                                             min-width: 220px; max-width: 340px; background: #1e2330; color: #e2e8f0;
+                                             border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem;
+                                             font-weight: 400; line-height: 1.6; z-index: 100;
+                                             box-shadow: 0 4px 16px rgba(0,0,0,0.25); white-space: nowrap;">
+                                    <?php foreach ($repoNames as $rn): ?>
+                                        <span style="display: block;"><?= htmlspecialchars($rn) ?></span>
+                                    <?php endforeach; ?>
+                                </span>
+                            </span>
+                            <?php else: ?>
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">0 repos</span>
+                            <?php endif; ?>
                         </td>
                         <td style="padding: 0.6rem 0.5rem; text-align: right; white-space: nowrap;">
                             <?php if ($install['installation_id']): ?>
@@ -332,6 +356,16 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 </section>
 
 <script>
+// Repo count badge hover tooltip
+document.querySelectorAll('.repo-count-badge').forEach(function(badge) {
+    var tip = badge.querySelector('.repo-tooltip');
+    if (!tip) { return; }
+    badge.addEventListener('mouseenter', function() { tip.style.display = 'block'; });
+    badge.addEventListener('mouseleave', function() { tip.style.display = 'none'; });
+    badge.addEventListener('focus',      function() { tip.style.display = 'block'; });
+    badge.addEventListener('blur',       function() { tip.style.display = 'none'; });
+});
+
 /**
  * Toggle reveal/mask of a Git webhook secret.
  *

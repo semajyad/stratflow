@@ -7,11 +7,16 @@
 -- An org can have many GitHub App installations (one per GitHub account).
 -- (provider, installation_id) is globally unique; (provider, org_id) is not.
 
+-- Step 1: Add new columns and indexes (skipped on re-deploy if already present — error 1060/1061).
 ALTER TABLE integrations
   ADD COLUMN installation_id BIGINT UNSIGNED NULL AFTER config_json,
   ADD COLUMN account_login   VARCHAR(255)    NULL AFTER installation_id,
   ADD UNIQUE KEY uk_provider_installation (provider, installation_id),
-  ADD KEY ix_org_provider_status (org_id, provider, status),
+  ADD KEY ix_org_provider_status (org_id, provider, status);
+
+-- Step 2: Extend status enum — kept as a separate statement so it always runs
+-- even when Step 1 is skipped on an already-migrated database.
+ALTER TABLE integrations
   MODIFY COLUMN status ENUM('active','paused','error','disconnected','inactive','revoked')
     NOT NULL DEFAULT 'disconnected';
 
