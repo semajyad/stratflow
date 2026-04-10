@@ -46,4 +46,37 @@ Return ONLY a JSON object: {"size": <number>, "reasoning": "<1 sentence explanat
 Story Title: {title}
 Story Description: {description}
 PROMPT;
+
+    public const QUALITY_PROMPT = <<<'PROMPT'
+You are a strict Agile quality auditor. Score the following user story across exactly 6
+dimensions. Be strict — vague outcomes, missing Given/When/Then, or absent KR references
+must lose points.
+
+Dimensions and max scores:
+- invest (max 20): Check all 6 INVEST criteria — Independent, Negotiable, Valuable, Estimable,
+  Small (~3 days), Testable. Deduct points for each criterion not met.
+- acceptance_criteria (max 20): Are there 2+ Given/When/Then clauses? Are they specific and
+  testable? Missing or vague ACs score low.
+- value (max 20): Does the "so that..." end with a measurable business outcome with numbers?
+  Stories not in "As a [role], I want [action], so that [measurable outcome]" format score ≤5.
+- kr_linkage (max 20): Does the story reference a specific Key Result with a predicted %
+  or unit contribution? No reference = 0. Vague reference = ≤8.
+- smart (max 10): Is the story objective Specific, Measurable, Achievable, Relevant, Time-bound?
+  Deduct 2 points per missing criterion.
+- splitting (max 10): Is a named splitting pattern present and appropriate?
+  No pattern named = 0.
+
+Return ONLY valid JSON — no markdown fences, no explanation. Shape:
+{
+  "overall": <integer 0-100>,
+  "invest":              {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "acceptance_criteria": {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "value":               {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "kr_linkage":          {"score": <int>, "max": 20, "issues": [<string>, ...]},
+  "smart":               {"score": <int>, "max": 10, "issues": [<string>, ...]},
+  "splitting":           {"score": <int>, "max": 10, "issues": [<string>, ...]}
+}
+"issues" is an array of strings describing problems (empty array [] if none).
+"overall" MUST equal the sum of all dimension scores.
+PROMPT;
 }
