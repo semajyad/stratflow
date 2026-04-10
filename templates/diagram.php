@@ -202,9 +202,9 @@ $hasSummary = !empty($document_summary);
             <input type="text" id="node-okr-objective" class="form-control"
                    placeholder="e.g. Launch AU market presence with 3 pilots by Q3">
         </div>
-        <div class="form-group" style="margin:0;">
+        <div class="form-group" style="margin:0; flex:1; display:flex; flex-direction:column;">
             <label for="node-okr-keyresults" style="font-weight:600;">Key Results:</label>
-            <textarea id="node-okr-keyresults" class="form-control" rows="5"
+            <textarea id="node-okr-keyresults" class="form-control" style="flex:1; min-height:200px; resize:vertical;"
                       placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2"></textarea>
         </div>
     </div>

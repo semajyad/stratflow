@@ -1496,46 +1496,6 @@ function attachDiagramNodeClicks(container) {
             }
         });
 
-        // Inject key badge into top-left corner — only once per key.
-        if (badgedKeys[nodeKey]) return;
-        badgedKeys[nodeKey] = true;
-
-        // Use getBBox() so it works for rect, path, polygon — Mermaid v11 uses <path>
-        // for rounded rects. Must query the first shape child.
-        var shapeEl = el.querySelector('rect, path, polygon, ellipse, circle');
-        if (!shapeEl) return;
-
-        var bbox;
-        try { bbox = shapeEl.getBBox(); } catch (e) { return; }
-        if (!bbox || bbox.width === 0) return;
-
-        var badgeW = Math.max(20, nodeKey.length * 7 + 8);
-        var badgeH = 17;
-        var bx = bbox.x + 5;
-        var by = bbox.y + 4;
-
-        var bg = document.createElementNS(ns, 'rect');
-        bg.setAttribute('x', bx);
-        bg.setAttribute('y', by);
-        bg.setAttribute('width', badgeW);
-        bg.setAttribute('height', badgeH);
-        bg.setAttribute('rx', 3);
-        bg.setAttribute('fill', '#4f46e5');
-        bg.setAttribute('pointer-events', 'none');
-
-        var txt = document.createElementNS(ns, 'text');
-        txt.setAttribute('x', bx + badgeW / 2);
-        txt.setAttribute('y', by + badgeH - 4);
-        txt.setAttribute('text-anchor', 'middle');
-        txt.setAttribute('dominant-baseline', 'auto');
-        txt.setAttribute('font-size', '10');
-        txt.setAttribute('font-weight', '700');
-        txt.setAttribute('fill', '#ffffff');
-        txt.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
-        txt.setAttribute('pointer-events', 'none');
-        txt.textContent = nodeKey;
-
-        el.appendChild(bg);
-        el.appendChild(txt);
+        // (badges removed — nodes are clickable via cursor:pointer)
     });
 }

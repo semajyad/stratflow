@@ -1718,6 +1718,14 @@ tbody tr:hover {
     height: auto;
 }
 
+/* Darken mermaid node text */
+#mermaid-output svg .label,
+#mermaid-output svg .nodeLabel,
+#mermaid-output svg text {
+    fill: #1e1b4b !important;
+    color: #1e1b4b !important;
+}
+
 #mermaid-output .error {
     color: var(--danger);
     font-size: 0.9rem;
