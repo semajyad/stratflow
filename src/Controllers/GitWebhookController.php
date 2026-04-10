@@ -273,8 +273,8 @@ class GitWebhookController
 
         $gemini = $this->makeGemini();
 
-        // AI PR matching: fires on opened/reopened with no explicit tag found
-        if ($affected === 0 && in_array($event['action'], ['opened', 'reopened'], true)) {
+        // AI PR matching: fires on opened/reopened/synchronize with no explicit tag found
+        if ($affected === 0 && in_array($event['action'], ['opened', 'reopened', 'synchronize'], true)) {
             $matcher = new GitPrMatcherService($this->db, $gemini);
             $matcher->matchAndLink(
                 $event['title'],
@@ -507,7 +507,7 @@ class GitWebhookController
      */
     private function dispatchEvent(GitLinkService $service, array $event, string $provider): int
     {
-        if ($event['action'] === 'opened' || $event['action'] === 'reopened') {
+        if (in_array($event['action'], ['opened', 'reopened', 'synchronize'], true)) {
             return $service->linkFromPrBody(
                 $event['body'],
                 $event['pr_url'],
@@ -523,7 +523,6 @@ class GitWebhookController
             return $service->updateStatusByRefUrl($event['pr_url'], $status);
         }
 
-        // synchronize — no link changes needed for MVP
         return 0;
     }
 }

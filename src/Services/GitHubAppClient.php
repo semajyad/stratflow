@@ -231,6 +231,7 @@ class GitHubAppClient
             'pr_url'         => $pr['html_url'] ?? '',
             'title'          => $pr['title'] ?? '',
             'body'           => $pr['body'] ?? '',
+            'branch'         => $pr['head']['ref'] ?? '',
             'author'         => $pr['user']['login'] ?? null,
             'repo_github_id' => (int) ($payload['repository']['id'] ?? 0),
         ];
