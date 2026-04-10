@@ -203,6 +203,8 @@ $s = $settings;
                     'feature_executive'      => ['Executive Dashboard', 'Cross-project executive rollup and insights'],
                     'feature_xero'           => ['Xero Integration', 'Invoice management via Xero'],
                     'feature_jira'           => ['Jira Integration', 'Two-way sync with Jira boards'],
+                    'feature_github'         => ['GitHub Integration', 'Link pull requests and commits to work items'],
+                    'feature_gitlab'         => ['GitLab Integration', 'Link merge requests and commits to work items'],
                 ];
                 ?>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
