@@ -64,7 +64,9 @@
     <div class="card-body">
         <div class="quick-links">
             <a href="/superadmin/organisations" class="btn btn-primary">Manage Organisations</a>
+            <a href="/superadmin/defaults" class="btn btn-primary">App Wide Defaults</a>
             <a href="/superadmin/personas" class="btn btn-primary">Manage Default Personas</a>
+            <a href="/superadmin/audit-logs" class="btn btn-secondary">Audit Logs</a>
         </div>
     </div>
 </section>

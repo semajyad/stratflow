@@ -21,6 +21,7 @@ use StratFlow\Models\Organisation;
 use StratFlow\Models\PersonaMember;
 use StratFlow\Models\PersonaPanel;
 use StratFlow\Models\Subscription;
+use StratFlow\Models\SystemSettings;
 use StratFlow\Models\User;
 use StratFlow\Services\AuditLogger;
 
@@ -242,7 +243,8 @@ class SuperadminController
 
             case 'edit':
                 $newName       = trim((string) $this->request->post('org_name', ''));
-                $newPlanType   = trim((string) $this->request->post('plan_type', 'product'));
+                $newPlanType   = in_array($this->request->post('plan_type'), ['product', 'consultancy'], true)
+                                 ? $this->request->post('plan_type') : 'product';
                 $newSeats      = max(1, (int) $this->request->post('seat_limit', 5));
                 $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoiced';
 
@@ -250,37 +252,37 @@ class SuperadminController
                     Organisation::update($this->db, $orgId, ['name' => $newName]);
                 }
 
+                // Derive new stripe_subscription_id from billing method:
+                // invoiced → manual_ prefix; stripe → empty (Stripe connects separately)
+                $newSubId = $billingMethod === 'invoiced' ? 'manual_' . time() : '';
+
                 $sub = Subscription::findByOrgId($this->db, $orgId);
                 if ($sub) {
-                    Subscription::updateSeatLimit($this->db, $orgId, $newSeats);
-                    if (in_array($newPlanType, ['product', 'consultancy'], true)) {
-                        $this->db->query(
-                            "UPDATE subscriptions SET plan_type = :plan WHERE org_id = :org",
-                            [':plan' => $newPlanType, ':org' => $orgId]
-                        );
-                    }
-                    // Billing method: manual_ prefix = invoiced, real Stripe ID = stripe
-                    $currentSubId = $sub['stripe_subscription_id'] ?? '';
-                    $isCurrentlyInvoiced = empty($currentSubId) || str_starts_with($currentSubId, 'manual_');
-                    if ($billingMethod === 'invoiced' && !$isCurrentlyInvoiced) {
-                        $this->db->query(
-                            "UPDATE subscriptions SET stripe_subscription_id = :sid WHERE org_id = :org",
-                            [':sid' => 'manual_' . time(), ':org' => $orgId]
-                        );
-                    }
+                    $this->db->query(
+                        "UPDATE subscriptions
+                         SET plan_type = :plan, user_seat_limit = :seats, stripe_subscription_id = :sub_id
+                         WHERE org_id = :org
+                         ORDER BY id DESC LIMIT 1",
+                        [
+                            ':plan'   => $newPlanType,
+                            ':seats'  => $newSeats,
+                            ':sub_id' => $newSubId,
+                            ':org'    => $orgId,
+                        ]
+                    );
                 } else {
                     Subscription::create($this->db, [
-                        'org_id' => $orgId,
-                        'stripe_subscription_id' => $billingMethod === 'stripe' ? '' : 'manual_' . time(),
-                        'plan_type' => $newPlanType,
-                        'status' => 'active',
-                        'started_at' => date('Y-m-d H:i:s'),
+                        'org_id'                 => $orgId,
+                        'stripe_subscription_id' => $newSubId,
+                        'plan_type'              => $newPlanType,
+                        'status'                 => 'active',
+                        'started_at'             => date('Y-m-d H:i:s'),
                     ]);
                     Subscription::updateSeatLimit($this->db, $orgId, $newSeats);
                 }
 
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
-                    'action' => 'org_edited', 'org_id' => $orgId, 'org_name' => $newName ?: $org['name'],
+                    'action'    => 'org_edited', 'org_id' => $orgId, 'org_name' => $newName ?: $org['name'],
                     'plan_type' => $newPlanType, 'seats' => $newSeats, 'billing' => $billingMethod,
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . ($newName ?: $org['name']) . '" updated.';
@@ -354,6 +356,63 @@ class SuperadminController
      *
      * Seeds the default panels if none exist yet.
      */
+
+    // =========================================================================
+    // APP-WIDE DEFAULTS
+    // =========================================================================
+
+    /**
+     * Render the app-wide defaults configuration page.
+     */
+    public function defaults(): void
+    {
+        $user     = $this->auth->user();
+        $settings = SystemSettings::get($this->db);
+
+        $this->response->render('superadmin/defaults', [
+            'user'          => $user,
+            'settings'      => $settings,
+            'active_page'   => 'superadmin',
+            'flash_message' => $_SESSION['flash_message'] ?? null,
+            'flash_error'   => $_SESSION['flash_error']   ?? null,
+        ], 'app');
+
+        unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Save app-wide defaults.
+     */
+    public function saveDefaults(): void
+    {
+        $user = $this->auth->user();
+
+        $data = [
+            'ai_provider'            => trim((string) $this->request->post('ai_provider', 'google')),
+            'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-2.5-flash')),
+            'default_seat_limit'     => max(1, (int) $this->request->post('default_seat_limit', 5)),
+            'default_plan_type'      => $this->request->post('default_plan_type', 'product'),
+            'default_billing_method' => $this->request->post('default_billing_method', 'invoiced'),
+            'feature_sounding_board' => (bool) $this->request->post('feature_sounding_board', false),
+            'feature_executive'      => (bool) $this->request->post('feature_executive', false),
+            'feature_xero'           => (bool) $this->request->post('feature_xero', false),
+            'feature_jira'           => (bool) $this->request->post('feature_jira', false),
+            'quality_threshold'      => min(100, max(0, (int) $this->request->post('quality_threshold', 70))),
+            'quality_enforcement'    => $this->request->post('quality_enforcement', 'warn'),
+            'support_email'          => trim((string) $this->request->post('support_email', '')),
+            'mail_from_name'         => trim((string) $this->request->post('mail_from_name', 'StratFlow')),
+        ];
+
+        SystemSettings::save($this->db, $data);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'system_defaults_updated']);
+
+        $_SESSION['flash_message'] = 'App-wide defaults saved.';
+        $this->response->redirect('/superadmin/defaults');
+    }
+
     public function personas(): void
     {
         $user   = $this->auth->user();
