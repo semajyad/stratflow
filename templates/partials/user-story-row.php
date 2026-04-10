@@ -48,6 +48,10 @@
         <?php endif; ?>
     </div>
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
+    <?php if ($story['quality_score'] !== null): ?>
+    <?php $qs = (int) $story['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
+    <span class="quality-pill" style="background:<?= $qc ?>;" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>
     <?php
         $row_edit_class     = 'edit-story-btn';
@@ -86,5 +90,48 @@
         </div>
         <?php endif; ?>
     </div>
+    <?php
+    $storyBreakdown = null;
+    if (!empty($story['quality_breakdown'])) {
+        $storyBreakdown = json_decode($story['quality_breakdown'], true);
+    }
+    ?>
+    <?php if ($storyBreakdown !== null): ?>
+    <div class="story-expand-section">
+        <span class="story-expand-label">Quality Breakdown</span>
+        <div class="quality-breakdown">
+            <?php
+            $dimLabels = [
+                'invest'              => 'INVEST',
+                'acceptance_criteria' => 'Acceptance Criteria',
+                'value'               => 'Value',
+                'kr_linkage'          => 'KR Linkage',
+                'smart'               => 'SMART',
+                'splitting'           => 'Splitting',
+            ];
+            foreach ($dimLabels as $dimKey => $dimLabel):
+                if (!isset($storyBreakdown[$dimKey])) continue;
+                $dim      = $storyBreakdown[$dimKey];
+                $dimScore = (int) ($dim['score'] ?? 0);
+                $dimMax   = (int) ($dim['max'] ?? 1);
+                $dimPct   = $dimMax > 0 ? (int) round($dimScore / $dimMax * 100) : 0;
+                $dimColor = $dimPct >= 80 ? '#10b981' : ($dimPct >= 50 ? '#f59e0b' : '#ef4444');
+            ?>
+            <div class="quality-dim">
+                <div class="quality-dim-header">
+                    <span class="quality-dim-label"><?= htmlspecialchars($dimLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="quality-dim-score" style="color:<?= $dimColor ?>;"><?= $dimScore ?>/<?= $dimMax ?></span>
+                </div>
+                <div class="quality-dim-bar-track">
+                    <div class="quality-dim-bar-fill" style="width:<?= $dimPct ?>%; background:<?= $dimColor ?>;"></div>
+                </div>
+                <?php foreach ($dim['issues'] ?? [] as $issue): ?>
+                <div class="quality-dim-issue">&#8627; <?= htmlspecialchars((string) $issue, ENT_QUOTES, 'UTF-8') ?></div>
+                <?php endforeach; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 </details>
