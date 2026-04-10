@@ -33,7 +33,7 @@
                 <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
                 <?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
                 <div class="topbar-right">
-                    <img src="/assets/images/ThreePoints%20-%20final%20logo.png" alt="ThreePoints" class="topbar-threepoints-logo">
+                    <img src="/assets/images/threepoints-logo.png" alt="ThreePoints" class="topbar-threepoints-logo">
                     <span class="user-name"><?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></span>
                     <form method="POST" action="/logout" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">

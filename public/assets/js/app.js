@@ -473,28 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
         riskImpact.addEventListener('change', updateRpnPreview);
     }
 
-    // ===========================
-    // Risks: Heatmap Cell Click Highlighting
-    // ===========================
-    document.querySelectorAll('.heatmap-cell.has-risks').forEach(function(cell) {
-        cell.addEventListener('click', function() {
-            var l = cell.dataset.likelihood;
-            var i = cell.dataset.impact;
-
-            // Remove previous highlights
-            document.querySelectorAll('.risk-row').forEach(function(row) {
-                row.classList.remove('risk-highlighted');
-            });
-
-            // Highlight matching risks
-            document.querySelectorAll('.risk-row').forEach(function(row) {
-                if (row.dataset.likelihood === l && row.dataset.impact === i) {
-                    row.classList.add('risk-highlighted');
-                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            });
-        });
-    });
+    // Heatmap row highlighting is handled inline in risks.php (filterHeatmapRisks / clearHeatmapFilter)
 
     // ===========================
     // User Stories: SortableJS Drag & Drop

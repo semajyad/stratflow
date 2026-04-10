@@ -206,11 +206,17 @@ function filterHeatmapRisks(likelihood, impact) {
     var selected = document.querySelector('.heatmap-cell[data-likelihood="' + likelihood + '"][data-impact="' + impact + '"]');
     if (selected) selected.classList.add('heatmap-cell--selected');
 
-    // Filter risk rows
+    // Filter and highlight matching risk rows
     document.querySelectorAll('.risk-row').forEach(function(row) {
         var l = parseInt(row.dataset.likelihood || 0, 10);
         var i = parseInt(row.dataset.impact || 0, 10);
-        row.style.display = (l === likelihood && i === impact) ? '' : 'none';
+        var match = (l === likelihood && i === impact);
+        row.style.display = match ? '' : 'none';
+        if (match) {
+            row.classList.add('risk-highlighted');
+        } else {
+            row.classList.remove('risk-highlighted');
+        }
     });
 
     // Show filter banner
@@ -238,7 +244,10 @@ function clearHeatmapFilter() {
     document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
         cell.classList.remove('heatmap-cell--selected');
     });
-    document.querySelectorAll('.risk-row').forEach(function(row) { row.style.display = ''; });
+    document.querySelectorAll('.risk-row').forEach(function(row) {
+        row.style.display = '';
+        row.classList.remove('risk-highlighted');
+    });
     var banner = document.getElementById('heatmap-filter-banner');
     if (banner) banner.remove();
     var riskList = document.querySelector('.risk-list');
