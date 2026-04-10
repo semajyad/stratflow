@@ -316,6 +316,17 @@ class ExecutiveController
             $krsByItemId[(int) $kr['work_item_id']][] = $kr;
         }
 
+        // Contributions per KR (for the expandable PR list)
+        $contributionsByKrId = [];
+        foreach ($krRows as $kr) {
+            $contribs = \StratFlow\Models\KeyResultContribution::findByKeyResultId(
+                $this->db, (int) $kr['id'], $orgId
+            );
+            if (!empty($contribs)) {
+                $contributionsByKrId[(int) $kr['id']] = $contribs;
+            }
+        }
+
         // Risks per work item (via risk_item_links)
         $riskRows = $this->db->query(
             "SELECT ril.work_item_id, r.title, r.likelihood, r.impact,
@@ -338,9 +349,12 @@ class ExecutiveController
                     blocked.title AS blocked_title, blocked.status AS blocked_status
                FROM hl_item_dependencies hid
                JOIN hl_work_items blocker ON hid.depends_on_id = blocker.id
-               JOIN hl_work_items blocked  ON hid.item_id = blocked.id
-              WHERE blocker.project_id = :pid OR blocked.project_id = :pid",
-            [':pid' => $id]
+               JOIN projects bp ON blocker.project_id = bp.id
+               JOIN hl_work_items blocked ON hid.item_id = blocked.id
+               JOIN projects bpd ON blocked.project_id = bpd.id
+              WHERE (blocker.project_id = :pid OR blocked.project_id = :pid)
+                AND bp.org_id = :oid AND bpd.org_id = :oid",
+            [':pid' => $id, ':oid' => $orgId]
         )->fetchAll();
         $depsByItemId = [];
         foreach ($depRows as $dep) {
@@ -358,17 +372,18 @@ class ExecutiveController
         }
 
         $this->response->render('executive-project', [
-            'user'           => $user,
-            'active_page'    => 'executive',
-            'project'        => $project,
-            'projects'       => $projects,
-            'okr_items'      => $okrItems,
-            'krs_by_item_id' => $krsByItemId,
-            'risks_by_item'  => $risksByItemId,
-            'deps_by_item'   => $depsByItemId,
-            'health_counts'  => $healthCounts,
-            'flash_message'  => $_SESSION['flash_message'] ?? null,
-            'flash_error'    => $_SESSION['flash_error']   ?? null,
+            'user'                   => $user,
+            'active_page'            => 'executive',
+            'project'                => $project,
+            'projects'               => $projects,
+            'okr_items'              => $okrItems,
+            'krs_by_item_id'         => $krsByItemId,
+            'risks_by_item'          => $risksByItemId,
+            'deps_by_item'           => $depsByItemId,
+            'health_counts'          => $healthCounts,
+            'contributions_by_kr_id' => $contributionsByKrId,
+            'flash_message'          => $_SESSION['flash_message'] ?? null,
+            'flash_error'            => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

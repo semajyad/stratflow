@@ -129,6 +129,35 @@
                     &ldquo;<?= htmlspecialchars($kr['ai_momentum'], ENT_QUOTES, 'UTF-8') ?>&rdquo;
                 </p>
                 <?php endif; ?>
+<?php
+$krContribs = $contributions_by_kr_id[(int) $kr['id']] ?? [];
+if (!empty($krContribs)):
+?>
+<details style="margin-top: 0.375rem;">
+    <summary style="font-size: 0.75rem; color: #6366f1; cursor: pointer; list-style: none;">
+        + <?= count($krContribs) ?> contributing PR<?= count($krContribs) !== 1 ? 's' : '' ?>
+    </summary>
+    <div style="margin-top: 0.375rem; padding-left: 0.5rem; border-left: 2px solid #e5e7eb;">
+        <?php foreach ($krContribs as $contrib): ?>
+        <div style="font-size: 0.75rem; color: #374151; margin-bottom: 0.25rem;">
+            <a href="<?= htmlspecialchars($contrib['ref_url'], ENT_QUOTES, 'UTF-8') ?>"
+               target="_blank" rel="noopener noreferrer"
+               style="color: #6366f1; text-decoration: none;">
+                <?= htmlspecialchars($contrib['ref_label'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+            </a>
+            <span style="display:inline-block; background:#f3f4f6; border-radius:999px; padding:0 6px; margin-left:4px; font-size:0.7rem; font-weight:600;">
+                <?= (int) $contrib['ai_relevance_score'] ?>/10
+            </span>
+            <?php if (!empty($contrib['ai_rationale'])): ?>
+            <span style="color: #9ca3af; font-style: italic; margin-left: 4px;">
+                — <?= htmlspecialchars($contrib['ai_rationale'], ENT_QUOTES, 'UTF-8') ?>
+            </span>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</details>
+<?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>
