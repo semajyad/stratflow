@@ -52,10 +52,10 @@ $icon = function (string $name): string {
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <a href="/app/home" class="sidebar-brand-full" aria-label="StratFlow home">
-            <img src="/assets/images/stratflow-logo.png" alt="StratFlow" class="sidebar-brand-logo">
+            <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow" class="sidebar-brand-logo">
         </a>
         <a href="/app/home" class="sidebar-brand-mark" aria-label="StratFlow home">
-            <img src="/assets/images/stratflow-logo.png" alt="SF" class="sidebar-brand-mark-logo">
+            <img src="/assets/images/StratFlow_logo.webp" alt="SF" class="sidebar-brand-mark-logo">
         </a>
     </div>
     <div class="sidebar-project">
