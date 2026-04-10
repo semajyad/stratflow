@@ -724,7 +724,7 @@ class FileProcessor
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
                 "Content-Type: multipart/related; boundary={$boundary}",
-                "Content-Length: " . strlen($body),
+                "Content-Length: " . mb_strlen($body, '8bit'),
             ],
             CURLOPT_TIMEOUT        => 300,
         ]);
