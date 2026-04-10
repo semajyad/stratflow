@@ -8,7 +8,7 @@
 -- cascading a delete.
 
 ALTER TABLE user_stories
-  ADD COLUMN assignee_user_id BIGINT UNSIGNED NULL AFTER team_assigned,
+  ADD COLUMN assignee_user_id INT UNSIGNED NULL AFTER team_assigned,
   ADD CONSTRAINT fk_user_stories_assignee
     FOREIGN KEY (assignee_user_id) REFERENCES users(id) ON DELETE SET NULL,
   ADD KEY ix_user_stories_assignee (assignee_user_id);

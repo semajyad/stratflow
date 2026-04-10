@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS user_stories (
     description TEXT NULL,
     parent_link VARCHAR(255) NULL,
     team_assigned       VARCHAR(255)    NULL,
-    assignee_user_id    BIGINT UNSIGNED NULL,
+    assignee_user_id    INT UNSIGNED NULL,
     size INT UNSIGNED NULL,
     blocked_by INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -11,9 +11,9 @@
 -- NULL means "full read + story status transitions" for now.
 
 CREATE TABLE personal_access_tokens (
-  id             BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
-  user_id        BIGINT UNSIGNED  NOT NULL,
-  org_id         BIGINT UNSIGNED  NOT NULL COMMENT 'Denormalised for fast middleware lookup',
+  id             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  user_id        INT UNSIGNED     NOT NULL,
+  org_id         INT UNSIGNED     NOT NULL COMMENT 'Denormalised for fast middleware lookup',
   name           VARCHAR(100)     NOT NULL,
   token_hash     CHAR(64)         NOT NULL COMMENT 'sha256 hex of raw token',
   token_prefix   CHAR(15)         NOT NULL COMMENT 'sf_pat_ + first 8 raw chars, for UI display',
