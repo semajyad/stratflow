@@ -1,0 +1,83 @@
+<h2>Prompt Engineering — Before vs After</h2>
+<p class="subtitle">What AI currently generates vs what it will generate with the new prompts</p>
+
+<div class="split" style="gap:1.5rem; align-items:flex-start;">
+
+  <div class="mockup" style="flex:1;">
+    <div class="mockup-header" style="background:#ef4444; color:#fff;">BEFORE — Current output</div>
+    <div class="mockup-body" style="font-size:0.8rem; line-height:1.7;">
+
+      <div style="margin-bottom:1.25rem;">
+        <div class="label" style="color:#6b7280;">Epic</div>
+        <strong>Improve Checkout Flow</strong>
+        <p style="color:#374151; margin:0.25rem 0 0;">Reduce the number of steps in the checkout process to improve conversion rates. This epic covers frontend and backend changes needed to streamline the purchase journey.</p>
+        <p style="color:#9ca3af; font-size:0.75rem; margin:0.25rem 0 0; font-style:italic;">No acceptance criteria. No KR linkage. No SMART objective. Vague scope.</p>
+      </div>
+
+      <div style="border-top:1px solid #f3f4f6; padding-top:1rem;">
+        <div class="label" style="color:#6b7280;">Story 1 of 3</div>
+        <strong>As a user, I want a better checkout, so that it's easier</strong>
+        <p style="color:#374151; margin:0.25rem 0 0;">Improve the checkout UI.</p>
+        <p style="color:#9ca3af; font-size:0.75rem; margin:0.25rem 0 0; font-style:italic;">Not INVEST-compliant. No ACs. Vague value. No splitting pattern used.</p>
+      </div>
+
+      <div style="border-top:1px solid #f3f4f6; padding-top:1rem;">
+        <div class="label" style="color:#6b7280;">Story 2 of 3</div>
+        <strong>As a user, I want to save my payment details</strong>
+        <p style="color:#374151; margin:0.25rem 0 0;">Allow users to save card details for future purchases.</p>
+        <p style="color:#9ca3af; font-size:0.75rem; margin:0.25rem 0 0; font-style:italic;">No ACs. Not estimable. No KR linkage. Not testable as written.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="mockup" style="flex:1;">
+    <div class="mockup-header" style="background:#10b981; color:#fff;">AFTER — New prompt output</div>
+    <div class="mockup-body" style="font-size:0.8rem; line-height:1.7;">
+
+      <div style="margin-bottom:1.25rem;">
+        <div class="label" style="color:#6b7280;">Epic</div>
+        <strong>Reduce checkout from 5 steps to 2 to increase conversion rate from 2.1% to 3.5%</strong>
+        <p style="color:#374151; margin:0.25rem 0 0;">Streamline the purchase journey by consolidating address, payment, and review screens into a single-page flow. Scope: guest and registered users on web only. Excludes mobile app (separate epic).</p>
+        <div style="background:#f0fdf4; border-left:3px solid #10b981; padding:0.5rem 0.75rem; margin-top:0.5rem; border-radius:0 4px 4px 0;">
+          <div class="label" style="color:#059669;">Acceptance Criteria</div>
+          <ul style="margin:0.25rem 0 0; padding-left:1.25rem; color:#374151;">
+            <li>Checkout completes in ≤2 steps for registered users with saved payment</li>
+            <li>Guest checkout available without account creation</li>
+            <li>Conversion rate measurable via existing analytics within 1 sprint</li>
+            <li>No regression in payment success rate (currently 97.2%)</li>
+          </ul>
+        </div>
+        <p style="color:#6366f1; font-size:0.75rem; margin:0.5rem 0 0;">↗ Contributes to KR: Increase conversion rate to 3.5%</p>
+      </div>
+
+      <div style="border-top:1px solid #f3f4f6; padding-top:1rem;">
+        <div class="label" style="color:#6b7280;">Story 1 — Happy path (splitting pattern: Happy/Unhappy Path)</div>
+        <strong>As a registered user with saved payment, I want to complete checkout in one click, so that I can purchase without re-entering details and reduce abandoned carts</strong>
+        <div style="background:#f0fdf4; border-left:3px solid #10b981; padding:0.5rem 0.75rem; margin-top:0.5rem; border-radius:0 4px 4px 0;">
+          <div class="label" style="color:#059669;">Acceptance Criteria</div>
+          <ul style="margin:0.25rem 0 0; padding-left:1.25rem; color:#374151;">
+            <li>Given I have saved payment + address, when I click "Buy now", then order is placed without additional screens</li>
+            <li>Given order placed, when confirmed, then confirmation email sent within 30s</li>
+            <li>Checkout flow completes in &lt;3s on 4G</li>
+          </ul>
+        </div>
+        <p style="color:#6b7280; font-size:0.75rem; margin:0.5rem 0 0;">Size: 3pts &nbsp;·&nbsp; INVEST ✓ &nbsp;·&nbsp; ↗ KR: conversion rate</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:1.5rem; padding:1rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+  <div class="label">Key changes in the new prompts</div>
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-top:0.5rem; font-size:0.8rem;">
+    <div><strong>INVEST</strong><br><span style="color:#6b7280;">AI self-checks each story against all 6 INVEST criteria before outputting</span></div>
+    <div><strong>SMART ACs</strong><br><span style="color:#6b7280;">Acceptance criteria in Given/When/Then with measurable conditions</span></div>
+    <div><strong>KR linkage</strong><br><span style="color:#6b7280;">Each item explicitly states which KR it contributes to</span></div>
+    <div><strong>Splitting patterns</strong><br><span style="color:#6b7280;">AI names the pattern used — teams learn why stories are split this way</span></div>
+    <div><strong>Value clarity</strong><br><span style="color:#6b7280;">"So that..." ends with a measurable business outcome, not a vague benefit</span></div>
+    <div><strong>Org rules</strong><br><span style="color:#6b7280;">Custom conditions (e.g. NFRs) loaded from story_quality_config and injected into prompt</span></div>
+  </div>
+</div>

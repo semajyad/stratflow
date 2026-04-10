@@ -5,3 +5,4 @@ ALTER TABLE user_stories ADD COLUMN status ENUM('backlog','in_progress','in_revi
 -- Token encryption support
 ALTER TABLE integrations ADD COLUMN token_iv VARCHAR(64) NULL;
 ALTER TABLE integrations ADD COLUMN token_tag VARCHAR(64) NULL;
+

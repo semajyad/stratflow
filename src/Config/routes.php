@@ -201,9 +201,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/xero/disconnect',       'XeroController@disconnect',        ['auth', 'billing', 'csrf']);
 
     // Invoices — Xero primary, Stripe fallback (static routes BEFORE {id})
-    $router->add('GET',  '/app/admin/invoices',              'XeroController@invoices',          ['auth', 'billing']);
-    $router->add('POST', '/app/admin/invoices/create',       'XeroController@createInvoice',     ['auth', 'billing', 'csrf']);
-    $router->add('POST', '/app/admin/invoices/sync',         'XeroController@syncInvoices',      ['auth', 'billing', 'csrf']);
+    $router->add('GET',  '/app/admin/invoices',                          'XeroController@invoices',      ['auth', 'billing']);
+    $router->add('POST', '/app/admin/invoices/create',                   'XeroController@createInvoice', ['auth', 'billing', 'csrf']);
+    $router->add('POST', '/app/admin/invoices/sync',                     'XeroController@syncInvoices',  ['auth', 'billing', 'csrf']);
+    $router->add('POST', '/app/admin/invoices/{id}/push-to-xero',        'XeroController@pushToXero',    ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);

@@ -44,16 +44,7 @@
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="sprint-form-row" style="flex-wrap: wrap;">
-                <?php if (!empty($teams ?? [])): ?>
-                <select name="team_id" class="form-control form-control-sm" style="min-width: 130px;">
-                    <option value="">No team</option>
-                    <?php foreach ($teams as $t): ?>
-                        <option value="<?= (int) $t['id'] ?>" <?= ((int) ($sprint['team_id'] ?? 0)) === (int) $t['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($t['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php endif; ?>
+                <input type="hidden" name="team_id" value="<?= (int) ($sprint['team_id'] ?? 0) ?>">
                 <input type="text" name="name" value="<?= htmlspecialchars($sprint['name']) ?>" placeholder="Sprint name" class="form-control form-control-sm" required>
                 <input type="date" name="start_date" value="<?= htmlspecialchars($sprint['start_date'] ?? '') ?>" class="form-control form-control-sm">
                 <input type="date" name="end_date" value="<?= htmlspecialchars($sprint['end_date'] ?? '') ?>" class="form-control form-control-sm">

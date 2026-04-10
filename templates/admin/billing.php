@@ -225,52 +225,80 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
 </div>
 
 <!-- ===========================
-     Xero Invoicing
+     Invoices
      =========================== -->
 <section class="card mt-4">
     <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
         <div>
-            <h2 class="card-title" style="margin: 0;">Xero Invoicing</h2>
-            <small class="text-muted">Connect Xero to create and manage invoices for enterprise clients</small>
+            <h2 class="card-title" style="margin: 0;">Invoices</h2>
+            <small class="text-muted">Your subscription invoices<?= $xero_connected ? ' — push any to <strong>' . htmlspecialchars($xero_tenant_name ?? 'Xero') . '</strong>' : '' ?></small>
         </div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
             <?php if ($xero_connected): ?>
-                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+                <span class="badge badge-success" style="font-size: 0.82rem; padding: 4px 10px;">Xero Connected</span>
+                <form method="POST" action="/app/admin/xero/disconnect" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                    <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('Disconnect Xero? Cached invoices will be removed.')">
+                        Disconnect
+                    </button>
+                </form>
             <?php else: ?>
-                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Not Connected</span>
+                <a href="/app/admin/xero/connect" class="btn btn-sm btn-secondary">Connect Xero</a>
             <?php endif; ?>
         </div>
     </div>
-    <div class="card-body">
-        <?php if ($xero_connected): ?>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;">
-                <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Connected Organisation</span>
-                    <strong><?= htmlspecialchars($xero_tenant_name ?? 'Xero') ?></strong>
-                </div>
-            </div>
-            <div style="display: flex; gap: 0.75rem; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <a href="/app/admin/invoices" class="btn btn-primary">View &amp; Create Invoices</a>
-                <form method="POST" action="/app/admin/invoices/sync" class="inline-form">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <button type="submit" class="btn btn-secondary">Sync from Xero</button>
-                </form>
-                <div style="margin-left: auto;">
-                    <form method="POST" action="/app/admin/xero/disconnect" class="inline-form">
-                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Disconnect Xero? Cached invoices will be removed.')">
-                            Disconnect
-                        </button>
-                    </form>
-                </div>
-            </div>
+    <div class="card-body" style="padding: 0;">
+        <?php if (empty($stripe_invoices)): ?>
+            <p style="padding: 1.25rem; color: var(--text-muted); font-size: 0.9rem;">No invoices found.</p>
         <?php else: ?>
-            <p style="font-size: 0.9rem; margin-bottom: 1.25rem; color: var(--text-secondary);">
-                Connect your Xero account to generate and track invoices for enterprise clients directly from StratFlow.
-                Enterprise clients often require Xero-compatible invoices rather than Stripe receipts.
-            </p>
-            <a href="/app/admin/xero/connect" class="btn btn-primary">Connect to Xero</a>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border);">
+                        <th style="padding: 0.6rem 1.25rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">Date</th>
+                        <th style="padding: 0.6rem 1.25rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">Description</th>
+                        <th style="padding: 0.6rem 1.25rem; text-align: right; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">Amount</th>
+                        <th style="padding: 0.6rem 1.25rem; text-align: center; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">Status</th>
+                        <th style="padding: 0.6rem 1.25rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($stripe_invoices as $inv): ?>
+                        <?php
+                            $isPaid     = ($inv->status ?? '') === 'paid';
+                            $isPushed   = in_array($inv->id, $pushed_to_xero ?? [], true);
+                            $amount     = number_format(($inv->amount_paid ?? $inv->amount_due ?? 0) / 100, 2);
+                            $currency   = strtoupper($inv->currency ?? 'NZD');
+                            $date       = date('j M Y', $inv->created ?? time());
+                            $desc       = $inv->description ?? ($inv->lines->data[0]->description ?? 'StratFlow Subscription');
+                        ?>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 0.75rem 1.25rem; font-size: 0.875rem; color: var(--text-muted);"><?= htmlspecialchars($date) ?></td>
+                            <td style="padding: 0.75rem 1.25rem; font-size: 0.875rem;"><?= htmlspecialchars($desc) ?></td>
+                            <td style="padding: 0.75rem 1.25rem; font-size: 0.875rem; text-align: right; font-weight: 600;"><?= $currency ?> <?= $amount ?></td>
+                            <td style="padding: 0.75rem 1.25rem; text-align: center;">
+                                <span class="badge <?= $isPaid ? 'badge-success' : 'badge-warning' ?>"><?= htmlspecialchars(ucfirst($inv->status ?? 'open')) ?></span>
+                            </td>
+                            <td style="padding: 0.75rem 1.25rem; text-align: right; white-space: nowrap;">
+                                <?php if (!empty($inv->invoice_pdf)): ?>
+                                    <a href="<?= htmlspecialchars($inv->invoice_pdf) ?>" target="_blank"
+                                       style="font-size: 0.8rem; color: var(--text-muted); margin-right: 0.75rem;">PDF</a>
+                                <?php endif; ?>
+                                <?php if ($xero_connected): ?>
+                                    <?php if ($isPushed): ?>
+                                        <span style="font-size: 0.8rem; color: #22c55e; font-weight: 600;">✓ In Xero</span>
+                                    <?php else: ?>
+                                        <form method="POST" action="/app/admin/invoices/<?= htmlspecialchars($inv->id) ?>/push-to-xero" class="inline-form" style="display: inline;">
+                                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                            <button type="submit" class="btn btn-sm btn-secondary">Push to Xero</button>
+                                        </form>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         <?php endif; ?>
     </div>
 </section>

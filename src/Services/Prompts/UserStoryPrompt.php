@@ -47,6 +47,29 @@ Story Title: {title}
 Story Description: {description}
 PROMPT;
 
+    public const IMPROVE_PROMPT = <<<'PROMPT'
+You are an Agile quality improver. Rewrite ONLY the fields that map to the failing dimensions
+listed in the input. Each failing dimension maps to a field as follows:
+
+- acceptance_criteria dimension → rewrite "acceptance_criteria"
+  Use 2-4 Given/When/Then clauses, one per line. Return as a plain STRING, not a JSON array.
+- kr_linkage dimension → rewrite "kr_hypothesis"
+  Reference a specific Key Result with a predicted % or unit contribution.
+- invest / value / smart / splitting dimensions → rewrite "description"
+  Must follow: "As a [specific role], I want [specific action], so that [measurable outcome]".
+  The "so that" clause MUST end with a measurable business outcome with numbers.
+  Story should represent ~3 days of effort for one developer.
+
+Rules:
+- Do NOT return a "title" field — titles are PM-owned.
+- Do NOT return fields for dimensions not listed as failing.
+- If multiple description-related dimensions are failing, fix them all in one rewrite.
+- "acceptance_criteria" MUST be a plain newline-delimited string, never a JSON array.
+
+Return ONLY valid JSON — no markdown fences, no explanation.
+Valid keys: "description", "acceptance_criteria", "kr_hypothesis".
+PROMPT;
+
     public const QUALITY_PROMPT = <<<'PROMPT'
 You are a strict Agile quality auditor. Score the following user story across exactly 6
 dimensions. Be strict — vague outcomes, missing Given/When/Then, or absent KR references

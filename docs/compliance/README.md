@@ -10,17 +10,20 @@ for enterprise client due diligence. All documents are dated and version-control
 ### Security Assessment Reports
 | Document | Date | Status |
 |---|---|---|
-| *(run `security-report-generator` agent to generate)* | | |
+| [security-assessment-2026-04-10.md](security-assessment-2026-04-10.md) | 2026-04-10 | Current |
+| *(run `security-report-generator` agent to generate next report)* | | |
 
 ### Performance Reports
 | Document | Date | Status |
 |---|---|---|
-| *(run `performance-report-generator` agent to generate)* | | |
+| [performance-report-2026-04-10.md](performance-report-2026-04-10.md) | 2026-04-10 | Current |
+| *(run `performance-report-generator` agent to generate next report)* | | |
 
 ### CAIQ Responses
 | Document | Date | Status |
 |---|---|---|
-| *(run `caiq-responder` agent to generate)* | | |
+| [caiq-v4-2026-04-10.md](caiq-v4-2026-04-10.md) | 2026-04-10 | Current |
+| *(run `caiq-responder` agent to generate next response)* | | |
 
 ### Security Policies (`policies/`)
 | Policy | Version | Effective Date |

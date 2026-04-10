@@ -545,12 +545,31 @@ class AdminController
 
         $hasStripeCustomer = !empty($org['stripe_customer_id']);
 
+        // Load Stripe invoices for inline display
+        $stripeInvoices = [];
+        if ($hasStripeCustomer) {
+            try {
+                $stripe = new StripeService($this->config['stripe']);
+                $stripeInvoices = $stripe->listInvoices($org['stripe_customer_id']);
+            } catch (\Throwable) {}
+        }
+
         // Xero integration status for billing page
         $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         $xeroConnected   = $xeroIntegration && $xeroIntegration['status'] === 'active';
         $xeroTenantName  = $xeroConnected
             ? (json_decode($xeroIntegration['config_json'] ?? '{}', true)['tenant_name'] ?? 'Xero')
             : null;
+
+        // Track which Stripe invoice IDs have already been pushed to Xero
+        $pushedToXero = [];
+        if ($xeroConnected) {
+            $stmt = $this->db->query(
+                "SELECT reference FROM xero_invoices WHERE org_id = :org_id AND reference IS NOT NULL",
+                [':org_id' => $orgId]
+            );
+            $pushedToXero = array_column($stmt->fetchAll(), 'reference');
+        }
 
         $this->response->render('admin/billing', [
             'user'              => $user,
@@ -561,8 +580,10 @@ class AdminController
             'active_users'      => $activeCount,
             'total_users'       => count($activeUsers),
             'has_stripe'        => $hasStripeCustomer,
+            'stripe_invoices'   => $stripeInvoices,
             'xero_connected'    => $xeroConnected,
             'xero_tenant_name'  => $xeroTenantName,
+            'pushed_to_xero'    => $pushedToXero,
             'csrf_token'        => $_SESSION['csrf_token'] ?? '',
             'active_page'       => 'billing',
             'flash_message'     => $_SESSION['flash_message'] ?? null,

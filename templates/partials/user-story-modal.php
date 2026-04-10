@@ -55,10 +55,10 @@
                     </select>
                 </div>
 
-                <div class="flex gap-4">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="story-size">Size (Story Points)</label>
-                        <select id="story-size" name="size" class="form-control">
+                <div class="form-group">
+                    <label for="story-size">Size (Story Points)</label>
+                    <div style="display: flex; align-items: center; gap: 0.625rem;">
+                        <select id="story-size" name="size" class="form-control" style="width: 130px; flex: 0 0 auto;">
                             <option value="">--</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
@@ -68,25 +68,12 @@
                             <option value="13">13</option>
                             <option value="20">20</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-                        <button type="button" class="btn btn-sm btn-secondary" id="ai-size-btn"
-                                style="margin-bottom: 1.25rem;">
+                        <button type="button" class="btn btn-sm btn-secondary" id="ai-size-btn">
                             AI Suggest Size
                         </button>
                     </div>
                 </div>
                 <div id="ai-size-reasoning" class="text-muted" style="font-size: 0.8125rem; margin-bottom: 1rem; display: none;"></div>
-
-                <div class="form-group">
-                    <label for="story-blocked-by">Blocked By</label>
-                    <select id="story-blocked-by" name="blocked_by" class="form-control">
-                        <option value="">-- None --</option>
-                        <?php foreach ($stories as $s): ?>
-                            <option value="<?= (int) $s['id'] ?>">#<?= (int) $s['priority_number'] ?> <?= htmlspecialchars($s['title']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
 
                 <!-- Acceptance Criteria — collapsible, AI-generated + editable -->
                 <details id="story-ac-details" style="border:1px solid #d1fae5; border-radius:6px; margin-bottom:0.75rem;">
@@ -114,6 +101,16 @@
                                maxlength="500">
                     </div>
                 </details>
+
+                <div class="form-group">
+                    <label for="story-blocked-by">Blocked By</label>
+                    <select id="story-blocked-by" name="blocked_by" class="form-control">
+                        <option value="">-- None --</option>
+                        <?php foreach ($stories as $s): ?>
+                            <option value="<?= (int) $s['id'] ?>">#<?= (int) $s['priority_number'] ?> <?= htmlspecialchars($s['title']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
                 <?php require __DIR__ . '/git-links-field.php'; ?>
             </div>

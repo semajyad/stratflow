@@ -144,6 +144,60 @@ class XeroController
     }
 
     /**
+     * Push a single Stripe invoice to Xero and cache the result.
+     *
+     * POST /app/admin/invoices/{id}/push-to-xero
+     *
+     * @param string $id Stripe invoice ID (in_xxx)
+     */
+    public function pushToXero(string $id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
+        if (!$xeroIntegration || $xeroIntegration['status'] !== 'active') {
+            $_SESSION['flash_error'] = 'Xero is not connected.';
+            $this->response->redirect('/app/admin/billing');
+            return;
+        }
+
+        try {
+            \Stripe\Stripe::setApiKey($this->config['stripe']['secret_key'] ?? '');
+            $stripeInvoice = \Stripe\Invoice::retrieve($id);
+
+            $config = json_decode($xeroIntegration['config_json'] ?? '{}', true) ?: [];
+            $xero   = new XeroService($this->config);
+            $xero->setTokens($config);
+
+            $contactName = $stripeInvoice->customer_name
+                ?? $stripeInvoice->customer_email
+                ?? 'Customer';
+            $amount      = (($stripeInvoice->amount_paid ?? $stripeInvoice->amount_due ?? 0)) / 100;
+            $currency    = strtoupper($stripeInvoice->currency ?? 'NZD');
+            $description = 'StratFlow Subscription — ' . date('M Y', $stripeInvoice->created ?? time());
+
+            $payload = XeroService::buildInvoicePayload(
+                $contactName,
+                $description,
+                $amount,
+                $currency,
+                $id   // Stripe invoice ID stored as reference for dedup tracking
+            );
+
+            $invoice = $xero->createInvoice($config['tenant_id'], $payload);
+            $this->cacheXeroInvoice($orgId, $invoice);
+            $this->persistTokens($xeroIntegration, $xero);
+
+            $_SESSION['flash_message'] = 'Invoice pushed to Xero successfully.';
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Failed to push to Xero: ' . $e->getMessage();
+        }
+
+        $this->response->redirect('/app/admin/billing');
+    }
+
+    /**
      * Remove the Xero integration for this organisation.
      *
      * POST /app/admin/xero/disconnect
