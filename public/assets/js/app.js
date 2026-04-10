@@ -325,6 +325,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-owner').value                = row.dataset.owner || '';
             document.getElementById('modal-acceptance-criteria').value  = row.dataset.acceptanceCriteria || '';
             document.getElementById('modal-kr-hypothesis').value        = row.dataset.krHypothesis || '';
+            var sprintsEl = document.getElementById('modal-estimated-sprints');
+            if (sprintsEl) { sprintsEl.value = row.dataset.estimatedSprints ?? ''; }
 
             document.getElementById('edit-form').action = '/app/work-items/' + currentEditId;
             document.getElementById('edit-modal').classList.remove('hidden');
