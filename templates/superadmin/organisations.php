@@ -2,25 +2,18 @@
 /**
  * Superadmin Organisations Template
  *
- * Table of all organisations with status, user count, subscription info, and actions.
- * Includes assign-superadmin section at the bottom.
+ * Clean org table with inline edit panels. Columns: name, plan, seats, billing, status, created.
+ * Edit panel: rename, plan type, seat limit, billing method toggle, suspend/enable.
  *
- * Variables: $user (array), $orgs (array), $org_subs (array), $all_users (array),
- *            $csrf_token (string)
+ * Variables: $user (array), $orgs (array), $org_subs (array), $all_users (array), $csrf_token (string)
  */
 ?>
 
-<!-- ===========================
-     Page Header
-     =========================== -->
 <div class="page-header">
     <h1 class="page-title">Manage Organisations</h1>
-    <p class="page-subtitle">View, suspend, enable, export, or delete organisations.</p>
+    <p class="page-subtitle">Create, configure and manage client organisations.</p>
 </div>
 
-<!-- ===========================
-     Flash Messages
-     =========================== -->
 <?php if (!empty($flash_message)): ?>
     <div class="alert alert-success"><?= htmlspecialchars($flash_message) ?></div>
 <?php endif; ?>
@@ -32,27 +25,34 @@
      Create Organisation
      =========================== -->
 <section class="card mb-4">
-    <div class="card-header">
-        <h2 class="card-title">Create Organisation</h2>
-    </div>
+    <div class="card-header"><h2 class="card-title">Create Organisation</h2></div>
     <div class="card-body">
         <form method="POST" action="/superadmin/organisations/create">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <div class="sprint-gen-grid">
-                <div class="sprint-gen-field">
-                    <label>Organisation Name</label>
-                    <input type="text" name="org_name" class="form-control" required placeholder="e.g. Acme Corp">
+            <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Organisation Name</label>
+                    <input type="text" name="org_name" class="form-control" required placeholder="e.g. Acme Corp" style="min-width:220px;">
                 </div>
-                <div class="sprint-gen-field">
-                    <label>Plan Type</label>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Plan Type</label>
                     <select name="plan_type" class="form-control">
                         <option value="product">Product</option>
                         <option value="consultancy">Consultancy</option>
                     </select>
                 </div>
-                <div class="sprint-gen-field" style="align-self: end;">
-                    <button type="submit" class="btn btn-primary">Create Organisation</button>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Billing</label>
+                    <select name="billing_method" class="form-control">
+                        <option value="invoiced">Invoiced</option>
+                        <option value="stripe">Stripe</option>
+                    </select>
                 </div>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Seats</label>
+                    <input type="number" name="seat_limit" value="5" min="1" max="10000" class="form-control" style="width:80px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Create Organisation</button>
             </div>
         </form>
     </div>
@@ -62,108 +62,137 @@
      Organisations Table
      =========================== -->
 <section class="card">
-    <div class="card-header">
+    <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
         <h2 class="card-title">All Organisations</h2>
+        <span class="text-muted" style="font-size:0.85rem;"><?= count($orgs) ?> organisation<?= count($orgs) !== 1 ? 's' : '' ?></span>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="padding:0;">
         <?php if (empty($orgs)): ?>
-            <p class="text-muted">No organisations found.</p>
+            <p class="text-muted" style="padding:1.25rem;">No organisations found.</p>
         <?php else: ?>
-            <div class="table-responsive">
-                <table class="table org-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Users / Seats</th>
-                            <th>Subscription</th>
-                            <th>Jira</th>
-                            <th>Created</th>
-                            <th>Actions</th>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--border);">
+                        <th style="padding:0.6rem 1.25rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Name</th>
+                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Plan</th>
+                        <th style="padding:0.6rem 1rem; text-align:center; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Users / Seats</th>
+                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Billing</th>
+                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Status</th>
+                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Created</th>
+                        <th style="padding:0.6rem 1.25rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($orgs as $org): ?>
+                        <?php
+                            $orgId    = (int) $org['id'];
+                            $isActive = (int) ($org['is_active'] ?? 1);
+                            $sub      = $org_subs[$orgId] ?? null;
+                            $planType = $sub['plan_type'] ?? 'none';
+                            $seats    = (int) ($sub['user_seat_limit'] ?? 5);
+                            $users    = (int) ($org['user_count'] ?? 0);
+                            $subId    = $sub['stripe_subscription_id'] ?? '';
+                            $isInvoiced = (empty($subId) || str_starts_with($subId, 'manual_'));
+                            $billingLabel = $isInvoiced ? 'Invoiced' : 'Stripe';
+                            $createdAt = date('j M Y', strtotime($org['created_at'] ?? 'now'));
+                        ?>
+                        <!-- Main row -->
+                        <tr style="border-bottom:1px solid var(--border);" id="org-row-<?= $orgId ?>">
+                            <td style="padding:0.85rem 1.25rem; font-weight:600;"><?= htmlspecialchars($org['name']) ?></td>
+                            <td style="padding:0.85rem 1rem;">
+                                <span class="badge badge-primary" style="font-size:0.75rem;"><?= htmlspecialchars(ucfirst($planType)) ?></span>
+                            </td>
+                            <td style="padding:0.85rem 1rem; text-align:center;">
+                                <span style="font-size:0.875rem;"><?= $users ?> / <?= $seats ?></span>
+                                <?php
+                                    $pct = $seats > 0 ? min(100, ($users / $seats) * 100) : 0;
+                                    $barColor = $pct >= 90 ? 'var(--danger)' : ($pct >= 70 ? '#f0ad4e' : 'var(--primary)');
+                                ?>
+                                <div style="width:60px; height:4px; background:var(--border); border-radius:2px; margin:3px auto 0;">
+                                    <div style="width:<?= $pct ?>%; height:100%; background:<?= $barColor ?>; border-radius:2px;"></div>
+                                </div>
+                            </td>
+                            <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-muted);"><?= htmlspecialchars($billingLabel) ?></td>
+                            <td style="padding:0.85rem 1rem;">
+                                <?php if ($isActive): ?>
+                                    <span class="badge badge-success">Active</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning">Suspended</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding:0.85rem 1rem; font-size:0.8rem; color:var(--text-muted);"><?= htmlspecialchars($createdAt) ?></td>
+                            <td style="padding:0.85rem 1.25rem; text-align:right; white-space:nowrap;">
+                                <button type="button" class="btn btn-sm btn-secondary"
+                                        onclick="toggleOrgEdit(<?= $orgId ?>)">Edit</button>
+                                <a href="/superadmin/organisations/<?= $orgId ?>/export"
+                                   class="btn btn-sm btn-secondary">Export</a>
+                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;"
+                                      onsubmit="return confirm('Delete <?= htmlspecialchars(addslashes($org['name'])) ?>? This cannot be undone.');">
+                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($orgs as $org): ?>
-                            <?php
-                                $orgId   = (int) $org['id'];
-                                $isActive = (int) ($org['is_active'] ?? 1);
-                                $sub     = $org_subs[$orgId] ?? null;
-                            ?>
-                            <tr>
-                                <td><?= htmlspecialchars($org['name']) ?></td>
-                                <td>
-                                    <?php if ($isActive): ?>
-                                        <span class="badge badge-success">Active</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-warning">Suspended</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?= (int) ($org['user_count'] ?? 0) ?> / <?= (int) ($sub['user_seat_limit'] ?? 5) ?>
-                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline; margin-left:0.5rem;">
-                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                        <input type="hidden" name="action" value="update_seats">
-                                        <input type="number" name="seat_limit" value="<?= (int) ($sub['user_seat_limit'] ?? 5) ?>"
-                                               min="1" max="10000" style="width:55px; padding:0.15rem 0.3rem; font-size:0.8rem; border:1px solid var(--border); border-radius:3px;">
-                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size:0.7rem; padding:0.15rem 0.4rem;">Set</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <?php if ($sub): ?>
-                                        <span class="badge badge-primary"><?= htmlspecialchars(ucfirst($sub['plan_type'] ?? 'Unknown')) ?></span>
-                                        <span class="badge <?= ($sub['status'] ?? '') === 'active' ? 'badge-success' : 'badge-muted' ?>">
-                                            <?= htmlspecialchars(ucfirst($sub['status'] ?? 'Unknown')) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-muted">None</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php
-                                        $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db ?? \StratFlow\Core\Database::getInstance(), $orgId, 'jira');
-                                        $jiraEnabled = $jiraIntegration !== null;
-                                    ?>
-                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>/jira" style="display:inline;">
-                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                        <?php if ($jiraEnabled): ?>
-                                            <input type="hidden" name="action" value="disable">
-                                            <button type="submit" class="btn btn-sm btn-success" style="font-size:0.75rem;">Enabled</button>
-                                        <?php else: ?>
-                                            <input type="hidden" name="action" value="enable">
-                                            <button type="submit" class="btn btn-sm btn-secondary" style="font-size:0.75rem;">Disabled</button>
-                                        <?php endif; ?>
-                                    </form>
-                                </td>
-                                <td><?= htmlspecialchars($org['created_at'] ?? '') ?></td>
-                                <td class="org-actions">
-                                    <!-- Suspend/Enable toggle -->
-                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
-                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                        <?php if ($isActive): ?>
-                                            <input type="hidden" name="action" value="suspend">
-                                            <button type="submit" class="btn btn-sm btn-warning">Suspend</button>
-                                        <?php else: ?>
-                                            <input type="hidden" name="action" value="enable">
-                                            <button type="submit" class="btn btn-sm btn-success">Enable</button>
-                                        <?php endif; ?>
-                                    </form>
 
-                                    <!-- Export -->
-                                    <a href="/superadmin/organisations/<?= $orgId ?>/export" class="btn btn-sm btn-secondary">Export</a>
-
-                                    <!-- Delete -->
-                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;"
-                                          onsubmit="return confirm('Are you sure you want to delete this organisation? This cannot be undone.');">
-                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                        <input type="hidden" name="action" value="delete">
-                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                        <!-- Inline edit row (hidden by default) -->
+                        <tr id="org-edit-<?= $orgId ?>" style="display:none; background:#f8fafc;">
+                            <td colspan="7" style="padding:1.25rem 1.5rem; border-bottom:2px solid var(--primary);">
+                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>">
+                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                    <input type="hidden" name="action" value="edit">
+                                    <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Organisation Name</label>
+                                            <input type="text" name="org_name" value="<?= htmlspecialchars($org['name']) ?>"
+                                                   class="form-control form-control-sm" style="min-width:200px;" required>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Plan Type</label>
+                                            <select name="plan_type" class="form-control form-control-sm">
+                                                <option value="product" <?= $planType === 'product' ? 'selected' : '' ?>>Product</option>
+                                                <option value="consultancy" <?= $planType === 'consultancy' ? 'selected' : '' ?>>Consultancy</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Seats</label>
+                                            <input type="number" name="seat_limit" value="<?= $seats ?>" min="1" max="10000"
+                                                   class="form-control form-control-sm" style="width:80px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Billing</label>
+                                            <select name="billing_method" class="form-control form-control-sm">
+                                                <option value="invoiced" <?= $isInvoiced ? 'selected' : '' ?>>Invoiced</option>
+                                                <option value="stripe" <?= !$isInvoiced ? 'selected' : '' ?>>Stripe</option>
+                                            </select>
+                                        </div>
+                                        <div style="display:flex; gap:0.5rem;">
+                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                            <button type="button" class="btn btn-sm btn-secondary"
+                                                    onclick="toggleOrgEdit(<?= $orgId ?>)">Cancel</button>
+                                        </div>
+                                        <div style="margin-left:auto;">
+                                            <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
+                                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                                <?php if ($isActive): ?>
+                                                    <input type="hidden" name="action" value="suspend">
+                                                    <button type="submit" class="btn btn-sm btn-warning"
+                                                            onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($org['name'])) ?>?')">
+                                                        Suspend
+                                                    </button>
+                                                <?php else: ?>
+                                                    <input type="hidden" name="action" value="enable">
+                                                    <button type="submit" class="btn btn-sm btn-success">Enable</button>
+                                                <?php endif; ?>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         <?php endif; ?>
     </div>
 </section>
@@ -171,31 +200,32 @@
 <!-- ===========================
      Assign Superadmin
      =========================== -->
-<section class="card mt-6">
-    <div class="card-header">
-        <h2 class="card-title">Assign Superadmin Role</h2>
-    </div>
+<section class="card mt-4">
+    <div class="card-header"><h2 class="card-title">Assign Superadmin Role</h2></div>
     <div class="card-body">
-        <p class="text-muted mb-4">Promote a user to superadmin. This grants full system-wide access.</p>
-        <form method="POST" action="/superadmin/assign-superadmin" class="admin-inline-form">
+        <p class="text-muted" style="font-size:0.875rem; margin-bottom:1rem;">Promote a user to superadmin. Grants full system-wide access.</p>
+        <form method="POST" action="/superadmin/assign-superadmin" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <div class="form-row">
-                <div class="form-group" style="flex: 1;">
-                    <select name="user_id" class="form-control" required>
-                        <option value="">Select a user...</option>
-                        <?php foreach ($all_users as $u): ?>
-                            <option value="<?= (int) $u['id'] ?>">
-                                <?= htmlspecialchars($u['full_name']) ?> (<?= htmlspecialchars($u['email']) ?>)
-                                <?php if (!empty($u['org_name'])): ?> — <?= htmlspecialchars($u['org_name']) ?><?php endif; ?>
-                                <?php if ($u['role'] === 'superadmin'): ?> [already superadmin]<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Assign Superadmin</button>
-                </div>
+            <div style="flex:1; min-width:280px;">
+                <select name="user_id" class="form-control" required>
+                    <option value="">Select a user...</option>
+                    <?php foreach ($all_users as $u): ?>
+                        <option value="<?= (int) $u['id'] ?>">
+                            <?= htmlspecialchars($u['full_name']) ?> (<?= htmlspecialchars($u['email']) ?>)
+                            <?php if (!empty($u['org_name'])): ?> — <?= htmlspecialchars($u['org_name']) ?><?php endif; ?>
+                            <?php if ($u['role'] === 'superadmin'): ?> [superadmin]<?php endif; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
+            <button type="submit" class="btn btn-primary">Assign Superadmin</button>
         </form>
     </div>
 </section>
+
+<script>
+function toggleOrgEdit(orgId) {
+    var row = document.getElementById('org-edit-' + orgId);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>

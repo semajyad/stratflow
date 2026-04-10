@@ -125,15 +125,18 @@ class SuperadminController
             'is_active' => 1,
         ]);
 
-        // Create an active subscription
+        $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? '' : 'manual_' . time();
+        $seatLimit = max(1, (int) $this->request->post('seat_limit', 5));
+
         if (in_array($planType, ['product', 'consultancy'], true)) {
             \StratFlow\Models\Subscription::create($this->db, [
                 'org_id' => $orgId,
-                'stripe_subscription_id' => 'manual_' . time(),
+                'stripe_subscription_id' => $billingMethod,
                 'plan_type' => $planType,
                 'status' => 'active',
                 'started_at' => date('Y-m-d H:i:s'),
             ]);
+            \StratFlow\Models\Subscription::updateSeatLimit($this->db, $orgId, $seatLimit);
         }
 
         $user = $this->auth->user();
@@ -235,6 +238,52 @@ class SuperadminController
                     'action' => 'org_deleted', 'org_id' => $orgId, 'org_name' => $org['name'],
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" deleted.';
+                break;
+
+            case 'edit':
+                $newName       = trim((string) $this->request->post('org_name', ''));
+                $newPlanType   = trim((string) $this->request->post('plan_type', 'product'));
+                $newSeats      = max(1, (int) $this->request->post('seat_limit', 5));
+                $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoiced';
+
+                if ($newName !== '') {
+                    Organisation::update($this->db, $orgId, ['name' => $newName]);
+                }
+
+                $sub = Subscription::findByOrgId($this->db, $orgId);
+                if ($sub) {
+                    Subscription::updateSeatLimit($this->db, $orgId, $newSeats);
+                    if (in_array($newPlanType, ['product', 'consultancy'], true)) {
+                        $this->db->query(
+                            "UPDATE subscriptions SET plan_type = :plan WHERE org_id = :org",
+                            [':plan' => $newPlanType, ':org' => $orgId]
+                        );
+                    }
+                    // Billing method: manual_ prefix = invoiced, real Stripe ID = stripe
+                    $currentSubId = $sub['stripe_subscription_id'] ?? '';
+                    $isCurrentlyInvoiced = empty($currentSubId) || str_starts_with($currentSubId, 'manual_');
+                    if ($billingMethod === 'invoiced' && !$isCurrentlyInvoiced) {
+                        $this->db->query(
+                            "UPDATE subscriptions SET stripe_subscription_id = :sid WHERE org_id = :org",
+                            [':sid' => 'manual_' . time(), ':org' => $orgId]
+                        );
+                    }
+                } else {
+                    Subscription::create($this->db, [
+                        'org_id' => $orgId,
+                        'stripe_subscription_id' => $billingMethod === 'stripe' ? '' : 'manual_' . time(),
+                        'plan_type' => $newPlanType,
+                        'status' => 'active',
+                        'started_at' => date('Y-m-d H:i:s'),
+                    ]);
+                    Subscription::updateSeatLimit($this->db, $orgId, $newSeats);
+                }
+
+                AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
+                    'action' => 'org_edited', 'org_id' => $orgId, 'org_name' => $newName ?: $org['name'],
+                    'plan_type' => $newPlanType, 'seats' => $newSeats, 'billing' => $billingMethod,
+                ]);
+                $_SESSION['flash_message'] = 'Organisation "' . ($newName ?: $org['name']) . '" updated.';
                 break;
 
             case 'update_seats':
