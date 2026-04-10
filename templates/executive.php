@@ -68,8 +68,8 @@
         </div>
     </div>
 
-    <!-- Risk Register -->
-    <div class="exec-status-card" style="border-top: 3px solid <?= $riskBorder ?>;">
+    <!-- Risk Register — clickable link to risk section below -->
+    <a href="#risk-register" class="exec-status-card exec-status-card--link" style="border-top: 3px solid <?= $riskBorder ?>; text-decoration:none;">
         <div class="exec-status-label">Open Risks</div>
         <div class="exec-status-value" style="color: <?= $riskBorder ?>"><?= (int) $risk_summary['total'] ?></div>
         <div class="exec-status-sub">
@@ -80,11 +80,12 @@
                 <?php if ($risk_summary['medium'] > 0): ?>&middot; <span style="color:#f59e0b; font-weight:600;"><?= $risk_summary['medium'] ?> medium</span><?php endif; ?>
                 <?php if ($risk_summary['low'] > 0): ?>&middot; <span style="color:#64748b;"><?= $risk_summary['low'] ?> low</span><?php endif; ?>
             <?php endif; ?>
+            <div style="margin-top:4px; font-size:0.72rem; color:#a5b4fc;">View details &darr;</div>
         </div>
-    </div>
+    </a>
 
-    <!-- Needs Attention -->
-    <div class="exec-status-card" style="border-top: 3px solid <?= $govBorder ?>;">
+    <!-- Needs Attention — clickable link to attention section below -->
+    <a href="#needs-attention" class="exec-status-card exec-status-card--link" style="border-top: 3px solid <?= $govBorder ?>; text-decoration:none;">
         <div class="exec-status-label">Needs Attention</div>
         <div class="exec-status-value" style="color: <?= $govBorder ?>"><?= $needsAttention ?></div>
         <div class="exec-status-sub">
@@ -93,9 +94,10 @@
             <?php else: ?>
                 <?php if ($drift_alerts['critical'] > 0): ?><span style="color:#ef4444; font-weight:600;"><?= $drift_alerts['critical'] ?> critical alerts</span><?php endif; ?>
                 <?php if ($governance_queue > 0): ?><?php if ($drift_alerts['critical'] > 0): ?> &middot; <?php endif; ?><span style="color:#d97706; font-weight:600;"><?= $governance_queue ?> pending review<?= $governance_queue !== 1 ? 's' : '' ?></span><?php endif; ?>
+                <div style="margin-top:4px; font-size:0.72rem; color:#a5b4fc;">View details &darr;</div>
             <?php endif; ?>
         </div>
-    </div>
+    </a>
 
 </div>
 
@@ -172,14 +174,60 @@
             </div>
         </summary>
         <div class="okr-kr-list">
-            <?php foreach ($krLines as $j => $krLine):
-                $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+            <?php
+            $structuredKrs = $okr['structured_krs'] ?? [];
+            $krStatusColours = [
+                'on_track'    => ['#10b981', '#d1fae5'],
+                'at_risk'     => ['#f59e0b', '#fef3c7'],
+                'off_track'   => ['#ef4444', '#fee2e2'],
+                'not_started' => ['#9ca3af', '#f3f4f6'],
+                'achieved'    => ['#6366f1', '#e0e7ff'],
+            ];
+            $krStatusLabels = [
+                'on_track'    => 'On Track',
+                'at_risk'     => 'At Risk',
+                'off_track'   => 'Off Track',
+                'not_started' => 'Not Started',
+                'achieved'    => 'Achieved',
+            ];
             ?>
-            <div class="okr-kr-item">
-                <span class="okr-kr-num"><?= (int) ($j + 1) ?>.</span>
-                <span class="okr-kr-text"><?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?></span>
-            </div>
-            <?php endforeach; ?>
+            <?php if (!empty($structuredKrs)): ?>
+                <?php foreach ($structuredKrs as $skr):
+                    $baseline = (float) ($skr['baseline_value'] ?? 0);
+                    $target   = (float) ($skr['target_value']   ?? 0);
+                    $current  = (float) ($skr['current_value']  ?? 0);
+                    $range    = $target - $baseline;
+                    $krPct    = $range > 0 ? max(0, min(100, (int) round(($current - $baseline) / $range * 100))) : 0;
+                    $krStatus = $skr['kr_status'] ?? 'not_started';
+                    [$krColor, $krBg] = $krStatusColours[$krStatus] ?? ['#9ca3af', '#f3f4f6'];
+                    $unit     = htmlspecialchars($skr['unit'] ?? '', ENT_QUOTES, 'UTF-8');
+                ?>
+                <div class="okr-kr-item okr-kr-item--structured">
+                    <div class="okr-kr-item-header">
+                        <span class="okr-kr-text"><?= htmlspecialchars($skr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <span class="okr-kr-status-badge" style="background:<?= $krBg ?>; color:<?= $krColor ?>;"><?= $krStatusLabels[$krStatus] ?? ucwords(str_replace('_', ' ', $krStatus)) ?></span>
+                    </div>
+                    <div class="okr-kr-progress-row">
+                        <div class="okr-kr-bar-track">
+                            <div class="okr-kr-bar-fill" style="width:<?= $krPct ?>%; background:<?= $krColor ?>;"></div>
+                        </div>
+                        <span class="okr-kr-progress-text" style="color:<?= $krColor ?>;"><?= $krPct ?>%</span>
+                        <?php if ($target > 0): ?>
+                        <span class="okr-kr-values"><?= number_format($current, 0) ?><?= $unit ? ' '.$unit : '' ?> / <?= number_format($target, 0) ?><?= $unit ? ' '.$unit : '' ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <?php foreach ($krLines as $j => $krLine):
+                    $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+                ?>
+                <div class="okr-kr-item">
+                    <span class="okr-kr-num"><?= (int) ($j + 1) ?>.</span>
+                    <span class="okr-kr-text"><?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
             <?php if ($sp['total'] > 0): ?>
             <div style="margin-top:0.5rem; padding:0.4rem 0.6rem; background:#f1f5f9; border-radius:4px; font-size:0.75rem; color:#6b7280; display:flex; align-items:center; gap:0.75rem;">
                 <span><?= $sp['done'] ?>/<?= $sp['total'] ?> stories done</span>
@@ -223,7 +271,7 @@
      Risk Register
      =========================== -->
 <?php if (!empty($top_risks)): ?>
-<div class="card mt-6">
+<div class="card mt-6" id="risk-register">
     <div class="card-header">
         <h2 class="card-title">Risk Register <span style="font-size:0.8rem; font-weight:400; color:#64748b;">— top <?= count($top_risks) ?> by priority</span></h2>
     </div>
@@ -263,17 +311,21 @@
      Critical Alerts + Governance (only if there's something to show)
      =========================== -->
 <?php if (!empty($critical_alerts) || $governance_queue > 0): ?>
-<div class="card mt-6" style="border-left: 4px solid #ef4444; margin-bottom: 2rem;">
+<?php
+$changeTypeLabels = [
+    'new_story'          => 'New Story',
+    'scope_change'       => 'Scope Change',
+    'size_change'        => 'Size Change',
+    'dependency_change'  => 'Dependency Change',
+];
+?>
+<div class="card mt-6" id="needs-attention" style="border-left: 4px solid #ef4444; margin-bottom: 2rem;">
     <div class="card-header">
         <h2 class="card-title" style="color:#dc2626;">Needs Attention</h2>
     </div>
-    <?php if ($governance_queue > 0): ?>
-    <div style="padding: 0.75rem 1.25rem; border-bottom: 1px solid #f3f4f6; display:flex; align-items:center; gap:0.75rem;">
-        <span style="background:#fef3c7; color:#d97706; font-weight:700; font-size:0.85rem; padding:3px 10px; border-radius:999px;"><?= $governance_queue ?></span>
-        <span style="font-size:0.875rem;">change<?= $governance_queue !== 1 ? 's' : '' ?> awaiting governance review</span>
-    </div>
-    <?php endif; ?>
+
     <?php if (!empty($critical_alerts)): ?>
+    <div style="padding: 0.5rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700;">Critical Drift Alerts</div>
     <div class="table-responsive">
         <table class="table">
             <thead>
@@ -288,6 +340,31 @@
                     <td style="color:#64748b;"><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
                     <td><?= htmlspecialchars($details['message'] ?? $alert['alert_type'], ENT_QUOTES, 'UTF-8') ?></td>
                     <td style="font-size:12px; color:#94a3b8; white-space:nowrap;"><?= htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($governance_items)): ?>
+    <div style="padding: 0.5rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700; <?= !empty($critical_alerts) ? 'border-top:1px solid #f3f4f6; margin-top:0.5rem;' : '' ?>">Pending Governance Review</div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr><th>Change Type</th><th>Project</th><th>Details</th><th>Requested</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ($governance_items as $gi):
+                    $giData  = json_decode($gi['proposed_change_json'] ?? '{}', true);
+                    $giLabel = $changeTypeLabels[$gi['change_type']] ?? ucwords(str_replace('_', ' ', $gi['change_type']));
+                    $giTitle = $giData['title'] ?? $giData['story_title'] ?? $giData['item_title'] ?? '';
+                ?>
+                <tr>
+                    <td><span style="background:#fef3c7; color:#d97706; font-weight:600; font-size:0.8rem; padding:2px 8px; border-radius:999px;"><?= htmlspecialchars($giLabel, ENT_QUOTES, 'UTF-8') ?></span></td>
+                    <td style="color:#64748b; font-size:0.85rem;"><?= htmlspecialchars($gi['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                    <td style="font-size:0.85rem;"><?= htmlspecialchars($giTitle ?: '—', ENT_QUOTES, 'UTF-8') ?></td>
+                    <td style="font-size:12px; color:#94a3b8; white-space:nowrap;"><?= htmlspecialchars($gi['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -424,4 +501,72 @@
     color: #374151;
     line-height: 1.4;
 }
+
+/* Structured KR items with progress bars */
+.okr-kr-item--structured {
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.4rem 0.6rem;
+}
+.okr-kr-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+.okr-kr-item-header .okr-kr-text {
+    flex: 1;
+    font-size: 0.8rem;
+}
+.okr-kr-status-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.okr-kr-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.okr-kr-bar-track {
+    flex: 1;
+    height: 5px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.okr-kr-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s;
+}
+.okr-kr-progress-text {
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 2.5rem;
+    text-align: right;
+}
+.okr-kr-values {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+/* Clickable stat cards */
+.exec-status-card--link {
+    cursor: pointer;
+    display: block;
+    transition: box-shadow 0.15s, transform 0.1s;
+}
+.exec-status-card--link:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    transform: translateY(-1px);
+}
+
+/* Smooth scroll for anchor links */
+html { scroll-behavior: smooth; }
 </style>

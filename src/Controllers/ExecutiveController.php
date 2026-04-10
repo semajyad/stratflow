@@ -162,16 +162,18 @@ class ExecutiveController
         }
         $driftAlerts['total'] = array_sum($driftAlerts);
 
-        // ── 8. Governance queue depth ─────────────────────────────────────────
-        $govRow = $this->db->query(
-            'SELECT COUNT(*) AS cnt
+        // ── 8. Governance queue depth + items ─────────────────────────────────
+        $govItems = $this->db->query(
+            'SELECT gq.change_type, gq.proposed_change_json, gq.created_at, p.name AS project_name
                FROM governance_queue gq
                JOIN projects p ON gq.project_id = p.id
               WHERE p.org_id = :oid
-                AND gq.status = \'pending\'',
+                AND gq.status = \'pending\'
+              ORDER BY gq.created_at DESC
+              LIMIT 20',
             [':oid' => $orgId]
-        )->fetch();
-        $governanceQueueDepth = (int) ($govRow['cnt'] ?? 0);
+        )->fetchAll();
+        $governanceQueueDepth = count($govItems);
 
         // ── 9. Integration health ─────────────────────────────────────────────
         $integrations = $this->db->query(
@@ -243,6 +245,9 @@ class ExecutiveController
                 }
             }
             $okr['kr_count'] = count($okr['kr_lines']);
+            // Attach structured KRs for per-KR progress display
+            $okrKey = strtolower(trim($okr['okr_title'])) . '::' . (int) $okr['project_id'];
+            $okr['structured_krs'] = $structuredKrsByKey[$okrKey] ?? [];
         }
         unset($okr);
 
@@ -279,6 +284,34 @@ class ExecutiveController
             }
         } catch (\Throwable $e) {
             error_log('[Executive] KR counts query failed: ' . $e->getMessage());
+        }
+
+        // ── Structured KR detail per OKR (for per-KR progress in expanded rows) ──
+        $structuredKrsByKey = [];
+        try {
+            $krDetailRows = $this->db->query(
+                "SELECT LOWER(TRIM(hwi.okr_title)) AS okr_key,
+                        hwi.project_id,
+                        kr.title       AS kr_title,
+                        kr.baseline_value,
+                        kr.target_value,
+                        kr.current_value,
+                        kr.unit,
+                        kr.status      AS kr_status,
+                        kr.ai_momentum
+                   FROM key_results kr
+                   JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
+                   JOIN projects p ON hwi.project_id = p.id
+                  WHERE p.org_id = :oid
+                  ORDER BY kr.display_order ASC, kr.id ASC",
+                [':oid' => $orgId]
+            )->fetchAll();
+            foreach ($krDetailRows as $row) {
+                $key = $row['okr_key'] . '::' . (int) $row['project_id'];
+                $structuredKrsByKey[$key][] = $row;
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] structured KR detail query failed: ' . $e->getMessage());
         }
 
         // ── Story completion per project (progress proxy for OKR rows) ──────────
@@ -386,8 +419,9 @@ class ExecutiveController
             'story_progress'          => $storyProgressByProject,
             'merged_prs_by_project'   => $mergedPrByProject,
             // Risk detail
-            'top_risks'        => $topRisks,
-            'critical_alerts'  => $criticalAlerts,
+            'top_risks'          => $topRisks,
+            'critical_alerts'    => $criticalAlerts,
+            'governance_items'   => $govItems,
             // Flash
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
