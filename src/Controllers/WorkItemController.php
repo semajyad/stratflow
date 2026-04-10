@@ -216,9 +216,8 @@ class WorkItemController
         // Delete existing work items and create new ones
         HLWorkItem::deleteByProjectId($this->db, $projectId);
 
-        $scorer = new StoryQualityScorer(new GeminiService($this->config));
-
         // First pass: create all items and build a map of priority_number => new DB id
+        // Quality scoring is deferred — scores are null until first update or "Improve with AI"
         $priorityToId = [];
         foreach ($itemsData as $index => $item) {
             $priorityNumber = (int) ($item['priority_number'] ?? ($index + 1));
@@ -246,17 +245,6 @@ class WorkItemController
                                          ? mb_substr((string) $item['kr_hypothesis'], 0, 500)
                                          : null,
             ]);
-            // Score the new item — failure is non-fatal
-            $scored = $scorer->scoreWorkItem(
-                array_merge($item, ['acceptance_criteria' => $ac]),
-                $qualityBlock
-            );
-            if ($scored['score'] !== null) {
-                HLWorkItem::update($this->db, $newId, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown']),
-                ]);
-            }
 
             $priorityToId[$priorityNumber] = $newId;
         }
@@ -474,7 +462,7 @@ class WorkItemController
      *
      * @param int $id Work item primary key (from route parameter)
      */
-    public function improve($id): void
+    public function improve(int $id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];

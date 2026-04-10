@@ -172,8 +172,6 @@ class UserStoryController
             }
             $input .= $qualityBlock;
 
-            $scorer = new StoryQualityScorer(new GeminiService($this->config));
-
             try {
                 $gemini     = new GeminiService($this->config);
                 $storiesData = $gemini->generateJson(UserStoryPrompt::DECOMPOSE_PROMPT, $input);
@@ -210,18 +208,7 @@ class UserStoryController
                                              : null,
                 ]);
                 $totalCreated++;
-
-                // Score the new story — failure is non-fatal
-                $scored = $scorer->scoreStory(
-                    array_merge($storyData, ['acceptance_criteria' => $ac]),
-                    $qualityBlock
-                );
-                if ($scored['score'] !== null) {
-                    UserStory::update($this->db, $newStoryId, [
-                        'quality_score'     => $scored['score'],
-                        'quality_breakdown' => json_encode($scored['breakdown']),
-                    ]);
-                }
+                // Quality scoring is deferred — scores are null until first update or "Improve with AI"
             }
         }
 
@@ -370,7 +357,7 @@ class UserStoryController
      *
      * @param int $id User story primary key (from route parameter)
      */
-    public function improve($id): void
+    public function improve(int $id): void
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
