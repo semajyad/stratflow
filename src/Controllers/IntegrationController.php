@@ -21,6 +21,7 @@ use StratFlow\Models\Integration;
 use StratFlow\Models\IntegrationRepo;
 use StratFlow\Models\SyncLog;
 use StratFlow\Models\SyncMapping;
+use StratFlow\Models\SystemSettings;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\JiraService;
 use StratFlow\Services\JiraSyncService;
@@ -112,6 +113,7 @@ class IntegrationController
             'sync_health'      => $syncHealth,
             'github_installs'  => $githubInstalls,
             'github_app_slug'  => $githubAppSlug,
+            'settings'         => SystemSettings::get($this->db),
             'active_page'      => 'integrations',
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,

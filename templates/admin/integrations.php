@@ -161,6 +161,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 <!-- ===========================
      GitHub App Integration
      =========================== -->
+<?php if (($settings['feature_github'] ?? true) || $hasGithub): ?>
 <section class="card mt-4">
     <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
         <div>
@@ -275,9 +276,12 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
     </div>
 </section>
 
+<?php endif; ?>
+
 <!-- ===========================
      GitLab Webhook Integration
      =========================== -->
+<?php if (($settings['feature_gitlab'] ?? true) || $gitlabActive): ?>
 <section class="card mt-4">
     <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
         <div>
@@ -354,6 +358,8 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
         <?php endif; ?>
     </div>
 </section>
+
+<?php endif; ?>
 
 <script>
 // Repo count badge hover tooltip
