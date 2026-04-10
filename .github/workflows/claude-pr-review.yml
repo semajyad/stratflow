@@ -1,0 +1,110 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD -- '*.php' > /tmp/pr.diff
+          echo "lines=$(wc -l < /tmp/pr.diff)" >> $GITHUB_OUTPUT
+
+      - name: Skip if no PHP changes
+        if: steps.diff.outputs.lines == '0'
+        run: echo "No PHP changes — skipping review" && exit 0
+
+      - name: Truncate diff if too large
+        run: |
+          if [ $(wc -l < /tmp/pr.diff) -gt 800 ]; then
+            head -800 /tmp/pr.diff > /tmp/pr_truncated.diff
+            echo "" >> /tmp/pr_truncated.diff
+            echo "... [diff truncated at 800 lines]" >> /tmp/pr_truncated.diff
+            mv /tmp/pr_truncated.diff /tmp/pr.diff
+          fi
+
+      - name: Claude code review
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          DIFF=$(cat /tmp/pr.diff)
+          REVIEW=$(python3 - <<'PYEOF'
+          import os, json, urllib.request
+
+          diff = open("/tmp/pr.diff").read()
+
+          prompt = f"""You are reviewing a PHP pull request for StratFlow, a multi-tenant SaaS application.
+
+          Review the following diff for these critical issues:
+
+          ## CRITICAL (must flag)
+          1. SQL injection — string interpolation in queries instead of PDO prepared statements
+          2. Missing org_id filter — SELECT/UPDATE/DELETE on tenant tables without org_id = ?
+          3. Missing CSRF — POST handlers without $this->verifyCsrf() as first line
+          4. XSS — echoing user input without htmlspecialchars()
+          5. Hardcoded secrets — API keys, passwords, tokens in code
+          6. Raw exception output — die($e->getMessage()) leaking internals
+
+          ## IMPORTANT (should flag)
+          - Missing return types on new methods
+          - Debug statements left in (var_dump, print_r)
+          - Silent exception catches with no logging
+          - Stripe events not checked for idempotency via stripe_events table
+
+          Format your response as GitHub markdown. Start with a one-paragraph summary.
+          Then list issues found under ## Issues. Use ✅ if clean, 🔴 for critical, 🟡 for important.
+          Be concise — max 400 words total.
+
+          Diff to review:
+          ```diff
+          {diff}
+          ```"""
+
+          payload = json.dumps({{
+              "model": "claude-sonnet-4-6",
+              "max_tokens": 1024,
+              "messages": [{{"role": "user", "content": prompt}}]
+          }}).encode()
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={{
+                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                  "anthropic-version": "2023-06-01",
+                  "content-type": "application/json",
+              }}
+          )
+          resp = json.loads(urllib.request.urlopen(req).read())
+          print(resp["content"][0]["text"])
+          PYEOF
+          )
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = `## 🤖 Claude Code Review\n\n${{ steps.claude.outputs.review }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: review
+            });

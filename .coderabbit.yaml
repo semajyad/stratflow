@@ -1,0 +1,70 @@
+# CodeRabbit configuration for StratFlow
+# Install the CodeRabbit GitHub App at https://coderabbit.ai to activate.
+
+language: en-US
+tone_instructions: "Be direct and technical. Skip pleasantries. Flag issues clearly."
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  path_filters:
+    - "!node_modules/**"
+    - "!vendor/**"
+    - "!*.min.js"
+    - "!*.min.css"
+    - "!public/assets/compiled/**"
+
+  path_instructions:
+    - path: "src/Controllers/**"
+      instructions: |
+        This is a PHP 8.4 MVC controller. Check for:
+        - Every POST handler must call $this->verifyCsrf() as its FIRST line
+        - Every query touching orgs/users/strategies/work_items/documents must filter by org_id
+        - All DB queries must use PDO prepared statements — no string interpolation in SQL
+        - User output must use htmlspecialchars() — never echo raw $_GET/$_POST
+        - No die($e->getMessage()) — use proper error responses
+        - Methods must have return type declarations
+
+    - path: "src/Services/**"
+      instructions: |
+        Service layer. Check for:
+        - PDO prepared statements only
+        - org_id passed in and used in all queries — never assumed from global state
+        - Exceptions must be caught and re-thrown or logged — no silent catches
+        - External HTTP calls must have timeout set
+
+    - path: "src/Controllers/WebhookController.php"
+      instructions: |
+        Stripe webhook handler. Check for:
+        - Signature verification via $this->stripe->webhooks->constructEvent() must be first
+        - Every event type must check stripe_events table for idempotency before processing
+        - Must be exempt from CSRF (POST from Stripe, not browser)
+
+    - path: "tests/**"
+      instructions: |
+        PHPUnit tests. Check for:
+        - Tests must use test database credentials, never production
+        - Each test must be isolated — no shared state between tests
+        - Test names must describe the behavior being tested
+
+    - path: "database/**"
+      instructions: |
+        Database migrations/schema. Check for:
+        - New columns must be NULLABLE or have a DEFAULT — never NOT NULL without default on existing tables
+        - New tables must have created_at, updated_at columns
+        - Foreign keys must be explicit
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+chat:
+  auto_reply: true
