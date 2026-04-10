@@ -45,17 +45,28 @@ class GitHubAppClient
      */
     public static function mintAppJwt(): string
     {
-        $appId      = $_ENV['GITHUB_APP_ID'] ?? '';
-        $keyPath    = $_ENV['GITHUB_APP_PRIVATE_KEY_PATH'] ?? '';
-
-        if ($appId === '' || $keyPath === '') {
-            throw new \RuntimeException('[GitHubAppClient] GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY_PATH not configured');
+        $appId = $_ENV['GITHUB_APP_ID'] ?? '';
+        if ($appId === '') {
+            throw new \RuntimeException('[GitHubAppClient] GITHUB_APP_ID not configured');
         }
 
-        $pem = file_get_contents($keyPath);
-        if ($pem === false) {
-            throw new \RuntimeException('[GitHubAppClient] Cannot read private key at: ' . $keyPath);
+        // Prefer inline PEM content (GITHUB_APP_PRIVATE_KEY env var) over a file path.
+        // On Railway and other PaaS environments, storing the key as an env var is
+        // simpler than managing file mounts. The path-based fallback supports local Docker.
+        $pem = $_ENV['GITHUB_APP_PRIVATE_KEY'] ?? '';
+        if ($pem === '') {
+            $keyPath = $_ENV['GITHUB_APP_PRIVATE_KEY_PATH'] ?? '';
+            if ($keyPath === '') {
+                throw new \RuntimeException('[GitHubAppClient] Neither GITHUB_APP_PRIVATE_KEY nor GITHUB_APP_PRIVATE_KEY_PATH is configured');
+            }
+            $pem = file_get_contents($keyPath);
+            if ($pem === false) {
+                throw new \RuntimeException('[GitHubAppClient] Cannot read private key at: ' . $keyPath);
+            }
         }
+
+        // Railway stores env vars as single-line; restore newlines if collapsed.
+        $pem = str_replace('\n', "\n", $pem);
 
         $now = time();
         $header  = self::base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR));
