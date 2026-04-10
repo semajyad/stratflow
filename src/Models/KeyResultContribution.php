@@ -64,7 +64,7 @@ class KeyResultContribution
     public static function findByKeyResultId(Database $db, int $keyResultId, int $orgId): array
     {
         return $db->query(
-            "SELECT krc.*, sgl.ref_url, sgl.ref_label, sgl.ref_title
+            "SELECT krc.*, sgl.ref_url, sgl.ref_label
                FROM key_result_contributions krc
                JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
               WHERE krc.key_result_id = :kr_id AND krc.org_id = :oid
@@ -89,7 +89,7 @@ class KeyResultContribution
         int      $limit = 10
     ): array {
         return $db->query(
-            "SELECT krc.ai_relevance_score, krc.ai_rationale, sgl.ref_title
+            "SELECT krc.ai_relevance_score, krc.ai_rationale, sgl.ref_label
                FROM key_result_contributions krc
                JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
               WHERE krc.key_result_id = :kr_id AND krc.org_id = :oid
