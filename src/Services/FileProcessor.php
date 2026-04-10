@@ -183,26 +183,54 @@ class FileProcessor
         // Also check by file extension as a fallback
         $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
+        // MIME type takes strict priority. Extension fallbacks only apply when no
+        // specific MIME handler matched (i.e. MIME is empty or genuinely unknown).
+        // This prevents a .txt extension from overriding an explicit non-text MIME
+        // type such as application/octet-stream or application/msword.
         return match (true) {
-            $mimeType === 'text/plain' || in_array($ext, ['txt', 'csv', 'md'])
+            $mimeType === 'text/plain'
                 => (string) file_get_contents($filePath),
 
-            $mimeType === 'application/pdf' || $ext === 'pdf'
+            $mimeType === 'application/pdf'
                 => $this->extractPdfText($filePath),
 
-            str_contains($mimeType, 'wordprocessingml') || $ext === 'docx'
+            str_contains($mimeType, 'wordprocessingml')
                 => $this->extractDocxText($filePath),
 
-            str_contains($mimeType, 'presentationml') || $ext === 'pptx'
+            str_contains($mimeType, 'presentationml')
                 => $this->extractPptxText($filePath),
 
-            str_contains($mimeType, 'spreadsheetml') || $ext === 'xlsx'
+            str_contains($mimeType, 'spreadsheetml')
                 => $this->extractXlsxText($filePath),
 
-            $mimeType === 'text/rtf' || $mimeType === 'application/rtf' || $ext === 'rtf'
+            $mimeType === 'text/rtf' || $mimeType === 'application/rtf'
                 => $this->extractRtfText($filePath),
 
-            $mimeType === 'application/msword' || $ext === 'doc'
+            $mimeType === 'application/msword'
+                => 'Binary .doc format is not supported. Please save as .docx or paste text.',
+
+            // Extension-only fallbacks — only reached when MIME type is empty (absent).
+            // An explicit MIME type (even application/octet-stream) takes precedence;
+            // if the MIME matched nothing above, that IS the answer (return '').
+            $mimeType === '' && in_array($ext, ['txt', 'csv', 'md'])
+                => (string) file_get_contents($filePath),
+
+            $mimeType === '' && $ext === 'pdf'
+                => $this->extractPdfText($filePath),
+
+            $mimeType === '' && $ext === 'docx'
+                => $this->extractDocxText($filePath),
+
+            $mimeType === '' && $ext === 'pptx'
+                => $this->extractPptxText($filePath),
+
+            $mimeType === '' && $ext === 'xlsx'
+                => $this->extractXlsxText($filePath),
+
+            $mimeType === '' && $ext === 'rtf'
+                => $this->extractRtfText($filePath),
+
+            $mimeType === '' && $ext === 'doc'
                 => 'Binary .doc format is not supported. Please save as .docx or paste text.',
 
             default => '',

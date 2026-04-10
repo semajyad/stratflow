@@ -13,9 +13,9 @@ $jira = $integrations['jira'] ?? null;
 $jiraActive = $jira && $jira['status'] === 'active';
 $jiraConfig = $jira ? (json_decode($jira['config_json'] ?? '{}', true) ?: []) : [];
 
-$github = $integrations['github'] ?? null;
-$githubActive = $github && $github['status'] === 'active';
-$githubConfig = $github ? (json_decode($github['config_json'] ?? '{}', true) ?: []) : [];
+// GitHub App — multiple installs per org; $github_installs is an array from the controller
+$githubInstalls = $github_installs ?? [];
+$hasGithub      = count($githubInstalls) > 0;
 
 $gitlab = $integrations['gitlab'] ?? null;
 $gitlabActive = $gitlab && $gitlab['status'] === 'active';
@@ -159,81 +159,94 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 </section>
 
 <!-- ===========================
-     GitHub Webhook Integration
+     GitHub App Integration
      =========================== -->
 <section class="card mt-4">
     <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
         <div>
             <h2 class="card-title" style="margin: 0;">GitHub</h2>
-            <small class="text-muted">Auto-link PRs to user stories and work items via webhook</small>
+            <small class="text-muted">Auto-link pull requests to user stories via GitHub App — no copy/paste required</small>
         </div>
         <div>
-            <?php if ($githubActive): ?>
-                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+            <?php if ($hasGithub): ?>
+                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">
+                    <?= count($githubInstalls) ?> account<?= count($githubInstalls) === 1 ? '' : 's' ?> connected
+                </span>
             <?php else: ?>
-                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Disconnected</span>
+                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Not connected</span>
             <?php endif; ?>
         </div>
     </div>
     <div class="card-body">
-        <?php if ($githubActive): ?>
-            <!-- Connected state -->
-            <div style="margin-bottom: 1rem;">
-                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook URL</span>
-                <code style="font-size: 0.85rem; word-break: break-all;"><?= htmlspecialchars(($_SERVER['HTTP_HOST'] ?? '') ? 'https://' . $_SERVER['HTTP_HOST'] . '/webhook/git/github' : '/webhook/git/github') ?></code>
-            </div>
+        <?php if ($hasGithub): ?>
+            <!-- Connected state — list each GitHub account installation -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <th style="text-align: left; padding: 0.4rem 0.5rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Account</th>
+                        <th style="text-align: left; padding: 0.4rem 0.5rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Repos</th>
+                        <th style="text-align: right; padding: 0.4rem 0.5rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($githubInstalls as $install): ?>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.6rem 0.5rem;">
+                            <strong>@<?= htmlspecialchars($install['account_login'] ?? '') ?></strong>
+                        </td>
+                        <td style="padding: 0.6rem 0.5rem; color: var(--text-muted);">
+                            <?= (int) $install['repo_count'] ?> repo<?= (int) $install['repo_count'] === 1 ? '' : 's' ?>
+                        </td>
+                        <td style="padding: 0.6rem 0.5rem; text-align: right; white-space: nowrap;">
+                            <?php if ($install['installation_id']): ?>
+                            <a href="https://github.com/settings/installations/<?= (int) $install['installation_id'] ?>"
+                               target="_blank" rel="noopener noreferrer"
+                               class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">
+                                Manage on GitHub
+                            </a>
+                            <?php endif; ?>
+                            <form method="POST"
+                                  action="/app/admin/integrations/github/<?= (int) $install['id'] ?>/disconnect"
+                                  class="inline-form" style="display: inline;">
+                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        data-account="<?= htmlspecialchars($install['account_login'] ?? '') ?>"
+                                        onclick="return confirm('Disconnect @' + this.dataset.account + '? PR links already created will be preserved.')">
+                                    Disconnect
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
 
-            <div style="margin-bottom: 1rem;">
-                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret</span>
-                <?php
-                    $ghSecret = $githubConfig['webhook_secret'] ?? '';
-                    $ghMasked = $ghSecret !== ''
-                        ? str_repeat('*', max(0, strlen($ghSecret) - 4)) . substr($ghSecret, -4)
-                        : '';
-                ?>
-                <?php if ($ghSecret !== ''): ?>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <code id="github-secret-display"
-                              data-masked="<?= htmlspecialchars($ghMasked) ?>"
-                              style="font-size: 0.85rem; letter-spacing: 0.05em;"><?= htmlspecialchars($ghMasked) ?></code>
-                        <button type="button" class="btn btn-sm btn-secondary"
-                                onclick="toggleGitSecret('github')"
-                                id="github-secret-reveal-btn">Reveal</button>
-                    </div>
-                <?php else: ?>
-                    <span class="text-muted">No secret set.</span>
-                <?php endif; ?>
-            </div>
+            <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+                To add or remove repos from an installation, use the <em>Manage on GitHub</em> link above —
+                stratflow will sync the change automatically. Project managers can then subscribe their
+                projects to specific repos from the project settings page.
+            </p>
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <form method="POST" action="/app/admin/integrations/git/github/regenerate-secret" class="inline-form">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <button type="submit" class="btn btn-sm btn-secondary"
-                            onclick="return confirm('Regenerate GitHub webhook secret? You must update your repository webhook settings with the new secret.')">
-                        Regenerate Secret
-                    </button>
-                </form>
+            <a href="/app/admin/integrations/github/install" class="btn btn-sm btn-secondary">
+                + Add another GitHub account
+            </a>
 
-                <div style="margin-left: auto;">
-                    <form method="POST" action="/app/admin/integrations/git/github/disconnect" class="inline-form">
-                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Disconnect GitHub webhook?')">
-                            Disconnect
-                        </button>
-                    </form>
-                </div>
-            </div>
         <?php else: ?>
             <!-- Disconnected state -->
             <p class="text-muted" style="margin-bottom: 1rem;">
-                Connect a GitHub webhook to automatically link pull requests to user stories and work items.
+                Install the StratFlow GitHub App to automatically link pull requests to user stories.
+                GitHub handles the repository picker — no webhook URLs or secrets to copy.
                 Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your PR description.
             </p>
-            <form method="POST" action="/app/admin/integrations/git/github/connect" class="inline-form">
-                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <button type="submit" class="btn btn-primary">Connect GitHub</button>
-            </form>
+            <?php if (($github_app_slug ?? '') !== ''): ?>
+            <a href="/app/admin/integrations/github/install" class="btn btn-primary">
+                Install GitHub App
+            </a>
+            <?php else: ?>
+            <p class="text-muted" style="font-size: 0.85rem;">
+                <em>GITHUB_APP_SLUG is not configured — ask your system administrator to set it up.</em>
+            </p>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </section>

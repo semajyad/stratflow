@@ -18,6 +18,7 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Integration;
+use StratFlow\Models\IntegrationRepo;
 use StratFlow\Models\SyncLog;
 use StratFlow\Models\SyncMapping;
 use StratFlow\Services\AuditLogger;
@@ -92,14 +93,21 @@ class IntegrationController
             }
         }
 
+        // GitHub App installations (multiple per org are allowed)
+        $githubInstalls = Integration::findActiveGithubByOrg($this->db, $orgId);
+
+        $githubAppSlug = $_ENV['GITHUB_APP_SLUG'] ?? '';
+
         $this->response->render('admin/integrations', [
-            'user'            => $user,
-            'integrations'    => $byProvider,
-            'jira_sync_count' => $jiraSyncCount,
-            'sync_health'     => $syncHealth,
-            'active_page'     => 'integrations',
-            'flash_message'   => $_SESSION['flash_message'] ?? null,
-            'flash_error'     => $_SESSION['flash_error']   ?? null,
+            'user'             => $user,
+            'integrations'     => $byProvider,
+            'jira_sync_count'  => $jiraSyncCount,
+            'sync_health'      => $syncHealth,
+            'github_installs'  => $githubInstalls,
+            'github_app_slug'  => $githubAppSlug,
+            'active_page'      => 'integrations',
+            'flash_message'    => $_SESSION['flash_message'] ?? null,
+            'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);

@@ -119,6 +119,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/jira/sync',         'IntegrationController@contextualSync', ['auth', 'csrf']);
     $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth']);
 
+    // Project GitHub repo subscription
+    $router->add('GET',  '/app/projects/{id}/github/edit', 'ProjectGitHubController@edit', ['auth']);
+    $router->add('POST', '/app/projects/{id}/github/save', 'ProjectGitHubController@save', ['auth', 'csrf']);
+
     // Project management
     $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira', ['auth', 'csrf']);
     $router->add('POST', '/app/projects/{id}/rename',    'HomeController@renameProject', ['auth', 'csrf']);
@@ -142,6 +146,11 @@ return function (\StratFlow\Core\Router $router) {
     // Git webhooks — NO middleware (public, HMAC-verified in controller)
     $router->add('POST', '/webhook/git/github', 'GitWebhookController@receiveGitHub');
     $router->add('POST', '/webhook/git/gitlab', 'GitWebhookController@receiveGitLab');
+
+    // GitHub App install flow — callback omits csrf (GitHub redirects back, state nonce is used instead)
+    $router->add('GET',  '/app/admin/integrations/github/install',              'GitHubAppController@install',    ['auth', 'admin']);
+    $router->add('GET',  '/app/admin/integrations/github/callback',             'GitHubAppController@callback',   ['auth', 'admin']);
+    $router->add('POST', '/app/admin/integrations/github/{id}/disconnect',      'GitHubAppController@disconnect', ['auth', 'admin', 'csrf']);
 
     // Git links — manual CRUD (static routes BEFORE {id} routes)
     $router->add('GET',  '/app/git-links',            'GitLinkController@index',  ['auth']);

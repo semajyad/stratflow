@@ -30,10 +30,18 @@ class GitLinkService
     // ===========================
 
     private Database $db;
+    private ?int $orgId;
 
-    public function __construct(Database $db)
+    /**
+     * @param Database $db    Database instance
+     * @param int|null $orgId Organisation ID for tenancy scoping.
+     *                        Pass null only for GitLab (which still uses the legacy
+     *                        single-integration model and has no org_id in the handler).
+     */
+    public function __construct(Database $db, ?int $orgId = null)
     {
-        $this->db = $db;
+        $this->db    = $db;
+        $this->orgId = $orgId;
     }
 
     // ===========================
@@ -136,6 +144,11 @@ class GitLinkService
      *
      * Called on merge/close webhook events. Works across all local types.
      *
+     * When $this->orgId is set (GitHub App path), only links whose local item
+     * belongs to that org are updated. This prevents a cross-tenant status
+     * poisoning attack where Org B sends a closed event with a PR URL that
+     * happens to appear in Org A's story_git_links.
+     *
      * @param string $refUrl Full URL of the PR/MR
      * @param string $status New status value ('merged', 'closed', etc.)
      * @return int           Number of links updated
@@ -143,14 +156,21 @@ class GitLinkService
     public function updateStatusByRefUrl(string $refUrl, string $status): int
     {
         $stmt = $this->db->query(
-            "SELECT id, status FROM story_git_links WHERE ref_url = :ref_url",
+            "SELECT id, status, local_type, local_id FROM story_git_links WHERE ref_url = :ref_url",
             [':ref_url' => $refUrl]
         );
 
-        $rows = $stmt->fetchAll();
+        $rows    = $stmt->fetchAll();
         $updated = 0;
 
         foreach ($rows as $row) {
+            // Org tenancy check — only update links whose local item belongs to this org.
+            // story_git_links has no org_id column (MVP deferred), so we resolve via the
+            // local item. Skip items we cannot confirm belong to this org.
+            if ($this->orgId !== null && !$this->localItemBelongsToOrg((string) $row['local_type'], (int) $row['local_id'])) {
+                continue;
+            }
+
             if ($row['status'] !== $status) {
                 StoryGitLink::updateStatus($this->db, (int) $row['id'], $status);
                 $updated++;
@@ -158,6 +178,35 @@ class GitLinkService
         }
 
         return $updated;
+    }
+
+    /**
+     * Check whether a local item (user_story or hl_work_item) belongs to $this->orgId.
+     *
+     * Used to scope updateStatusByRefUrl when org_id is set.
+     *
+     * @param string $localType 'user_story' or 'hl_work_item'
+     * @param int    $localId   Local item primary key
+     * @return bool             True if the item belongs to $this->orgId
+     */
+    private function localItemBelongsToOrg(string $localType, int $localId): bool
+    {
+        $table = match ($localType) {
+            'user_story'   => 'user_stories',
+            'hl_work_item' => 'hl_work_items',
+            default        => null,
+        };
+
+        if ($table === null) {
+            return false;
+        }
+
+        $stmt = $this->db->query(
+            "SELECT 1 FROM `{$table}` WHERE id = :id AND org_id = :org_id LIMIT 1",
+            [':id' => $localId, ':org_id' => $this->orgId]
+        );
+
+        return $stmt->fetch() !== false;
     }
 
     /**
@@ -216,6 +265,7 @@ class GitLinkService
      * Resolve a numeric SF-{id} reference to a local item.
      *
      * Tries user_stories first, then hl_work_items.
+     * When $this->orgId is set, the resolved item must belong to that org.
      *
      * @param int $id Numeric ID from the PR body reference
      * @return array{string, int|null} [local_type, local_id] or [string, null] if not found
@@ -224,11 +274,17 @@ class GitLinkService
     {
         $story = UserStory::findById($this->db, $id);
         if ($story !== null) {
+            if ($this->orgId !== null && (int) ($story['org_id'] ?? 0) !== $this->orgId) {
+                return ['user_story', null];
+            }
             return ['user_story', $id];
         }
 
         $workItem = HLWorkItem::findById($this->db, $id);
         if ($workItem !== null) {
+            if ($this->orgId !== null && (int) ($workItem['org_id'] ?? 0) !== $this->orgId) {
+                return ['hl_work_item', null];
+            }
             return ['hl_work_item', $id];
         }
 

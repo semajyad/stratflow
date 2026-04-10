@@ -31,6 +31,7 @@ class Integration
         'token_expires_at', 'site_url', 'config_json', 'status',
         'last_sync_at', 'error_message', 'error_count',
         'token_iv', 'token_tag',
+        'installation_id', 'account_login',
     ];
 
     /**
@@ -84,10 +85,12 @@ class Integration
         $db->query(
             "INSERT INTO integrations
                 (org_id, provider, display_name, cloud_id, access_token,
-                 refresh_token, token_expires_at, site_url, config_json, status)
+                 refresh_token, token_expires_at, site_url, config_json, status,
+                 installation_id, account_login)
              VALUES
                 (:org_id, :provider, :display_name, :cloud_id, :access_token,
-                 :refresh_token, :token_expires_at, :site_url, :config_json, :status)",
+                 :refresh_token, :token_expires_at, :site_url, :config_json, :status,
+                 :installation_id, :account_login)",
             [
                 ':org_id'           => $data['org_id'],
                 ':provider'         => $data['provider'],
@@ -99,6 +102,8 @@ class Integration
                 ':site_url'         => $data['site_url'] ?? null,
                 ':config_json'      => $data['config_json'] ?? null,
                 ':status'           => $data['status'] ?? 'disconnected',
+                ':installation_id'  => $data['installation_id'] ?? null,
+                ':account_login'    => $data['account_login'] ?? null,
             ]
         );
 
@@ -141,6 +146,58 @@ class Integration
     {
         $stmt = $db->query(
             "SELECT * FROM integrations WHERE org_id = :org_id ORDER BY provider ASC",
+            [':org_id' => $orgId]
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Find a single active GitHub integration by its installation_id.
+     *
+     * The (provider, installation_id) pair is globally unique — each GitHub App
+     * installation belongs to exactly one stratflow org. Returns the row so the
+     * caller can extract org_id for tenancy scoping.
+     *
+     * @param Database $db             Database instance
+     * @param int      $installationId GitHub App installation ID from webhook payload
+     * @return array|null              Row as associative array, or null if not found
+     */
+    public static function findActiveByInstallationId(Database $db, int $installationId): ?array
+    {
+        $stmt = $db->query(
+            "SELECT id, org_id, account_login, installation_id FROM integrations
+             WHERE provider = 'github'
+               AND installation_id = :installation_id
+               AND status = 'active'
+             LIMIT 1",
+            [':installation_id' => $installationId]
+        );
+        $row = $stmt->fetch();
+
+        return $row !== false ? $row : null;
+    }
+
+    /**
+     * Return all active GitHub App integrations for an organisation.
+     *
+     * Used by the admin integrations page to list all connected GitHub accounts.
+     *
+     * @param Database $db    Database instance
+     * @param int      $orgId Organisation ID
+     * @return array          Array of integration rows (newest first)
+     */
+    public static function findActiveGithubByOrg(Database $db, int $orgId): array
+    {
+        $stmt = $db->query(
+            "SELECT i.*, COUNT(ir.id) AS repo_count
+             FROM integrations i
+             LEFT JOIN integration_repos ir ON ir.integration_id = i.id
+             WHERE i.org_id = :org_id
+               AND i.provider = 'github'
+               AND i.status = 'active'
+             GROUP BY i.id
+             ORDER BY i.id DESC",
             [':org_id' => $orgId]
         );
 
