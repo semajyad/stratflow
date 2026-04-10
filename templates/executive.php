@@ -33,9 +33,10 @@
      Status Bar — 3 cards
      =========================== -->
 <?php
-    $totalKrs   = array_sum($okr_health);
-    $atRiskKrs  = $okr_health['at_risk'] + $okr_health['off_track'];
-    $okrBorder  = $okr_health['off_track'] > 0 ? '#ef4444' : ($okr_health['at_risk'] > 0 ? '#f59e0b' : '#10b981');
+    $totalKrs    = array_sum($okr_health);
+    $totalOkrs   = count($okr_items ?? []);
+    $atRiskKrs   = $okr_health['at_risk'] + $okr_health['off_track'];
+    $okrBorder   = $okr_health['off_track'] > 0 ? '#ef4444' : ($okr_health['at_risk'] > 0 ? '#f59e0b' : ($totalOkrs > 0 ? '#10b981' : '#9ca3af'));
     $riskBorder = $risk_summary['high'] > 0 ? '#ef4444' : ($risk_summary['medium'] > 0 ? '#f59e0b' : '#10b981');
     $govBorder  = ($governance_queue > 0 || $drift_alerts['critical'] > 0) ? '#f59e0b' : '#10b981';
     $needsAttention = $governance_queue + $drift_alerts['critical'];
@@ -46,14 +47,14 @@
     <div class="exec-status-card" style="border-top: 3px solid <?= $okrBorder ?>;">
         <div class="exec-status-label">OKR Health</div>
         <div class="exec-status-value" style="color: <?= $okrBorder ?>">
-            <?php if ($totalKrs === 0): ?>—<?php else: ?>
-                <?= $okr_health['on_track'] ?> / <?= $totalKrs ?>
+            <?php if ($totalOkrs === 0): ?>—<?php else: ?>
+                <?= $totalOkrs ?>
             <?php endif; ?>
         </div>
         <div class="exec-status-sub">
-            <?php if ($totalKrs === 0): ?>
-                <span style="color:#9ca3af; font-size:12px;">No KRs defined yet</span>
-            <?php else: ?>
+            <?php if ($totalOkrs === 0): ?>
+                <span style="color:#9ca3af; font-size:12px;">No OKRs defined yet</span>
+            <?php elseif ($totalKrs > 0): ?>
                 <span style="color:#10b981; font-weight:600;"><?= $okr_health['on_track'] ?> on track</span>
                 <?php if ($okr_health['at_risk'] > 0): ?>
                     &middot; <span style="color:#f59e0b; font-weight:600;"><?= $okr_health['at_risk'] ?> at risk</span>
@@ -61,6 +62,8 @@
                 <?php if ($okr_health['off_track'] > 0): ?>
                     &middot; <span style="color:#ef4444; font-weight:600;"><?= $okr_health['off_track'] ?> off track</span>
                 <?php endif; ?>
+            <?php else: ?>
+                <span style="color:#10b981; font-weight:600;"><?= $totalOkrs ?> objective<?= $totalOkrs !== 1 ? 's' : '' ?> set</span>
             <?php endif; ?>
         </div>
     </div>
@@ -110,8 +113,8 @@
 
     <?php if (empty($okr_items)): ?>
         <p style="color:#9ca3af; font-size:0.875rem; padding: 1rem 0;">
-            No OKRs defined yet. Add OKR titles to work items on the
-            <a href="/app/work-items" style="color:#6366f1;">Work Items</a> page.
+            No OKRs defined yet. Set OKRs on strategy roadmap nodes on the
+            <a href="/app/diagram" style="color:#6366f1;">Strategy Roadmap</a> page.
         </p>
     <?php else: ?>
 
@@ -142,19 +145,31 @@
 
     <?php foreach ($projectOkrs as $okr):
         // Determine worst status for this OKR
-        $worst = 'not_started';
-        $statusOrder = ['off_track' => 0, 'at_risk' => 1, 'not_started' => 2, 'on_track' => 3, 'achieved' => 4];
-        // Check sub-status counts to derive worst
-        foreach (['off_track', 'at_risk', 'not_started', 'on_track', 'achieved'] as $s) {
-            if ((int) $okr[$s] > 0) { $worst = $s; break; }
+        // Status is only meaningful if structured key_results exist;
+        // diagram-node OKRs show "OKR Set" by default.
+        $hasStructuredKrs = ((int) $okr['on_track'] + (int) $okr['at_risk'] + (int) $okr['off_track']
+                             + (int) $okr['not_started'] + (int) $okr['achieved']) > 0;
+        if ($hasStructuredKrs) {
+            $worst = 'not_started';
+            foreach (['off_track', 'at_risk', 'not_started', 'on_track', 'achieved'] as $s) {
+                if ((int) $okr[$s] > 0) { $worst = $s; break; }
+            }
+        } else {
+            $worst = 'okr_set';
         }
-        $worstColour = $statusColours[$worst] ?? '#9ca3af';
+        $worstColour = match($worst) {
+            'off_track'   => '#ef4444',
+            'at_risk'     => '#f59e0b',
+            'on_track'    => '#10b981',
+            'achieved'    => '#6366f1',
+            default       => '#6366f1',  // okr_set / not_started → indigo
+        };
         $krCount = (int) $okr['kr_count'];
     ?>
     <div class="okr-row">
         <div class="okr-row-left">
             <span class="okr-status-pill" style="background:<?= $worstColour ?>">
-                <?= htmlspecialchars(str_replace('_', ' ', $worst), ENT_QUOTES, 'UTF-8') ?>
+                <?= $worst === 'okr_set' ? 'OKR Set' : htmlspecialchars(str_replace('_', ' ', $worst), ENT_QUOTES, 'UTF-8') ?>
             </span>
             <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
         </div>
@@ -162,22 +177,7 @@
             <?php if ($krCount === 0): ?>
                 <span style="font-size:0.75rem; color:#9ca3af;">No KRs</span>
             <?php else: ?>
-                <?php if ((int) $okr['on_track'] > 0): ?>
-                    <span class="kr-pip" style="background:#10b981;" title="<?= (int) $okr['on_track'] ?> on track"></span>
-                <?php endif; ?>
-                <?php if ((int) $okr['at_risk'] > 0): ?>
-                    <span class="kr-pip" style="background:#f59e0b;" title="<?= (int) $okr['at_risk'] ?> at risk"></span>
-                <?php endif; ?>
-                <?php if ((int) $okr['off_track'] > 0): ?>
-                    <span class="kr-pip" style="background:#ef4444;" title="<?= (int) $okr['off_track'] ?> off track"></span>
-                <?php endif; ?>
-                <?php if ((int) $okr['not_started'] > 0): ?>
-                    <span class="kr-pip" style="background:#d1d5db;" title="<?= (int) $okr['not_started'] ?> not started"></span>
-                <?php endif; ?>
-                <?php if ((int) $okr['achieved'] > 0): ?>
-                    <span class="kr-pip" style="background:#6366f1;" title="<?= (int) $okr['achieved'] ?> achieved"></span>
-                <?php endif; ?>
-                <span style="font-size:0.75rem; color:#6b7280; margin-left:4px;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
+                <span style="font-size:0.75rem; color:#6b7280;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
             <?php endif; ?>
         </div>
     </div>

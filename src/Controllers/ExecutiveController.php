@@ -199,34 +199,54 @@ class ExecutiveController
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
 
         // ── OKR / KR health across all projects ──────────────────────────────
-        // Show all strategic work items — okr_title shown if set, else item title used.
-        // Filtering only by NOT NULL and NOT empty-string was hiding items where okr_title
-        // was stored as NULL even though the item has strategic value. Now includes any
-        // item with okr_title set OR with strategic_context set.
-        $okrItems = $this->db->query(
-            "SELECT hwi.id AS item_id, hwi.title AS item_title,
-                    COALESCE(NULLIF(TRIM(hwi.okr_title), ''), hwi.title) AS okr_title,
-                    hwi.priority_number,
-                    p.id AS project_id, p.name AS project_name,
-                    0 AS on_track, 0 AS at_risk, 0 AS off_track,
-                    0 AS not_started, 0 AS achieved, 0 AS kr_count
-               FROM hl_work_items hwi
-               JOIN projects p ON hwi.project_id = p.id
-              WHERE p.org_id = :oid
-                AND hwi.status != 'done'
-              ORDER BY p.name ASC, hwi.priority_number ASC
-              LIMIT 20",
-            [':oid' => $orgId]
-        )->fetchAll();
+        // Source: diagram_nodes — these are the OKRs set on the strategy roadmap.
+        // The KR text lines (KR1:, KR2:...) are stored in okr_description as free text.
+        // We count KR lines per node to show a "X KRs" badge, and also try to enrich
+        // with structured key_results rows if they exist.
+        $okrItems = [];
+        try {
+            $okrItems = $this->db->query(
+                "SELECT dn.id AS item_id, dn.okr_title, dn.okr_description,
+                        p.id AS project_id, p.name AS project_name,
+                        0 AS on_track, 0 AS at_risk, 0 AS off_track,
+                        0 AS not_started, 0 AS achieved, 0 AS kr_count
+                   FROM diagram_nodes dn
+                   JOIN strategy_diagrams sd ON sd.id = dn.diagram_id
+                   JOIN projects p           ON p.id  = sd.project_id
+                  WHERE p.org_id = :oid
+                    AND dn.okr_title IS NOT NULL
+                    AND TRIM(dn.okr_title) != ''
+                  ORDER BY p.name ASC, dn.id ASC",
+                [':oid' => $orgId]
+            )->fetchAll();
+        } catch (\Throwable $e) {
+            error_log('[Executive] diagram_nodes OKR query failed: ' . $e->getMessage());
+        }
 
-        // Index by item_id so we can merge KR counts below.
+        // Count KR text lines (lines starting with KR) from okr_description for each node.
+        foreach ($okrItems as &$okr) {
+            if (!empty($okr['okr_description'])) {
+                $lines = preg_split('/\r?\n/', trim($okr['okr_description']));
+                $krLineCount = 0;
+                foreach ($lines as $line) {
+                    if (preg_match('/^\s*KR\d*[\s:]/i', $line) && trim($line) !== '') {
+                        $krLineCount++;
+                    }
+                }
+                $okr['kr_count'] = $krLineCount;
+            }
+        }
+        unset($okr);
+
+        // Index by item_id so we can optionally merge structured key_results below.
         $okrIndex = [];
         foreach ($okrItems as $i => $okr) {
             $okrIndex[(int) $okr['item_id']] = $i;
         }
 
         $okrHealth = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
-        // Optionally enrich with KR status counts — degrades silently if table absent.
+        // Optionally enrich with structured KR status counts from key_results.
+        // Degrades silently if table is absent or no rows exist.
         try {
             $krCounts = $this->db->query(
                 "SELECT kr.hl_work_item_id AS item_id,
@@ -245,15 +265,6 @@ class ExecutiveController
             )->fetchAll();
 
             foreach ($krCounts as $kc) {
-                $idx = $okrIndex[(int) $kc['item_id']] ?? null;
-                if ($idx !== null) {
-                    $okrItems[$idx]['on_track']    = (int) $kc['on_track'];
-                    $okrItems[$idx]['at_risk']     = (int) $kc['at_risk'];
-                    $okrItems[$idx]['off_track']   = (int) $kc['off_track'];
-                    $okrItems[$idx]['not_started'] = (int) $kc['not_started'];
-                    $okrItems[$idx]['achieved']    = (int) $kc['achieved'];
-                    $okrItems[$idx]['kr_count']    = (int) $kc['kr_count'];
-                }
                 $okrHealth['on_track']  += (int) $kc['on_track'];
                 $okrHealth['at_risk']   += (int) $kc['at_risk'];
                 $okrHealth['off_track'] += (int) $kc['off_track'];
