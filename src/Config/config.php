@@ -85,7 +85,28 @@ return [
     ],
     'upload' => [
         'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 52428800),
-        'allowed_types' => ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        'allowed_extensions' => ['txt', 'pdf', 'doc', 'docx'],
+        'allowed_types' => [
+            'text/plain',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            // Video
+            'video/mp4',
+            'video/quicktime',
+            'video/x-msvideo',
+            'video/webm',
+            'video/x-matroska',
+            // Audio
+            'audio/mpeg',
+            'audio/mp4',
+            'audio/wav',
+            'audio/ogg',
+            'audio/aac',
+        ],
+        'allowed_extensions' => [
+            'txt', 'pdf', 'doc', 'docx',
+            'mp4', 'mov', 'avi', 'webm', 'mkv',
+            'mp3', 'm4a', 'wav', 'ogg', 'aac',
+        ],
     ],
 ];
