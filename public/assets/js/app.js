@@ -764,6 +764,12 @@ function applyAiSuggestions(suggestions, framework) {
 function closeEditModal() {
     var modal = document.getElementById('edit-modal');
     if (modal) {
+        // Return any mounted KR editor back to the stash
+        var mount = document.getElementById('kr-editor-mount');
+        var stash = document.getElementById('kr-editor-stash');
+        if (mount && stash && mount.firstElementChild) {
+            stash.appendChild(mount.firstElementChild);
+        }
         modal.classList.add('hidden');
     }
 }
@@ -810,6 +816,23 @@ function openWorkItemModal(rowEl) {
         document.getElementById('modal-okr-desc').value      = rowEl.dataset.okrDesc || '';
         document.getElementById('modal-owner').value         = rowEl.dataset.owner || '';
         form.action = '/app/work-items/' + currentEditId;
+
+        // Mount the KR editor for this item into the modal
+        var mount = document.getElementById('kr-editor-mount');
+        var stash = document.getElementById('kr-editor-stash');
+        if (mount && stash) {
+            // Return any previously mounted editor to the stash
+            if (mount.firstElementChild) {
+                stash.appendChild(mount.firstElementChild);
+            }
+            // Move this item's KR editor wrapper into the mount point
+            var wrapper = stash.querySelector('.kr-editor-wrapper[data-item-id="' + currentEditId + '"]');
+            if (wrapper) {
+                mount.appendChild(wrapper);
+                // Fire mount event so the inline script can initialise event listeners
+                document.dispatchEvent(new CustomEvent('kr-editor-mounted', { detail: { itemId: Number(currentEditId) } }));
+            }
+        }
     }
 
     modal.classList.remove('hidden');
