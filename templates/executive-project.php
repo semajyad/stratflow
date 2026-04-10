@@ -113,7 +113,7 @@
                 <!-- Progress bar -->
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <div style="flex:1; background:#e5e7eb; border-radius:999px; height:8px; overflow:hidden;">
-                        <div style="width:<?= $pct ?>%; background:<?= htmlspecialchars($krBadge, ENT_QUOTES, 'UTF-8') ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
+                        <div style="width:<?= (int) $pct ?>%; background:<?= htmlspecialchars($krBadge, ENT_QUOTES, 'UTF-8') ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
                     </div>
                     <span style="font-size:0.75rem; color:#6b7280; white-space:nowrap;">
                         <?php if ($target > 0): ?>
