@@ -34,8 +34,7 @@
                 <?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
                 <div class="topbar-right">
                     <img src="/assets/images/threepoints-logo.png" alt="ThreePoints" class="topbar-threepoints-logo">
-                    <span class="user-name"><?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></span>
-                    <form method="POST" action="/logout" class="inline-form">
+<form method="POST" action="/logout" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-secondary">Logout</button>
                     </form>
