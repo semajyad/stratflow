@@ -77,52 +77,91 @@ class SprintController
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
         $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
 
-        // Jira smart defaults: last sprint end date + velocity
-        $jiraSuggestedStart    = null; // Y-m-d: day after last Jira sprint end
-        $jiraSuggestedCapacity = null; // int: average velocity from last 3 sprints
-
+        // Jira defaults are loaded client-side via /app/sprints/jira-defaults (background fetch)
+        $jiraConnected = false;
         $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'connected') {
-            try {
-                $jira        = new \StratFlow\Services\JiraService($this->config['jira'], $jiraIntegration, $this->db);
-                $intConfig   = json_decode($jiraIntegration['config_json'] ?? '{}', true) ?? [];
-                $boardId     = (int) ($intConfig['field_mapping']['board_id'] ?? 0);
-                $spField     = $intConfig['field_mapping']['story_points_field'] ?? 'story_points';
-
-                if ($boardId > 0) {
-                    $lastEnd = $jira->getLastCompletedSprintEndDate($boardId);
-                    if ($lastEnd) {
-                        // Day after last sprint end
-                        $next = new \DateTime($lastEnd);
-                        $next->modify('+1 day');
-                        $jiraSuggestedStart = $next->format('Y-m-d');
-                    }
-
-                    $velocity = $jira->getAverageVelocity($boardId, $spField);
-                    if ($velocity !== null && $velocity > 0) {
-                        $jiraSuggestedCapacity = $velocity;
-                    }
-                }
-            } catch (\Throwable) {
-                // Jira unavailable — fall through to JS defaults silently
-            }
+            $jiraConnected = true;
         }
 
         $this->response->render('sprints', [
-            'user'                    => $user,
-            'project'                 => $project,
-            'sprints'                 => $sprints,
-            'unallocated'             => $unallocated,
-            'teams'                   => $teams,
-            'jira_suggested_start'    => $jiraSuggestedStart,
-            'jira_suggested_capacity' => $jiraSuggestedCapacity,
-            'active_page'             => 'sprints',
-            'has_evaluation_board'    => Subscription::hasEvaluationBoard($this->db, $orgId),
-            'flash_message'           => $_SESSION['flash_message'] ?? null,
-            'flash_error'             => $_SESSION['flash_error']   ?? null,
+            'user'            => $user,
+            'project'         => $project,
+            'sprints'         => $sprints,
+            'unallocated'     => $unallocated,
+            'teams'           => $teams,
+            'jira_connected'  => $jiraConnected,
+            'active_page'     => 'sprints',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'   => $_SESSION['flash_message'] ?? null,
+            'flash_error'     => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Return Jira-derived sprint defaults as JSON for background client-side fetch.
+     *
+     * Returns: suggested_start (Y-m-d), sprint_length_days (7/14/21/28),
+     *          next_sprint_number (int), suggested_capacity (int|null).
+     *
+     * Falls back gracefully when Jira is unavailable — next_sprint_number
+     * is always populated from local sprint data.
+     */
+    public function jiraDefaults(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->get('project_id', 0);
+        $boardId   = (int) $this->request->get('board_id', 0);
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->json(['error' => 'Not found'], 404);
+            return;
+        }
+
+        // Compute local next sprint number from existing sprints
+        $existingSprints  = Sprint::findByProjectId($this->db, $projectId);
+        $localNextNumber  = count($existingSprints) + 1;
+        foreach ($existingSprints as $s) {
+            if (preg_match('/(\d+)\s*$/', $s['name'] ?? '', $m)) {
+                $localNextNumber = max($localNextNumber, (int) $m[1] + 1);
+            }
+        }
+
+        $result = [
+            'suggested_start'    => null,
+            'sprint_length_days' => 14,
+            'next_sprint_number' => $localNextNumber,
+            'suggested_capacity' => null,
+        ];
+
+        if ($boardId > 0) {
+            $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+            if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'connected') {
+                try {
+                    $intConfig = json_decode($jiraIntegration['config_json'] ?? '{}', true) ?? [];
+                    $spField   = $intConfig['field_mapping']['story_points_field'] ?? 'story_points';
+                    $jira      = new \StratFlow\Services\JiraService($this->config['jira'], $jiraIntegration, $this->db);
+                    $defaults  = $jira->getSprintDefaults($boardId, $spField);
+
+                    $result['suggested_start']    = $defaults['suggested_start']    ?? null;
+                    $result['sprint_length_days'] = $defaults['sprint_length_days'] ?? 14;
+                    $result['suggested_capacity'] = $defaults['suggested_capacity'] ?? null;
+
+                    // Jira's next sprint number wins if it's higher than local
+                    if (!empty($defaults['next_sprint_number'])) {
+                        $result['next_sprint_number'] = max($localNextNumber, (int) $defaults['next_sprint_number']);
+                    }
+                } catch (\Throwable) {
+                    // Jira unavailable — return local defaults only
+                }
+            }
+        }
+
+        $this->response->json($result);
     }
 
     /**

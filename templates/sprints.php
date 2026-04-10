@@ -57,6 +57,7 @@
             <?php foreach ($teams as $t): ?>
                 <option value="<?= (int) $t['id'] ?>"
                         data-capacity="<?= (int) ($t['capacity'] ?? 0) ?>"
+                        data-jira-board-id="<?= (int) ($t['jira_board_id'] ?? 0) ?>"
                         <?= ((int) ($t['id'] ?? 0)) === (int) ($teams[0]['id'] ?? 0) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($t['name']) ?>
                     <?= !empty($t['jira_board_id']) ? ' (Board #' . (int) $t['jira_board_id'] . ')' : '' ?>
@@ -83,7 +84,7 @@
             <div class="sprint-creation-form" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end;">
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Sprint Name</label>
-                    <input type="text" name="name" placeholder="e.g. Sprint 1" class="form-control" required>
+                    <input type="text" name="name" id="sprint-name-input" placeholder="e.g. Sprint 1" class="form-control" required>
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Start</label>
@@ -104,9 +105,9 @@
 </div>
 <script>
 (function() {
-    // Server-provided Jira smart defaults (null = not available)
-    var jiraSuggestedStart    = <?= json_encode($jira_suggested_start ?? null) ?>;
-    var jiraSuggestedCapacity = <?= json_encode($jira_suggested_capacity ?? null) ?>;
+    var PROJECT_ID    = <?= (int) $project['id'] ?>;
+    var JIRA_ENABLED  = <?= json_encode(!empty($jira_connected)) ?>;
+    var sprintLengthDays = 14; // updated by loadJiraDefaults
 
     function tomorrow() {
         var d = new Date();
@@ -119,44 +120,94 @@
         return d.toISOString().slice(0, 10);
     }
 
-    // Create Sprint form
-    var startEl    = document.getElementById('sprint-start-date');
-    var endEl      = document.getElementById('sprint-end-date');
-    var capacityEl = document.querySelector('input[name="team_capacity"]');
+    // Populate all sprint forms with fetched/fallback defaults
+    function applyDefaults(data) {
+        sprintLengthDays = data.sprint_length_days || 14;
 
-    var defaultStart = jiraSuggestedStart || tomorrow();
+        var start = data.suggested_start || tomorrow();
 
-    if (startEl && !startEl.value) {
-        startEl.value = defaultStart;
+        // Create Sprint — name
+        var nameEl = document.getElementById('sprint-name-input');
+        if (nameEl && !nameEl.value && data.next_sprint_number) {
+            nameEl.value       = 'Sprint ' + data.next_sprint_number;
+            nameEl.placeholder = 'Sprint ' + data.next_sprint_number;
+        }
+
+        // Create Sprint — start date
+        var startEl = document.getElementById('sprint-start-date');
+        if (startEl && !startEl.value) {
+            startEl.value = start;
+        }
+
+        // Create Sprint — end date (sprint length - 1 so start+end are inclusive)
+        var endEl = document.getElementById('sprint-end-date');
+        if (endEl && !endEl.value && startEl && startEl.value) {
+            endEl.value = addDays(startEl.value, sprintLengthDays - 1);
+        }
+
+        // Create Sprint — capacity
+        var capEl = document.querySelector('input[name="team_capacity"]');
+        if (capEl && !capEl.value && data.suggested_capacity) {
+            capEl.value       = data.suggested_capacity;
+            capEl.placeholder = data.suggested_capacity + ' pts';
+        }
+
+        // Auto-Generate — start date
+        var genStart = document.querySelector('form[action*="auto-generate"] input[name="start_date"]');
+        if (genStart && !genStart.value) {
+            genStart.value = start;
+            if (data.suggested_start) {
+                genStart.title = 'Day after last Jira sprint (' + data.suggested_start + ')';
+            }
+        }
+
+        // Auto-Generate — sprint length select
+        var genLength = document.querySelector('form[action*="auto-generate"] select[name="sprint_length"]');
+        if (genLength) {
+            genLength.value = sprintLengthDays;
+        }
+
+        // Auto-Generate — capacity
+        var genCap = document.querySelector('form[action*="auto-generate"] input[name="capacity"]');
+        if (genCap && !genCap.value && data.suggested_capacity) {
+            genCap.value       = data.suggested_capacity;
+            genCap.placeholder = 'e.g. ' + data.suggested_capacity + ' (Jira avg)';
+        }
     }
-    if (endEl && !endEl.value && startEl && startEl.value) {
-        endEl.value = addDays(startEl.value, 13);
-    }
-    if (capacityEl && !capacityEl.value && jiraSuggestedCapacity) {
-        capacityEl.value = jiraSuggestedCapacity;
-        capacityEl.placeholder = jiraSuggestedCapacity + ' pts';
+
+    // Fetch Jira defaults in background; fall back to local-only defaults
+    window.loadJiraDefaults = function loadJiraDefaults(boardId) {
+        var url = '/app/sprints/jira-defaults?project_id=' + PROJECT_ID + '&board_id=' + (boardId || 0);
+        fetch(url, { credentials: 'same-origin' })
+            .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(applyDefaults)
+            .catch(function() {
+                // Jira unreachable — apply tomorrow + local sprint count only
+                applyDefaults({ sprint_length_days: 14, suggested_start: null,
+                                 next_sprint_number: null, suggested_capacity: null });
+            });
     }
 
     window.autoSetSprintEndDate = function() {
+        var startEl = document.getElementById('sprint-start-date');
+        var endEl   = document.getElementById('sprint-end-date');
         if (startEl && startEl.value) {
-            endEl.value = addDays(startEl.value, 13);
+            endEl.value = addDays(startEl.value, sprintLengthDays - 1);
         }
     };
 
-    // Auto-Generate form
-    var genStart    = document.querySelector('form[action*="auto-generate"] input[name="start_date"]');
-    var genCapacity = document.querySelector('form[action*="auto-generate"] input[name="capacity"]');
-
-    if (genStart && !genStart.value) {
-        genStart.value = defaultStart;
-        <?php if ($jira_suggested_start ?? null): ?>
-        genStart.title = 'Set to day after last Jira sprint (<?= htmlspecialchars($jira_suggested_start) ?>)';
-        <?php endif; ?>
-    }
-    if (genCapacity && !genCapacity.value && jiraSuggestedCapacity) {
-        genCapacity.value = jiraSuggestedCapacity;
-        genCapacity.placeholder = 'e.g. ' + jiraSuggestedCapacity + ' (Jira avg)';
-    }
+    // On page load: fetch defaults for the initially selected team's board
+    document.addEventListener('DOMContentLoaded', function() {
+        var sel = document.getElementById('active-team-selector');
+        if (sel) {
+            var opt     = sel.options[sel.selectedIndex];
+            var boardId = opt ? (parseInt(opt.dataset.jiraBoardId, 10) || 0) : 0;
+            loadJiraDefaults(boardId);
+        } else {
+            // No team selector — fetch without board to get local defaults
+            loadJiraDefaults(0);
+        }
+    });
 })();
 </script>
 
@@ -183,14 +234,18 @@
                 </div>
                 <div class="sprint-gen-field">
                     <label>First sprint starts
-                        <?php if ($jira_suggested_start ?? null): ?>
+                        <?php if (!empty($jira_connected)): ?>
                             <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — day after last Jira sprint</span>
                         <?php endif; ?>
                     </label>
                     <input type="date" name="start_date" class="form-control" required>
                 </div>
                 <div class="sprint-gen-field">
-                    <label>Sprint length</label>
+                    <label>Sprint length
+                        <?php if (!empty($jira_connected)): ?>
+                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — from Jira history</span>
+                        <?php endif; ?>
+                    </label>
                     <select name="sprint_length" class="form-control" required>
                         <option value="7">1 week</option>
                         <option value="14" selected>2 weeks</option>
@@ -200,12 +255,11 @@
                 </div>
                 <div class="sprint-gen-field">
                     <label>Default capacity (pts)
-                        <?php if ($jira_suggested_capacity ?? null): ?>
+                        <?php if (!empty($jira_connected)): ?>
                             <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — Jira avg velocity</span>
                         <?php endif; ?>
                     </label>
-                    <input type="number" name="capacity" class="form-control" min="1" required
-                           placeholder="<?= ($jira_suggested_capacity ?? null) ? 'e.g. ' . (int)$jira_suggested_capacity . ' (Jira avg)' : 'e.g. 50' ?>">
+                    <input type="number" name="capacity" class="form-control" min="1" required placeholder="e.g. 50">
                 </div>
                 <div class="sprint-gen-field" style="align-self: end;">
                     <button type="submit" class="btn btn-ai">Generate Sprints</button>
@@ -289,5 +343,13 @@ function filterSprintsByTeam(teamId) {
             card.style.display = 'none';
         }
     });
+
+    // Re-fetch Jira defaults for the newly selected board
+    var sel = document.getElementById('active-team-selector');
+    var opt = sel ? sel.querySelector('option[value="' + teamId + '"]') : null;
+    var boardId = opt ? (parseInt(opt.dataset.jiraBoardId, 10) || 0) : 0;
+    if (typeof loadJiraDefaults === 'function') {
+        loadJiraDefaults(boardId);
+    }
 }
 </script>

@@ -18,7 +18,6 @@ $sizingLabels = [
 ];
 $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
 ?>
-?>
 <div class="modal-overlay hidden" id="edit-modal">
     <div class="modal" style="max-width: 760px;">
         <div class="modal-header">

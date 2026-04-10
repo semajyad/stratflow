@@ -432,6 +432,82 @@ class JiraService
     }
 
     /**
+     * Fetch all sprint defaults for a board in a single closed-sprints API call.
+     *
+     * Returns suggested start date (day after last closed sprint end), typical
+     * sprint length snapped to 7/14/21/28 days, next sprint number parsed from
+     * the last sprint name, and average velocity from completed story points.
+     *
+     * @return array{suggested_start: ?string, sprint_length_days: int, next_sprint_number: ?int, suggested_capacity: ?int}
+     */
+    public function getSprintDefaults(int $boardId, string $storyPointsField = 'story_points'): array
+    {
+        $result = [
+            'suggested_start'    => null,
+            'sprint_length_days' => 14,
+            'next_sprint_number' => null,
+            'suggested_capacity' => null,
+        ];
+
+        try {
+            $closed  = $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/board/{$boardId}/sprint?state=closed&maxResults=10");
+            $sprints = $closed['values'] ?? [];
+        } catch (\Throwable) {
+            return $result;
+        }
+
+        if (!empty($sprints)) {
+            // Sort by end date descending — most recent sprint first
+            usort($sprints, static fn($a, $b) => strcmp($b['endDate'] ?? '', $a['endDate'] ?? ''));
+
+            // Suggested start: day after last sprint end
+            $lastEnd = substr($sprints[0]['endDate'] ?? '', 0, 10);
+            if ($lastEnd) {
+                $next = new \DateTime($lastEnd);
+                $next->modify('+1 day');
+                $result['suggested_start'] = $next->format('Y-m-d');
+            }
+
+            // Typical sprint length: average of last 3 sprints, snapped to 7/14/21/28
+            $lengths = [];
+            foreach (array_slice($sprints, 0, 3) as $s) {
+                $start = substr($s['startDate'] ?? '', 0, 10);
+                $end   = substr($s['endDate']   ?? '', 0, 10);
+                if ($start && $end) {
+                    $days = (int) (new \DateTime($start))->diff(new \DateTime($end))->days;
+                    if ($days > 0) {
+                        $lengths[] = $days;
+                    }
+                }
+            }
+            if (!empty($lengths)) {
+                $avg    = (int) round(array_sum($lengths) / count($lengths));
+                $minGap = PHP_INT_MAX;
+                foreach ([7, 14, 21, 28] as $snap) {
+                    $gap = abs($avg - $snap);
+                    if ($gap < $minGap) {
+                        $minGap                        = $gap;
+                        $result['sprint_length_days']  = $snap;
+                    }
+                }
+            }
+
+            // Next sprint number: extract trailing number from last sprint name
+            if (!empty($sprints[0]['name']) && preg_match('/(\d+)\s*$/', $sprints[0]['name'], $m)) {
+                $result['next_sprint_number'] = (int) $m[1] + 1;
+            }
+        }
+
+        // Velocity: average completed story points across last 3 sprints
+        $velocity = $this->getAverageVelocity($boardId, $storyPointsField);
+        if ($velocity !== null && $velocity > 0) {
+            $result['suggested_capacity'] = $velocity;
+        }
+
+        return $result;
+    }
+
+    /**
      * Create a sprint on a board.
      */
     public function createSprint(int $boardId, string $name, ?string $startDate = null, ?string $endDate = null): array

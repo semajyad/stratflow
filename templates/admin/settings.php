@@ -331,6 +331,65 @@
         </div>
 
         <!-- ===========================
+             Story Quality
+             =========================== -->
+        <?php if (!empty($system_settings['feature_story_quality'])): ?>
+        <div class="accordion-item">
+            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+                <span class="accordion-title">Story Quality</span>
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                    AI quality scoring threshold and enforcement
+                </span>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-body">
+                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                    When enabled, user stories are scored by AI after generation. Stories below the threshold are flagged or blocked depending on enforcement mode.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    <div class="form-group">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <input type="hidden" name="quality_enabled" value="0">
+                            <input type="checkbox" name="quality_enabled" value="1"
+                                   id="quality-enabled-check"
+                                   <?= !empty($settings['quality']['enabled']) ? 'checked' : '' ?>
+                                   onchange="document.getElementById('quality-options').style.display = this.checked ? '' : 'none'">
+                            <label for="quality-enabled-check" style="font-weight:600; cursor:pointer; margin:0;">
+                                Enable story quality checks for this organisation
+                            </label>
+                        </div>
+                    </div>
+                    <div id="quality-options" style="<?= empty($settings['quality']['enabled']) ? 'display:none' : 'display:flex' ?>; gap:1.5rem; flex-wrap:wrap;">
+                        <div class="form-group" style="flex:1; min-width:200px;">
+                            <label class="form-label">Quality Threshold (%)</label>
+                            <div style="display:flex; align-items:center; gap:0.75rem;">
+                                <input type="range" name="quality_threshold"
+                                       min="0" max="100" step="5"
+                                       value="<?= (int) ($settings['quality']['threshold'] ?? 70) ?>"
+                                       style="flex:1;"
+                                       oninput="document.getElementById('org-qt-val').textContent = this.value + '%'">
+                                <span id="org-qt-val" style="font-weight:700; font-size:1rem; min-width:3rem;">
+                                    <?= (int) ($settings['quality']['threshold'] ?? 70) ?>%
+                                </span>
+                            </div>
+                            <small class="text-muted">Stories below this score are flagged. Platform default: <?= (int) ($system_settings['quality_threshold'] ?? 70) ?>%.</small>
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:200px;">
+                            <label class="form-label">Enforcement Mode</label>
+                            <select name="quality_enforcement" class="form-input">
+                                <option value="warn"  <?= ($settings['quality']['enforcement'] ?? 'warn') === 'warn'  ? 'selected' : '' ?>>Warn only — show badge, allow save</option>
+                                <option value="block" <?= ($settings['quality']['enforcement'] ?? '') === 'block' ? 'selected' : '' ?>>Block — prevent saving low-quality stories</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- ===========================
              Tripwires
              =========================== -->
         <div class="accordion-item">

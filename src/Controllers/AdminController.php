@@ -763,6 +763,11 @@ class AdminController
             'user_story_max_size'          => 13,
             'capacity_tripwire_percent'    => 20,
             'dependency_tripwire_enabled'  => true,
+            'quality' => [
+                'enabled'     => true,
+                'threshold'   => 70,
+                'enforcement' => 'warn',
+            ],
             'ai' => [
                 'model'   => '',   // empty = use platform default (gemini-3-flash-preview)
                 'api_key' => '',   // empty = use platform default key
@@ -868,12 +873,15 @@ class AdminController
             }
         }
 
+        $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
+
         $this->response->render('admin/settings', [
-            'user'          => $user,
-            'settings'      => $settings,
-            'active_page'   => 'admin',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'            => $user,
+            'settings'        => $settings,
+            'system_settings' => $systemSettings,
+            'active_page'     => 'admin',
+            'flash_message'   => $_SESSION['flash_message'] ?? null,
+            'flash_error'     => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
@@ -906,6 +914,12 @@ class AdminController
             'user_story_max_size'         => (int) $this->request->post('user_story_max_size', '13'),
             'capacity_tripwire_percent'   => (int) $this->request->post('capacity_tripwire_percent', '20'),
             'dependency_tripwire_enabled' => $this->request->post('dependency_tripwire_enabled') === '1',
+            'quality' => [
+                'enabled'     => $this->request->post('quality_enabled') === '1',
+                'threshold'   => min(100, max(0, (int) $this->request->post('quality_threshold', 70))),
+                'enforcement' => in_array($this->request->post('quality_enforcement'), ['warn', 'block'], true)
+                    ? $this->request->post('quality_enforcement') : 'warn',
+            ],
         ];
 
         // Preserve the existing API key if the form was submitted with a blank field

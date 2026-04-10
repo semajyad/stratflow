@@ -423,6 +423,7 @@ class SuperadminController
             'feature_jira'           => (bool) $this->request->post('feature_jira', false),
             'feature_github'         => (bool) $this->request->post('feature_github', false),
             'feature_gitlab'         => (bool) $this->request->post('feature_gitlab', false),
+            'feature_story_quality'  => (bool) $this->request->post('feature_story_quality', false),
             'quality_threshold'      => min(100, max(0, (int) $this->request->post('quality_threshold', 70))),
             'quality_enforcement'    => $this->request->post('quality_enforcement', 'warn'),
             'support_email'          => trim((string) $this->request->post('support_email', '')),

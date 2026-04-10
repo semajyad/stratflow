@@ -94,8 +94,9 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
 
     // Sprint allocation — static routes MUST come before {id} routes
-    $router->add('GET',  '/app/sprints',             'SprintController@index',         ['auth']);
-    $router->add('POST', '/app/sprints/store',        'SprintController@store',         ['auth', 'csrf']);
+    $router->add('GET',  '/app/sprints',               'SprintController@index',         ['auth']);
+    $router->add('GET',  '/app/sprints/jira-defaults', 'SprintController@jiraDefaults',  ['auth']);
+    $router->add('POST', '/app/sprints/store',         'SprintController@store',         ['auth', 'csrf']);
     $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth']);
     $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth']);
     $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'csrf']);

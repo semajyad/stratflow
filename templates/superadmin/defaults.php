@@ -205,6 +205,7 @@ $s = $settings;
                     'feature_jira'           => ['Jira Integration', 'Two-way sync with Jira boards'],
                     'feature_github'         => ['GitHub Integration', 'Link pull requests and commits to work items'],
                     'feature_gitlab'         => ['GitLab Integration', 'Link merge requests and commits to work items'],
+                    'feature_story_quality'  => ['Story Quality', 'AI-powered story quality scoring and enforcement'],
                 ];
                 ?>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
