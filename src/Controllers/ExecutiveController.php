@@ -20,6 +20,7 @@ use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Models\KeyResult;
 
 class ExecutiveController
 {
@@ -258,6 +259,116 @@ class ExecutiveController
             // Flash
             'flash_message'        => $_SESSION['flash_message'] ?? null,
             'flash_error'          => $_SESSION['flash_error']   ?? null,
+        ], 'app');
+
+        unset($_SESSION['flash_message'], $_SESSION['flash_error']);
+    }
+
+    /**
+     * Render the per-project Executive Dashboard (OKR/KR view).
+     *
+     * Loads all OKR work items for the given project, their associated Key
+     * Results, risks, and dependency data, then renders the executive-project
+     * template. Access is org-scoped; a 404 is returned if the project does
+     * not belong to the authenticated user's organisation.
+     *
+     * @param int $id The project ID from the route parameter.
+     */
+    public function projectDashboard(int $id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        // Verify project belongs to this org
+        $project = $this->db->query(
+            "SELECT id, name, updated_at FROM projects WHERE id = :id AND org_id = :oid LIMIT 1",
+            [':id' => $id, ':oid' => $orgId]
+        )->fetch();
+
+        if ($project === false) {
+            http_response_code(404);
+            $this->response->render('errors/404', [], 'app');
+            return;
+        }
+
+        // Project selector (all active projects in org)
+        $projects = $this->db->query(
+            "SELECT id, name FROM projects WHERE org_id = :oid AND status != 'deleted' ORDER BY name ASC",
+            [':oid' => $orgId]
+        )->fetchAll();
+
+        // OKR work items for this project (items with an okr_title)
+        $okrItems = $this->db->query(
+            "SELECT hwi.id, hwi.title, hwi.okr_title, hwi.okr_description,
+                    hwi.priority_number, hwi.status
+               FROM hl_work_items hwi
+              WHERE hwi.project_id = :pid
+                AND hwi.okr_title IS NOT NULL
+                AND hwi.okr_title != ''
+              ORDER BY hwi.priority_number ASC",
+            [':pid' => $id]
+        )->fetchAll();
+
+        // KRs per work item
+        $krRows = KeyResult::findByProjectOkrs($this->db, $id, $orgId);
+        $krsByItemId = [];
+        foreach ($krRows as $kr) {
+            $krsByItemId[(int) $kr['work_item_id']][] = $kr;
+        }
+
+        // Risks per work item (via risk_item_links)
+        $riskRows = $this->db->query(
+            "SELECT ril.work_item_id, r.title, r.likelihood, r.impact,
+                    (r.likelihood * r.impact) AS priority
+               FROM risk_item_links ril
+               JOIN risks r ON ril.risk_id = r.id
+               JOIN projects p ON r.project_id = p.id
+              WHERE p.id = :pid AND p.org_id = :oid",
+            [':pid' => $id, ':oid' => $orgId]
+        )->fetchAll();
+        $risksByItemId = [];
+        foreach ($riskRows as $risk) {
+            $risksByItemId[(int) $risk['work_item_id']][] = $risk;
+        }
+
+        // Dependencies per work item
+        $depRows = $this->db->query(
+            "SELECT hid.item_id, hid.depends_on_id, hid.dependency_type,
+                    blocker.title AS blocker_title, blocker.status AS blocker_status,
+                    blocked.title AS blocked_title, blocked.status AS blocked_status
+               FROM hl_item_dependencies hid
+               JOIN hl_work_items blocker ON hid.depends_on_id = blocker.id
+               JOIN hl_work_items blocked  ON hid.item_id = blocked.id
+              WHERE blocker.project_id = :pid OR blocked.project_id = :pid",
+            [':pid' => $id]
+        )->fetchAll();
+        $depsByItemId = [];
+        foreach ($depRows as $dep) {
+            $depsByItemId[(int) $dep['item_id']]['blocked_by'][]   = $dep;
+            $depsByItemId[(int) $dep['depends_on_id']]['blocks'][] = $dep;
+        }
+
+        // Overall health summary
+        $healthCounts = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
+        foreach ($krRows as $kr) {
+            $s = $kr['status'];
+            if (isset($healthCounts[$s])) {
+                $healthCounts[$s]++;
+            }
+        }
+
+        $this->response->render('executive-project', [
+            'user'           => $user,
+            'active_page'    => 'executive',
+            'project'        => $project,
+            'projects'       => $projects,
+            'okr_items'      => $okrItems,
+            'krs_by_item_id' => $krsByItemId,
+            'risks_by_item'  => $risksByItemId,
+            'deps_by_item'   => $depsByItemId,
+            'health_counts'  => $healthCounts,
+            'flash_message'  => $_SESSION['flash_message'] ?? null,
+            'flash_error'    => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
