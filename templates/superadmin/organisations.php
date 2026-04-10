@@ -52,6 +52,23 @@
                     <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Seats</label>
                     <input type="number" name="seat_limit" value="5" min="1" max="10000" class="form-control" style="width:80px;">
                 </div>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Period</label>
+                    <select name="billing_period_months" class="form-control">
+                        <option value="1">Monthly</option>
+                        <option value="3">Quarterly</option>
+                        <option value="6">6-Monthly</option>
+                        <option value="12">Annual</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">$/Seat</label>
+                    <input type="number" name="price_per_seat" value="0.00" min="0" step="0.01" class="form-control" style="width:90px;">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Next Invoice</label>
+                    <input type="date" name="next_invoice_date" class="form-control">
+                </div>
                 <button type="submit" class="btn btn-primary">Create Organisation</button>
             </div>
         </form>

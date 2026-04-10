@@ -126,18 +126,35 @@ class SuperadminController
             'is_active' => 1,
         ]);
 
-        $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? '' : 'manual_' . time();
-        $seatLimit = max(1, (int) $this->request->post('seat_limit', 5));
+        $billingMethod   = $this->request->post('billing_method', 'invoiced') === 'stripe' ? '' : 'manual_' . time();
+        $seatLimit       = max(1, (int) $this->request->post('seat_limit', 5));
+        $billingPeriod   = in_array((int) $this->request->post('billing_period_months', 1), [1, 3, 6, 12], true)
+                           ? (int) $this->request->post('billing_period_months', 1) : 1;
+        $pricePerSeat    = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
+        $nextInvoiceDate = $this->request->post('next_invoice_date', '') ?: null;
 
         if (in_array($planType, ['product', 'consultancy'], true)) {
             \StratFlow\Models\Subscription::create($this->db, [
-                'org_id' => $orgId,
+                'org_id'                 => $orgId,
                 'stripe_subscription_id' => $billingMethod,
-                'plan_type' => $planType,
-                'status' => 'active',
-                'started_at' => date('Y-m-d H:i:s'),
+                'plan_type'              => $planType,
+                'status'                 => 'active',
+                'started_at'             => date('Y-m-d H:i:s'),
             ]);
             \StratFlow\Models\Subscription::updateSeatLimit($this->db, $orgId, $seatLimit);
+            $this->db->query(
+                "UPDATE subscriptions
+                 SET billing_method = :bmethod, billing_period_months = :bperiod,
+                     price_per_seat_cents = :price, next_invoice_date = :next_inv
+                 WHERE org_id = :org ORDER BY id DESC LIMIT 1",
+                [
+                    ':bmethod' => $billingMethod === '' ? 'stripe' : 'invoice',
+                    ':bperiod' => $billingPeriod,
+                    ':price'   => $pricePerSeat,
+                    ':next_inv'=> $nextInvoiceDate,
+                    ':org'     => $orgId,
+                ]
+            );
         }
 
         $user = $this->auth->user();
