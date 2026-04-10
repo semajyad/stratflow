@@ -64,6 +64,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
     $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
+    $router->add('POST', '/app/work-items/{id}/improve',              'WorkItemController@improve',             ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
 
     // Key Results — KR CRUD (static /delete route MUST come before {id} catch-all)
@@ -89,6 +90,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
+    $router->add('POST', '/app/user-stories/{id}/improve',          'UserStoryController@improve',         ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
 
     // Sprint allocation — static routes MUST come before {id} routes

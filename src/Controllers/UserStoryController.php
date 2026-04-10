@@ -25,6 +25,7 @@ use StratFlow\Models\StrategicBaseline;
 use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\StoryQualityScorer;
+use StratFlow\Services\StoryImprovementService;
 use StratFlow\Services\Prompts\UserStoryPrompt;
 
 class UserStoryController
@@ -361,6 +362,83 @@ class UserStoryController
 
         $_SESSION['flash_message'] = 'User story updated.';
         $this->response->redirect('/app/user-stories?project_id=' . $story['project_id']);
+    }
+
+    /**
+     * Improve a user story's low-scoring fields using AI, then re-score.
+     * If quality_score is null, scores first then improves in one request.
+     *
+     * @param int $id User story primary key (from route parameter)
+     */
+    public function improve($id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $story = UserStory::findById($this->db, (int) $id);
+        if ($story === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = Project::findById($this->db, (int) $story['project_id'], $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        // Score first if not yet scored — improvement needs the breakdown
+        if ($story['quality_score'] === null) {
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
+            $scored = $scorer->scoreStory($story, $qualityBlock);
+            if ($scored['score'] !== null) {
+                UserStory::update($this->db, (int) $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown']),
+                ]);
+                $story = UserStory::findById($this->db, (int) $id);
+            }
+        }
+
+        // Decode breakdown — if still null after scoring attempt, nothing to improve
+        $breakdown = null;
+        if (!empty($story['quality_breakdown'])) {
+            $breakdown = json_decode((string) $story['quality_breakdown'], true);
+        }
+
+        if ($breakdown === null) {
+            $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=0');
+            return;
+        }
+
+        // Improve fields that score below 80% of their max
+        $improver       = new StoryImprovementService(new GeminiService($this->config));
+        $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
+
+        if (empty($improvedFields)) {
+            $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=0');
+            return;
+        }
+
+        UserStory::update($this->db, (int) $id, $improvedFields);
+
+        // Re-score with the improved content — failure is non-fatal
+        $storyForScore = array_merge($story, $improvedFields);
+        $scorer        = new StoryQualityScorer(new GeminiService($this->config));
+        $scored        = $scorer->scoreStory($storyForScore, $qualityBlock);
+        if ($scored['score'] !== null) {
+            UserStory::update($this->db, (int) $id, [
+                'quality_score'     => $scored['score'],
+                'quality_breakdown' => json_encode($scored['breakdown']),
+            ]);
+        }
+
+        $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=1');
     }
 
     /**

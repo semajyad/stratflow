@@ -131,6 +131,12 @@
             </div>
             <?php endforeach; ?>
         </div>
+        <form method="POST" action="/app/user-stories/<?= (int) $story['id'] ?>/improve"
+              class="quality-improve-form"
+              onsubmit="return confirm('Improve this story with AI? The description, acceptance criteria, and KR hypothesis may be rewritten based on the quality score.')">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+            <button type="submit" class="btn-secondary btn-sm">Improve with AI</button>
+        </form>
     </div>
     <?php endif; ?>
 </div>

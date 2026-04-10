@@ -28,6 +28,7 @@ use StratFlow\Models\Subscription;
 use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\StoryQualityScorer;
+use StratFlow\Services\StoryImprovementService;
 use StratFlow\Services\Prompts\WorkItemPrompt;
 
 class WorkItemController
@@ -465,6 +466,83 @@ class WorkItemController
 
         $_SESSION['flash_message'] = 'Work item updated.';
         $this->response->redirect('/app/work-items?project_id=' . $item['project_id']);
+    }
+
+    /**
+     * Improve a work item's low-scoring fields using AI, then re-score.
+     * If quality_score is null, scores first then improves in one request.
+     *
+     * @param int $id Work item primary key (from route parameter)
+     */
+    public function improve($id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $item = HLWorkItem::findById($this->db, (int) $id);
+        if ($item === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        // Score first if not yet scored — improvement needs the breakdown
+        if ($item['quality_score'] === null) {
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
+            $scored = $scorer->scoreWorkItem($item, $qualityBlock);
+            if ($scored['score'] !== null) {
+                HLWorkItem::update($this->db, (int) $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown']),
+                ]);
+                $item = HLWorkItem::findById($this->db, (int) $id);
+            }
+        }
+
+        // Decode breakdown — if still null after scoring attempt, nothing to improve
+        $breakdown = null;
+        if (!empty($item['quality_breakdown'])) {
+            $breakdown = json_decode((string) $item['quality_breakdown'], true);
+        }
+
+        if ($breakdown === null) {
+            $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=0');
+            return;
+        }
+
+        // Improve fields that score below 80% of their max
+        $improver       = new StoryImprovementService(new GeminiService($this->config));
+        $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
+
+        if (empty($improvedFields)) {
+            $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=0');
+            return;
+        }
+
+        HLWorkItem::update($this->db, (int) $id, $improvedFields);
+
+        // Re-score with the improved content — failure is non-fatal
+        $itemForScore = array_merge($item, $improvedFields);
+        $scorer       = new StoryQualityScorer(new GeminiService($this->config));
+        $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
+        if ($scored['score'] !== null) {
+            HLWorkItem::update($this->db, (int) $id, [
+                'quality_score'     => $scored['score'],
+                'quality_breakdown' => json_encode($scored['breakdown']),
+            ]);
+        }
+
+        $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=1');
     }
 
     /**
