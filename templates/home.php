@@ -130,7 +130,7 @@ if ($lastProjectId && !empty($projects)) {
                         </a>
                         <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
-                                onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>)">
+                                onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['visibility'] ?? 'everyone'), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['member_ids'] ?? []), ENT_QUOTES) ?>)">
                             Edit
                         </button>
                         <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form"
@@ -146,10 +146,19 @@ if ($lastProjectId && !empty($projects)) {
     <?php endif; ?>
 </section>
 
+<!-- Shared member picker partial used by both New and Edit modals -->
+<?php
+// Build org users JSON for JS (id, name, email)
+$orgUsersJson = htmlspecialchars(json_encode(array_map(fn($u) => [
+    'id'    => (int) $u['id'],
+    'label' => $u['full_name'] . ' (' . $u['email'] . ')',
+], $org_users ?? []), JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+?>
+
 <!-- New Project Modal -->
 <div id="new-project-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;"
      onclick="if(event.target===this) this.classList.add('hidden');">
-    <div class="card" style="max-width:480px; width:90%; margin:0;">
+    <div class="card" style="max-width:520px; width:90%; margin:0;">
         <div class="card-header flex justify-between items-center">
             <h2 class="card-title" style="margin:0;">Create New Project</h2>
             <button type="button" onclick="document.getElementById('new-project-modal').classList.add('hidden');"
@@ -161,11 +170,19 @@ if ($lastProjectId && !empty($projects)) {
                 <label class="form-label" for="new-project-name">Project Name</label>
                 <input type="text" id="new-project-name" name="name" class="form-input"
                        placeholder="e.g. Q3 Platform Modernisation" required maxlength="255" autocomplete="off">
-                <small class="text-muted" style="display:block; margin-top:0.4rem;">
-                    You'll upload a strategy document next to generate your roadmap.
-                </small>
             </div>
-            <div class="flex justify-end gap-2">
+            <div class="form-group">
+                <label class="form-label">Access</label>
+                <select name="visibility" id="new-visibility" class="form-input"
+                        onchange="toggleMemberPicker('new', this.value)">
+                    <option value="everyone">Everyone in organisation</option>
+                    <option value="restricted">Restricted — specific users only</option>
+                </select>
+            </div>
+            <div id="new-member-picker" style="display:none;">
+                <?php include __DIR__ . '/partials/project-member-picker.php'; ?>
+            </div>
+            <div class="flex justify-end gap-2" style="margin-top:1rem;">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-modal').classList.add('hidden');">Cancel</button>
                 <button type="submit" class="btn btn-primary">Create Project</button>
             </div>
@@ -176,7 +193,7 @@ if ($lastProjectId && !empty($projects)) {
 <!-- Edit Project Modal -->
 <div id="edit-project-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;"
      onclick="if(event.target===this) this.classList.add('hidden');">
-    <div class="card" style="max-width:500px; width:90%; margin:0;">
+    <div class="card" style="max-width:520px; width:90%; margin:0;">
         <div class="card-header flex justify-between items-center">
             <h2 class="card-title" style="margin:0;">Edit Project</h2>
             <button type="button" onclick="document.getElementById('edit-project-modal').classList.add('hidden');"
@@ -206,7 +223,18 @@ if ($lastProjectId && !empty($projects)) {
                 <small class="text-muted">Connect Jira in Integrations to see a project picker.</small>
                 <?php endif; ?>
             </div>
-            <div class="flex justify-end gap-2">
+            <div class="form-group">
+                <label class="form-label">Access</label>
+                <select name="visibility" id="edit-visibility" class="form-input"
+                        onchange="toggleMemberPicker('edit', this.value)">
+                    <option value="everyone">Everyone in organisation</option>
+                    <option value="restricted">Restricted — specific users only</option>
+                </select>
+            </div>
+            <div id="edit-member-picker" style="display:none;">
+                <?php include __DIR__ . '/partials/project-member-picker.php'; ?>
+            </div>
+            <div class="flex justify-end gap-2" style="margin-top:1rem;">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-project-modal').classList.add('hidden');">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
@@ -215,13 +243,52 @@ if ($lastProjectId && !empty($projects)) {
 </div>
 
 <script>
-function openEditProjectModal(id, name, jiraKey) {
+// Pass org users data from PHP for member picker pre-population
+var _orgUsers = <?= $orgUsersJson ?? '[]' ?>;
+
+function openEditProjectModal(id, name, jiraKey, visibility, memberIds) {
     document.getElementById('edit-project-form').action = '/app/projects/' + id + '/edit';
     document.getElementById('edit-project-name').value = name;
     var jiraEl = document.getElementById('edit-jira-key');
     if (jiraEl) { jiraEl.value = jiraKey || ''; }
+
+    // Set visibility and show/hide picker
+    var visEl = document.getElementById('edit-visibility');
+    if (visEl) {
+        visEl.value = visibility || 'everyone';
+        toggleMemberPicker('edit', visEl.value);
+    }
+
+    // Pre-check current members
+    var ids = Array.isArray(memberIds) ? memberIds.map(Number) : [];
+    document.querySelectorAll('#edit-member-picker input[name="member_ids[]"]').forEach(function(cb) {
+        cb.checked = ids.indexOf(parseInt(cb.value, 10)) !== -1;
+    });
+
     document.getElementById('edit-project-modal').classList.remove('hidden');
     setTimeout(function() { document.getElementById('edit-project-name').focus(); }, 50);
+}
+
+function toggleMemberPicker(prefix, value) {
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) return;
+    picker.style.display = value === 'restricted' ? '' : 'none';
+    // Uncheck all boxes when switching back to 'everyone'
+    if (value !== 'restricted') {
+        picker.querySelectorAll('input[name="member_ids[]"]').forEach(function(cb) {
+            cb.checked = false;
+        });
+    }
+}
+
+function filterMemberList(input) {
+    var q = input.value.trim().toLowerCase();
+    var list = input.closest('div').nextElementSibling;
+    if (!list) return;
+    list.querySelectorAll('.member-item').forEach(function(item) {
+        var label = (item.dataset.label || '').toLowerCase();
+        item.style.display = (q === '' || label.indexOf(q) !== -1) ? '' : 'none';
+    });
 }
 
 function filterProjectList(query) {

@@ -48,30 +48,41 @@ class HomeController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
 
-        $projects = Project::findByOrgId($this->db, $orgId);
+        $userId        = (int) $user['id'];
+        $role          = (string) ($user['role'] ?? 'user');
+        $isProjectAdmin = (bool) ($user['is_project_admin'] ?? false);
+
+        $projects = Project::findAccessibleByOrgId($this->db, $orgId, $userId, $role, $isProjectAdmin);
 
         // Compute smart "next step" destination and progress for each project
         foreach ($projects as &$p) {
             $stage = $this->getProjectStage($this->db, (int) $p['id']);
-            $p['next_step_url']  = $stage['next_url'] . '?project_id=' . (int) $p['id'];
+            $p['next_step_url']   = $stage['next_url'] . '?project_id=' . (int) $p['id'];
             $p['next_step_label'] = $stage['next_label'];
             $p['steps_complete']  = $stage['steps_complete'];
             $p['steps_total']     = $stage['steps_total'];
             $p['completion']      = $stage['completion'];
+            // Attach current member IDs for edit modal
+            $p['member_ids']      = Project::getMemberIds($this->db, (int) $p['id']);
         }
         unset($p);
 
+        // Load org users for the project member picker
+        $orgUsers = $this->db->query(
+            "SELECT id, full_name, email FROM users WHERE org_id = :org_id AND is_active = 1 ORDER BY full_name",
+            [':org_id' => $orgId]
+        )->fetchAll();
+
         // Check if Jira is connected for this org and load Jira projects
         $jiraConnected = false;
-        $jiraProjects = [];
-        $integration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        $jiraProjects  = [];
+        $integration   = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         if ($integration && $integration['status'] === 'active') {
             $jiraConnected = true;
             try {
-                $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
+                $jiraService  = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
                 $jiraProjects = $jiraService->getProjects();
             } catch (\Throwable $e) {
-                // Jira API failed — just skip project list
                 $jiraProjects = [];
             }
         }
@@ -79,6 +90,7 @@ class HomeController
         $this->response->render('home', [
             'user'           => $user,
             'projects'       => $projects,
+            'org_users'      => $orgUsers,
             'jira_connected' => $jiraConnected,
             'jira_projects'  => $jiraProjects,
             'active_page'    => 'home',
@@ -107,12 +119,21 @@ class HomeController
             return;
         }
 
-        Project::create($this->db, [
+        $visibility = $this->request->post('visibility', 'everyone') === 'restricted' ? 'restricted' : 'everyone';
+
+        $projectId = Project::create($this->db, [
             'org_id'     => $orgId,
             'name'       => $name,
             'status'     => 'draft',
             'created_by' => (int) $user['id'],
         ]);
+
+        // Set visibility and initial members if restricted
+        Project::update($this->db, $projectId, ['visibility' => $visibility], $orgId);
+        if ($visibility === 'restricted') {
+            $memberIds = array_map('intval', (array) ($this->request->post('member_ids') ?? []));
+            Project::setMembers($this->db, $projectId, $memberIds);
+        }
 
         $_SESSION['flash_message'] = 'Project "' . $name . '" created successfully.';
         $this->response->redirect('/app/home');
@@ -168,17 +189,24 @@ class HomeController
             return;
         }
 
-        $name    = trim((string) $this->request->post('name', ''));
-        $jiraKey = trim((string) $this->request->post('jira_project_key', ''));
+        $name       = trim((string) $this->request->post('name', ''));
+        $jiraKey    = trim((string) $this->request->post('jira_project_key', ''));
+        $visibility = $this->request->post('visibility', 'everyone') === 'restricted' ? 'restricted' : 'everyone';
 
-        $updates = [];
+        $updates = ['visibility' => $visibility, 'jira_project_key' => $jiraKey ?: null];
         if ($name !== '') {
             $updates['name'] = $name;
         }
-        $updates['jira_project_key'] = $jiraKey ?: null;
 
-        if (!empty($updates)) {
-            Project::update($this->db, $projectId, $updates, $orgId);
+        Project::update($this->db, $projectId, $updates, $orgId);
+
+        // Replace member list when restricted (empty list = nobody extra)
+        if ($visibility === 'restricted') {
+            $memberIds = array_map('intval', (array) ($this->request->post('member_ids') ?? []));
+            Project::setMembers($this->db, $projectId, $memberIds);
+        } else {
+            // Switching back to 'everyone' — clear any stored members
+            Project::setMembers($this->db, $projectId, []);
         }
 
         $_SESSION['flash_message'] = 'Project updated.';

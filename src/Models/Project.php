@@ -65,6 +65,89 @@ class Project
     }
 
     /**
+     * Return projects accessible to a specific user within an organisation.
+     *
+     * Org admins, superadmins, and project admins always see all projects.
+     * For regular users: 'everyone' projects are always visible; 'restricted'
+     * projects are only visible if the user is in project_members.
+     *
+     * @param Database $db            Database instance
+     * @param int      $orgId         Organisation ID
+     * @param int      $userId        Authenticated user ID
+     * @param string   $role          User role (e.g. 'org_admin', 'superadmin', 'user')
+     * @param bool     $isProjectAdmin Whether the user has the project_admin flag
+     * @return array                  Array of project rows
+     */
+    public static function findAccessibleByOrgId(
+        Database $db,
+        int $orgId,
+        int $userId,
+        string $role,
+        bool $isProjectAdmin = false
+    ): array {
+        // Admins and superadmins always see everything
+        if (in_array($role, ['org_admin', 'superadmin'], true) || $isProjectAdmin) {
+            return self::findByOrgId($db, $orgId);
+        }
+
+        $stmt = $db->query(
+            "SELECT p.* FROM projects p
+             WHERE p.org_id = :org_id
+               AND (
+                     p.visibility = 'everyone'
+                  OR EXISTS (
+                       SELECT 1 FROM project_members pm
+                       WHERE pm.project_id = p.id AND pm.user_id = :user_id
+                     )
+               )
+             ORDER BY p.created_at DESC",
+            [':org_id' => $orgId, ':user_id' => $userId]
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    // ===========================
+    // MEMBER MANAGEMENT
+    // ===========================
+
+    /**
+     * Replace the full member list for a restricted project.
+     *
+     * Deletes all existing members then inserts the new set.
+     * Pass an empty array to remove all members.
+     *
+     * @param int   $projectId Project ID
+     * @param int[] $userIds   User IDs to grant access
+     */
+    public static function setMembers(Database $db, int $projectId, array $userIds): void
+    {
+        $db->query("DELETE FROM project_members WHERE project_id = :pid", [':pid' => $projectId]);
+
+        foreach (array_unique(array_filter(array_map('intval', $userIds))) as $uid) {
+            $db->query(
+                "INSERT IGNORE INTO project_members (project_id, user_id) VALUES (:pid, :uid)",
+                [':pid' => $projectId, ':uid' => $uid]
+            );
+        }
+    }
+
+    /**
+     * Return the user IDs currently in a project's member list.
+     *
+     * @return int[]
+     */
+    public static function getMemberIds(Database $db, int $projectId): array
+    {
+        $rows = $db->query(
+            "SELECT user_id FROM project_members WHERE project_id = :pid",
+            [':pid' => $projectId]
+        )->fetchAll();
+
+        return array_column($rows, 'user_id');
+    }
+
+    /**
      * Find a single project by ID, scoped to an org for security.
      *
      * @param Database $db    Database instance
@@ -102,7 +185,7 @@ class Project
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'name', 'status', 'selected_framework', 'jira_project_key', 'jira_board_id',
+        'name', 'status', 'selected_framework', 'jira_project_key', 'jira_board_id', 'visibility',
     ];
 
     public static function update(Database $db, int $id, array $data, ?int $orgId = null): void

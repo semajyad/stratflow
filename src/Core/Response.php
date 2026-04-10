@@ -36,13 +36,20 @@ class Response
         $data['csrf_token'] = $this->csrf->getToken();
 
         // Inject project list for sidebar project switcher (app layout only)
+        // Uses access-filtered query so restricted projects are hidden from non-members.
         if ($layout === 'app' && !isset($data['all_projects']) && isset($data['user'])) {
             try {
-                $orgId = (int) ($data['user']['org_id'] ?? 0);
+                $orgId         = (int) ($data['user']['org_id'] ?? 0);
+                $userId        = (int) ($data['user']['id']    ?? 0);
+                $role          = (string) ($data['user']['role'] ?? 'user');
+                $isProjectAdmin = (bool) ($data['user']['is_project_admin'] ?? false);
                 if ($orgId > 0) {
-                    $data['all_projects'] = \StratFlow\Models\Project::findByOrgId(
+                    $data['all_projects'] = \StratFlow\Models\Project::findAccessibleByOrgId(
                         \StratFlow\Core\Database::getInstance(),
-                        $orgId
+                        $orgId,
+                        $userId,
+                        $role,
+                        $isProjectAdmin
                     );
                 }
             } catch (\Throwable $e) {
