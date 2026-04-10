@@ -13,7 +13,9 @@
      data-okr-title="<?= htmlspecialchars($item['okr_title'] ?? '') ?>"
      data-okr-desc="<?= htmlspecialchars($item['okr_description'] ?? '') ?>"
      data-owner="<?= htmlspecialchars($item['owner'] ?? '') ?>"
-     data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>">
+     data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>"
+     data-acceptance-criteria="<?= htmlspecialchars($item['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+     data-kr-hypothesis="<?= htmlspecialchars($item['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
     <span class="drag-handle" title="Drag to reorder">&#x2807;</span>
     <span class="priority-number"><?= (int) $item['priority_number'] ?></span>
     <div class="work-item-info">

@@ -309,12 +309,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var row = btn.closest('.work-item-row');
             currentEditId = row.dataset.id;
 
-            document.getElementById('modal-priority').value      = row.querySelector('.priority-number').textContent;
-            document.getElementById('modal-title').value         = row.dataset.title || '';
-            document.getElementById('modal-description').value   = row.dataset.description || '';
-            document.getElementById('modal-okr-title').value     = row.dataset.okrTitle || '';
-            document.getElementById('modal-okr-desc').value      = row.dataset.okrDesc || '';
-            document.getElementById('modal-owner').value         = row.dataset.owner || '';
+            document.getElementById('modal-priority').value             = row.querySelector('.priority-number').textContent;
+            document.getElementById('modal-title').value                = row.dataset.title || '';
+            document.getElementById('modal-description').value          = row.dataset.description || '';
+            document.getElementById('modal-okr-title').value            = row.dataset.okrTitle || '';
+            document.getElementById('modal-okr-desc').value             = row.dataset.okrDesc || '';
+            document.getElementById('modal-owner').value                = row.dataset.owner || '';
+            document.getElementById('modal-acceptance-criteria').value  = row.dataset.acceptanceCriteria || '';
+            document.getElementById('modal-kr-hypothesis').value        = row.dataset.krHypothesis || '';
 
             document.getElementById('edit-form').action = '/app/work-items/' + currentEditId;
             document.getElementById('edit-modal').classList.remove('hidden');
@@ -530,12 +532,14 @@ document.addEventListener('DOMContentLoaded', function() {
             currentStoryId = row.dataset.id;
 
             document.getElementById('story-modal-title').textContent = 'Edit User Story';
-            document.getElementById('story-title').value       = row.dataset.title || '';
-            document.getElementById('story-description').value = row.dataset.description || '';
-            document.getElementById('story-team').value        = row.dataset.team || '';
-            document.getElementById('story-size').value        = row.dataset.size || '';
-            document.getElementById('story-blocked-by').value  = row.dataset.blockedBy || '';
-            document.getElementById('story-parent').value      = row.dataset.parentId || '';
+            document.getElementById('story-title').value                    = row.dataset.title || '';
+            document.getElementById('story-description').value              = row.dataset.description || '';
+            document.getElementById('story-team').value                     = row.dataset.team || '';
+            document.getElementById('story-size').value                     = row.dataset.size || '';
+            document.getElementById('story-blocked-by').value               = row.dataset.blockedBy || '';
+            document.getElementById('story-parent').value                   = row.dataset.parentId || '';
+            document.getElementById('story-acceptance-criteria').value      = row.dataset.acceptanceCriteria || '';
+            document.getElementById('story-kr-hypothesis').value            = row.dataset.krHypothesis || '';
             document.getElementById('story-submit-btn').textContent = 'Update';
             document.getElementById('story-form').action = '/app/user-stories/' + currentStoryId;
 
@@ -900,6 +904,8 @@ function toggleStoryModal() {
         document.getElementById('story-size').value = '';
         document.getElementById('story-blocked-by').value = '';
         document.getElementById('story-parent').value = '';
+        document.getElementById('story-acceptance-criteria').value = '';
+        document.getElementById('story-kr-hypothesis').value = '';
         document.getElementById('story-submit-btn').textContent = 'Save';
         document.getElementById('ai-size-reasoning').style.display = 'none';
 
