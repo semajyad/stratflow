@@ -15,10 +15,42 @@ class Auth
     private Session $session;
     private Database $db;
 
+    /**
+     * In-memory principal set by ApiAuthMiddleware for token-authenticated
+     * requests.  When non-null, check/user/orgId prefer this over the session
+     * so that API controllers work identically to session-based controllers
+     * without touching the session at all.
+     *
+     * @var array|null
+     */
+    private ?array $apiPrincipal = null;
+
     public function __construct(Session $session, Database $db)
     {
         $this->session = $session;
         $this->db = $db;
+    }
+
+    /**
+     * Set an in-memory principal for the current request.
+     *
+     * Called by ApiAuthMiddleware after validating a PAT.  Does NOT touch
+     * the session, does NOT regenerate the session ID, sets no cookies.
+     *
+     * @param array $user User row with at minimum: id, org_id, full_name, email, role
+     */
+    public function loginAsPrincipal(array $user): void
+    {
+        $this->apiPrincipal = [
+            'id'                   => $user['id'],
+            'org_id'               => $user['org_id'],
+            'name'                 => $user['full_name'] ?? $user['name'] ?? '',
+            'email'                => $user['email'],
+            'role'                 => $user['role'],
+            'has_billing_access'   => (bool) ($user['has_billing_access']   ?? false),
+            'has_executive_access' => (bool) ($user['has_executive_access'] ?? false),
+            'is_project_admin'     => (bool) ($user['is_project_admin']     ?? false),
+        ];
     }
 
     /**
@@ -78,19 +110,30 @@ class Auth
 
     /**
      * Check whether a user is currently authenticated.
+     *
+     * Returns true when an in-memory API principal is set (PAT auth) OR
+     * when a valid session exists (browser auth).
      */
     public function check(): bool
     {
+        if ($this->apiPrincipal !== null) {
+            return true;
+        }
         return $this->session->has('user');
     }
 
     /**
      * Return the authenticated user's data, or null.
      *
+     * Prefers the in-memory API principal when set, falling back to the session.
+     *
      * @return array|null User array with id, org_id, name, email, role
      */
     public function user(): ?array
     {
+        if ($this->apiPrincipal !== null) {
+            return $this->apiPrincipal;
+        }
         return $this->session->get('user');
     }
 
@@ -100,7 +143,7 @@ class Auth
     public function orgId(): ?int
     {
         $user = $this->user();
-        return $user ? (int)$user['org_id'] : null;
+        return $user ? (int) $user['org_id'] : null;
     }
 
     /**

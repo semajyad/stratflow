@@ -64,6 +64,20 @@
                     </div>
                 </div>
 
+                <div class="modal-field-wrap" data-field="assignee_user_id">
+                    <div class="form-group">
+                        <label for="story-assignee">Assignee</label>
+                        <select id="story-assignee" name="assignee_user_id" class="form-control">
+                            <option value="">-- Unassigned --</option>
+                            <?php if (!empty($org_users)): ?>
+                                <?php foreach ($org_users as $ou): ?>
+                                    <option value="<?= (int) $ou['id'] ?>"><?= htmlspecialchars($ou['full_name'] ?? $ou['name'] ?? $ou['email']) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="modal-field-wrap" data-field="size">
                     <div class="form-group">
                         <label for="story-size">Size (Story Points)</label>

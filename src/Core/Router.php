@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace StratFlow\Core;
 
 use StratFlow\Middleware\AdminMiddleware;
+use StratFlow\Middleware\ApiAuthMiddleware;
 use StratFlow\Middleware\AuthMiddleware;
 use StratFlow\Middleware\BillingMiddleware;
 use StratFlow\Middleware\CSRFMiddleware;
@@ -137,12 +138,13 @@ class Router
     {
         foreach ($middlewareKeys as $key) {
             $result = match ($key) {
-                'auth'  => (new AuthMiddleware())->handle($this->auth, $this->response),
-                'csrf'  => (new CSRFMiddleware())->handle($this->request, $this->csrf, $this->response),
-                'admin'      => (new AdminMiddleware())->handle($this->auth, $this->response),
-                'billing'    => (new BillingMiddleware())->handle($this->auth, $this->response),
+                'auth'     => (new AuthMiddleware())->handle($this->auth, $this->response),
+                'csrf'     => (new CSRFMiddleware())->handle($this->request, $this->csrf, $this->response),
+                'admin'    => (new AdminMiddleware())->handle($this->auth, $this->response),
+                'billing'  => (new BillingMiddleware())->handle($this->auth, $this->response),
                 'executive'  => (new ExecutiveMiddleware())->handle($this->auth, $this->response),
                 'superadmin' => (new SuperadminMiddleware())->handle($this->auth, $this->response),
+                'api_auth'   => (new ApiAuthMiddleware())->handle($this->auth, $this->db, $this->response),
                 default      => true,
             };
 

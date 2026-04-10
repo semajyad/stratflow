@@ -16,7 +16,8 @@
          data-blocked-by="<?= htmlspecialchars((string) ($story['blocked_by'] ?? '')) ?>"
          data-parent-id="<?= htmlspecialchars((string) ($story['parent_hl_item_id'] ?? '')) ?>"
          data-acceptance-criteria="<?= htmlspecialchars($story['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-         data-kr-hypothesis="<?= htmlspecialchars($story['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+         data-kr-hypothesis="<?= htmlspecialchars($story['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+         data-assignee-user-id="<?= htmlspecialchars((string) ($story['assignee_user_id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
     <span class="drag-handle" title="Drag to reorder">&#x2807;</span>
     <span class="priority-number"><?= (int) $story['priority_number'] ?></span>
     <div class="story-info">

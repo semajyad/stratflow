@@ -140,7 +140,7 @@ class User
     public static function countByOrgId(Database $db, int $orgId): int
     {
         $stmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :org_id AND is_active = 1",
+            "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :org_id AND is_active = 1 AND role != 'developer'",
             [':org_id' => $orgId]
         );
 

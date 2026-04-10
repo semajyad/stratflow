@@ -7,7 +7,7 @@
  * with size estimates, team assignments, and dependency tracking.
  *
  * Columns: id, project_id, parent_hl_item_id, priority_number, title,
- *          description, parent_link, team_assigned, size, blocked_by,
+ *          description, parent_link, team_assigned, assignee_user_id, size, blocked_by,
  *          acceptance_criteria, kr_hypothesis, created_at, updated_at
  */
 
@@ -189,7 +189,7 @@ class UserStory
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'parent_hl_item_id',
-        'parent_link', 'team_assigned', 'size', 'blocked_by',
+        'parent_link', 'team_assigned', 'assignee_user_id', 'size', 'blocked_by',
         'acceptance_criteria', 'kr_hypothesis', 'quality_score', 'quality_breakdown',
         'requires_review', 'status', 'last_jira_sync_at',
     ];

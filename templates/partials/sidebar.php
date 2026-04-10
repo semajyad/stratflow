@@ -45,6 +45,8 @@ $icon = function (string $name): string {
             return "<svg $attrs><path d='M3 19h18M5 19V9l7 4 7-4v10'/></svg>";
         case 'chevron-left':
             return "<svg $attrs><polyline points='15 18 9 12 15 6'/></svg>";
+        case 'token':
+            return "<svg $attrs><rect x='2' y='9' width='20' height='6' rx='2'/><path d='M9 12h.01M12 12h.01M15 12h.01'/></svg>";
     }
     return '';
 };
@@ -175,6 +177,11 @@ $icon = function (string $name): string {
                 <?= $icon('superadmin') ?><span class="nav-label">Superadmin</span>
             </a>
         <?php endif; ?>
+
+        <hr class="sidebar-divider">
+        <a href="/app/account/tokens" class="nav-link <?= ($active_page ?? '') === 'account-tokens' ? 'active' : '' ?>" data-label="Developer Tokens">
+            <?= $icon('token') ?><span class="nav-label">Developer Tokens</span>
+        </a>
     </nav>
 
     <button type="button" class="sidebar-collapse-btn" id="sidebar-collapse-btn"

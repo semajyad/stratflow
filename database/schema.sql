@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    role ENUM('viewer','user','project_manager','org_admin','superadmin') NOT NULL DEFAULT 'user',
+    role ENUM('viewer','user','project_manager','org_admin','superadmin','developer') NOT NULL DEFAULT 'user',
+    jira_account_id    VARCHAR(255) NULL,
     has_billing_access TINYINT(1) NOT NULL DEFAULT 0,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     password_changed_at DATETIME NULL,
@@ -177,7 +178,8 @@ CREATE TABLE IF NOT EXISTS user_stories (
     title VARCHAR(255) NOT NULL,
     description TEXT NULL,
     parent_link VARCHAR(255) NULL,
-    team_assigned VARCHAR(255) NULL,
+    team_assigned       VARCHAR(255)    NULL,
+    assignee_user_id    BIGINT UNSIGNED NULL,
     size INT UNSIGNED NULL,
     blocked_by INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -186,7 +188,8 @@ CREATE TABLE IF NOT EXISTS user_stories (
     status ENUM('backlog','in_progress','in_review','done') NOT NULL DEFAULT 'backlog',
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_hl_item_id) REFERENCES hl_work_items(id) ON DELETE SET NULL,
-    FOREIGN KEY (blocked_by) REFERENCES user_stories(id) ON DELETE SET NULL
+    FOREIGN KEY (blocked_by) REFERENCES user_stories(id) ON DELETE SET NULL,
+    FOREIGN KEY (assignee_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Item 9: Sprint planning

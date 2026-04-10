@@ -48,7 +48,10 @@ class AuthController
     public function showLogin(): void
     {
         if ($this->auth->check()) {
-            $this->response->redirect('/app/home');
+            unset($_SESSION['_intended_url']);
+            $user = $this->auth->user();
+            $redirect = ($user['role'] ?? '') === 'developer' ? '/app/account/tokens' : '/app/home';
+            $this->response->redirect($redirect);
         }
 
         $this->response->render('login', [
@@ -92,18 +95,27 @@ class AuthController
                 'email' => $email,
             ]);
 
+            $role = $user['role'] ?? 'user';
+
+            // Developers always land on token management — MCP is their primary interface.
+            if ($role === 'developer') {
+                unset($_SESSION['_intended_url']);
+                $this->response->redirect('/app/account/tokens');
+                return;
+            }
+
             // Redirect to intended URL (if session expired mid-flow), otherwise role-aware default
             $intendedUrl = $_SESSION['_intended_url'] ?? null;
             unset($_SESSION['_intended_url']);
 
-            if ($intendedUrl !== null) {
+            // Validate the intended URL is a safe internal path before redirecting
+            if ($intendedUrl !== null && str_starts_with($intendedUrl, '/app/')) {
                 $this->response->redirect($intendedUrl);
                 return;
             }
 
             // Role-aware landing: viewers with billing flag go to billing,
             // superadmins go to their dashboard, everyone else goes home.
-            $role = $user['role'] ?? 'user';
             $hasBilling = (bool) ($user['has_billing_access'] ?? false);
 
             if ($role === 'superadmin') {

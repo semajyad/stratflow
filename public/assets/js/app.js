@@ -530,6 +530,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('story-title').value                    = row.dataset.title || '';
             document.getElementById('story-description').value              = row.dataset.description || '';
             document.getElementById('story-team').value                     = row.dataset.team || '';
+            var assigneeEl = document.getElementById('story-assignee');
+            if (assigneeEl) { assigneeEl.value = row.dataset.assigneeUserId || ''; }
             document.getElementById('story-size').value                     = row.dataset.size || '';
             document.getElementById('story-blocked-by').value               = row.dataset.blockedBy || '';
             document.getElementById('story-parent').value                   = row.dataset.parentId || '';
@@ -911,6 +913,8 @@ function toggleStoryModal() {
         document.getElementById('story-title').value = '';
         document.getElementById('story-description').value = '';
         document.getElementById('story-team').value = '';
+        var newAssigneeEl = document.getElementById('story-assignee');
+        if (newAssigneeEl) { newAssigneeEl.value = ''; }
         document.getElementById('story-size').value = '';
         document.getElementById('story-blocked-by').value = '';
         document.getElementById('story-parent').value = '';

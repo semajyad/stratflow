@@ -74,6 +74,7 @@ class UserStoryController
         $stories   = UserStory::findByProjectId($this->db, $projectId);
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $teams     = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
+        $orgUsers  = \StratFlow\Models\User::findByOrgId($this->db, $orgId);
 
         // Inject git link counts in bulk to avoid N+1 queries
         $storyIds   = array_column($stories, 'id');
@@ -101,6 +102,7 @@ class UserStoryController
             'stories'              => $stories,
             'work_items'           => $workItems,
             'teams'                => $teams,
+            'org_users'            => $orgUsers,
             'field_order_st'       => $fieldOrderSt,
             'show_quality'         => $showQuality,
             'active_page'          => 'user-stories',
@@ -318,15 +320,30 @@ class UserStoryController
         $parentHlItemId = $this->request->post('parent_hl_item_id', '');
         $blockedBy      = $this->request->post('blocked_by', '');
         $size           = $this->request->post('size', '');
+        $assigneeRaw    = $this->request->post('assignee_user_id', null);
 
         $oldSize = (int) ($story['size'] ?? 0);
         $newSize = $size !== '' ? (int) $size : 0;
+
+        // Validate assignee belongs to this org before accepting
+        $assigneeUserId = null;
+        if ($assigneeRaw !== null && $assigneeRaw !== '') {
+            $assigneeId = (int) $assigneeRaw;
+            $assigneeCheck = $this->db->query(
+                'SELECT id FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
+                [':id' => $assigneeId, ':org_id' => $orgId]
+            )->fetch();
+            if ($assigneeCheck) {
+                $assigneeUserId = $assigneeId;
+            }
+        }
 
         UserStory::update($this->db, $id, [
             'title'               => trim((string) $this->request->post('title', $story['title'])),
             'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
             'parent_hl_item_id'   => $parentHlItemId !== '' ? (int) $parentHlItemId : null,
             'team_assigned'       => trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
+            'assignee_user_id'    => $assigneeUserId,
             'size'                => $size !== '' ? (int) $size : null,
             'blocked_by'          => $blockedBy !== '' ? (int) $blockedBy : null,
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,

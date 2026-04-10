@@ -87,4 +87,34 @@ class Request
     {
         return file_get_contents('php://input');
     }
+
+    /**
+     * Decode the request body as JSON and return an associative array.
+     *
+     * Used by API controllers for PAT-authenticated endpoints where the
+     * body is application/json rather than form-encoded.
+     *
+     * Returns an empty array when the body is empty or not valid JSON.
+     */
+    public function json(): array
+    {
+        $body = $this->body();
+        if ($body === '' || $body === false) {
+            return [];
+        }
+        $decoded = json_decode($body, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Return the value of an HTTP request header.
+     *
+     * Header names are normalised to HTTP_UPPER_CASE keys in $_SERVER.
+     * e.g. header('Authorization') reads $_SERVER['HTTP_AUTHORIZATION'].
+     */
+    public function header(string $name): string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        return $_SERVER[$key] ?? '';
+    }
 }
