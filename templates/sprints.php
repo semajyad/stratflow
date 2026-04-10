@@ -104,12 +104,13 @@
 </div>
 <script>
 (function() {
-    // Default start date to next Monday, end date to 2 weeks later
-    function nextMonday() {
+    // Server-provided Jira smart defaults (null = not available)
+    var jiraSuggestedStart    = <?= json_encode($jira_suggested_start ?? null) ?>;
+    var jiraSuggestedCapacity = <?= json_encode($jira_suggested_capacity ?? null) ?>;
+
+    function tomorrow() {
         var d = new Date();
-        var day = d.getDay();
-        var daysUntilMonday = (day === 1) ? 7 : ((8 - day) % 7 || 7);
-        d.setDate(d.getDate() + daysUntilMonday);
+        d.setDate(d.getDate() + 1);
         return d.toISOString().slice(0, 10);
     }
     function addDays(isoDate, days) {
@@ -117,19 +118,45 @@
         d.setDate(d.getDate() + days);
         return d.toISOString().slice(0, 10);
     }
-    var startEl = document.getElementById('sprint-start-date');
-    var endEl = document.getElementById('sprint-end-date');
+
+    // Create Sprint form
+    var startEl    = document.getElementById('sprint-start-date');
+    var endEl      = document.getElementById('sprint-end-date');
+    var capacityEl = document.querySelector('input[name="team_capacity"]');
+
+    var defaultStart = jiraSuggestedStart || tomorrow();
+
     if (startEl && !startEl.value) {
-        startEl.value = nextMonday();
+        startEl.value = defaultStart;
     }
-    if (endEl && !endEl.value && startEl.value) {
-        endEl.value = addDays(startEl.value, 13); // 2-week sprint (Mon-Sun)
+    if (endEl && !endEl.value && startEl && startEl.value) {
+        endEl.value = addDays(startEl.value, 13);
     }
+    if (capacityEl && !capacityEl.value && jiraSuggestedCapacity) {
+        capacityEl.value = jiraSuggestedCapacity;
+        capacityEl.placeholder = jiraSuggestedCapacity + ' pts';
+    }
+
     window.autoSetSprintEndDate = function() {
-        if (startEl.value) {
+        if (startEl && startEl.value) {
             endEl.value = addDays(startEl.value, 13);
         }
     };
+
+    // Auto-Generate form
+    var genStart    = document.querySelector('form[action*="auto-generate"] input[name="start_date"]');
+    var genCapacity = document.querySelector('form[action*="auto-generate"] input[name="capacity"]');
+
+    if (genStart && !genStart.value) {
+        genStart.value = defaultStart;
+        <?php if ($jira_suggested_start ?? null): ?>
+        genStart.title = 'Set to day after last Jira sprint (<?= htmlspecialchars($jira_suggested_start) ?>)';
+        <?php endif; ?>
+    }
+    if (genCapacity && !genCapacity.value && jiraSuggestedCapacity) {
+        genCapacity.value = jiraSuggestedCapacity;
+        genCapacity.placeholder = 'e.g. ' + jiraSuggestedCapacity + ' (Jira avg)';
+    }
 })();
 </script>
 
@@ -155,7 +182,11 @@
                     <input type="number" name="num_sprints" class="form-control" min="1" max="20" required value="5">
                 </div>
                 <div class="sprint-gen-field">
-                    <label>First sprint starts</label>
+                    <label>First sprint starts
+                        <?php if ($jira_suggested_start ?? null): ?>
+                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — day after last Jira sprint</span>
+                        <?php endif; ?>
+                    </label>
                     <input type="date" name="start_date" class="form-control" required>
                 </div>
                 <div class="sprint-gen-field">
@@ -168,8 +199,13 @@
                     </select>
                 </div>
                 <div class="sprint-gen-field">
-                    <label>Default capacity (pts)</label>
-                    <input type="number" name="capacity" class="form-control" min="1" required placeholder="e.g. 50">
+                    <label>Default capacity (pts)
+                        <?php if ($jira_suggested_capacity ?? null): ?>
+                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — Jira avg velocity</span>
+                        <?php endif; ?>
+                    </label>
+                    <input type="number" name="capacity" class="form-control" min="1" required
+                           placeholder="<?= ($jira_suggested_capacity ?? null) ? 'e.g. ' . (int)$jira_suggested_capacity . ' (Jira avg)' : 'e.g. 50' ?>">
                 </div>
                 <div class="sprint-gen-field" style="align-self: end;">
                     <button type="submit" class="btn btn-ai">Generate Sprints</button>

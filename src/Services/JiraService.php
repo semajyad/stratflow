@@ -340,6 +340,98 @@ class JiraService
     }
 
     /**
+     * Return the end date (Y-m-d) of the last completed sprint on a board,
+     * or null if none exists or the call fails.
+     */
+    public function getLastCompletedSprintEndDate(int $boardId): ?string
+    {
+        try {
+            $result  = $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/board/{$boardId}/sprint?state=closed&maxResults=50");
+            $sprints = $result['values'] ?? [];
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (empty($sprints)) {
+            return null;
+        }
+
+        // Find the sprint with the most recent end date
+        usort($sprints, static function ($a, $b) {
+            return strcmp($b['endDate'] ?? '', $a['endDate'] ?? '');
+        });
+
+        $endDate = $sprints[0]['endDate'] ?? null;
+        if (!$endDate) {
+            return null;
+        }
+
+        // Jira returns ISO 8601 with time zone — strip to Y-m-d
+        return substr($endDate, 0, 10);
+    }
+
+    /**
+     * Calculate average velocity (completed story points) across the last
+     * $numSprints closed sprints on a board.
+     *
+     * Returns null if not enough data or the call fails.
+     */
+    public function getAverageVelocity(int $boardId, string $storyPointsField = 'story_points', int $numSprints = 3): ?int
+    {
+        try {
+            $result  = $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/board/{$boardId}/sprint?state=closed&maxResults=10");
+            $sprints = $result['values'] ?? [];
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (empty($sprints)) {
+            return null;
+        }
+
+        // Sort by end date descending, take the last N
+        usort($sprints, static function ($a, $b) {
+            return strcmp($b['endDate'] ?? '', $a['endDate'] ?? '');
+        });
+        $sprints = array_slice($sprints, 0, $numSprints);
+
+        // Map common aliases to Jira field names
+        $fieldAliases = [
+            'story_points'  => 'story_points',
+            'customfield_10016' => 'customfield_10016',
+            'customfield_10028' => 'customfield_10028',
+        ];
+        $jiraField = $fieldAliases[$storyPointsField] ?? $storyPointsField;
+
+        $totals = [];
+        foreach ($sprints as $sprint) {
+            $sprintId = (int) ($sprint['id'] ?? 0);
+            if (!$sprintId) {
+                continue;
+            }
+            try {
+                $issueResult = $this->makeAuthenticatedRequest(
+                    'GET',
+                    "/rest/agile/1.0/sprint/{$sprintId}/issue?jql=status%3DDone&fields={$jiraField}&maxResults=200"
+                );
+                $pts = 0;
+                foreach ($issueResult['issues'] ?? [] as $issue) {
+                    $pts += (float) ($issue['fields'][$jiraField] ?? 0);
+                }
+                $totals[] = $pts;
+            } catch (\Throwable) {
+                // skip this sprint
+            }
+        }
+
+        if (empty($totals)) {
+            return null;
+        }
+
+        return (int) round(array_sum($totals) / count($totals));
+    }
+
+    /**
      * Create a sprint on a board.
      */
     public function createSprint(int $boardId, string $name, ?string $startDate = null, ?string $endDate = null): array
