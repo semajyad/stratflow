@@ -18,71 +18,122 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
     <p class="page-subtitle"><a href="/app/admin">&larr; Back to Administration</a></p>
 </div>
 
-<!-- Overview Cards -->
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; align-items: stretch;">
-    <section class="card" style="display:flex; flex-direction:column;">
-        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Plan</span>
-            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
+<!-- Overview Cards — fixed structure: label top, value middle, sub bottom -->
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; margin-bottom:2rem;">
+    <?php
+    // Helper: render a stat card with pinned label/value/sub positions.
+    // Each card has the same three-zone layout regardless of content,
+    // so all labels, values, and subtitles align across the row.
+    //   $label  — uppercase tiny label
+    //   $value  — main bold value (HTML allowed)
+    //   $sub    — sub-line HTML (optional)
+    ?>
+
+    <!-- Plan -->
+    <section class="card">
+        <div class="billing-stat">
+            <span class="billing-stat-label">Plan</span>
+            <div class="billing-stat-value">
                 <?= $sub ? htmlspecialchars(ucfirst($plan)) : 'No Plan' ?>
             </div>
-            <?php if ($sub): ?>
-                <span class="badge <?= $status === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= htmlspecialchars(ucfirst($status)) ?></span>
-                <?php if ($sd && $sd['cancel_at_period_end']): ?>
-                    <br><small class="text-muted" style="color: var(--danger);">Cancels at period end</small>
+            <div class="billing-stat-sub">
+                <?php if ($sub): ?>
+                    <span class="badge <?= $status === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= htmlspecialchars(ucfirst($status)) ?></span>
+                    <?php if ($sd && $sd['cancel_at_period_end']): ?>
+                        <span style="color:var(--danger); font-size:0.75rem; display:block; margin-top:2px;">Cancels at period end</span>
+                    <?php endif; ?>
+                <?php else: ?>
+                    &nbsp;
                 <?php endif; ?>
-            <?php endif; ?>
+            </div>
         </div>
     </section>
 
-    <section class="card" style="display:flex; flex-direction:column;">
-        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Seats</span>
-            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
-                <?= (int) $active_users ?> / <?= (int) $seat_limit ?>
+    <!-- Seats -->
+    <section class="card">
+        <div class="billing-stat">
+            <span class="billing-stat-label">Seats</span>
+            <div class="billing-stat-value"><?= (int) $active_users ?> / <?= (int) $seat_limit ?></div>
+            <div class="billing-stat-sub">
+                <div style="width:100%; background:var(--border); border-radius:4px; height:5px; margin-bottom:4px; overflow:hidden;">
+                    <div style="background:<?= $seatColor ?>; height:100%; width:<?= $seatPct ?>%; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+                <?= (int) $total_users ?> total user<?= $total_users !== 1 ? 's' : '' ?>
             </div>
-            <div style="background: var(--border); border-radius: 4px; height: 6px; margin-top: 0.4rem;">
-                <div style="background: <?= $seatColor ?>; border-radius: 4px; height: 100%; width: <?= $seatPct ?>%; transition: width 0.3s;"></div>
-            </div>
-            <small class="text-muted"><?= (int) $total_users ?> total users</small>
         </div>
     </section>
 
-    <section class="card" style="display:flex; flex-direction:column;">
-        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">
-                <?php if ($sd): ?>Cost<?php else: ?>Started<?php endif; ?>
-            </span>
-            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
+    <!-- Cost / Started -->
+    <section class="card">
+        <div class="billing-stat">
+            <span class="billing-stat-label"><?= $sd ? 'Cost' : 'Started' ?></span>
+            <div class="billing-stat-value">
                 <?php if ($sd): ?>
-                    <?= htmlspecialchars(strtoupper($sd['currency'])) ?> <?= number_format($sd['unit_amount'] / 100, 2) ?>
-                    <small style="font-weight: 400; font-size: 0.85rem;">/seat/<?= htmlspecialchars($sd['interval']) ?></small>
+                    <?= htmlspecialchars(strtoupper($sd['currency'])) ?>&nbsp;<?= number_format($sd['unit_amount'] / 100, 2) ?>
+                    <span style="font-weight:400; font-size:0.85rem;">/seat/<?= htmlspecialchars($sd['interval']) ?></span>
                 <?php else: ?>
                     <?= $sub ? date('j M Y', strtotime($sub['started_at'])) : '—' ?>
                 <?php endif; ?>
             </div>
-            <?php if ($sd): ?>
-                <small class="text-muted"><?= (int) ($sd['quantity'] ?? 1) ?> seats billed</small>
-            <?php endif; ?>
+            <div class="billing-stat-sub">
+                <?= $sd ? ((int) ($sd['quantity'] ?? 1)) . ' seat' . ($sd['quantity'] !== 1 ? 's' : '') . ' billed' : '&nbsp;' ?>
+            </div>
         </div>
     </section>
 
-    <section class="card" style="display:flex; flex-direction:column;">
-        <div class="card-body" style="text-align: center; padding: 1.25rem; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <span class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Period</span>
-            <div style="font-size: 1.4rem; font-weight: 700; margin: 0.4rem 0;">
+    <!-- Period -->
+    <section class="card">
+        <div class="billing-stat">
+            <span class="billing-stat-label">Period</span>
+            <div class="billing-stat-value">
                 <?php if ($sd): ?>
-                    <?= date('j M', strtotime($sd['current_period_end'])) ?>
+                    <?= date('j M Y', strtotime($sd['current_period_end'])) ?>
                 <?php elseif ($sub && $sub['expires_at']): ?>
                     <?= date('j M Y', strtotime($sub['expires_at'])) ?>
                 <?php else: ?>
                     —
                 <?php endif; ?>
             </div>
-            <small class="text-muted"><?= $sd ? 'Next renewal' : ($sub ? 'Expires' : '') ?></small>
+            <div class="billing-stat-sub">
+                <?= $sd ? 'Next renewal' : ($sub && $sub['expires_at'] ? 'Expires' : '&nbsp;') ?>
+            </div>
         </div>
     </section>
 </div>
+
+<style>
+.billing-stat {
+    padding: 1.25rem 1.25rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+.billing-stat-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #94a3b8;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+.billing-stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+.billing-stat-sub {
+    font-size: 0.78rem;
+    color: #64748b;
+    min-height: 1.2em;
+    width: 100%;
+    text-align: center;
+}
+</style>
 
 <!-- Flash messages -->
 <?php if (!empty($flash_error)): ?>

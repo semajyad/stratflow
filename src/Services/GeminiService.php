@@ -93,33 +93,85 @@ class GeminiService
         }
 
         $text = trim($text);
-        if (str_starts_with($text, '```')) {
-            $text = preg_replace('/^```(?:json)?\s*/', '', $text);
-            $text = preg_replace('/\s*```$/', '', $text);
-        }
 
+        // Strip markdown code fences — handle both leading and trailing,
+        // and fences that appear anywhere in the response (not just at start).
+        $text = preg_replace('/^```(?:json)?\s*/m', '', $text);
+        $text = preg_replace('/\s*```\s*$/m', '', $text);
+        $text = trim($text);
+
+        // Attempt 1: plain decode (fast path — works when AI returns clean JSON)
         $decoded = json_decode($text, true);
         if (json_last_error() === JSON_ERROR_NONE) {
             return $decoded;
         }
 
-        // Gemini occasionally embeds literal control characters (LF, CR, TAB, etc.)
-        // inside JSON string values, which json_decode rejects as JSON_ERROR_CTRL_CHAR.
-        // The regex approach can fail on large responses (PCRE backtrack limit), so we
-        // walk the string character-by-character — O(n), no backtracking.
-        $text = $this->sanitizeJsonControlChars($text);
-
-        $decoded = json_decode($text, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
+        // Attempt 2: sanitize bare control chars (LF, CR, TAB, etc. inside string
+        // values) with a char-by-char walker — O(n), immune to PCRE backtrack limits
+        $sanitized = $this->sanitizeJsonControlChars($text);
+        $decoded   = json_decode($sanitized, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
         }
 
-        return $decoded;
+        // Attempt 3: the AI may have prefixed/suffixed explanatory text around the
+        // JSON object. Extract the first complete {…} or […] block and try again.
+        $extracted = $this->extractJsonBlock($sanitized);
+        if ($extracted !== null) {
+            $decoded = json_decode($extracted, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decoded;
+            }
+        }
+
+        error_log('[GeminiService] All JSON parse attempts failed. Raw (first 800): ' . substr($text, 0, 800));
+        throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
     }
 
     // ===========================
     // HELPERS
     // ===========================
+
+    /**
+     * Find the first top-level JSON object ({…}) or array ([…]) in the string
+     * and return just that substring. Returns null if no valid block is found.
+     * Used when the AI wraps JSON in explanatory prose.
+     */
+    private function extractJsonBlock(string $text): ?string
+    {
+        $len   = strlen($text);
+        $open  = null;
+        $close = null;
+        $depth = 0;
+        $inStr = false;
+        $esc   = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $c = $text[$i];
+
+            if ($esc) { $esc = false; continue; }
+            if ($c === '\\' && $inStr) { $esc = true; continue; }
+            if ($c === '"') { $inStr = !$inStr; continue; }
+            if ($inStr) { continue; }
+
+            if ($c === '{' || $c === '[') {
+                if ($depth === 0) { $open = $i; }
+                $depth++;
+            } elseif ($c === '}' || $c === ']') {
+                $depth--;
+                if ($depth === 0 && $open !== null) {
+                    $close = $i;
+                    break;
+                }
+            }
+        }
+
+        if ($open === null || $close === null) {
+            return null;
+        }
+
+        return substr($text, $open, $close - $open + 1);
+    }
 
     /**
      * Walk the JSON string character-by-character and escape any bare control
