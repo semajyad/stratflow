@@ -270,6 +270,43 @@ class GitHubAppClient
      * @param array $payload Decoded JSON payload
      * @return array|null    ['installation_id', 'action', 'account_login', 'account_type']
      */
+    /**
+     * Parse a GitHub push event payload into commit data.
+     *
+     * Returns null if the payload has no commits (e.g. tag pushes).
+     *
+     * @param array $payload Decoded push webhook payload
+     * @return array|null    ['repo_github_id', 'repo_full_name', 'branch', 'commits']
+     *                       Each commit: ['sha', 'message', 'url', 'author']
+     */
+    public static function parsePushEvent(array $payload): ?array
+    {
+        $commits = $payload['commits'] ?? [];
+        if (empty($commits)) {
+            return null;
+        }
+
+        $ref    = $payload['ref'] ?? '';
+        $branch = preg_replace('#^refs/heads/#', '', $ref);
+
+        $parsed = [];
+        foreach ($commits as $c) {
+            $parsed[] = [
+                'sha'     => (string) ($c['id'] ?? ''),
+                'message' => (string) ($c['message'] ?? ''),
+                'url'     => (string) ($c['url'] ?? ''),
+                'author'  => $c['author']['username'] ?? ($c['author']['name'] ?? null),
+            ];
+        }
+
+        return [
+            'repo_github_id' => (int) ($payload['repository']['id'] ?? 0),
+            'repo_full_name' => (string) ($payload['repository']['full_name'] ?? ''),
+            'branch'         => $branch,
+            'commits'        => $parsed,
+        ];
+    }
+
     public static function parseInstallationEvent(array $payload): ?array
     {
         if (!isset($payload['installation'])) {

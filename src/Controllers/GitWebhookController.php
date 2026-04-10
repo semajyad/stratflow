@@ -126,6 +126,93 @@ class GitWebhookController
             return;
         }
 
+        // Step 4a — handle push events (commit messages with SF-{id} or AI fallback)
+        if ($githubEvent === 'push') {
+            $integration = Integration::findActiveByInstallationId($this->db, $installationId);
+            if ($integration === null) {
+                http_response_code(404);
+                echo json_encode(['error' => 'unknown_installation']);
+                return;
+            }
+
+            $orgId    = (int) $integration['org_id'];
+            $pushData = GitHubAppClient::parsePushEvent($payload);
+
+            if ($pushData === null) {
+                http_response_code(200);
+                echo json_encode(['ok' => true, 'links_affected' => 0]);
+                return;
+            }
+
+            $repoRow = IntegrationRepo::findByIntegrationAndGithubId(
+                $this->db,
+                (int) $integration['id'],
+                $pushData['repo_github_id']
+            );
+
+            if ($repoRow === null) {
+                http_response_code(200);
+                echo json_encode(['ok' => true, 'links_affected' => 0, 'reason' => 'repo_not_linked']);
+                return;
+            }
+
+            $service  = new GitLinkService($this->db, $orgId);
+            $affected = 0;
+            $aiQueue  = []; // commits with no explicit SF- tag go to AI matching
+
+            foreach ($pushData['commits'] as $commit) {
+                $subject = strtok($commit['message'], "\n"); // first line only
+                if (preg_match('/\b(SF|StratFlow)[-_\s]?(\d+)\b/i', $commit['message'])) {
+                    $linked = $service->linkFromPrBody(
+                        $commit['message'],
+                        $commit['url'],
+                        'github',
+                        $subject,
+                        'merged',
+                        $commit['author'] ?? null
+                    );
+                    $affected += $linked;
+                } else {
+                    $aiQueue[] = $commit;
+                }
+            }
+
+            error_log(sprintf(
+                '[GitWebhook] GitHub push %s branch=%s org_id=%d commits=%d explicit_links=%d ai_queue=%d',
+                $pushData['repo_full_name'],
+                $pushData['branch'],
+                $orgId,
+                count($pushData['commits']),
+                $affected,
+                count($aiQueue)
+            ));
+
+            http_response_code(200);
+            echo json_encode(['ok' => true, 'links_affected' => $affected]);
+
+            // AI matching for commits with no explicit reference — fire after response
+            if (!empty($aiQueue)) {
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                ignore_user_abort(true);
+
+                $gemini  = $this->makeGemini();
+                $matcher = new GitPrMatcherService($this->db, $gemini);
+                foreach ($aiQueue as $commit) {
+                    $subject = strtok($commit['message'], "\n");
+                    $matcher->matchAndLink(
+                        $subject,
+                        $commit['message'],
+                        $pushData['branch'],
+                        $commit['url'],
+                        $orgId
+                    );
+                }
+            }
+            return;
+        }
+
         // Step 4 — resolve integration for PR events
         $integration = Integration::findActiveByInstallationId($this->db, $installationId);
         if ($integration === null) {

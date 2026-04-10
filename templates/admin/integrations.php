@@ -247,9 +247,9 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
             </table>
 
             <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
-                To add or remove repos from an installation, use the <em>Manage on GitHub</em> link above —
-                stratflow will sync the change automatically. Project managers can then subscribe their
-                projects to specific repos from the project settings page.
+                To add or remove repos use the <em>Manage on GitHub</em> link above — StratFlow syncs automatically.
+                Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in a PR description or commit message to link it.
+                No reference? AI will try to match it automatically.
             </p>
 
             <a href="/app/admin/integrations/github/install" class="btn btn-sm btn-secondary">
@@ -259,9 +259,9 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
         <?php else: ?>
             <!-- Disconnected state -->
             <p class="text-muted" style="margin-bottom: 1rem;">
-                Install the StratFlow GitHub App to automatically link pull requests to user stories.
+                Install the StratFlow GitHub App to automatically link pull requests and commits to user stories.
                 GitHub handles the repository picker — no webhook URLs or secrets to copy.
-                Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your PR description.
+                Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your PR description or commit message, or let AI match automatically.
             </p>
             <?php if (($github_app_slug ?? '') !== ''): ?>
             <a href="/app/admin/integrations/github/install" class="btn btn-primary">
