@@ -55,7 +55,7 @@ $icon = function (string $name): string {
             <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow" class="sidebar-brand-logo">
         </a>
         <a href="/app/home" class="sidebar-brand-mark" aria-label="StratFlow home">
-            <img src="/assets/images/StratFlow_logo.webp" alt="SF" class="sidebar-brand-mark-logo">
+            <img src="/assets/images/Favicon.webp" alt="SF" class="sidebar-brand-mark-logo">
         </a>
     </div>
     <div class="sidebar-project">

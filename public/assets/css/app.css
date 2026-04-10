@@ -4210,9 +4210,10 @@ details[open] > summary .trace-chevron {
 }
 
 .sidebar-brand-mark-logo {
-    height: 44px;
-    width: auto;
+    height: 32px;
+    width: 32px;
     display: block;
+    object-fit: contain;
 }
 
 .public-header .logo img {
