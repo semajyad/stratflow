@@ -857,8 +857,9 @@ class AdminController
             $existing = json_decode($org['settings_json'], true) ?? [];
         }
         $settings['ai'] = [
-            'model'   => trim((string) $this->request->post('ai_model', '')),
-            'api_key' => $submittedKey !== '' ? $submittedKey : ($existing['ai']['api_key'] ?? ''),
+            'provider' => trim((string) $this->request->post('ai_provider', '')),
+            'model'    => trim((string) $this->request->post('ai_model', '')),
+            'api_key'  => $submittedKey !== '' ? $submittedKey : ($existing['ai']['api_key'] ?? ''),
         ];
 
         Organisation::update($this->db, $orgId, [
@@ -871,5 +872,54 @@ class AdminController
 
         $_SESSION['flash_message'] = 'Settings saved successfully.';
         $this->response->redirect('/app/admin/settings');
+    }
+
+    /**
+     * Test the AI connection using the submitted provider/model/key.
+     */
+    public function testAi(): void
+    {
+        $provider = trim((string) $this->request->post('ai_provider', ''));
+        $model    = trim((string) $this->request->post('ai_model', ''));
+        $apiKey   = trim((string) $this->request->post('ai_api_key', ''));
+
+        // Fall back to org's saved key if none submitted
+        if ($apiKey === '') {
+            $user  = $this->auth->user();
+            $org   = \StratFlow\Models\Organisation::findById($this->db, (int) $user['org_id']);
+            $saved = [];
+            if ($org && !empty($org['settings_json'])) {
+                $saved = json_decode($org['settings_json'], true) ?? [];
+            }
+            $apiKey = $saved['ai']['api_key'] ?? '';
+        }
+
+        // Only Google Gemini is supported as primary provider; others return a clear message
+        $supported = ['', 'google'];
+        if (!in_array($provider, $supported, true)) {
+            $this->response->json([
+                'status'  => 'error',
+                'message' => ucfirst($provider) . ' provider is not yet integrated — contact StratFlow support.',
+            ]);
+            return;
+        }
+
+        // Use the platform key if none provided
+        if ($apiKey === '') {
+            $apiKey = $this->config['gemini_api_key'] ?? '';
+        }
+
+        $resolvedModel = $model ?: 'gemini-2.5-flash';
+
+        try {
+            $config = $this->config;
+            $config['gemini']['api_key'] = $apiKey ?: ($config['gemini']['api_key'] ?? '');
+            $config['gemini']['model']   = $resolvedModel;
+            $gemini = new \StratFlow\Services\GeminiService($config);
+            $gemini->generate('Reply with exactly one word: OK', '');
+            $this->response->json(['status' => 'ok', 'message' => 'Connected to ' . $resolvedModel]);
+        } catch (\Throwable $e) {
+            $this->response->json(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 }

@@ -68,35 +68,110 @@
         </div>
         <div class="card-body">
             <p class="text-muted mb-4" style="font-size: 0.875rem;">
-                Override the platform default AI model and API key for your organisation.
-                Leave blank to use the StratFlow default (<code>gemini-3-flash-preview</code>).
+                Override the AI provider, model, and API key for your organisation.
+                Leave blank to use the StratFlow default (Google Gemini — gemini-2.5-flash).
             </p>
-            <div class="form-row gap-4">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">Gemini Model</label>
-                    <select name="ai_model" class="form-input">
-                        <option value="" <?= empty($settings['ai']['model']) ? 'selected' : '' ?>>
-                            Platform default (gemini-3-flash-preview)
-                        </option>
-                        <option value="gemini-3-flash-preview" <?= ($settings['ai']['model'] ?? '') === 'gemini-3-flash-preview' ? 'selected' : '' ?>>gemini-3-flash-preview</option>
-                        <option value="gemini-2.5-flash" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.5-flash' ? 'selected' : '' ?>>gemini-2.5-flash</option>
-                        <option value="gemini-2.5-pro" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.5-pro' ? 'selected' : '' ?>>gemini-2.5-pro (slower, higher quality)</option>
-                        <option value="gemini-2.0-flash" <?= ($settings['ai']['model'] ?? '') === 'gemini-2.0-flash' ? 'selected' : '' ?>>gemini-2.0-flash</option>
+            <div class="form-row gap-4" style="flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label class="form-label">Provider</label>
+                    <select name="ai_provider" id="ai-provider-select" class="form-input" onchange="updateAiModelPlaceholder()">
+                        <option value="" <?= empty($settings['ai']['provider']) ? 'selected' : '' ?>>Platform default (Google Gemini)</option>
+                        <option value="google" <?= ($settings['ai']['provider'] ?? '') === 'google' ? 'selected' : '' ?>>Google Gemini</option>
+                        <option value="openai" <?= ($settings['ai']['provider'] ?? '') === 'openai' ? 'selected' : '' ?>>OpenAI</option>
+                        <option value="anthropic" <?= ($settings['ai']['provider'] ?? '') === 'anthropic' ? 'selected' : '' ?>>Anthropic</option>
                     </select>
                 </div>
-                <div class="form-group" style="flex:1;">
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label class="form-label">Model</label>
+                    <input type="text"
+                           name="ai_model"
+                           id="ai-model-input"
+                           class="form-input"
+                           value="<?= htmlspecialchars($settings['ai']['model'] ?? '') ?>"
+                           placeholder="e.g. gemini-2.5-flash">
+                    <small class="text-muted" id="ai-model-hint">Leave blank to use the platform default.</small>
+                </div>
+                <div class="form-group" style="flex:1; min-width:180px;">
                     <label class="form-label">API Key <span class="text-muted" style="font-weight:400;">(optional)</span></label>
                     <input type="password"
                            name="ai_api_key"
+                           id="ai-api-key-input"
                            class="form-input"
                            autocomplete="new-password"
                            placeholder="<?= empty($settings['ai']['api_key']) ? 'Using platform key' : '••••••••••••' ?>"
                            value="">
-                    <small class="text-muted">Your Google AI Studio API key. Leave blank to use the StratFlow shared key.</small>
+                    <small class="text-muted">Leave blank to use the StratFlow shared key.</small>
                 </div>
+            </div>
+            <div style="margin-top:1rem; display:flex; align-items:center; gap:1rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="testAiConnection()">Test Connection</button>
+                <span id="ai-test-result" style="font-size:0.875rem;"></span>
             </div>
         </div>
     </section>
+
+    <script>
+    var _aiProviderPlaceholders = {
+        '':          'e.g. gemini-2.5-flash',
+        'google':    'e.g. gemini-2.5-flash',
+        'openai':    'e.g. gpt-4o',
+        'anthropic': 'e.g. claude-sonnet-4-6',
+    };
+    var _aiProviderHints = {
+        '':          'Leave blank to use the platform default.',
+        'google':    'e.g. gemini-2.5-flash, gemini-2.5-pro',
+        'openai':    'e.g. gpt-4o, gpt-4o-mini',
+        'anthropic': 'e.g. claude-opus-4-6, claude-sonnet-4-6',
+    };
+    function updateAiModelPlaceholder() {
+        var prov = document.getElementById('ai-provider-select').value;
+        document.getElementById('ai-model-input').placeholder = _aiProviderPlaceholders[prov] || 'Enter model name';
+        document.getElementById('ai-model-hint').textContent  = _aiProviderHints[prov] || '';
+    }
+    function testAiConnection() {
+        var btn      = document.querySelector('[onclick="testAiConnection()"]');
+        var result   = document.getElementById('ai-test-result');
+        var provider = document.getElementById('ai-provider-select').value;
+        var model    = document.getElementById('ai-model-input').value;
+        var apiKey   = document.getElementById('ai-api-key-input').value;
+        var csrf     = document.querySelector('input[name="_csrf_token"]');
+
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+        result.style.color = '';
+        result.textContent = '';
+
+        var form = new FormData();
+        form.append('_csrf_token', csrf ? csrf.value : '');
+        form.append('ai_provider', provider);
+        form.append('ai_model',    model);
+        form.append('ai_api_key',  apiKey);
+
+        fetch('/app/admin/test-ai', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: form
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.textContent = 'Test Connection';
+            if (data.status === 'ok') {
+                result.style.color = '#16a34a';
+                result.textContent = '✓ ' + (data.message || 'Connection successful');
+            } else {
+                result.style.color = '#dc2626';
+                result.textContent = '✗ ' + (data.message || 'Connection failed');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.textContent = 'Test Connection';
+            result.style.color = '#dc2626';
+            result.textContent = '✗ Request failed';
+        });
+    }
+    </script>
 
     <!-- ===========================
          Defaults

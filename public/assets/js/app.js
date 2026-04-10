@@ -738,10 +738,11 @@ function applyAiSuggestions(suggestions, framework) {
         var row = document.querySelector('.prio-row[data-id="' + suggestion.id + '"]');
         if (!row) { return; }
 
+        var maxVal = framework === 'wsjf' ? 20 : 10;
         var dropdowns = row.querySelectorAll('.score-dropdown');
         scoreFields.forEach(function(field, i) {
             var val = parseInt(suggestion[field]) || 0;
-            if (val >= 1 && val <= 10 && dropdowns[i]) {
+            if (val >= 1 && val <= maxVal && dropdowns[i]) {
                 dropdowns[i].value = val;
             }
         });
