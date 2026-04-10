@@ -7,15 +7,16 @@
  * $project (array) from the parent scope.
  */
 ?>
-<div class="work-item-row" data-id="<?= (int) $item['id'] ?>"
-     data-title="<?= htmlspecialchars($item['title']) ?>"
-     data-description="<?= htmlspecialchars($item['description'] ?? '') ?>"
-     data-okr-title="<?= htmlspecialchars($item['okr_title'] ?? '') ?>"
-     data-okr-desc="<?= htmlspecialchars($item['okr_description'] ?? '') ?>"
-     data-owner="<?= htmlspecialchars($item['owner'] ?? '') ?>"
-     data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>"
-     data-acceptance-criteria="<?= htmlspecialchars($item['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-     data-kr-hypothesis="<?= htmlspecialchars($item['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+<details class="story-row-details">
+<summary class="work-item-row" data-id="<?= (int) $item['id'] ?>"
+         data-title="<?= htmlspecialchars($item['title']) ?>"
+         data-description="<?= htmlspecialchars($item['description'] ?? '') ?>"
+         data-okr-title="<?= htmlspecialchars($item['okr_title'] ?? '') ?>"
+         data-okr-desc="<?= htmlspecialchars($item['okr_description'] ?? '') ?>"
+         data-owner="<?= htmlspecialchars($item['owner'] ?? '') ?>"
+         data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>"
+         data-acceptance-criteria="<?= htmlspecialchars($item['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+         data-kr-hypothesis="<?= htmlspecialchars($item['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
     <span class="drag-handle" title="Drag to reorder">&#x2807;</span>
     <span class="priority-number"><?= (int) $item['priority_number'] ?></span>
     <div class="work-item-info">
@@ -57,4 +58,35 @@
         $row_delete_confirm = 'Delete this work item?';
         include __DIR__ . '/row-actions-menu.php';
     ?>
+</summary>
+<div class="story-row-expand">
+    <?php if (!empty($item['acceptance_criteria'])): ?>
+    <div class="story-expand-section">
+        <span class="story-expand-label">Acceptance Criteria</span>
+        <ul class="story-ac-list">
+            <?php foreach (array_filter(array_map('trim', explode("\n", $item['acceptance_criteria']))) as $ac): ?>
+                <li><?= htmlspecialchars($ac, ENT_QUOTES, 'UTF-8') ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php endif; ?>
+    <div class="story-expand-meta">
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">Sprints</span>
+            <span><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?> estimated</span>
+        </div>
+        <?php if (!empty($item['kr_hypothesis'])): ?>
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">KR Hypothesis</span>
+            <span><?= htmlspecialchars($item['kr_hypothesis'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($item['owner'])): ?>
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">Owner</span>
+            <span><?= htmlspecialchars($item['owner'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <?php endif; ?>
+    </div>
 </div>
+</details>

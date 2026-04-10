@@ -7,15 +7,16 @@
  * and $project (array) from the parent scope.
  */
 ?>
-<div class="story-row" data-id="<?= (int) $story['id'] ?>"
-     data-title="<?= htmlspecialchars($story['title']) ?>"
-     data-description="<?= htmlspecialchars($story['description'] ?? '') ?>"
-     data-team="<?= htmlspecialchars($story['team_assigned'] ?? '') ?>"
-     data-size="<?= htmlspecialchars((string) ($story['size'] ?? '')) ?>"
-     data-blocked-by="<?= htmlspecialchars((string) ($story['blocked_by'] ?? '')) ?>"
-     data-parent-id="<?= htmlspecialchars((string) ($story['parent_hl_item_id'] ?? '')) ?>"
-     data-acceptance-criteria="<?= htmlspecialchars($story['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-     data-kr-hypothesis="<?= htmlspecialchars($story['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+<details class="story-row-details">
+<summary class="story-row" data-id="<?= (int) $story['id'] ?>"
+         data-title="<?= htmlspecialchars($story['title']) ?>"
+         data-description="<?= htmlspecialchars($story['description'] ?? '') ?>"
+         data-team="<?= htmlspecialchars($story['team_assigned'] ?? '') ?>"
+         data-size="<?= htmlspecialchars((string) ($story['size'] ?? '')) ?>"
+         data-blocked-by="<?= htmlspecialchars((string) ($story['blocked_by'] ?? '')) ?>"
+         data-parent-id="<?= htmlspecialchars((string) ($story['parent_hl_item_id'] ?? '')) ?>"
+         data-acceptance-criteria="<?= htmlspecialchars($story['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+         data-kr-hypothesis="<?= htmlspecialchars($story['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
     <span class="drag-handle" title="Drag to reorder">&#x2807;</span>
     <span class="priority-number"><?= (int) $story['priority_number'] ?></span>
     <div class="story-info">
@@ -55,4 +56,35 @@
         $row_delete_confirm = 'Delete this user story?';
         include __DIR__ . '/row-actions-menu.php';
     ?>
+</summary>
+<div class="story-row-expand">
+    <?php if (!empty($story['acceptance_criteria'])): ?>
+    <div class="story-expand-section">
+        <span class="story-expand-label">Acceptance Criteria</span>
+        <ul class="story-ac-list">
+            <?php foreach (array_filter(array_map('trim', explode("\n", $story['acceptance_criteria']))) as $ac): ?>
+                <li><?= htmlspecialchars($ac, ENT_QUOTES, 'UTF-8') ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php endif; ?>
+    <div class="story-expand-meta">
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">Size</span>
+            <span><?= $story['size'] !== null ? (int) $story['size'] . ' story points' : 'Not estimated' ?></span>
+        </div>
+        <?php if (!empty($story['kr_hypothesis'])): ?>
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">KR Hypothesis</span>
+            <span><?= htmlspecialchars($story['kr_hypothesis'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($story['team_assigned'])): ?>
+        <div class="story-expand-meta-item">
+            <span class="story-expand-label">Team</span>
+            <span><?= htmlspecialchars($story['team_assigned'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <?php endif; ?>
+    </div>
 </div>
+</details>

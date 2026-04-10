@@ -267,6 +267,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ===========================
+    // Expandable rows: prevent drag-handle clicks from toggling <details>
+    // ===========================
+    // Prevent drag-handle clicks from toggling <details> open/close
+    document.querySelectorAll('.story-row-details .drag-handle').forEach(function(handle) {
+        handle.addEventListener('click', function(e) { e.preventDefault(); });
+    });
+
+    // ===========================
     // Work Items: SortableJS Drag & Drop
     // ===========================
     var workItemsList = document.getElementById('work-items-list');

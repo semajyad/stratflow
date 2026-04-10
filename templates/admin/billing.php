@@ -147,7 +147,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
 <?php endif; ?>
 
 <!-- Plan Details -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;">
+<style>.billing-detail .card + .card { margin-top: 0; }</style>
+<div class="billing-detail" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem; align-items: start;">
     <section class="card">
         <div class="card-header"><h2 class="card-title">Plan Details</h2></div>
         <div class="card-body">

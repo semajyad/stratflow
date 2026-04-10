@@ -1796,7 +1796,8 @@ tbody tr:hover {
     transition: background 0.15s;
 }
 
-.work-item-row:last-child {
+.work-item-row:last-child,
+.story-row-details:last-child > summary.work-item-row {
     border-bottom: none;
 }
 
@@ -2252,7 +2253,8 @@ tbody tr:hover {
     transition: background 0.15s;
 }
 
-.story-row:last-child {
+.story-row:last-child,
+.story-row-details:last-child > summary.story-row {
     border-bottom: none;
 }
 
@@ -2327,6 +2329,87 @@ tbody tr:hover {
         flex-basis: 100%;
         justify-content: flex-end;
     }
+}
+
+/* === Story / Work Item Expandable Rows ====================================== */
+
+/* Remove default <details> marker and make summary look like the existing rows */
+.story-row-details {
+    list-style: none;
+}
+
+.story-row-details > summary {
+    cursor: pointer;
+}
+
+.story-row-details > summary::-webkit-details-marker,
+.story-row-details > summary::marker {
+    display: none;
+}
+
+/* Expand indicator on the drag handle area */
+.story-row-details[open] > summary .drag-handle::after,
+.story-row-details > summary .drag-handle::after {
+    content: '';
+}
+
+/* Strip the bottom border from the summary when expanded so the expand panel flows */
+.story-row-details[open] > summary.story-row,
+.story-row-details[open] > summary.work-item-row {
+    border-bottom: none;
+    background: #f8fafc;
+}
+
+/* Expand panel */
+.story-row-expand {
+    padding: 0.75rem 1rem 0.875rem 3.25rem;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.story-expand-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.story-expand-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: #94a3b8;
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.story-ac-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.82rem;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.story-ac-list li {
+    margin-bottom: 0.2rem;
+}
+
+.story-expand-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+}
+
+.story-expand-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-size: 0.82rem;
+    color: #374151;
 }
 
 /* === Sprint Allocation ====================================================== */

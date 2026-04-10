@@ -631,4 +631,32 @@ PROMPT;
 
         $this->response->download($content, $safeName . '_user_stories.csv', 'text/csv');
     }
+
+    /**
+     * Delete all user stories for a project.
+     *
+     * Requires project_id POST param. Verifies org ownership before deleting.
+     */
+    public function deleteAll(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        if ($projectId === 0) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        UserStory::deleteByProjectId($this->db, $projectId);
+
+        $_SESSION['flash_message'] = 'All user stories deleted.';
+        $this->response->redirect('/app/user-stories?project_id=' . $projectId);
+    }
 }

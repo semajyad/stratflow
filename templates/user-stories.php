@@ -69,8 +69,14 @@
      =========================== -->
 <?php if (!empty($stories)): ?>
 <div class="card mb-6">
-    <div class="card-header">
+    <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
         <h3>User Stories (<?= count($stories) ?>)</h3>
+        <form method="POST" action="/app/user-stories/delete-all" class="inline-form"
+              onsubmit="return confirm('Delete all <?= count($stories) ?> stories for this project? This cannot be undone.')">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="btn btn-sm btn-danger">Delete All</button>
+        </form>
     </div>
     <div class="card-body" style="padding:0;">
         <div id="user-stories-list">

@@ -86,6 +86,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth']);
     $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'csrf']);
     $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
+    $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
     $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
