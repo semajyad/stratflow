@@ -295,7 +295,7 @@ body.sidebar-collapsed .app-main {
 .sidebar-brand {
     display: flex;
     align-items: center;
-    height: 48px;
+    height: 88px;
     padding: 0 1.25rem;
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
