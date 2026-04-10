@@ -144,19 +144,30 @@
     </div>
 
     <?php foreach ($projectOkrs as $okr):
-        $krLines = $okr['kr_lines'] ?? [];
-        $krCount = count($krLines);
-        $hasKrs  = $krCount > 0;
+        $krLines  = $okr['kr_lines'] ?? [];
+        $krCount  = count($krLines);
+        $hasKrs   = $krCount > 0;
+        $sp       = ($story_progress ?? [])[(int) $okr['project_id']] ?? ['total' => 0, 'done' => 0, 'pct' => 0];
+        $pct      = (int) $sp['pct'];
+        $barColour = $pct >= 80 ? '#10b981' : ($pct >= 40 ? '#f59e0b' : '#6366f1');
     ?>
     <?php if ($hasKrs): ?>
     <details class="okr-details">
-        <summary class="okr-row" style="cursor:pointer; list-style:none;">
+        <summary class="okr-row" style="cursor:pointer; list-style:none; display:flex; align-items:center;">
             <div class="okr-row-left">
                 <span class="okr-expand-icon">&#9654;</span>
                 <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
                 <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
             </div>
-            <div class="okr-row-right">
+            <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
+                <?php if ($sp['total'] > 0): ?>
+                <div style="display:flex; align-items:center; gap:0.35rem;">
+                    <div style="width:60px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden;">
+                        <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
+                    </div>
+                    <span style="font-size:0.7rem; color:<?= $barColour ?>; font-weight:700;"><?= $pct ?>%</span>
+                </div>
+                <?php endif; ?>
                 <span style="font-size:0.75rem; color:#6b7280;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
             </div>
         </summary>
@@ -169,6 +180,15 @@
                 <span class="okr-kr-text"><?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?></span>
             </div>
             <?php endforeach; ?>
+            <?php if ($sp['total'] > 0): ?>
+            <div style="margin-top:0.5rem; padding:0.4rem 0.6rem; background:#f1f5f9; border-radius:4px; font-size:0.75rem; color:#6b7280; display:flex; align-items:center; gap:0.75rem;">
+                <span><?= $sp['done'] ?>/<?= $sp['total'] ?> stories done</span>
+                <?php $mergedPrs = ($merged_prs_by_project ?? [])[(int) $okr['project_id']] ?? 0;
+                if ($mergedPrs > 0): ?>
+                <span>&middot; <?= $mergedPrs ?> merged PR<?= $mergedPrs !== 1 ? 's' : '' ?></span>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         </div>
     </details>
     <?php else: ?>
@@ -178,7 +198,15 @@
             <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
             <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
         </div>
-        <div class="okr-row-right">
+        <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
+            <?php if ($sp['total'] > 0): ?>
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+                <div style="width:60px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden;">
+                    <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
+                </div>
+                <span style="font-size:0.7rem; color:<?= $barColour ?>; font-weight:700;"><?= $pct ?>%</span>
+            </div>
+            <?php endif; ?>
             <span style="font-size:0.75rem; color:#9ca3af;">No KRs</span>
         </div>
     </div>

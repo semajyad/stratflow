@@ -2,8 +2,19 @@
 // stratflow/templates/executive-project.php
 // Variables: $user, $project, $projects, $okr_items, $health_counts,
 //            $flash_message, $flash_error
-// $okr_items[]: id, okr_title, okr_description, kr_lines[]
+// $okr_items[]: id, okr_title, okr_description, kr_lines[],
+//               story_total, story_done, story_pct,
+//               kr_hypothesis{krText=>[done,total]},
+//               structured_krs[]{kr_title,baseline_value,target_value,current_value,unit,kr_status,ai_momentum}
 // $health_counts: total_okrs, total_krs
+
+$statusColours = [
+    'on_track'    => '#10b981',
+    'at_risk'     => '#f59e0b',
+    'off_track'   => '#ef4444',
+    'not_started' => '#9ca3af',
+    'achieved'    => '#6366f1',
+];
 ?>
 
 <?php if (!empty($flash_message)): ?>
@@ -48,16 +59,22 @@
 <?php endif; ?>
 
 <!-- OKR Cards -->
-<?php foreach ($okr_items as $i => $okr):
-    $krLines = $okr['kr_lines'] ?? [];
-    $krCount = count($krLines);
-    $borderColour = $krCount > 0 ? '#6366f1' : '#9ca3af';
+<?php foreach ($okr_items as $okr):
+    $krLines      = $okr['kr_lines'] ?? [];
+    $storyPct     = (int) ($okr['story_pct'] ?? 0);
+    $storyDone    = (int) ($okr['story_done'] ?? 0);
+    $storyTotal   = (int) ($okr['story_total'] ?? 0);
+    $structuredKrs = $okr['structured_krs'] ?? [];
+    $krHypData    = $okr['kr_hypothesis'] ?? [];
+    $barColour    = $storyPct >= 80 ? '#10b981' : ($storyPct >= 40 ? '#f59e0b' : '#6366f1');
+    $hasProgress  = $storyTotal > 0 || !empty($structuredKrs);
+    $borderColour = $storyPct >= 80 ? '#10b981' : ($storyPct > 0 ? '#f59e0b' : '#6366f1');
 ?>
 <div class="card mb-4" style="border-top: 3px solid <?= htmlspecialchars($borderColour, ENT_QUOTES, 'UTF-8') ?>;">
     <div class="card-body" style="padding: 1rem 1.25rem;">
 
-        <!-- OKR header -->
-        <div class="flex justify-between items-start" style="gap: 0.75rem;">
+        <!-- OKR header row -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; flex-wrap:wrap;">
             <div style="flex:1; min-width:0;">
                 <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
                     <span style="display:inline-block; background:#6366f1; color:#fff; border-radius:999px; padding:2px 10px; font-size:0.65rem; text-transform:uppercase; font-weight:700; white-space:nowrap;">
@@ -73,36 +90,107 @@
                     </p>
                 <?php endif; ?>
             </div>
-            <span style="font-size:0.75rem; color:#94a3b8; white-space:nowrap; padding-top:3px;">
-                <?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?>
-            </span>
+
+            <!-- Overall progress indicator -->
+            <?php if ($storyTotal > 0): ?>
+            <div style="text-align:right; flex-shrink:0; min-width:90px;">
+                <div style="font-size:0.65rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:4px;">Progress</div>
+                <div style="font-size:1.5rem; font-weight:800; color:<?= $barColour ?>; line-height:1;"><?= $storyPct ?>%</div>
+                <div style="font-size:0.7rem; color:#94a3b8;"><?= $storyDone ?>/<?= $storyTotal ?> stories</div>
+                <div style="width:90px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden; margin-top:4px;">
+                    <div style="width:<?= $storyPct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
-        <?php if (!empty($krLines)): ?>
-        <!-- KR lines -->
-        <div style="margin-top: 0.875rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
+        <?php if (!empty($structuredKrs)): ?>
+        <!-- Structured key_results with numeric progress bars -->
+        <div style="margin-top: 1rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
             <div style="font-size:0.68rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
-            <?php foreach ($krLines as $j => $krLine): ?>
-            <div style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0.6rem; margin-bottom:0.3rem; background:#f8fafc; border-radius:5px; border-left:3px solid #a5b4fc;">
-                <span style="font-size:0.75rem; font-weight:700; color:#6366f1; white-space:nowrap; min-width:1.5rem;">
-                    <?= (int) ($j + 1) ?>.
-                </span>
-                <span style="font-size:0.8rem; color:#374151; line-height:1.4;">
-                    <?php
-                    // Strip leading "KR1:" or "KR:" prefix for cleaner display
-                    $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
-                    echo htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8');
-                    ?>
-                </span>
+            <?php foreach ($structuredKrs as $kr):
+                $krStatus  = $kr['kr_status'] ?? 'not_started';
+                $krColour  = $statusColours[$krStatus] ?? '#9ca3af';
+                $baseline  = (float) ($kr['baseline_value'] ?? 0);
+                $target    = (float) ($kr['target_value']   ?? 0);
+                $current   = (float) ($kr['current_value']  ?? 0);
+                $unit      = htmlspecialchars((string) ($kr['unit'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $krPct     = 0;
+                if ($target !== 0.0 && $target !== $baseline) {
+                    $krPct = max(0, min(100, (int) round(($current - $baseline) / ($target - $baseline) * 100)));
+                }
+            ?>
+            <div style="margin-bottom:0.625rem; padding:0.5rem 0.75rem; background:#f8fafc; border-radius:6px; border-left:3px solid <?= $krColour ?>;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.375rem; flex-wrap:wrap; gap:0.3rem;">
+                    <span style="font-size:0.82rem; font-weight:500; color:#1e293b;"><?= htmlspecialchars($kr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <span style="display:inline-block; background:<?= $krColour ?>; color:#fff; border-radius:999px; padding:1px 8px; font-size:0.65rem; text-transform:uppercase; font-weight:700; white-space:nowrap;">
+                        <?= htmlspecialchars(str_replace('_', ' ', $krStatus), ENT_QUOTES, 'UTF-8') ?>
+                    </span>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <div style="flex:1; background:#e5e7eb; border-radius:999px; height:8px; overflow:hidden;">
+                        <div style="width:<?= $krPct ?>%; background:<?= $krColour ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
+                    </div>
+                    <span style="font-size:0.72rem; color:#6b7280; white-space:nowrap;">
+                        <?php if ($target > 0): ?>
+                            <?= number_format($current, 0, '.', '') . $unit ?> / <?= number_format($target, 0, '.', '') . $unit ?>
+                        <?php else: ?>
+                            <?= $krPct ?>%
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <?php if (!empty($kr['ai_momentum'])): ?>
+                <p style="margin:0.375rem 0 0; font-size:0.75rem; color:#6b7280; font-style:italic; line-height:1.4;">
+                    &ldquo;<?= htmlspecialchars($kr['ai_momentum'], ENT_QUOTES, 'UTF-8') ?>&rdquo;
+                </p>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>
-        <?php elseif (!empty($okr['okr_description'])): ?>
-        <!-- Description only (no KR lines detected) -->
-        <div style="margin-top:0.75rem; border-top:1px solid #f1f5f9; padding-top:0.625rem;">
-            <p style="font-size:0.8rem; color:#6b7280; white-space:pre-wrap; margin:0;">
-                <?= htmlspecialchars(trim($okr['okr_description']), ENT_QUOTES, 'UTF-8') ?>
-            </p>
+
+        <?php elseif (!empty($krLines)): ?>
+        <!-- Free-text KR lines with story-hypothesis progress -->
+        <div style="margin-top: 0.875rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
+            <div style="font-size:0.68rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
+            <?php foreach ($krLines as $j => $krLine):
+                $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+                // Try to find matching kr_hypothesis stories
+                // Match if hypothesis contains any significant words from this KR line
+                $matchedHyp = null;
+                foreach ($krHypData as $hyp => $hd) {
+                    // Simple substring match — hypothesis often contains the KR number or a key phrase
+                    if (stripos($hyp, 'KR' . ($j + 1)) !== false
+                        || stripos($krLine, $hyp) !== false
+                        || stripos($hyp, $displayLine) !== false) {
+                        $matchedHyp = $hd;
+                        break;
+                    }
+                }
+                $krPct = $matchedHyp && $matchedHyp['total'] > 0
+                    ? (int) round($matchedHyp['done'] / $matchedHyp['total'] * 100)
+                    : null;
+                $krBarColour = $krPct !== null
+                    ? ($krPct >= 80 ? '#10b981' : ($krPct >= 40 ? '#f59e0b' : '#6366f1'))
+                    : '#a5b4fc';
+            ?>
+            <div style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.45rem 0.65rem; margin-bottom:0.35rem; background:#f8fafc; border-radius:5px; border-left:3px solid <?= $krBarColour ?>;">
+                <span style="font-size:0.75rem; font-weight:700; color:#6366f1; white-space:nowrap; min-width:1.6rem; padding-top:1px;"><?= (int) ($j + 1) ?>.</span>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:0.8rem; color:#374151; line-height:1.4; margin-bottom:<?= $matchedHyp ? '0.3rem' : '0' ?>;">
+                        <?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <?php if ($matchedHyp): ?>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <div style="flex:1; background:#e5e7eb; border-radius:999px; height:5px; overflow:hidden; max-width:120px;">
+                            <div style="width:<?= $krPct ?>%; background:<?= $krBarColour ?>; height:100%; border-radius:999px;"></div>
+                        </div>
+                        <span style="font-size:0.7rem; color:<?= $krBarColour ?>; font-weight:700;"><?= $krPct ?>%</span>
+                        <span style="font-size:0.7rem; color:#9ca3af;"><?= $matchedHyp['done'] ?>/<?= $matchedHyp['total'] ?> stories</span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 

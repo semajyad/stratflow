@@ -281,6 +281,60 @@ class ExecutiveController
             error_log('[Executive] KR counts query failed: ' . $e->getMessage());
         }
 
+        // ── Story completion per project (progress proxy for OKR rows) ──────────
+        // Aggregates user_stories.status across all work items in each project.
+        // Used on the OKR section of the dashboard to show "X% complete" bars.
+        $storyProgressByProject = [];
+        try {
+            $spRows = $this->db->query(
+                "SELECT p.id AS project_id,
+                        COUNT(us.id)                                          AS total,
+                        SUM(CASE WHEN us.status = 'done'        THEN 1 ELSE 0 END) AS done,
+                        SUM(CASE WHEN us.status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress
+                   FROM projects p
+                   LEFT JOIN hl_work_items hwi ON hwi.project_id = p.id
+                   LEFT JOIN user_stories  us  ON us.parent_hl_item_id = hwi.id
+                  WHERE p.org_id = :oid
+                  GROUP BY p.id",
+                [':oid' => $orgId]
+            )->fetchAll();
+            foreach ($spRows as $row) {
+                $storyProgressByProject[(int) $row['project_id']] = [
+                    'total'       => (int) $row['total'],
+                    'done'        => (int) $row['done'],
+                    'in_progress' => (int) $row['in_progress'],
+                    'pct'         => $row['total'] > 0
+                        ? (int) round($row['done'] / $row['total'] * 100)
+                        : 0,
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] story progress query failed: ' . $e->getMessage());
+        }
+
+        // ── Merged PR count per project (activity indicator) ─────────────────
+        $mergedPrByProject = [];
+        try {
+            $prRows = $this->db->query(
+                "SELECT p.id AS project_id, COUNT(DISTINCT sgl.id) AS merged_prs
+                   FROM projects p
+                   JOIN hl_work_items hwi ON hwi.project_id = p.id
+                   JOIN user_stories  us  ON us.parent_hl_item_id = hwi.id
+                   JOIN story_git_links sgl
+                     ON sgl.local_type = 'user_story'
+                    AND sgl.local_id   = us.id
+                    AND sgl.status     = 'merged'
+                  WHERE p.org_id = :oid
+                  GROUP BY p.id",
+                [':oid' => $orgId]
+            )->fetchAll();
+            foreach ($prRows as $row) {
+                $mergedPrByProject[(int) $row['project_id']] = (int) $row['merged_prs'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] merged PR count query failed: ' . $e->getMessage());
+        }
+
         // ── Table A: Top 10 active risks ──────────────────────────────────────
         $topRisks = $this->db->query(
             'SELECT r.title, r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
@@ -327,8 +381,10 @@ class ExecutiveController
             'governance_queue' => $governanceQueueDepth,
             'drift_alerts'     => $driftAlerts,
             // OKR health
-            'okr_health'       => $okrHealth,
-            'okr_items'        => $okrItems,
+            'okr_health'              => $okrHealth,
+            'okr_items'               => $okrItems,
+            'story_progress'          => $storyProgressByProject,
+            'merged_prs_by_project'   => $mergedPrByProject,
             // Risk detail
             'top_risks'        => $topRisks,
             'critical_alerts'  => $criticalAlerts,
@@ -409,6 +465,92 @@ class ExecutiveController
         foreach ($okrItems as $o) {
             $healthCounts['total_krs'] += count($o['kr_lines']);
         }
+
+        // ── Story progress per OKR (matched by okr_title on hl_work_items) ────
+        // Also pull kr_hypothesis breakdown so each KR text line can show progress.
+        $okrStoryProgress = [];   // keyed by okr_title (lower-trimmed)
+        $krHypothesisData = [];   // keyed by okr_title → kr_hypothesis → [done, total]
+        try {
+            $spRows = $this->db->query(
+                "SELECT hwi.okr_title,
+                        us.kr_hypothesis,
+                        COUNT(us.id)                                                AS total,
+                        SUM(CASE WHEN us.status = 'done'        THEN 1 ELSE 0 END) AS done,
+                        SUM(CASE WHEN us.status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress
+                   FROM hl_work_items hwi
+                   JOIN user_stories  us ON us.parent_hl_item_id = hwi.id
+                  WHERE hwi.project_id = :pid
+                    AND hwi.okr_title IS NOT NULL
+                    AND TRIM(hwi.okr_title) != ''
+                  GROUP BY hwi.okr_title, us.kr_hypothesis",
+                [':pid' => $id]
+            )->fetchAll();
+
+            foreach ($spRows as $row) {
+                $key = strtolower(trim($row['okr_title']));
+                if (!isset($okrStoryProgress[$key])) {
+                    $okrStoryProgress[$key] = ['total' => 0, 'done' => 0, 'in_progress' => 0];
+                }
+                $okrStoryProgress[$key]['total']       += (int) $row['total'];
+                $okrStoryProgress[$key]['done']        += (int) $row['done'];
+                $okrStoryProgress[$key]['in_progress'] += (int) $row['in_progress'];
+
+                // KR hypothesis breakdown (may be null)
+                $krKey = trim((string) $row['kr_hypothesis']);
+                if ($krKey !== '') {
+                    if (!isset($krHypothesisData[$key])) {
+                        $krHypothesisData[$key] = [];
+                    }
+                    if (!isset($krHypothesisData[$key][$krKey])) {
+                        $krHypothesisData[$key][$krKey] = ['total' => 0, 'done' => 0];
+                    }
+                    $krHypothesisData[$key][$krKey]['total'] += (int) $row['total'];
+                    $krHypothesisData[$key][$krKey]['done']  += (int) $row['done'];
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] projectDashboard story progress query failed: ' . $e->getMessage());
+        }
+
+        // ── Structured key_results for work items in this project ──────────
+        $structuredKrsByOkrTitle = [];
+        try {
+            $krRows = $this->db->query(
+                "SELECT hwi.okr_title,
+                        kr.title       AS kr_title,
+                        kr.baseline_value,
+                        kr.target_value,
+                        kr.current_value,
+                        kr.unit,
+                        kr.status      AS kr_status,
+                        kr.ai_momentum
+                   FROM key_results   kr
+                   JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
+                  WHERE hwi.project_id = :pid
+                    AND hwi.okr_title IS NOT NULL
+                  ORDER BY kr.display_order ASC, kr.id ASC",
+                [':pid' => $id]
+            )->fetchAll();
+
+            foreach ($krRows as $row) {
+                $key = strtolower(trim($row['okr_title']));
+                $structuredKrsByOkrTitle[$key][] = $row;
+            }
+        } catch (\Throwable $e) {
+            error_log('[Executive] projectDashboard structured KR query failed: ' . $e->getMessage());
+        }
+
+        // ── Attach progress data to each OKR item ────────────────────────────
+        foreach ($okrItems as &$okr) {
+            $key                   = strtolower(trim($okr['okr_title']));
+            $sp                    = $okrStoryProgress[$key] ?? ['total' => 0, 'done' => 0, 'in_progress' => 0];
+            $okr['story_total']    = $sp['total'];
+            $okr['story_done']     = $sp['done'];
+            $okr['story_pct']      = $sp['total'] > 0 ? (int) round($sp['done'] / $sp['total'] * 100) : 0;
+            $okr['kr_hypothesis']  = $krHypothesisData[$key] ?? [];
+            $okr['structured_krs'] = $structuredKrsByOkrTitle[$key] ?? [];
+        }
+        unset($okr);
 
         $this->response->render('executive-project', [
             'user'          => $user,
