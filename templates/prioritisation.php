@@ -105,16 +105,16 @@ $formula = $isRice
         <h3>Score Work Items (<?= count($work_items) ?>)</h3>
         <span class="text-muted" style="font-size: 0.8125rem;"><?= $formula ?></span>
     </div>
-    <div class="card-body" style="padding: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 260px);">
-        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="width: 100%;">
+    <div class="card-body" style="padding: 0; overflow: hidden; max-height: calc(100vh - 260px);">
+        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="width: 100%; table-layout: fixed;">
             <thead>
                 <tr>
-                    <th style="width: 36px;">#</th>
+                    <th style="width: 32px;">#</th>
                     <th>Title</th>
                     <?php foreach ($labels as $label): ?>
-                        <th style="width: 80px; text-align: center; white-space: nowrap; font-size: 0.75rem;"><?= $label ?></th>
+                        <th style="width: 68px; text-align: center;"><?= $label ?></th>
                     <?php endforeach; ?>
-                    <th style="width: 70px; text-align: center; position: sticky; right: 0; background: var(--bg, #fff); z-index: 1;">Score</th>
+                    <th style="width: 58px; text-align: center; position: sticky; right: 0; background: var(--bg, #fff); z-index: 1;">Score</th>
                 </tr>
             </thead>
             <tbody>
@@ -139,10 +139,10 @@ $formula = $isRice
                         <td class="text-center">
                             <span class="priority-number"><?= (int) $item['priority_number'] ?></span>
                         </td>
-                        <td>
+                        <td class="prio-title">
                             <strong><?= htmlspecialchars($item['title']) ?></strong>
                             <?php if (!empty($item['description'])): ?>
-                                <p class="work-item-desc-preview"><?= htmlspecialchars(mb_substr($item['description'], 0, 80)) ?></p>
+                                <p class="work-item-desc-preview"><?= htmlspecialchars(mb_substr($item['description'], 0, 60)) ?></p>
                             <?php endif; ?>
                         </td>
                         <?php foreach ($fields as $i => $field): ?>
