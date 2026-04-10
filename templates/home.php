@@ -20,7 +20,7 @@
         </p>
     </div>
     <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
-    <button type="button" class="btn btn-primary" onclick="document.getElementById('new-project-modal').classList.remove('hidden'); setTimeout(function(){document.getElementById('new-project-name').focus();},50);">
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('new-project-modal').classList.remove('hidden'); clearMemberPicker('new'); setTimeout(function(){document.getElementById('new-project-name').focus();},50);">
         + New Project
     </button>
     <?php endif; ?>
@@ -149,10 +149,11 @@ if ($lastProjectId && !empty($projects)) {
 <!-- Shared member picker partial used by both New and Edit modals -->
 <?php
 // Build org users JSON for JS (id, name, email)
-$orgUsersJson = htmlspecialchars(json_encode(array_map(fn($u) => [
+// JSON_HEX_TAG prevents </script> injection; safe for inline <script> output (do NOT wrap in htmlspecialchars)
+$orgUsersJson = json_encode(array_map(fn($u) => [
     'id'    => (int) $u['id'],
     'label' => $u['full_name'] . ' (' . $u['email'] . ')',
-], $org_users ?? []), JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+], $org_users ?? []), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
 ?>
 
 <!-- New Project Modal -->
@@ -243,8 +244,10 @@ $orgUsersJson = htmlspecialchars(json_encode(array_map(fn($u) => [
 </div>
 
 <script>
-// Pass org users data from PHP for member picker pre-population
+// Org users for member picker — safe inline JSON (no htmlspecialchars, uses JSON_HEX_TAG)
 var _orgUsers = <?= $orgUsersJson ?? '[]' ?>;
+
+// ── Modal helpers ──────────────────────────────────────────────────────────────
 
 function openEditProjectModal(id, name, jiraKey, visibility, memberIds) {
     document.getElementById('edit-project-form').action = '/app/projects/' + id + '/edit';
@@ -252,18 +255,13 @@ function openEditProjectModal(id, name, jiraKey, visibility, memberIds) {
     var jiraEl = document.getElementById('edit-jira-key');
     if (jiraEl) { jiraEl.value = jiraKey || ''; }
 
-    // Set visibility and show/hide picker
     var visEl = document.getElementById('edit-visibility');
     if (visEl) {
         visEl.value = visibility || 'everyone';
         toggleMemberPicker('edit', visEl.value);
     }
 
-    // Pre-check current members
-    var ids = Array.isArray(memberIds) ? memberIds.map(Number) : [];
-    document.querySelectorAll('#edit-member-picker input[name="member_ids[]"]').forEach(function(cb) {
-        cb.checked = ids.indexOf(parseInt(cb.value, 10)) !== -1;
-    });
+    preloadMemberPicker('edit', Array.isArray(memberIds) ? memberIds.map(Number) : []);
 
     document.getElementById('edit-project-modal').classList.remove('hidden');
     setTimeout(function() { document.getElementById('edit-project-name').focus(); }, 50);
@@ -273,22 +271,7 @@ function toggleMemberPicker(prefix, value) {
     var picker = document.getElementById(prefix + '-member-picker');
     if (!picker) return;
     picker.style.display = value === 'restricted' ? '' : 'none';
-    // Uncheck all boxes when switching back to 'everyone'
-    if (value !== 'restricted') {
-        picker.querySelectorAll('input[name="member_ids[]"]').forEach(function(cb) {
-            cb.checked = false;
-        });
-    }
-}
-
-function filterMemberList(input) {
-    var q = input.value.trim().toLowerCase();
-    var list = input.closest('div').nextElementSibling;
-    if (!list) return;
-    list.querySelectorAll('.member-item').forEach(function(item) {
-        var label = (item.dataset.label || '').toLowerCase();
-        item.style.display = (q === '' || label.indexOf(q) !== -1) ? '' : 'none';
-    });
+    if (value !== 'restricted') { clearMemberPicker(prefix); }
 }
 
 function filterProjectList(query) {
@@ -298,4 +281,123 @@ function filterProjectList(query) {
         card.style.display = (q === '' || name.indexOf(q) !== -1) ? '' : 'none';
     });
 }
+
+// ── Member picker: type-to-search + chips ─────────────────────────────────────
+
+function _escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _getSelectedIds(picker) {
+    return Array.from(picker.querySelectorAll('.member-chip[data-member-id]'))
+               .map(function(el) { return parseInt(el.dataset.memberId, 10); });
+}
+
+function memberPickerSearch(input) {
+    var picker = input.closest('.member-picker-wrap');
+    if (!picker) return;
+    var q = input.value.trim().toLowerCase();
+    var resultsEl = picker.querySelector('.member-search-results');
+    var selected = _getSelectedIds(picker);
+
+    var matches = _orgUsers.filter(function(u) {
+        return selected.indexOf(u.id) === -1 &&
+               (q === '' || u.label.toLowerCase().indexOf(q) !== -1);
+    }).slice(0, 20);
+
+    if (!matches.length) { resultsEl.style.display = 'none'; return; }
+
+    resultsEl.innerHTML = matches.map(function(u) {
+        return '<div class="member-result-item" data-id="' + u.id + '" data-label="' + _escHtml(u.label) + '" ' +
+               'style="padding:0.45rem 0.75rem; cursor:pointer; font-size:0.875rem; border-bottom:1px solid var(--border);" ' +
+               'onmousedown="addMemberChip(this)">' + _escHtml(u.label) + '</div>';
+    }).join('');
+    resultsEl.style.display = '';
+}
+
+function addMemberChip(resultItem) {
+    var picker = resultItem.closest('.member-picker-wrap');
+    var id = parseInt(resultItem.dataset.id, 10);
+    var label = resultItem.dataset.label;
+
+    // Add chip
+    var chipsEl = picker.querySelector('.member-chips');
+    var chip = document.createElement('span');
+    chip.className = 'member-chip';
+    chip.dataset.memberId = id;
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;background:var(--primary);color:#fff;border-radius:4px;font-size:0.8rem;';
+    chip.innerHTML = _escHtml(label) +
+        '<button type="button" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" ' +
+        'onclick="removeMemberChip(this)" title="Remove">&times;</button>';
+    chipsEl.appendChild(chip);
+
+    // Hidden input for form submission
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'member_ids[]';
+    hidden.value = id; hidden.dataset.memberId = id;
+    picker.appendChild(hidden);
+
+    // Clear search
+    picker.querySelector('.member-search-input').value = '';
+    picker.querySelector('.member-search-results').style.display = 'none';
+}
+
+function removeMemberChip(btn) {
+    var chip = btn.closest('.member-chip');
+    var picker = chip.closest('.member-picker-wrap');
+    var id = chip.dataset.memberId;
+    var hidden = picker.querySelector('input[type="hidden"][data-member-id="' + id + '"]');
+    if (hidden) hidden.remove();
+    chip.remove();
+}
+
+function clearMemberPicker(prefix) {
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) return;
+    var wrap = picker.querySelector('.member-picker-wrap');
+    if (!wrap) return;
+    wrap.querySelectorAll('.member-chip').forEach(function(c) { c.remove(); });
+    wrap.querySelectorAll('input[type="hidden"][name="member_ids[]"]').forEach(function(i) { i.remove(); });
+    var si = wrap.querySelector('.member-search-input');
+    if (si) si.value = '';
+    var sr = wrap.querySelector('.member-search-results');
+    if (sr) sr.style.display = 'none';
+}
+
+function preloadMemberPicker(prefix, ids) {
+    clearMemberPicker(prefix);
+    if (!ids.length) return;
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) return;
+    var wrap = picker.querySelector('.member-picker-wrap');
+    if (!wrap) return;
+    ids.forEach(function(id) {
+        var user = _orgUsers.find(function(u) { return u.id === id; });
+        if (!user) return;
+        var chipsEl = wrap.querySelector('.member-chips');
+        var chip = document.createElement('span');
+        chip.className = 'member-chip';
+        chip.dataset.memberId = id;
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;background:var(--primary);color:#fff;border-radius:4px;font-size:0.8rem;';
+        chip.innerHTML = _escHtml(user.label) +
+            '<button type="button" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" ' +
+            'onclick="removeMemberChip(this)" title="Remove">&times;</button>';
+        chipsEl.appendChild(chip);
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden'; hidden.name = 'member_ids[]';
+        hidden.value = id; hidden.dataset.memberId = id;
+        wrap.appendChild(hidden);
+    });
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.member-picker-wrap')) {
+        document.querySelectorAll('.member-search-results').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
+});
 </script>

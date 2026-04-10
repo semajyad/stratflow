@@ -2,34 +2,28 @@
 /**
  * Project Member Picker Partial
  *
- * Renders a searchable checkbox list of org users for project access control.
- * Included inside both #new-member-picker and #edit-member-picker divs.
- *
- * Expects $org_users (array of {id, full_name, email}) and $orgUsersJson in scope.
+ * Type-to-search input with chip-style selected users.
+ * JS lives in home.php script block (memberPickerSearch, addMemberChip, removeMemberChip).
+ * Included inside #new-member-picker and #edit-member-picker divs.
  */
 ?>
-<div style="margin-bottom: 0.5rem;">
-    <input type="text" class="form-input member-search-input"
-           placeholder="Search users..."
-           style="font-size:0.875rem; padding:0.35rem 0.6rem;"
-           oninput="filterMemberList(this)">
-</div>
-<div class="member-checkbox-list"
-     style="max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:0.5rem;">
+<div class="member-picker-wrap" style="margin-top:0.25rem;">
+    <!-- Selected user chips -->
+    <div class="member-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.5rem; min-height:0;"></div>
+    <!-- Search input + dropdown -->
+    <div style="position:relative;">
+        <input type="text" class="form-input member-search-input"
+               placeholder="Search users to add..."
+               autocomplete="off"
+               style="font-size:0.875rem;"
+               oninput="memberPickerSearch(this)"
+               onfocus="memberPickerSearch(this)">
+        <div class="member-search-results"
+             style="display:none; position:absolute; top:calc(100% + 2px); left:0; right:0; z-index:200;
+                    background:#fff; border:1px solid var(--border); border-radius:6px;
+                    box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:200px; overflow-y:auto;"></div>
+    </div>
     <?php if (empty($org_users)): ?>
-        <p class="text-muted" style="font-size:0.8rem; margin:0; padding:0.25rem 0.5rem;">No users found.</p>
-    <?php else: ?>
-        <?php foreach ($org_users as $u): ?>
-            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.25rem 0.5rem; cursor:pointer; border-radius:4px;"
-                   class="member-item"
-                   data-label="<?= htmlspecialchars(strtolower($u['full_name'] . ' ' . $u['email']), ENT_QUOTES, 'UTF-8') ?>">
-                <input type="checkbox" name="member_ids[]" value="<?= (int) $u['id'] ?>"
-                       style="accent-color: var(--primary); width:15px; height:15px; cursor:pointer;">
-                <span style="font-size:0.875rem;">
-                    <?= htmlspecialchars($u['full_name'], ENT_QUOTES, 'UTF-8') ?>
-                    <span class="text-muted" style="font-size:0.8rem;">(<?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8') ?>)</span>
-                </span>
-            </label>
-        <?php endforeach; ?>
+        <p class="text-muted" style="font-size:0.8rem; margin-top:0.4rem;">No users in your organisation yet.</p>
     <?php endif; ?>
 </div>
