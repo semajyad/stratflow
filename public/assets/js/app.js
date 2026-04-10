@@ -1496,6 +1496,28 @@ function attachDiagramNodeClicks(container) {
             }
         });
 
-        // (badges removed — nodes are clickable via cursor:pointer)
+        // Inject key label into top-left corner — dark text, no background box.
+        if (badgedKeys[nodeKey]) return;
+        badgedKeys[nodeKey] = true;
+
+        var shapeEl = el.querySelector('rect, path, polygon, ellipse, circle');
+        if (!shapeEl) return;
+
+        var bbox;
+        try { bbox = shapeEl.getBBox(); } catch (e) { return; }
+        if (!bbox || bbox.width === 0) return;
+
+        var txt = document.createElementNS(ns, 'text');
+        txt.setAttribute('x', bbox.x + 8);
+        txt.setAttribute('y', bbox.y + 14);
+        txt.setAttribute('text-anchor', 'start');
+        txt.setAttribute('font-size', '11');
+        txt.setAttribute('font-weight', '700');
+        txt.setAttribute('fill', '#1e1b4b');
+        txt.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+        txt.setAttribute('pointer-events', 'none');
+        txt.textContent = nodeKey;
+
+        el.appendChild(txt);
     });
 }
