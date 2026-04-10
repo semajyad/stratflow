@@ -33,6 +33,12 @@ class SystemSettings
         'quality_enforcement',
         'support_email',
         'mail_from_name',
+        // Billing rates (price per seat in cents per period)
+        'billing_currency',
+        'billing_rate_monthly_cents',
+        'billing_rate_quarterly_cents',
+        'billing_rate_6monthly_cents',
+        'billing_rate_annual_cents',
     ];
 
     /** Safe fallback defaults returned when the table row is missing. */
@@ -50,6 +56,12 @@ class SystemSettings
         'quality_enforcement'    => 'warn',
         'support_email'          => 'support@stratflow.io',
         'mail_from_name'         => 'StratFlow',
+        // Billing rates
+        'billing_currency'              => 'NZD',
+        'billing_rate_monthly_cents'    => 0,
+        'billing_rate_quarterly_cents'  => 0,
+        'billing_rate_6monthly_cents'   => 0,
+        'billing_rate_annual_cents'     => 0,
     ];
 
     /**

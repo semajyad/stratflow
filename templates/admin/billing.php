@@ -5,12 +5,22 @@
  * Subscription overview, seat usage, Stripe portal access, invoices.
  * Only visible to users with has_billing_access flag or superadmin.
  */
-$sub = $subscription;
-$sd  = $stripe_details;
-$plan = $sub['plan_type'] ?? 'none';
+$sub    = $subscription;
+$sd     = $stripe_details;
+$plan   = $sub['plan_type'] ?? 'none';
 $status = $sub['status'] ?? 'none';
-$seatPct = $seat_limit > 0 ? min(100, ($active_users / $seat_limit) * 100) : 0;
+$seatPct   = $seat_limit > 0 ? min(100, ($active_users / $seat_limit) * 100) : 0;
 $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'var(--primary)');
+
+// Invoice billing helpers
+$isInvoice       = $is_invoice_billing ?? true;
+$nextInvDate     = $sub['next_invoice_date'] ?? null;
+$pricePerSeat    = (int) ($sub['price_per_seat_cents'] ?? 0);   // cents
+$billingPeriodMo = (int) ($sub['billing_period_months'] ?? 1);
+$periodLabels    = [1 => 'Monthly', 3 => 'Quarterly', 6 => '6-Monthly', 12 => 'Annual'];
+$periodLabel     = $periodLabels[$billingPeriodMo] ?? 'Monthly';
+$totalCostCents  = $pricePerSeat * $seat_limit;   // price × seats per period
+$billingContact  = $billing_contact ?? [];
 ?>
 
 <div class="page-header">
@@ -69,17 +79,26 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
     <!-- Cost / Started -->
     <section class="card">
         <div class="billing-stat">
-            <span class="billing-stat-label"><?= $sd ? 'Cost' : 'Started' ?></span>
+            <span class="billing-stat-label"><?= $sd ? 'Cost' : ($isInvoice && $pricePerSeat > 0 ? 'Cost / Seat' : 'Started') ?></span>
             <div class="billing-stat-value">
                 <?php if ($sd): ?>
                     <?= htmlspecialchars(strtoupper($sd['currency'])) ?>&nbsp;<?= number_format($sd['unit_amount'] / 100, 2) ?>
                     <span style="font-weight:400; font-size:0.85rem;">/seat/<?= htmlspecialchars($sd['interval']) ?></span>
+                <?php elseif ($isInvoice && $pricePerSeat > 0): ?>
+                    $<?= number_format($pricePerSeat / 100, 2) ?>
+                    <span style="font-weight:400; font-size:0.85rem;">/seat</span>
                 <?php else: ?>
                     <?= $sub ? date('j M Y', strtotime($sub['started_at'])) : '—' ?>
                 <?php endif; ?>
             </div>
             <div class="billing-stat-sub">
-                <?= $sd ? ((int) ($sd['quantity'] ?? 1)) . ' seat' . ($sd['quantity'] !== 1 ? 's' : '') . ' billed' : '&nbsp;' ?>
+                <?php if ($sd): ?>
+                    <?= (int) ($sd['quantity'] ?? 1) ?> seat<?= ($sd['quantity'] ?? 1) !== 1 ? 's' : '' ?> billed
+                <?php elseif ($isInvoice && $pricePerSeat > 0 && $seat_limit > 0): ?>
+                    $<?= number_format($totalCostCents / 100, 2) ?> total / <?= strtolower($periodLabel) ?>
+                <?php else: ?>
+                    &nbsp;
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -91,6 +110,8 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
             <div class="billing-stat-value">
                 <?php if ($sd): ?>
                     <?= date('j M Y', strtotime($sd['current_period_end'])) ?>
+                <?php elseif ($isInvoice && $nextInvDate): ?>
+                    <?= date('j M Y', strtotime($nextInvDate)) ?>
                 <?php elseif ($sub && $sub['expires_at']): ?>
                     <?= date('j M Y', strtotime($sub['expires_at'])) ?>
                 <?php else: ?>
@@ -98,7 +119,17 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
                 <?php endif; ?>
             </div>
             <div class="billing-stat-sub">
-                <?= $sd ? 'Next renewal' : ($sub && $sub['expires_at'] ? 'Expires' : '&nbsp;') ?>
+                <?php if ($sd): ?>
+                    Next renewal
+                <?php elseif ($isInvoice && $nextInvDate): ?>
+                    Next invoice due
+                <?php elseif ($isInvoice): ?>
+                    <?= htmlspecialchars($periodLabel) ?>
+                <?php elseif ($sub && $sub['expires_at']): ?>
+                    Expires
+                <?php else: ?>
+                    &nbsp;
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -203,15 +234,25 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
                         View Invoices
                     </a>
                 </div>
-                <p class="text-muted" style="font-size: 0.8rem; margin-top: 1rem;">
-                    In the portal you can:
+            <?php elseif ($isInvoice): ?>
+                <?php if ($nextInvDate): ?>
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem;">
+                    <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#1d4ed8; font-weight:700; margin-bottom:4px;">Next Invoice</div>
+                    <div style="font-size:1.25rem; font-weight:800; color:#1e40af;"><?= date('j M Y', strtotime($nextInvDate)) ?></div>
+                    <?php if ($totalCostCents > 0): ?>
+                    <div style="font-size:0.85rem; color:#2563eb; margin-top:4px;">
+                        $<?= number_format($totalCostCents / 100, 2) ?> &middot; <?= htmlspecialchars($periodLabel) ?> billing
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php else: ?>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                    Invoiced billing &mdash; invoices are sent directly to your billing contact.
                 </p>
-                <ul style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0; padding-left: 1.25rem;">
-                    <li>Add or remove user seats</li>
-                    <li>Update payment method</li>
-                    <li>Download invoices and receipts</li>
-                    <li>Cancel subscription</li>
-                </ul>
+                <?php endif; ?>
+                <p class="text-muted" style="font-size: 0.8rem;">
+                    To update billing details or raise a query, contact <a href="mailto:support@stratflow.io">support@stratflow.io</a>.
+                </p>
             <?php else: ?>
                 <p style="font-size: 0.9rem; color: var(--text-secondary);">
                     No billing account is linked to this organisation.
@@ -223,6 +264,74 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
         </div>
     </section>
 </div>
+
+<!-- ===========================
+     Cost Breakdown (invoice billing only)
+     =========================== -->
+<?php if ($isInvoice && $pricePerSeat > 0): ?>
+<section class="card mt-4">
+    <div class="card-header"><h2 class="card-title">Cost Breakdown</h2></div>
+    <div class="card-body" style="padding:0;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border);">
+                    <th style="padding:0.6rem 1.25rem; text-align:left; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Item</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:right; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Unit Price</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:center; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Qty</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:right; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.75rem 1.25rem;">
+                        <div style="font-weight:600; font-size:0.9rem;">StratFlow <?= htmlspecialchars(ucfirst($plan)) ?></div>
+                        <div style="font-size:0.78rem; color:var(--text-muted);"><?= htmlspecialchars($periodLabel) ?> subscription &mdash; <?= $active_users ?> of <?= $seat_limit ?> seats in use</div>
+                    </td>
+                    <td style="padding:0.75rem 1.25rem; text-align:right; font-size:0.9rem;">$<?= number_format($pricePerSeat / 100, 2) ?>/seat</td>
+                    <td style="padding:0.75rem 1.25rem; text-align:center; font-size:0.9rem;"><?= $seat_limit ?></td>
+                    <td style="padding:0.75rem 1.25rem; text-align:right; font-size:0.9rem; font-weight:700;">$<?= number_format($totalCostCents / 100, 2) ?></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="background:#f9fafb;">
+                    <td colspan="3" style="padding:0.75rem 1.25rem; text-align:right; font-size:0.85rem; color:var(--text-muted); font-weight:600;">Total per <?= strtolower($periodLabel) ?></td>
+                    <td style="padding:0.75rem 1.25rem; text-align:right; font-size:1.1rem; font-weight:800; color:#1e293b;">$<?= number_format($totalCostCents / 100, 2) ?></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     Billing Contact
+     =========================== -->
+<section class="card mt-4">
+    <div class="card-header"><h2 class="card-title">Billing Contact</h2></div>
+    <div class="card-body">
+        <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+            Invoices are sent to this contact. Keep it up to date to ensure you receive your invoices.
+        </p>
+        <form method="POST" action="/app/admin/billing/contact" class="inline-form">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem;">Contact Name</label>
+                    <input type="text" name="billing_contact_name" class="form-control"
+                           value="<?= htmlspecialchars($billingContact['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                           placeholder="e.g. Jane Smith" style="min-width:220px;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem;">Invoice Email</label>
+                    <input type="email" name="billing_contact_email" class="form-control"
+                           value="<?= htmlspecialchars($billingContact['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                           placeholder="accounts@example.com" style="min-width:260px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Contact</button>
+            </div>
+        </form>
+    </div>
+</section>
 
 <!-- ===========================
      Invoices

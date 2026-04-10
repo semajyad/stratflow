@@ -192,8 +192,9 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/admin/settings',              'AdminController@settings',         ['auth', 'admin']);
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/test-ai',               'AdminController@testAi',           ['auth', 'admin', 'csrf']);
-    $router->add('GET',  '/app/admin/billing',               'AdminController@billing',          ['auth', 'billing']);
-    $router->add('POST', '/app/admin/billing/portal',        'AdminController@billingPortal',    ['auth', 'billing', 'csrf']);
+    $router->add('GET',  '/app/admin/billing',                 'AdminController@billing',            ['auth', 'billing']);
+    $router->add('POST', '/app/admin/billing/portal',         'AdminController@billingPortal',      ['auth', 'billing', 'csrf']);
+    $router->add('POST', '/app/admin/billing/contact',        'AdminController@saveBillingContact', ['auth', 'billing', 'csrf']);
 
     // Xero OAuth — callback is GET with no CSRF (Xero redirects back)
     $router->add('GET',  '/app/admin/xero/connect',          'XeroController@connect',           ['auth', 'billing']);

@@ -193,13 +193,17 @@ class DriftController
             return;
         }
 
-        $action = $this->request->post('action', 'acknowledge');
-        $status = $action === 'resolve' ? 'resolved' : 'acknowledged';
+        $action     = $this->request->post('action', 'acknowledge');
+        $status     = $action === 'resolve' ? 'resolved' : 'acknowledged';
+        $redirectTo = $this->request->post('redirect_to', '');
 
         DriftAlert::updateStatus($this->db, (int) $id, $status);
 
         $_SESSION['flash_message'] = 'Alert ' . $status . '.';
-        $this->response->redirect('/app/governance?project_id=' . $alert['project_id']);
+        $dest = ($redirectTo !== '' && str_starts_with($redirectTo, '/app/'))
+            ? $redirectTo
+            : '/app/governance?project_id=' . $alert['project_id'];
+        $this->response->redirect($dest);
     }
 
     /**
@@ -227,8 +231,9 @@ class DriftController
             return;
         }
 
-        $action = $this->request->post('action', 'approve');
-        $status = $action === 'reject' ? 'rejected' : 'approved';
+        $action     = $this->request->post('action', 'approve');
+        $status     = $action === 'reject' ? 'rejected' : 'approved';
+        $redirectTo = $this->request->post('redirect_to', '');
 
         GovernanceItem::updateStatus($this->db, (int) $id, $status, (int) $user['id']);
 
@@ -242,6 +247,9 @@ class DriftController
         }
 
         $_SESSION['flash_message'] = 'Change ' . $status . '.';
-        $this->response->redirect('/app/governance?project_id=' . $item['project_id']);
+        $dest = ($redirectTo !== '' && str_starts_with($redirectTo, '/app/'))
+            ? $redirectTo
+            : '/app/governance?project_id=' . $item['project_id'];
+        $this->response->redirect($dest);
     }
 }

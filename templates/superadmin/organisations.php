@@ -168,6 +168,27 @@
                                                 <option value="stripe"   <?= !$isInvoiced ? 'selected' : '' ?>>Stripe</option>
                                             </select>
                                         </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Period</label>
+                                            <select name="billing_period_months" class="form-control form-control-sm">
+                                                <option value="1"  <?= (int) ($sub['billing_period_months'] ?? 1) === 1  ? 'selected' : '' ?>>Monthly</option>
+                                                <option value="3"  <?= (int) ($sub['billing_period_months'] ?? 1) === 3  ? 'selected' : '' ?>>Quarterly</option>
+                                                <option value="6"  <?= (int) ($sub['billing_period_months'] ?? 1) === 6  ? 'selected' : '' ?>>6-Monthly</option>
+                                                <option value="12" <?= (int) ($sub['billing_period_months'] ?? 1) === 12 ? 'selected' : '' ?>>Annual</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">$/Seat</label>
+                                            <input type="number" name="price_per_seat" step="0.01" min="0"
+                                                   value="<?= number_format((int) ($sub['price_per_seat_cents'] ?? 0) / 100, 2) ?>"
+                                                   class="form-control form-control-sm" style="width:90px;" placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Next Invoice</label>
+                                            <input type="date" name="next_invoice_date"
+                                                   value="<?= htmlspecialchars($sub['next_invoice_date'] ?? '') ?>"
+                                                   class="form-control form-control-sm">
+                                        </div>
                                         <div style="display:flex; gap:0.5rem;">
                                             <button type="submit" class="btn btn-sm btn-primary">Save</button>
                                             <button type="button" class="btn btn-sm btn-secondary"

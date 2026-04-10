@@ -246,28 +246,38 @@ class SuperadminController
                 $newPlanType   = in_array($this->request->post('plan_type'), ['product', 'consultancy'], true)
                                  ? $this->request->post('plan_type') : 'product';
                 $newSeats      = max(1, (int) $this->request->post('seat_limit', 5));
-                $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoiced';
+                $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoice';
+                $billingPeriod = in_array((int) $this->request->post('billing_period_months', 1), [1, 3, 6, 12], true)
+                                 ? (int) $this->request->post('billing_period_months', 1) : 1;
+                $pricePerSeat  = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
+                $nextInvoice   = $this->request->post('next_invoice_date', '') ?: null;
 
                 if ($newName !== '') {
                     Organisation::update($this->db, $orgId, ['name' => $newName]);
                 }
 
                 // Derive new stripe_subscription_id from billing method:
-                // invoiced → manual_ prefix; stripe → empty (Stripe connects separately)
-                $newSubId = $billingMethod === 'invoiced' ? 'manual_' . time() : '';
+                // invoice → manual_ prefix; stripe → empty (Stripe connects separately)
+                $newSubId = $billingMethod === 'invoice' ? 'manual_' . time() : '';
 
                 $sub = Subscription::findByOrgId($this->db, $orgId);
                 if ($sub) {
                     $this->db->query(
                         "UPDATE subscriptions
-                         SET plan_type = :plan, user_seat_limit = :seats, stripe_subscription_id = :sub_id
+                         SET plan_type = :plan, user_seat_limit = :seats, stripe_subscription_id = :sub_id,
+                             billing_method = :bmethod, billing_period_months = :bperiod,
+                             price_per_seat_cents = :price, next_invoice_date = :next_inv
                          WHERE org_id = :org
                          ORDER BY id DESC LIMIT 1",
                         [
-                            ':plan'   => $newPlanType,
-                            ':seats'  => $newSeats,
-                            ':sub_id' => $newSubId,
-                            ':org'    => $orgId,
+                            ':plan'     => $newPlanType,
+                            ':seats'    => $newSeats,
+                            ':sub_id'   => $newSubId,
+                            ':bmethod'  => $billingMethod,
+                            ':bperiod'  => $billingPeriod,
+                            ':price'    => $pricePerSeat,
+                            ':next_inv' => $nextInvoice,
+                            ':org'      => $orgId,
                         ]
                     );
                 } else {
@@ -415,6 +425,12 @@ class SuperadminController
             'quality_enforcement'    => $this->request->post('quality_enforcement', 'warn'),
             'support_email'          => trim((string) $this->request->post('support_email', '')),
             'mail_from_name'         => trim((string) $this->request->post('mail_from_name', 'StratFlow')),
+            // Billing rates — convert dollar input to cents
+            'billing_currency'             => strtoupper(trim((string) $this->request->post('billing_currency', 'NZD'))),
+            'billing_rate_monthly_cents'   => max(0, (int) round((float) $this->request->post('billing_rate_monthly', 0) * 100)),
+            'billing_rate_quarterly_cents' => max(0, (int) round((float) $this->request->post('billing_rate_quarterly', 0) * 100)),
+            'billing_rate_6monthly_cents'  => max(0, (int) round((float) $this->request->post('billing_rate_6monthly', 0) * 100)),
+            'billing_rate_annual_cents'    => max(0, (int) round((float) $this->request->post('billing_rate_annual', 0) * 100)),
         ];
 
         SystemSettings::save($this->db, $data);

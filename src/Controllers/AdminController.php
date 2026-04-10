@@ -532,9 +532,11 @@ class AdminController
         $activeUsers = User::findByOrgId($this->db, $orgId);
         $activeCount = count(array_filter($activeUsers, fn($u) => (bool) $u['is_active']));
 
-        // Fetch live Stripe subscription details if available
+        // Fetch live Stripe subscription details if available (only for Stripe-billed orgs)
         $stripeDetails = null;
-        if ($sub && !empty($sub['stripe_subscription_id']) && $sub['stripe_subscription_id'] !== 'prod_manual_setup') {
+        $isInvoiceBilling = ($sub === null || ($sub['billing_method'] ?? 'invoice') === 'invoice'
+                             || str_starts_with($sub['stripe_subscription_id'] ?? '', 'manual_'));
+        if (!$isInvoiceBilling && $sub && !empty($sub['stripe_subscription_id'])) {
             try {
                 $stripe = new StripeService($this->config['stripe']);
                 $stripeDetails = $stripe->getSubscription($sub['stripe_subscription_id']);
@@ -544,6 +546,10 @@ class AdminController
         }
 
         $hasStripeCustomer = !empty($org['stripe_customer_id']);
+
+        // Billing contact from org settings_json
+        $orgSettings    = json_decode($org['settings_json'] ?? '{}', true) ?? [];
+        $billingContact = $orgSettings['billing_contact'] ?? [];
 
         // Load Stripe invoices for inline display
         $stripeInvoices = [];
@@ -572,22 +578,24 @@ class AdminController
         }
 
         $this->response->render('admin/billing', [
-            'user'              => $user,
-            'org'               => $org,
-            'subscription'      => $sub,
-            'stripe_details'    => $stripeDetails,
-            'seat_limit'        => $seatLimit,
-            'active_users'      => $activeCount,
-            'total_users'       => count($activeUsers),
-            'has_stripe'        => $hasStripeCustomer,
-            'stripe_invoices'   => $stripeInvoices,
-            'xero_connected'    => $xeroConnected,
-            'xero_tenant_name'  => $xeroTenantName,
-            'pushed_to_xero'    => $pushedToXero,
-            'csrf_token'        => $_SESSION['csrf_token'] ?? '',
-            'active_page'       => 'billing',
-            'flash_message'     => $_SESSION['flash_message'] ?? null,
-            'flash_error'       => $_SESSION['flash_error']   ?? null,
+            'user'                => $user,
+            'org'                 => $org,
+            'subscription'        => $sub,
+            'stripe_details'      => $stripeDetails,
+            'is_invoice_billing'  => $isInvoiceBilling,
+            'seat_limit'          => $seatLimit,
+            'active_users'        => $activeCount,
+            'total_users'         => count($activeUsers),
+            'has_stripe'          => $hasStripeCustomer,
+            'stripe_invoices'     => $stripeInvoices,
+            'xero_connected'      => $xeroConnected,
+            'xero_tenant_name'    => $xeroTenantName,
+            'pushed_to_xero'      => $pushedToXero,
+            'billing_contact'     => $billingContact,
+            'csrf_token'          => $_SESSION['csrf_token'] ?? '',
+            'active_page'         => 'billing',
+            'flash_message'       => $_SESSION['flash_message'] ?? null,
+            'flash_error'         => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
@@ -628,6 +636,30 @@ class AdminController
             $_SESSION['flash_error'] = 'Could not open billing portal: ' . $e->getMessage();
             $this->response->redirect('/app/admin/billing');
         }
+    }
+
+    /**
+     * Save billing contact details (name, email) to org settings_json.
+     */
+    public function saveBillingContact(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+        $org   = Organisation::findById($this->db, $orgId);
+
+        $name  = trim((string) $this->request->post('billing_contact_name', ''));
+        $email = trim((string) $this->request->post('billing_contact_email', ''));
+
+        $settings = json_decode($org['settings_json'] ?? '{}', true) ?? [];
+        $settings['billing_contact'] = [
+            'name'  => $name,
+            'email' => $email,
+        ];
+
+        Organisation::update($this->db, $orgId, ['settings_json' => json_encode($settings)]);
+
+        $_SESSION['flash_message'] = 'Billing contact saved.';
+        $this->response->redirect('/app/admin/billing');
     }
 
     public function invoices(): void

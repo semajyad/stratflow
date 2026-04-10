@@ -150,7 +150,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">HL Work Item Sizing</label>
+                        <label class="form-label">High Level Work Item Sizing</label>
                         <select name="hl_item_sizing_method" class="form-input">
                             <option value="sprints" <?= ($settings['hl_item_sizing_method'] ?? 'sprints') === 'sprints' ? 'selected' : '' ?>>Sprints</option>
                             <option value="weeks"   <?= ($settings['hl_item_sizing_method'] ?? '') === 'weeks'   ? 'selected' : '' ?>>Weeks</option>
@@ -288,7 +288,7 @@
                     <!-- Work Item Fields -->
                     <div>
                         <div style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:0.625rem;">
-                            HL Work Item
+                            High Level Work Items
                         </div>
                         <p style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem;">
                             <span style="font-size:0.75rem; color:#94a3b8;">Priority always appears first and is not reorderable.</span>

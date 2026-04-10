@@ -275,34 +275,47 @@
     <div class="card-header">
         <h2 class="card-title">Risk Register <span style="font-size:0.8rem; font-weight:400; color:#64748b;">— top <?= count($top_risks) ?> by priority</span></h2>
     </div>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Risk</th>
-                    <th>Project</th>
-                    <th style="text-align:center;">L</th>
-                    <th style="text-align:center;">I</th>
-                    <th style="text-align:center;">Score</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($top_risks as $r):
-                    $pri = (int) $r['priority'];
-                    $band = $pri >= 15 ? ['#ef4444','#fee2e2'] : ($pri >= 5 ? ['#f59e0b','#fef3c7'] : ['#10b981','#f0fdf4']);
-                ?>
-                <tr>
-                    <td><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td style="color:#64748b; font-size:0.85rem;"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td style="text-align:center; color:#64748b;"><?= (int) $r['likelihood'] ?></td>
-                    <td style="text-align:center; color:#64748b;"><?= (int) $r['impact'] ?></td>
-                    <td style="text-align:center;">
-                        <span style="display:inline-block; background:<?= $band[1] ?>; color:<?= $band[0] ?>; font-weight:700; font-size:0.8rem; padding:2px 8px; border-radius:999px;"><?= $pri ?></span>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+    <div style="padding: 0 1.25rem 1.25rem;">
+        <?php foreach ($top_risks as $r):
+            $pri     = (int) $r['priority'];
+            $band    = $pri >= 15 ? ['#ef4444','#fee2e2'] : ($pri >= 5 ? ['#f59e0b','#fef3c7'] : ['#10b981','#f0fdf4']);
+            $hasDetail = !empty($r['description']) || !empty($r['mitigation']);
+        ?>
+        <?php if ($hasDetail): ?>
+        <details class="exec-risk-item">
+            <summary class="exec-risk-summary">
+                <span class="exec-risk-expand-icon">&#9654;</span>
+                <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="exec-risk-scores">
+                    <span style="color:#64748b; font-size:0.8rem;">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
+                    <span style="background:<?= $band[1] ?>; color:<?= $band[0] ?>; font-weight:700; font-size:0.8rem; padding:2px 8px; border-radius:999px; white-space:nowrap;"><?= $pri ?></span>
+                </span>
+            </summary>
+            <div class="exec-risk-detail">
+                <?php if (!empty($r['description'])): ?>
+                    <p style="margin: 0 0 0.4rem; color:#374151;"><?= htmlspecialchars($r['description'], ENT_QUOTES, 'UTF-8') ?></p>
+                <?php endif; ?>
+                <?php if (!empty($r['mitigation'])): ?>
+                    <div style="background:#f0fdf4; border-left:3px solid #10b981; padding:0.4rem 0.6rem; border-radius:0 4px 4px 0; font-size:0.8rem; color:#065f46;">
+                        <strong style="text-transform:uppercase; font-size:0.65rem; letter-spacing:.04em; color:#16a34a;">Mitigation:</strong>
+                        <span style="margin-left:0.3rem;"><?= htmlspecialchars($r['mitigation'], ENT_QUOTES, 'UTF-8') ?></span>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </details>
+        <?php else: ?>
+        <div class="exec-risk-item exec-risk-item--plain">
+            <span style="display:inline-block; width:14px; flex-shrink:0;"></span>
+            <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="exec-risk-scores">
+                <span style="color:#64748b; font-size:0.8rem;">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
+                <span style="background:<?= $band[1] ?>; color:<?= $band[0] ?>; font-weight:700; font-size:0.8rem; padding:2px 8px; border-radius:999px; white-space:nowrap;"><?= $pri ?></span>
+            </span>
+        </div>
+        <?php endif; ?>
+        <?php endforeach; ?>
     </div>
 </div>
 <?php endif; ?>
@@ -325,50 +338,97 @@ $changeTypeLabels = [
     </div>
 
     <?php if (!empty($critical_alerts)): ?>
-    <div style="padding: 0.5rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700;">Critical Drift Alerts</div>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr><th>Alert</th><th>Project</th><th>Details</th><th>When</th></tr>
-            </thead>
-            <tbody>
-                <?php foreach ($critical_alerts as $alert):
-                    $details = json_decode($alert['details_json'] ?? '{}', true);
-                ?>
-                <tr>
-                    <td><span class="badge badge-danger"><?= htmlspecialchars($alert['alert_type'], ENT_QUOTES, 'UTF-8') ?></span></td>
-                    <td style="color:#64748b;"><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td><?= htmlspecialchars($details['message'] ?? $alert['alert_type'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td style="font-size:12px; color:#94a3b8; white-space:nowrap;"><?= htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700;">Critical Alerts — Action Required</div>
+    <div style="padding: 0 1.25rem 0.75rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <?php foreach ($critical_alerts as $alert):
+            $alertDetails = json_decode($alert['details_json'] ?? '{}', true);
+            $alertMsg     = $alertDetails['message'] ?? $alertDetails['description'] ?? null;
+            $alertType    = htmlspecialchars(ucwords(str_replace('_', ' ', $alert['alert_type'])), ENT_QUOTES, 'UTF-8');
+            $alertAge     = htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8');
+        ?>
+        <div class="exec-action-card exec-action-card--danger">
+            <div class="exec-action-header">
+                <div>
+                    <span class="exec-action-type-pill exec-action-type-pill--danger"><?= $alertType ?></span>
+                    <span class="exec-action-project"><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <span class="exec-action-age"><?= $alertAge ?></span>
+            </div>
+            <?php if ($alertMsg): ?>
+            <p class="exec-action-message"><?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8') ?></p>
+            <?php endif; ?>
+            <div class="exec-action-footer">
+                <span class="exec-action-ask">What's needed: <strong>Acknowledge this alert</strong></span>
+                <form method="POST" action="/app/governance/alerts/<?= (int) $alert['id'] ?>" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="action" value="acknowledge">
+                    <input type="hidden" name="redirect_to" value="/app/executive">
+                    <button type="submit" class="btn btn-sm" style="background:#dc2626; color:#fff; border-color:#dc2626;">Acknowledge</button>
+                </form>
+            </div>
+        </div>
+        <?php endforeach; ?>
     </div>
     <?php endif; ?>
 
     <?php if (!empty($governance_items)): ?>
-    <div style="padding: 0.5rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700; <?= !empty($critical_alerts) ? 'border-top:1px solid #f3f4f6; margin-top:0.5rem;' : '' ?>">Pending Governance Review</div>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr><th>Change Type</th><th>Project</th><th>Details</th><th>Requested</th></tr>
-            </thead>
-            <tbody>
-                <?php foreach ($governance_items as $gi):
-                    $giData  = json_decode($gi['proposed_change_json'] ?? '{}', true);
-                    $giLabel = $changeTypeLabels[$gi['change_type']] ?? ucwords(str_replace('_', ' ', $gi['change_type']));
-                    $giTitle = $giData['title'] ?? $giData['story_title'] ?? $giData['item_title'] ?? '';
-                ?>
-                <tr>
-                    <td><span style="background:#fef3c7; color:#d97706; font-weight:600; font-size:0.8rem; padding:2px 8px; border-radius:999px;"><?= htmlspecialchars($giLabel, ENT_QUOTES, 'UTF-8') ?></span></td>
-                    <td style="color:#64748b; font-size:0.85rem;"><?= htmlspecialchars($gi['project_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                    <td style="font-size:0.85rem;"><?= htmlspecialchars($giTitle ?: '—', ENT_QUOTES, 'UTF-8') ?></td>
-                    <td style="font-size:12px; color:#94a3b8; white-space:nowrap;"><?= htmlspecialchars($gi['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700; <?= !empty($critical_alerts) ? 'border-top:1px solid #f3f4f6; margin-top:0.25rem;' : '' ?>">Pending Approvals — Your Decision Required</div>
+    <div style="padding: 0 1.25rem 1rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <?php foreach ($governance_items as $gi):
+            $giData  = json_decode($gi['proposed_change_json'] ?? '{}', true);
+            $giLabel = $changeTypeLabels[$gi['change_type']] ?? ucwords(str_replace('_', ' ', $gi['change_type']));
+            $giTitle = $giData['title'] ?? $giData['story_title'] ?? $giData['item_title'] ?? '';
+
+            // Build a human-readable summary of what changed
+            $giChangeSummary = '';
+            if ($gi['change_type'] === 'new_story' && $giTitle) {
+                $giChangeSummary = 'A new story has been proposed: "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"';
+            } elseif ($gi['change_type'] === 'scope_change') {
+                $giChangeSummary = 'Scope change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
+                if (!empty($giData['old_value']) && !empty($giData['new_value'])) {
+                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_value'], ENT_QUOTES, 'UTF-8')
+                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_value'], ENT_QUOTES, 'UTF-8');
+                }
+            } elseif ($gi['change_type'] === 'size_change') {
+                $giChangeSummary = 'Size change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
+                if (!empty($giData['old_size']) && !empty($giData['new_size'])) {
+                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_size'], ENT_QUOTES, 'UTF-8')
+                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_size'], ENT_QUOTES, 'UTF-8');
+                }
+            } elseif ($giTitle) {
+                $giChangeSummary = htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8');
+            }
+        ?>
+        <div class="exec-action-card exec-action-card--warning">
+            <div class="exec-action-header">
+                <div>
+                    <span class="exec-action-type-pill exec-action-type-pill--warning"><?= htmlspecialchars($giLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="exec-action-project"><?= htmlspecialchars($gi['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <span class="exec-action-age"><?= htmlspecialchars($gi['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <?php if ($giChangeSummary): ?>
+            <p class="exec-action-message"><?= $giChangeSummary ?></p>
+            <?php endif; ?>
+            <div class="exec-action-footer">
+                <span class="exec-action-ask">What's needed: <strong>Approve or reject this change</strong></span>
+                <div style="display:flex; gap:0.5rem;">
+                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="redirect_to" value="/app/executive">
+                        <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                    </form>
+                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="redirect_to" value="/app/executive">
+                        <button type="submit" class="btn btn-sm" style="background:#fff; color:#64748b; border:1px solid #cbd5e1;">Reject</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
     </div>
     <?php endif; ?>
 </div>
@@ -569,4 +629,133 @@ $changeTypeLabels = [
 
 /* Smooth scroll for anchor links */
 html { scroll-behavior: smooth; }
+
+/* Risk Register — expandable items */
+.exec-risk-item {
+    display: block;
+    background: #f9fafb;
+    border: 1px solid #f1f5f9;
+    border-radius: 6px;
+    margin-bottom: 0.375rem;
+    overflow: hidden;
+}
+.exec-risk-item--plain {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+}
+.exec-risk-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.exec-risk-summary::-webkit-details-marker { display: none; }
+.exec-risk-item[open] .exec-risk-expand-icon { transform: rotate(90deg); }
+.exec-risk-expand-icon {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+    line-height: 1.6;
+}
+.exec-risk-item:hover .exec-risk-summary,
+.exec-risk-item--plain:hover { background: #f1f5f9; }
+.exec-risk-title {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1e293b;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.exec-risk-project {
+    font-size: 0.8rem;
+    color: #64748b;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.exec-risk-scores {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.exec-risk-detail {
+    padding: 0.5rem 0.75rem 0.75rem 2.1rem;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.82rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+/* Needs Attention — action cards */
+.exec-action-card {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 0.875rem 1rem;
+    background: #fff;
+}
+.exec-action-card--danger { border-left: 3px solid #ef4444; }
+.exec-action-card--warning { border-left: 3px solid #f59e0b; }
+.exec-action-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.exec-action-type-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-right: 0.4rem;
+}
+.exec-action-type-pill--danger  { background: #fee2e2; color: #dc2626; }
+.exec-action-type-pill--warning { background: #fef3c7; color: #d97706; }
+.exec-action-project {
+    font-size: 0.82rem;
+    color: #475569;
+    font-weight: 500;
+}
+.exec-action-age {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.exec-action-message {
+    font-size: 0.875rem;
+    color: #374151;
+    margin: 0 0 0.6rem;
+    line-height: 1.45;
+}
+.exec-action-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid #f3f4f6;
+    padding-top: 0.6rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+}
+.exec-action-ask {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+.exec-action-ask strong {
+    color: #1e293b;
+}
 </style>

@@ -164,7 +164,8 @@ class ExecutiveController
 
         // ── 8. Governance queue depth + items ─────────────────────────────────
         $govItems = $this->db->query(
-            'SELECT gq.change_type, gq.proposed_change_json, gq.created_at, p.name AS project_name
+            'SELECT gq.id, gq.change_type, gq.proposed_change_json, gq.created_at,
+                    gq.project_id, p.name AS project_name
                FROM governance_queue gq
                JOIN projects p ON gq.project_id = p.id
               WHERE p.org_id = :oid
@@ -370,7 +371,8 @@ class ExecutiveController
 
         // ── Table A: Top 10 active risks ──────────────────────────────────────
         $topRisks = $this->db->query(
-            'SELECT r.title, r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
+            'SELECT r.id, r.title, r.description, r.mitigation,
+                    r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
                     p.name AS project_name
                FROM risks r
                JOIN projects p ON r.project_id = p.id
@@ -382,7 +384,8 @@ class ExecutiveController
 
         // ── Table B: Active critical drift alerts ─────────────────────────────
         $criticalAlerts = $this->db->query(
-            'SELECT da.alert_type, da.details_json, da.created_at, p.name AS project_name
+            'SELECT da.id, da.alert_type, da.details_json, da.created_at,
+                    da.project_id, p.name AS project_name
                FROM drift_alerts da
                JOIN projects p ON da.project_id = p.id
               WHERE p.org_id = :oid
