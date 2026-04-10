@@ -71,32 +71,77 @@ function copyToken() {
 </script>
 <?php endif; ?>
 
-<?php if (($user['role'] ?? '') === 'developer' && empty($tokens) && empty($new_token_raw)): ?>
-<!-- Developer onboarding: shown only on first visit before any token exists -->
-<section class="card mb-4" style="border:2px solid var(--primary,#2563eb);background:var(--surface-2,#f8fafc);">
-    <div class="card-body">
-        <h2 class="card-title" style="font-size:1rem;margin-bottom:0.5rem;">Set up Claude Code integration</h2>
-        <p style="font-size:0.875rem;margin-bottom:1rem;">
-            Create a token below, then add this snippet to your project's <code>.mcp.json</code> file:
-        </p>
-        <pre style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:6px;padding:1rem;font-size:0.8rem;overflow-x:auto;margin-bottom:0.75rem;">{
+<!-- Claude Code MCP setup guide — always visible, collapsible -->
+<section class="card mb-4">
+    <button type="button"
+            onclick="var b=document.getElementById('mcp-guide');var c=document.getElementById('mcp-chevron');b.classList.toggle('hidden');c.style.transform=b.classList.contains('hidden')?'':'rotate(180deg)';"
+            style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:none;border:none;cursor:pointer;text-align:left;">
+        <div style="display:flex;align-items:center;gap:0.625rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary,#2563eb)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+            <span style="font-weight:600;font-size:0.9375rem;">Claude Code MCP setup</span>
+        </div>
+        <svg id="mcp-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;transition:transform 0.2s;<?= empty($tokens) ? '' : 'transform:rotate(180deg)' ?>">
+            <polyline points="6 9 12 15 18 9"/>
+        </svg>
+    </button>
+    <div id="mcp-guide" style="border-top:1px solid var(--border);" class="<?= empty($tokens) ? '' : 'hidden' ?>">
+        <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+
+            <div>
+                <p style="font-size:0.875rem;margin-bottom:0.5rem;"><strong>Step 1</strong> — Create a token above, then add this to your project's <code>.mcp.json</code>:</p>
+                <div style="position:relative;">
+                    <pre id="mcp-snippet" style="background:var(--surface-2,#f8fafc);border:1px solid var(--border);border-radius:6px;padding:1rem;font-size:0.78rem;overflow-x:auto;margin:0;line-height:1.6;">{
   "mcpServers": {
     "stratflow": {
       "command": "npx",
       "args": ["-y", "stratflow-mcp"],
       "env": {
         "STRATFLOW_URL": "<?= htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8') ?>",
-        "STRATFLOW_TOKEN": "&lt;paste your token here&gt;"
+        "STRATFLOW_TOKEN": "<?= $new_token_raw ? htmlspecialchars($new_token_raw, ENT_QUOTES, 'UTF-8') : '&lt;your-token&gt;' ?>"
       }
     }
   }
 }</pre>
-        <p style="font-size:0.8rem;color:var(--text-muted);">
-            Once configured, use <code>list_my_stories</code>, <code>get_story</code>, <code>start_story</code>, and <code>complete_story</code> directly in Claude Code.
-        </p>
+                    <button type="button" onclick="copySnippet()" id="copy-snippet-btn"
+                            style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.75rem;padding:0.2rem 0.6rem;"
+                            class="btn btn-secondary btn-sm">Copy</button>
+                </div>
+            </div>
+
+            <div>
+                <p style="font-size:0.875rem;margin:0 0 0.5rem;"><strong>Step 2</strong> — Restart Claude Code. The following tools will be available in any project:</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem;">
+                    <?php foreach ([
+                        ['list_my_stories', 'Stories assigned to you'],
+                        ['get_story',       'Full story + AC + KR + git links'],
+                        ['start_story',     'Set status → in progress'],
+                        ['complete_story',  'Set status → in review'],
+                    ] as [$tool, $desc]): ?>
+                    <div style="background:var(--surface-2,#f8fafc);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;">
+                        <code style="font-size:0.78rem;color:var(--primary-dark,#1d4ed8);"><?= $tool ?></code>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin:0.15rem 0 0;"><?= $desc ?></p>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">
+                Commits with <code>Refs SF-{id}</code> in the message are automatically linked to stories via the GitHub App.
+            </p>
+
+        </div>
     </div>
 </section>
-<?php endif; ?>
+<script>
+function copySnippet() {
+    var pre = document.getElementById('mcp-snippet');
+    navigator.clipboard.writeText(pre.textContent).then(function() {
+        var btn = document.getElementById('copy-snippet-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    });
+}
+</script>
 
 <!-- Create new token form -->
 <section class="card mb-4">
