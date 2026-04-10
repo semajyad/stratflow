@@ -158,6 +158,15 @@ $hasSummary = !empty($document_summary);
                                       placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2&#10;KR3: $500k in committed pipeline by end of Q2"
                             ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
                         </div>
+                        <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
+                            <form method="POST" action="/app/diagram/delete-okr" class="inline-form"
+                                  onsubmit="return confirm('Delete this OKR? This cannot be undone.')">
+                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                                <input type="hidden" name="node_id" value="<?= (int) $node['id'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete OKR</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             <?php endforeach; ?>

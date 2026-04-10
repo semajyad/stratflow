@@ -119,4 +119,18 @@ class DiagramNode
             [':diagram_id' => $diagramId]
         );
     }
+
+    /**
+     * Delete a single node by ID.
+     *
+     * @param Database $db Database instance
+     * @param int      $id Node primary key
+     */
+    public static function delete(Database $db, int $id): void
+    {
+        $db->query(
+            "DELETE FROM diagram_nodes WHERE id = :id",
+            [':id' => $id]
+        );
+    }
 }

@@ -477,6 +477,38 @@ class DiagramController
         return $candidate;
     }
 
+    /**
+     * Delete a single OKR node (org-scoped).
+     */
+    public function deleteOkr(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $nodeId    = (int) $this->request->post('node_id', 0);
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        // Verify the node belongs to this org before deleting
+        $stmt = $this->db->query(
+            "SELECT dn.id FROM diagram_nodes dn
+             JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
+             JOIN projects p ON sd.project_id = p.id
+             WHERE dn.id = :node_id AND p.org_id = :org_id
+             LIMIT 1",
+            [':node_id' => $nodeId, ':org_id' => $orgId]
+        );
+
+        if (!$stmt->fetch()) {
+            $_SESSION['flash_message'] = 'OKR not found.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
+        DiagramNode::delete($this->db, $nodeId);
+
+        $_SESSION['flash_message'] = 'OKR deleted.';
+        $this->response->redirect('/app/diagram?project_id=' . $projectId);
+    }
+
     public function saveAllOkrs(): void
     {
         $user      = $this->auth->user();
