@@ -198,6 +198,14 @@ class ExecutiveController
         $seatsUsed  = (int) ($seatUsedRow['cnt'] ?? 0);
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
 
+        // ── Projects with OKRs (for per-project KR links) ────────────────────
+        $orgProjects = $this->db->query(
+            "SELECT id, name FROM projects
+              WHERE org_id = :oid AND status != 'deleted'
+              ORDER BY name ASC",
+            [':oid' => $orgId]
+        )->fetchAll();
+
         // ── Table A: Top 10 active risks ──────────────────────────────────────
         $topRisks = $this->db->query(
             'SELECT r.title, r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
@@ -252,6 +260,8 @@ class ExecutiveController
             'subscription'         => $subscription,
             'seats_used'           => $seatsUsed,
             'seat_limit'           => $seatLimit,
+            // Per-project OKR/KR links
+            'org_projects'         => $orgProjects,
             // Detail tables
             'top_risks'            => $topRisks,
             'critical_alerts'      => $criticalAlerts,

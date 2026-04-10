@@ -92,7 +92,13 @@ class WorkItemController
 
         // Build KR map: item_id => [kr rows] — single bulk query to avoid N+1
         $workItemIds = array_map('intval', array_column($workItems, 'id'));
-        $krsByItemId = KeyResult::findByWorkItemIds($this->db, $workItemIds, $orgId);
+        try {
+            $krsByItemId = KeyResult::findByWorkItemIds($this->db, $workItemIds, $orgId);
+        } catch (\Throwable $e) {
+            // Graceful degradation if key_results table is missing (pending migration)
+            $krsByItemId = [];
+            error_log('[WorkItems] KR lookup failed: ' . $e->getMessage());
+        }
 
         $this->response->render('work-items', [
             'user'                 => $user,

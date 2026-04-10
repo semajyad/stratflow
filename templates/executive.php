@@ -228,6 +228,33 @@
 <?php endif; ?>
 
 <!-- ===========================
+     OKR / KR Progress (per project)
+     =========================== -->
+<?php if (!empty($org_projects)): ?>
+<div class="card mt-6">
+    <details>
+        <summary style="padding: 1rem 1.25rem; font-size: 1rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+            OKR &amp; Key Results Progress
+            <span style="font-size: 0.8rem; font-weight: 400; color: #6b7280;">Click to expand &darr;</span>
+        </summary>
+        <div style="padding: 0 1.25rem 1.25rem;">
+            <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 1rem;">View per-project OKR tracking, KR progress bars, and contributing PRs.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
+                <?php foreach ($org_projects as $proj): ?>
+                <a href="/app/projects/<?= (int) $proj['id'] ?>/executive"
+                   style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; color: #1e293b; transition: border-color 0.15s;"
+                   onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e2e8f0'">
+                    <span style="font-size: 0.875rem; font-weight: 500;"><?= htmlspecialchars($proj['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <span style="font-size: 0.75rem; color: #6366f1;">View KRs &rarr;</span>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </details>
+</div>
+<?php endif; ?>
+
+<!-- ===========================
      Top 10 Active Risks
      =========================== -->
 <?php if (!empty($top_risks)): ?>
