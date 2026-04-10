@@ -76,13 +76,17 @@ class KrScoringService
             return;
         }
 
-        $krs = [];
+        $krsById = [];
         foreach ($workItemIds as $wid) {
             foreach (KeyResult::findByWorkItemId($this->db, $wid, $orgId) as $kr) {
-                $krs[] = $kr;
+                if (!isset($kr['id'])) {
+                    continue;
+                }
+                $krsById[(int) $kr['id']] = $kr;
             }
         }
 
+        $krs = array_values($krsById);
         if (empty($krs)) {
             return;
         }
@@ -117,7 +121,9 @@ class KrScoringService
         $input = json_encode([
             'kr_title'       => $kr['title'],
             'kr_description' => $kr['metric_description'] ?? '',
-            'kr_target'      => $kr['target_value'] ? "{$kr['target_value']} {$kr['unit']}" : '',
+            'kr_target'      => (isset($kr['target_value']) && $kr['target_value'] !== null)
+                ? "{$kr['target_value']} {$kr['unit']}"
+                : '',
             'pr_title'       => $prTitle,
             'pr_body'        => '',
         ], JSON_UNESCAPED_UNICODE);

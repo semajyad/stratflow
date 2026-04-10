@@ -61,6 +61,11 @@ class KrController
             return;
         }
 
+        $statusRaw = $this->request->post('status', 'not_started');
+        if (is_array($statusRaw) || !is_scalar($statusRaw)) {
+            $statusRaw = 'not_started';
+        }
+
         $id = KeyResult::create($this->db, [
             'org_id'             => $orgId,
             'hl_work_item_id'    => $workItemId,
@@ -70,7 +75,7 @@ class KrController
             'target_value'       => $this->request->post('target_value', ''),
             'current_value'      => $this->request->post('current_value', ''),
             'unit'               => trim((string) $this->request->post('unit', '')) ?: null,
-            'status'             => $this->sanitiseStatus($this->request->post('status', 'not_started')),
+            'status'             => $this->sanitiseStatus((string) $statusRaw),
             'display_order'      => (int) $this->request->post('display_order', 0),
         ]);
 
@@ -103,7 +108,11 @@ class KrController
         }
 
         if (isset($data['status'])) {
-            $data['status'] = $this->sanitiseStatus($data['status']);
+            $statusRaw = $data['status'];
+            if (is_array($statusRaw) || !is_scalar($statusRaw)) {
+                $statusRaw = 'not_started';
+            }
+            $data['status'] = $this->sanitiseStatus((string) $statusRaw);
         }
 
         KeyResult::update($this->db, $id, $orgId, $data);
