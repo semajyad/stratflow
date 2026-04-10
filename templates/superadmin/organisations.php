@@ -138,10 +138,12 @@
                         <!-- Inline edit row (hidden by default) -->
                         <tr id="org-edit-<?= $orgId ?>" style="display:none; background:#f8fafc;">
                             <td colspan="7" style="padding:1.25rem 1.5rem; border-bottom:2px solid var(--primary);">
-                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>">
-                                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                    <input type="hidden" name="action" value="edit">
-                                    <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                                <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                                    <!-- Edit form -->
+                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>"
+                                          style="display:contents;">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <input type="hidden" name="action" value="edit">
                                         <div>
                                             <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Organisation Name</label>
                                             <input type="text" name="org_name" value="<?= htmlspecialchars($org['name']) ?>"
@@ -150,7 +152,7 @@
                                         <div>
                                             <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Plan Type</label>
                                             <select name="plan_type" class="form-control form-control-sm">
-                                                <option value="product" <?= $planType === 'product' ? 'selected' : '' ?>>Product</option>
+                                                <option value="product"     <?= $planType === 'product'     ? 'selected' : '' ?>>Product</option>
                                                 <option value="consultancy" <?= $planType === 'consultancy' ? 'selected' : '' ?>>Consultancy</option>
                                             </select>
                                         </div>
@@ -162,8 +164,8 @@
                                         <div>
                                             <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Billing</label>
                                             <select name="billing_method" class="form-control form-control-sm">
-                                                <option value="invoiced" <?= $isInvoiced ? 'selected' : '' ?>>Invoiced</option>
-                                                <option value="stripe" <?= !$isInvoiced ? 'selected' : '' ?>>Stripe</option>
+                                                <option value="invoiced" <?= $isInvoiced  ? 'selected' : '' ?>>Invoiced</option>
+                                                <option value="stripe"   <?= !$isInvoiced ? 'selected' : '' ?>>Stripe</option>
                                             </select>
                                         </div>
                                         <div style="display:flex; gap:0.5rem;">
@@ -171,23 +173,24 @@
                                             <button type="button" class="btn btn-sm btn-secondary"
                                                     onclick="toggleOrgEdit(<?= $orgId ?>)">Cancel</button>
                                         </div>
-                                        <div style="margin-left:auto;">
-                                            <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
-                                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                                <?php if ($isActive): ?>
-                                                    <input type="hidden" name="action" value="suspend">
-                                                    <button type="submit" class="btn btn-sm btn-warning"
-                                                            onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($org['name'])) ?>?')">
-                                                        Suspend
-                                                    </button>
-                                                <?php else: ?>
-                                                    <input type="hidden" name="action" value="enable">
-                                                    <button type="submit" class="btn btn-sm btn-success">Enable</button>
-                                                <?php endif; ?>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </form>
+                                    </form>
+
+                                    <!-- Suspend / Enable form — separate, never nested -->
+                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>"
+                                          style="margin-left:auto;">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <?php if ($isActive): ?>
+                                            <input type="hidden" name="action" value="suspend">
+                                            <button type="submit" class="btn btn-sm btn-warning"
+                                                    onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($org['name'])) ?>?')">
+                                                Suspend
+                                            </button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="action" value="enable">
+                                            <button type="submit" class="btn btn-sm btn-success">Enable</button>
+                                        <?php endif; ?>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

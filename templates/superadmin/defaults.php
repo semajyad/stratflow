@@ -25,7 +25,7 @@ $s = $settings;
 <form method="POST" action="/superadmin/defaults">
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:stretch;">
 
         <!-- ===========================
              AI Defaults
@@ -38,7 +38,8 @@ $s = $settings;
             <div class="card-body" style="display:flex; flex-direction:column; gap:1rem;">
                 <div class="form-group">
                     <label class="form-label">Provider</label>
-                    <select name="ai_provider" class="form-control">
+                    <select name="ai_provider" class="form-control" id="ai-provider-select"
+                            onchange="showApiKey(this.value)">
                         <option value="google"    <?= ($s['ai_provider'] ?? '') === 'google'    ? 'selected' : '' ?>>Google Gemini</option>
                         <option value="openai"    <?= ($s['ai_provider'] ?? '') === 'openai'    ? 'selected' : '' ?>>OpenAI</option>
                         <option value="anthropic" <?= ($s['ai_provider'] ?? '') === 'anthropic' ? 'selected' : '' ?>>Anthropic</option>
@@ -51,6 +52,26 @@ $s = $settings;
                            placeholder="e.g. gemini-2.5-flash, gpt-4o, claude-sonnet-4-6">
                     <small class="text-muted">Free text — enter the exact model identifier.</small>
                 </div>
+
+                <?php
+                $providerKeyLabels = [
+                    'google'    => ['label' => 'Google API Key',    'env' => 'GEMINI_API_KEY'],
+                    'openai'    => ['label' => 'OpenAI API Key',    'env' => 'OPENAI_API_KEY'],
+                    'anthropic' => ['label' => 'Anthropic API Key', 'env' => 'ANTHROPIC_API_KEY'],
+                ];
+                foreach ($providerKeyLabels as $providerSlug => $meta):
+                    $maskedKey = $api_keys[$providerSlug] ?? '';
+                ?>
+                <div class="form-group" style="<?= ($s['ai_provider'] ?? 'google') !== $providerSlug ? 'display:none;' : '' ?>"
+                     id="api-key-<?= $providerSlug ?>">
+                    <label class="form-label"><?= htmlspecialchars($meta['label']) ?></label>
+                    <input type="text" class="form-control"
+                           value="<?= htmlspecialchars($maskedKey) ?>"
+                           placeholder="Not set — add <?= htmlspecialchars($meta['env']) ?> to environment"
+                           readonly style="font-family:monospace; background:var(--bg-muted, #f8fafc); cursor:default;">
+                    <small class="text-muted">Read from <code><?= htmlspecialchars($meta['env']) ?></code> environment variable.</small>
+                </div>
+                <?php endforeach; ?>
             </div>
         </section>
 
@@ -182,3 +203,12 @@ $s = $settings;
         <button type="submit" class="btn btn-primary" style="min-width:140px;">Save Defaults</button>
     </div>
 </form>
+
+<script>
+function showApiKey(provider) {
+    ['google','openai','anthropic'].forEach(function(p) {
+        var el = document.getElementById('api-key-' + p);
+        if (el) el.style.display = p === provider ? '' : 'none';
+    });
+}
+</script>

@@ -369,9 +369,23 @@ class SuperadminController
         $user     = $this->auth->user();
         $settings = SystemSettings::get($this->db);
 
+        $maskKey = static function (string $key): string {
+            if ($key === '') {
+                return '';
+            }
+            return '•••••••••' . substr($key, -4);
+        };
+
+        $apiKeys = [
+            'google'    => $maskKey($_ENV['GEMINI_API_KEY']    ?? ''),
+            'openai'    => $maskKey($_ENV['OPENAI_API_KEY']    ?? ''),
+            'anthropic' => $maskKey($_ENV['ANTHROPIC_API_KEY'] ?? ''),
+        ];
+
         $this->response->render('superadmin/defaults', [
             'user'          => $user,
             'settings'      => $settings,
+            'api_keys'      => $apiKeys,
             'active_page'   => 'superadmin',
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
