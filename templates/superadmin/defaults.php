@@ -78,6 +78,12 @@ $s = $settings;
                     </div>
                     <?php endforeach; ?>
                 </div>
+                <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border); display:flex; align-items:center; gap:1rem;">
+                    <button type="button" class="btn btn-secondary" id="test-ai-btn" onclick="testAiConnection()">
+                        Test Connection
+                    </button>
+                    <span id="test-ai-result" style="font-size:0.875rem;"></span>
+                </div>
             </div>
         </div>
 
@@ -95,12 +101,21 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; align-items:start;">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; align-items:start;">
                     <div class="form-group">
                         <label class="form-label">Default Seat Limit</label>
                         <input type="number" name="default_seat_limit" class="form-input"
                                value="<?= (int) ($s['default_seat_limit'] ?? 5) ?>" min="1" max="10000" style="width:100px;">
-                        <small class="text-muted">Applied to new organisations on creation.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Default Cost / Seat</label>
+                        <div style="display:flex; align-items:center; gap:0.4rem;">
+                            <span style="font-size:0.85rem; color:var(--text-muted);"><?= htmlspecialchars($s['billing_currency'] ?? 'NZD') ?></span>
+                            <input type="number" name="default_price_per_seat" step="0.01" min="0"
+                                   value="<?= ($s['default_price_per_seat_cents'] ?? 0) > 0 ? number_format(($s['default_price_per_seat_cents'] ?? 0) / 100, 2) : '' ?>"
+                                   class="form-input" style="width:110px;" placeholder="0.00">
+                        </div>
+                        <small class="text-muted">Per seat / month.</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Default Plan Type</label>
@@ -311,6 +326,56 @@ function showApiKey(provider) {
     ['google','openai','anthropic'].forEach(function(p) {
         var el = document.getElementById('api-key-' + p);
         if (el) el.style.display = p === provider ? '' : 'none';
+    });
+}
+
+function testAiConnection() {
+    var btn      = document.getElementById('test-ai-btn');
+    var result   = document.getElementById('test-ai-result');
+    var provider = document.getElementById('ai-provider-select').value;
+    var model    = document.querySelector('input[name="ai_model"]').value.trim();
+
+    if (!model) {
+        result.innerHTML = '<span style="color:var(--danger);">Enter a model identifier first.</span>';
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Testing...';
+    result.innerHTML = '<span style="color:var(--text-muted);">Connecting&hellip;</span>';
+
+    var form = new FormData();
+    form.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
+    form.append('provider', provider);
+    form.append('model', model);
+
+    fetch('/superadmin/defaults/test-ai', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form,
+        credentials: 'same-origin'
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        btn.disabled    = false;
+        btn.textContent = 'Test Connection';
+        if (d.success) {
+            result.innerHTML =
+                '<span style="color:#059669;">&#10003; Connected</span>' +
+                ' <span style="color:var(--text-muted); font-size:0.8rem;">' + d.latency_ms + 'ms &mdash; &ldquo;' +
+                d.snippet.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '&rdquo;</span>';
+        } else {
+            result.innerHTML =
+                '<span style="color:var(--danger);">&#10007; Failed: ' +
+                (d.error || 'Unknown error').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+                '</span>' +
+                (d.latency_ms ? ' <span style="color:var(--text-muted); font-size:0.8rem;">(' + d.latency_ms + 'ms)</span>' : '');
+        }
+    })
+    .catch(function(e) {
+        btn.disabled    = false;
+        btn.textContent = 'Test Connection';
+        result.innerHTML = '<span style="color:var(--danger);">&#10007; Network error: ' + e.message + '</span>';
     });
 }
 </script>

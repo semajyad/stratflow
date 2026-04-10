@@ -225,6 +225,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/organisations/{id}',        'SuperadminController@updateOrg',      ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/defaults',                  'SuperadminController@defaults',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/defaults',                  'SuperadminController@saveDefaults',    ['auth', 'superadmin', 'csrf']);
+    $router->add('POST', '/superadmin/defaults/test-ai',          'SuperadminController@testAiConnection', ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/audit-logs/export',          'SuperadminController@exportAuditLogs',  ['auth', 'superadmin']);

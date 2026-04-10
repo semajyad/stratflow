@@ -36,6 +36,8 @@ class SystemSettings
         'quality_enforcement',
         'support_email',
         'mail_from_name',
+        // New org defaults
+        'default_price_per_seat_cents',
         // Billing rates (price per seat in cents per period)
         'billing_currency',
         'billing_rate_monthly_cents',
@@ -62,6 +64,8 @@ class SystemSettings
         'quality_enforcement'    => 'warn',
         'support_email'          => 'support@stratflow.io',
         'mail_from_name'         => 'StratFlow',
+        // New org defaults
+        'default_price_per_seat_cents'  => 0,
         // Billing rates
         'billing_currency'              => 'NZD',
         'billing_rate_monthly_cents'    => 0,

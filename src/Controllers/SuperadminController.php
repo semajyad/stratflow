@@ -431,9 +431,10 @@ class SuperadminController
         $data = [
             'ai_provider'            => trim((string) $this->request->post('ai_provider', 'google')),
             'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-2.5-flash')),
-            'default_seat_limit'     => max(1, (int) $this->request->post('default_seat_limit', 5)),
-            'default_plan_type'      => $this->request->post('default_plan_type', 'product'),
-            'default_billing_method' => $this->request->post('default_billing_method', 'invoiced'),
+            'default_seat_limit'            => max(1, (int) $this->request->post('default_seat_limit', 5)),
+            'default_price_per_seat_cents'  => max(0, (int) round((float) $this->request->post('default_price_per_seat', 0) * 100)),
+            'default_plan_type'             => $this->request->post('default_plan_type', 'product'),
+            'default_billing_method'        => $this->request->post('default_billing_method', 'invoiced'),
             'feature_sounding_board' => (bool) $this->request->post('feature_sounding_board', false),
             'feature_executive'      => (bool) $this->request->post('feature_executive', false),
             'feature_xero'           => (bool) $this->request->post('feature_xero', false),
@@ -461,6 +462,155 @@ class SuperadminController
 
         $_SESSION['flash_message'] = 'App-wide defaults saved.';
         $this->response->redirect('/superadmin/defaults');
+    }
+
+    /**
+     * Test the configured AI provider/model with a minimal prompt.
+     *
+     * Returns JSON: {success, provider, model, latency_ms, snippet?, error?}
+     */
+    public function testAiConnection(): void
+    {
+        $provider = trim((string) $this->request->post('provider', 'google'));
+        $model    = trim((string) $this->request->post('model', ''));
+
+        if ($model === '') {
+            $this->response->json(['success' => false, 'error' => 'Model identifier is required.']);
+            return;
+        }
+
+        $start = microtime(true);
+
+        try {
+            $snippet = match ($provider) {
+                'google'    => $this->testGemini($model),
+                'openai'    => $this->testOpenAi($model),
+                'anthropic' => $this->testAnthropic($model),
+                default     => throw new \RuntimeException("Unknown provider: {$provider}"),
+            };
+
+            $this->response->json([
+                'success'     => true,
+                'provider'    => $provider,
+                'model'       => $model,
+                'latency_ms'  => (int) round((microtime(true) - $start) * 1000),
+                'snippet'     => mb_substr($snippet, 0, 120),
+            ]);
+        } catch (\Throwable $e) {
+            $this->response->json([
+                'success'    => false,
+                'provider'   => $provider,
+                'model'      => $model,
+                'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+                'error'      => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function testGemini(string $model): string
+    {
+        $apiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('GEMINI_API_KEY is not set.');
+        }
+
+        $url  = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        $body = json_encode([
+            'contents' => [['parts' => [['text' => 'Reply with just the word: OK']]]],
+            'generationConfig' => ['maxOutputTokens' => 10],
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        $data = json_decode($raw, true) ?? [];
+        if ($code !== 200) {
+            throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
+        }
+        return $data['candidates'][0]['content']['parts'][0]['text'] ?? '(no text)';
+    }
+
+    private function testOpenAi(string $model): string
+    {
+        $apiKey = $_ENV['OPENAI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('OPENAI_API_KEY is not set.');
+        }
+
+        $body = json_encode([
+            'model'       => $model,
+            'messages'    => [['role' => 'user', 'content' => 'Reply with just the word: OK']],
+            'max_tokens'  => 10,
+        ]);
+
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        $data = json_decode($raw, true) ?? [];
+        if ($code !== 200) {
+            throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
+        }
+        return $data['choices'][0]['message']['content'] ?? '(no text)';
+    }
+
+    private function testAnthropic(string $model): string
+    {
+        $apiKey = $_ENV['ANTHROPIC_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('ANTHROPIC_API_KEY is not set.');
+        }
+
+        $body = json_encode([
+            'model'      => $model,
+            'max_tokens' => 10,
+            'messages'   => [['role' => 'user', 'content' => 'Reply with just the word: OK']],
+        ]);
+
+        $ch = curl_init('https://api.anthropic.com/v1/messages');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'x-api-key: ' . $apiKey,
+                'anthropic-version: 2023-06-01',
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        $data = json_decode($raw, true) ?? [];
+        if ($code !== 200) {
+            throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
+        }
+        return $data['content'][0]['text'] ?? '(no text)';
     }
 
     public function personas(): void
