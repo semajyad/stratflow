@@ -33,6 +33,12 @@ class FileProcessor
     /** @var int Maximum file size enforced at PHP level (50 MB) */
     private const MAX_FILE_SIZE = 52428800;
 
+    /** @var int Maximum file size for video/audio uploads (200 MB) */
+    private const MAX_MEDIA_FILE_SIZE = 209715200;
+
+    /** @var array Extensions treated as media (skip text scan, use media size limit) */
+    private const MEDIA_EXTENSIONS = ['mp4', 'mov', 'avi', 'webm', 'mkv', 'mp3', 'm4a', 'wav', 'ogg', 'aac'];
+
     /** @var array Dangerous byte signatures to scan for in uploads */
     private const DANGEROUS_SIGNATURES = [
         '<?php',
@@ -53,6 +59,18 @@ class FileProcessor
         'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
         'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
         'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        // Video
+        'mp4'  => ['video/mp4'],
+        'mov'  => ['video/quicktime'],
+        'avi'  => ['video/x-msvideo'],
+        'webm' => ['video/webm'],
+        'mkv'  => ['video/x-matroska', 'application/x-matroska'],
+        // Audio
+        'mp3'  => ['audio/mpeg', 'audio/mp3'],
+        'm4a'  => ['audio/mp4', 'audio/x-m4a'],
+        'wav'  => ['audio/wav', 'audio/x-wav'],
+        'ogg'  => ['audio/ogg'],
+        'aac'  => ['audio/aac', 'audio/x-aac'],
     ];
 
     // ===========================
@@ -78,17 +96,19 @@ class FileProcessor
             return ['valid' => false, 'error' => $this->uploadErrorMessage($file['error'])];
         }
 
-        // Hard file size limit at PHP level
-        if ($file['size'] > self::MAX_FILE_SIZE) {
-            return ['valid' => false, 'error' => 'File exceeds the maximum allowed size of 50 MB.'];
+        $ext       = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $isMedia   = in_array($ext, self::MEDIA_EXTENSIONS, true);
+        $hardLimit = $isMedia ? self::MAX_MEDIA_FILE_SIZE : self::MAX_FILE_SIZE;
+        $hardLabel = $isMedia ? '200 MB' : '50 MB';
+
+        if ($file['size'] > $hardLimit) {
+            return ['valid' => false, 'error' => "File exceeds the maximum allowed size of {$hardLabel}."];
         }
 
-        if ($file['size'] > $uploadConfig['max_size']) {
+        if (!$isMedia && $file['size'] > $uploadConfig['max_size']) {
             $maxMb = round($uploadConfig['max_size'] / 1048576, 1);
             return ['valid' => false, 'error' => "File exceeds maximum size of {$maxMb} MB."];
         }
-
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, $uploadConfig['allowed_extensions'], true)) {
             $allowed = implode(', ', $uploadConfig['allowed_extensions']);
             return ['valid' => false, 'error' => "File type not allowed. Accepted: {$allowed}."];
@@ -107,7 +127,7 @@ class FileProcessor
 
             // Only scan plain text files for dangerous payloads
             // PDF and DOCX are binary formats that legitimately contain these signatures
-            if ($ext === 'txt') {
+            if ($ext === 'txt' && !$isMedia) {
                 $scanResult = $this->scanFileContent($file['tmp_name']);
                 if ($scanResult !== null) {
                     return ['valid' => false, 'error' => $scanResult];
@@ -232,6 +252,9 @@ class FileProcessor
 
             $mimeType === '' && $ext === 'doc'
                 => 'Binary .doc format is not supported. Please save as .docx or paste text.',
+
+            str_starts_with($mimeType, 'video/') || str_starts_with($mimeType, 'audio/')
+                => $this->extractMediaViaGemini($filePath, $mimeType),
 
             default => '',
         };
@@ -619,6 +642,218 @@ class FileProcessor
         $xml = preg_replace('/<w:br[ >]/', ' ', $xml) ?? $xml;
 
         return trim(strip_tags($xml));
+    }
+
+    /**
+     * Transcribe video or audio via the Gemini Files API.
+     *
+     * Three-step flow:
+     *   1. Upload file to Gemini Files API (resumable multipart)
+     *   2. Poll until state === ACTIVE (up to 120 seconds)
+     *   3. Call generateContent with the file URI to get transcript
+     *   4. Delete the file from Gemini (best-effort)
+     *
+     * Returns the transcript string, or '' on any failure (non-throwing).
+     */
+    private function extractMediaViaGemini(string $filePath, string $mimeType): string
+    {
+        $apiKey = $this->appConfig['gemini']['api_key']
+               ?? $_ENV['GEMINI_API_KEY']
+               ?? getenv('GEMINI_API_KEY')
+               ?: '';
+
+        if ($apiKey === '') {
+            error_log('[FileProcessor] No Gemini API key for media transcription');
+            return '';
+        }
+
+        $model = $this->appConfig['gemini']['model']
+              ?? $_ENV['GEMINI_MODEL']
+              ?? getenv('GEMINI_MODEL')
+              ?: 'gemini-2.5-flash';
+
+        try {
+            $fileUri  = $this->geminiFilesUpload($filePath, $mimeType, $apiKey);
+            $fileName = $this->geminiFileUriToName($fileUri);
+
+            if (!$this->geminiFilesPollActive($fileName, $apiKey)) {
+                error_log('[FileProcessor] Gemini file did not become ACTIVE within timeout');
+                $this->geminiFilesDelete($fileName, $apiKey);
+                return '';
+            }
+
+            $transcript = $this->geminiTranscribe($fileUri, $mimeType, $model, $apiKey);
+            $this->geminiFilesDelete($fileName, $apiKey);
+
+            return $transcript;
+        } catch (\Throwable $e) {
+            error_log('[FileProcessor] Media transcription failed: ' . $e->getMessage());
+            return '';
+        }
+    }
+
+    /**
+     * Upload a file to the Gemini Files API via multipart POST.
+     * Returns the uploaded file's URI.
+     *
+     * @throws \RuntimeException on HTTP error or unexpected response shape
+     */
+    private function geminiFilesUpload(string $filePath, string $mimeType, string $apiKey): string
+    {
+        $displayName = basename($filePath);
+        $fileSize    = filesize($filePath);
+
+        $boundary = bin2hex(random_bytes(8));
+        $metadata = json_encode(['file' => ['display_name' => $displayName, 'mime_type' => $mimeType]]);
+
+        $body  = "--{$boundary}\r\n";
+        $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+        $body .= $metadata . "\r\n";
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Type: {$mimeType}\r\n";
+        $body .= "Content-Length: {$fileSize}\r\n\r\n";
+        $body .= file_get_contents($filePath);
+        $body .= "\r\n--{$boundary}--\r\n";
+
+        $url = "https://generativelanguage.googleapis.com/upload/v1beta/files?key={$apiKey}";
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                "Content-Type: multipart/related; boundary={$boundary}",
+                "Content-Length: " . strlen($body),
+            ],
+            CURLOPT_TIMEOUT        => 300,
+        ]);
+
+        $response  = curl_exec($ch);
+        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '') {
+            throw new \RuntimeException("Gemini Files upload cURL error: {$curlError}");
+        }
+        if ($httpCode !== 200) {
+            throw new \RuntimeException("Gemini Files upload HTTP {$httpCode}: " . substr((string)$response, 0, 300));
+        }
+
+        $data = json_decode((string)$response, true);
+        $uri  = $data['file']['uri'] ?? '';
+        if ($uri === '') {
+            throw new \RuntimeException('Gemini Files upload returned no URI');
+        }
+
+        return $uri;
+    }
+
+    /**
+     * Extract the short file name (e.g. "files/abc123") from a full URI.
+     */
+    private function geminiFileUriToName(string $uri): string
+    {
+        $parts = explode('/v1beta/', $uri);
+        return $parts[1] ?? '';
+    }
+
+    /**
+     * Poll the Gemini Files API until the file reaches ACTIVE state.
+     * Returns true on ACTIVE, false on timeout or FAILED.
+     */
+    private function geminiFilesPollActive(string $fileName, string $apiKey): bool
+    {
+        $url      = "https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}";
+        $deadline = time() + 120;
+
+        while (time() < $deadline) {
+            sleep(2);
+
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+            ]);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            $data  = json_decode((string)$response, true);
+            $state = $data['state'] ?? '';
+
+            if ($state === 'ACTIVE') {
+                return true;
+            }
+            if ($state === 'FAILED') {
+                error_log('[FileProcessor] Gemini file processing FAILED: ' . json_encode($data['error'] ?? []));
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Call generateContent with a Gemini Files API file URI to get a transcript.
+     *
+     * @throws \RuntimeException on HTTP error or unexpected response
+     */
+    private function geminiTranscribe(string $fileUri, string $mimeType, string $model, string $apiKey): string
+    {
+        $url  = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        $body = json_encode([
+            'contents' => [[
+                'parts' => [
+                    ['file_data' => ['mime_type' => $mimeType, 'file_uri' => $fileUri]],
+                    ['text' => 'Transcribe all spoken content from this recording. Output the full verbatim transcript only, preserving speaker turns where identifiable (e.g. "Speaker 1:", "Speaker 2:"). Do not summarise, add headings, or add any commentary — output only the transcript text.'],
+                ],
+            ]],
+            'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 65536],
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT        => 120,
+        ]);
+
+        $response  = curl_exec($ch);
+        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '') {
+            throw new \RuntimeException("Gemini transcribe cURL error: {$curlError}");
+        }
+        if ($httpCode !== 200) {
+            throw new \RuntimeException("Gemini transcribe HTTP {$httpCode}: " . substr((string)$response, 0, 300));
+        }
+
+        $data = json_decode((string)$response, true);
+        return trim((string) ($data['candidates'][0]['content']['parts'][0]['text'] ?? ''));
+    }
+
+    /**
+     * Delete a file from Gemini Files API. Non-throwing — failure is logged only.
+     */
+    private function geminiFilesDelete(string $fileName, string $apiKey): void
+    {
+        if ($fileName === '') {
+            return;
+        }
+        $url = "https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}";
+        $ch  = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
     }
 
     /**
