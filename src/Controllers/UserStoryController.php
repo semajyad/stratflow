@@ -24,6 +24,7 @@ use StratFlow\Models\GovernanceItem;
 use StratFlow\Models\StrategicBaseline;
 use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
+use StratFlow\Services\StoryQualityScorer;
 use StratFlow\Services\Prompts\UserStoryPrompt;
 
 class UserStoryController
@@ -162,11 +163,15 @@ class UserStoryController
             }
 
             // Inject org quality rules
+            $qualityBlock = '';
             try {
-                $input .= StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+                $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
             } catch (\Throwable) {
                 // story_quality_config may not exist on a fresh deploy
             }
+            $input .= $qualityBlock;
+
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
 
             try {
                 $gemini     = new GeminiService($this->config);
@@ -191,7 +196,7 @@ class UserStoryController
                     $ac = $acRaw;
                 }
 
-                UserStory::create($this->db, [
+                $newStoryId = UserStory::create($this->db, [
                     'project_id'          => $projectId,
                     'parent_hl_item_id'   => (int) $hlItemId,
                     'priority_number'     => $priorityNumber++,
@@ -204,6 +209,18 @@ class UserStoryController
                                              : null,
                 ]);
                 $totalCreated++;
+
+                // Score the new story — failure is non-fatal
+                $scored = $scorer->scoreStory(
+                    array_merge($storyData, ['acceptance_criteria' => $ac]),
+                    $qualityBlock
+                );
+                if ($scored['score'] !== null) {
+                    UserStory::update($this->db, $newStoryId, [
+                        'quality_score'     => $scored['score'],
+                        'quality_breakdown' => json_encode($scored['breakdown']),
+                    ]);
+                }
             }
         }
 
@@ -316,6 +333,26 @@ class UserStoryController
                 0, 500
             ) ?: null,
         ]);
+
+        // Re-score after update — failure is non-fatal
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+        $scorer = new StoryQualityScorer(new GeminiService($this->config));
+        $storyForScore = array_merge($story, [
+            'title'               => trim((string) $this->request->post('title', $story['title'])),
+            'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
+            'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
+            'kr_hypothesis'       => mb_substr(trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')), 0, 500) ?: null,
+        ]);
+        $scored = $scorer->scoreStory($storyForScore, $qualityBlock);
+        if ($scored['score'] !== null) {
+            UserStory::update($this->db, (int) $id, [
+                'quality_score'     => $scored['score'],
+                'quality_breakdown' => json_encode($scored['breakdown']),
+            ]);
+        }
 
         // Flag parent work item for review if size changed significantly
         if ($oldSize > 0 && $newSize > 0 && abs($newSize - $oldSize) >= 2 && $story['parent_hl_item_id']) {
