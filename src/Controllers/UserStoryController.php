@@ -83,12 +83,20 @@ class UserStoryController
         }
         unset($story);
 
+        // Load field order preference from org settings
+        $orgRow = \StratFlow\Models\Organisation::findById($this->db, $orgId);
+        $orgSettings = $orgRow && !empty($orgRow['settings_json'])
+            ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
+        $defaultStOrder = ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'];
+        $fieldOrderSt = $orgSettings['field_order_story'] ?? $defaultStOrder;
+
         $this->response->render('user-stories', [
             'user'                 => $user,
             'project'              => $project,
             'stories'              => $stories,
             'work_items'           => $workItems,
             'teams'                => $teams,
+            'field_order_st'       => $fieldOrderSt,
             'active_page'          => 'user-stories',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,

@@ -733,6 +733,8 @@ class AdminController
                 'model'   => '',   // empty = use platform default (gemini-3-flash-preview)
                 'api_key' => '',   // empty = use platform default key
             ],
+            'field_order_work_item' => ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'],
+            'field_order_story'     => ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'],
         ];
     }
 
@@ -882,6 +884,25 @@ class AdminController
             'model'    => trim((string) $this->request->post('ai_model', '')),
             'api_key'  => $submittedKey !== '' ? $submittedKey : ($existing['ai']['api_key'] ?? ''),
         ];
+
+        // Field ordering — submitted as comma-separated key lists
+        $validWiFields = ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'];
+        $validStFields = ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'];
+
+        $wiOrder = array_values(array_intersect(
+            array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_work_item', '')))),
+            $validWiFields
+        ));
+        $stOrder = array_values(array_intersect(
+            array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_story', '')))),
+            $validStFields
+        ));
+        // Append any missing fields at the end (safety net)
+        foreach ($validWiFields as $f) { if (!in_array($f, $wiOrder, true)) { $wiOrder[] = $f; } }
+        foreach ($validStFields as $f) { if (!in_array($f, $stOrder, true)) { $stOrder[] = $f; } }
+
+        $settings['field_order_work_item'] = $wiOrder;
+        $settings['field_order_story']     = $stOrder;
 
         Organisation::update($this->db, $orgId, [
             'settings_json' => json_encode($settings),

@@ -170,6 +170,149 @@
         </div>
 
         <!-- ===========================
+             Field Ordering
+             =========================== -->
+        <div class="accordion-item">
+            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+                <span class="accordion-title">Field Ordering</span>
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                    Drag to reorder fields in work item and story modals
+                </span>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-body">
+                <?php
+                $wiLabels = [
+                    'title'               => 'Title',
+                    'okr_title'           => 'OKR Title',
+                    'okr_description'     => 'OKR Description',
+                    'owner'               => 'Owner',
+                    'estimated_sprints'   => 'Estimated Sprints',
+                    'description'         => 'Description',
+                    'acceptance_criteria' => 'Acceptance Criteria',
+                    'kr_hypothesis'       => 'KR Hypothesis',
+                    'git_links'           => 'Git Links',
+                ];
+                $stLabels = [
+                    'title'               => 'Title',
+                    'description'         => 'Description',
+                    'parent_hl_item_id'   => 'Parent Work Item',
+                    'team_assigned'       => 'Team Assigned',
+                    'size'                => 'Size (Story Points)',
+                    'acceptance_criteria' => 'Acceptance Criteria',
+                    'kr_hypothesis'       => 'KR Hypothesis',
+                    'blocked_by'          => 'Blocked By',
+                    'git_links'           => 'Git Links',
+                ];
+
+                // Apply saved order
+                $savedWiOrder = $settings['field_order_work_item'] ?? array_keys($wiLabels);
+                $savedStOrder = $settings['field_order_story']     ?? array_keys($stLabels);
+
+                // Build ordered label arrays, append any new fields not yet in saved order
+                $orderedWi = [];
+                foreach ($savedWiOrder as $k) { if (isset($wiLabels[$k])) $orderedWi[$k] = $wiLabels[$k]; }
+                foreach ($wiLabels as $k => $v) { if (!isset($orderedWi[$k])) $orderedWi[$k] = $v; }
+
+                $orderedSt = [];
+                foreach ($savedStOrder as $k) { if (isset($stLabels[$k])) $orderedSt[$k] = $stLabels[$k]; }
+                foreach ($stLabels as $k => $v) { if (!isset($orderedSt[$k])) $orderedSt[$k] = $v; }
+                ?>
+
+                <style>
+                .field-sort-list {
+                    list-style: none;
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.375rem;
+                }
+                .field-sort-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.5rem 0.75rem;
+                    background: var(--bg, #fff);
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    cursor: grab;
+                    user-select: none;
+                    font-size: 0.875rem;
+                    transition: box-shadow 100ms ease, background 100ms ease;
+                }
+                .field-sort-item:active { cursor: grabbing; }
+                .field-sort-item.drag-over {
+                    border-color: var(--primary);
+                    background: rgba(79,70,229,0.04);
+                }
+                .field-sort-item.dragging {
+                    opacity: 0.4;
+                }
+                .field-sort-handle {
+                    color: var(--text-muted);
+                    font-size: 1rem;
+                    line-height: 1;
+                    flex-shrink: 0;
+                }
+                .field-sort-num {
+                    width: 1.25rem;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    text-align: right;
+                    flex-shrink: 0;
+                }
+                </style>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                    <!-- Work Item Fields -->
+                    <div>
+                        <div style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:0.625rem;">
+                            HL Work Item
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem;">
+                            <span style="font-size:0.75rem; color:#94a3b8;">Priority always appears first and is not reorderable.</span>
+                        </p>
+                        <input type="hidden" name="field_order_work_item" id="field-order-wi"
+                               value="<?= htmlspecialchars(implode(',', array_keys($orderedWi))) ?>">
+                        <ul class="field-sort-list" id="sort-list-wi">
+                            <?php $n = 1; foreach ($orderedWi as $key => $label): ?>
+                                <li class="field-sort-item" draggable="true" data-key="<?= htmlspecialchars($key) ?>"
+                                    data-list="wi">
+                                    <span class="field-sort-handle">⠿</span>
+                                    <span class="field-sort-num"><?= $n++ ?></span>
+                                    <span><?= htmlspecialchars($label) ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                    <!-- Story Fields -->
+                    <div>
+                        <div style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:0.625rem;">
+                            User Story
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem;">&nbsp;</p>
+                        <input type="hidden" name="field_order_story" id="field-order-st"
+                               value="<?= htmlspecialchars(implode(',', array_keys($orderedSt))) ?>">
+                        <ul class="field-sort-list" id="sort-list-st">
+                            <?php $n = 1; foreach ($orderedSt as $key => $label): ?>
+                                <li class="field-sort-item" draggable="true" data-key="<?= htmlspecialchars($key) ?>"
+                                    data-list="st">
+                                    <span class="field-sort-handle">⠿</span>
+                                    <span class="field-sort-num"><?= $n++ ?></span>
+                                    <span><?= htmlspecialchars($label) ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===========================
              Tripwires
              =========================== -->
         <div class="accordion-item">
@@ -223,6 +366,64 @@
 </form>
 
 <script>
+// =========================================================================
+// Drag-and-drop field ordering
+// =========================================================================
+(function () {
+    var dragging = null;
+
+    function initList(listId, inputId) {
+        var list  = document.getElementById(listId);
+        var input = document.getElementById(inputId);
+        if (!list) return;
+
+        list.addEventListener('dragstart', function (e) {
+            dragging = e.target.closest('.field-sort-item');
+            if (!dragging) return;
+            dragging.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        list.addEventListener('dragend', function () {
+            if (dragging) dragging.classList.remove('dragging');
+            list.querySelectorAll('.field-sort-item').forEach(function (el) {
+                el.classList.remove('drag-over');
+            });
+            dragging = null;
+            syncOrder(list, input);
+        });
+
+        list.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            var target = e.target.closest('.field-sort-item');
+            if (!target || target === dragging) return;
+            var rect = target.getBoundingClientRect();
+            var after = e.clientY > rect.top + rect.height / 2;
+            list.querySelectorAll('.field-sort-item').forEach(function (el) { el.classList.remove('drag-over'); });
+            target.classList.add('drag-over');
+            if (after) {
+                list.insertBefore(dragging, target.nextSibling);
+            } else {
+                list.insertBefore(dragging, target);
+            }
+        });
+    }
+
+    function syncOrder(list, input) {
+        var keys = [];
+        var items = list.querySelectorAll('.field-sort-item');
+        items.forEach(function (el, i) {
+            keys.push(el.dataset.key);
+            var num = el.querySelector('.field-sort-num');
+            if (num) num.textContent = i + 1;
+        });
+        input.value = keys.join(',');
+    }
+
+    initList('sort-list-wi', 'field-order-wi');
+    initList('sort-list-st', 'field-order-st');
+}());
+
 var _aiProviderPlaceholders = {
     '':          'e.g. gemini-2.5-flash',
     'google':    'e.g. gemini-2.5-flash',

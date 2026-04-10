@@ -126,6 +126,18 @@
      Edit Modal
      =========================== -->
 <?php require __DIR__ . '/partials/work-item-modal.php'; ?>
+<script>
+(function () {
+    var order = <?= json_encode($field_order_wi ?? []) ?>;
+    if (!order || !order.length) return;
+    var body = document.querySelector('#edit-modal .modal-body');
+    if (!body) return;
+    order.forEach(function (key) {
+        var el = body.querySelector('.modal-field-wrap[data-field="' + key + '"]');
+        if (el) body.appendChild(el);
+    });
+}());
+</script>
 
 <!-- ===========================
      KR Editor Stash (hidden)

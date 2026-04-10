@@ -200,6 +200,18 @@ $unlinkedStories = $storiesByItem[0] ?? [];
      Add/Edit Story Modal
      =========================== -->
 <?php require __DIR__ . '/partials/user-story-modal.php'; ?>
+<script>
+(function () {
+    var order = <?= json_encode($field_order_st ?? []) ?>;
+    if (!order || !order.length) return;
+    var body = document.querySelector('#story-modal .modal-body');
+    if (!body) return;
+    order.forEach(function (key) {
+        var el = body.querySelector('.modal-field-wrap[data-field="' + key + '"]');
+        if (el) body.appendChild(el);
+    });
+}());
+</script>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
