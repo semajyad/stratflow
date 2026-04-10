@@ -24,7 +24,7 @@
 <div class="page-header flex justify-between items-center">
     <div>
         <h1 class="page-title">Executive Dashboard</h1>
-        <p class="page-subtitle">Organisation-wide view &mdash; <?= (int) $portfolio['active'] ?> active project<?= $portfolio['active'] !== 1 ? 's' : '' ?></p>
+        <p class="page-subtitle">Organisation-wide view &mdash; <?= (int) $portfolio['total'] ?> project<?= $portfolio['total'] !== 1 ? 's' : '' ?></p>
     </div>
     <span style="font-size: 13px; color: #64748b;">As of <?= date('d M Y, H:i') ?></span>
 </div>

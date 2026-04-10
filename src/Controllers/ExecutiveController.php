@@ -199,39 +199,63 @@ class ExecutiveController
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
 
         // ── OKR / KR health across all projects ──────────────────────────────
-        // key_results may not exist on a fresh deploy — degrade gracefully.
-        $okrItems  = [];
+        // Fetch OKR work items first — no key_results dependency, always works.
+        $okrItems = $this->db->query(
+            "SELECT hwi.id AS item_id, hwi.title AS item_title, hwi.okr_title,
+                    hwi.priority_number,
+                    p.id AS project_id, p.name AS project_name,
+                    0 AS on_track, 0 AS at_risk, 0 AS off_track,
+                    0 AS not_started, 0 AS achieved, 0 AS kr_count
+               FROM hl_work_items hwi
+               JOIN projects p ON hwi.project_id = p.id
+              WHERE p.org_id = :oid
+                AND hwi.okr_title IS NOT NULL
+                AND hwi.okr_title != ''
+              ORDER BY p.name ASC, hwi.priority_number ASC",
+            [':oid' => $orgId]
+        )->fetchAll();
+
+        // Index by item_id so we can merge KR counts below.
+        $okrIndex = [];
+        foreach ($okrItems as $i => $okr) {
+            $okrIndex[(int) $okr['item_id']] = $i;
+        }
+
         $okrHealth = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
+        // Optionally enrich with KR status counts — degrades silently if table absent.
         try {
-            $okrRows = $this->db->query(
-                "SELECT hwi.id AS item_id, hwi.title AS item_title, hwi.okr_title,
-                        hwi.priority_number,
-                        p.id AS project_id, p.name AS project_name,
+            $krCounts = $this->db->query(
+                "SELECT kr.hl_work_item_id AS item_id,
                         COALESCE(SUM(CASE WHEN kr.status = 'on_track'    THEN 1 ELSE 0 END), 0) AS on_track,
                         COALESCE(SUM(CASE WHEN kr.status = 'at_risk'     THEN 1 ELSE 0 END), 0) AS at_risk,
                         COALESCE(SUM(CASE WHEN kr.status = 'off_track'   THEN 1 ELSE 0 END), 0) AS off_track,
                         COALESCE(SUM(CASE WHEN kr.status = 'not_started' THEN 1 ELSE 0 END), 0) AS not_started,
                         COALESCE(SUM(CASE WHEN kr.status = 'achieved'    THEN 1 ELSE 0 END), 0) AS achieved,
                         COUNT(kr.id) AS kr_count
-                   FROM hl_work_items hwi
+                   FROM key_results kr
+                   JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
                    JOIN projects p ON hwi.project_id = p.id
-                   LEFT JOIN key_results kr ON kr.hl_work_item_id = hwi.id
                   WHERE p.org_id = :oid
-                    AND hwi.okr_title IS NOT NULL
-                    AND hwi.okr_title != ''
-                  GROUP BY hwi.id, hwi.title, hwi.okr_title, hwi.priority_number, p.id, p.name
-                  ORDER BY p.name ASC, hwi.priority_number ASC",
+                  GROUP BY kr.hl_work_item_id",
                 [':oid' => $orgId]
             )->fetchAll();
 
-            $okrItems = $okrRows;
-            foreach ($okrRows as $okr) {
-                $okrHealth['on_track']  += (int) $okr['on_track'];
-                $okrHealth['at_risk']   += (int) $okr['at_risk'];
-                $okrHealth['off_track'] += (int) $okr['off_track'];
+            foreach ($krCounts as $kc) {
+                $idx = $okrIndex[(int) $kc['item_id']] ?? null;
+                if ($idx !== null) {
+                    $okrItems[$idx]['on_track']    = (int) $kc['on_track'];
+                    $okrItems[$idx]['at_risk']     = (int) $kc['at_risk'];
+                    $okrItems[$idx]['off_track']   = (int) $kc['off_track'];
+                    $okrItems[$idx]['not_started'] = (int) $kc['not_started'];
+                    $okrItems[$idx]['achieved']    = (int) $kc['achieved'];
+                    $okrItems[$idx]['kr_count']    = (int) $kc['kr_count'];
+                }
+                $okrHealth['on_track']  += (int) $kc['on_track'];
+                $okrHealth['at_risk']   += (int) $kc['at_risk'];
+                $okrHealth['off_track'] += (int) $kc['off_track'];
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] OKR health query failed: ' . $e->getMessage());
+            error_log('[Executive] KR counts query failed: ' . $e->getMessage());
         }
 
         // ── Table A: Top 10 active risks ──────────────────────────────────────
@@ -339,7 +363,8 @@ class ExecutiveController
         )->fetchAll();
 
         // KRs per work item — key_results may not exist on fresh deploy
-        $krsByItemId        = [];
+        $krRows              = [];
+        $krsByItemId         = [];
         $contributionsByKrId = [];
         try {
             $krRows = KeyResult::findByProjectOkrs($this->db, $id, $orgId);
