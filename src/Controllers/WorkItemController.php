@@ -100,12 +100,19 @@ class WorkItemController
             error_log('[WorkItems] KR lookup failed: ' . $e->getMessage());
         }
 
+        // Distinct non-empty OKR titles for the modal datalist
+        $distinctOkrTitles = array_values(array_filter(
+            array_unique(array_column($workItems, 'okr_title')),
+            fn($t) => $t !== null && $t !== ''
+        ));
+
         $this->response->render('work-items', [
             'user'                 => $user,
             'project'              => $project,
             'work_items'           => $workItems,
             'krs_by_item_id'       => $krsByItemId,
             'diagram'              => $diagram,
+            'distinct_okr_titles'  => $distinctOkrTitles,
             'active_page'          => 'work-items',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,

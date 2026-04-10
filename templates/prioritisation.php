@@ -105,8 +105,8 @@ $formula = $isRice
         <h3>Score Work Items (<?= count($work_items) ?>)</h3>
         <span class="text-muted" style="font-size: 0.8125rem;"><?= $formula ?></span>
     </div>
-    <div class="card-body" style="padding: 0; overflow-x: auto;">
-        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>">
+    <div class="card-body" style="padding: 0; overflow: auto; max-height: calc(100vh - 260px);">
+        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="min-width: 700px;">
             <thead>
                 <tr>
                     <th style="width: 50px;">#</th>

@@ -31,7 +31,14 @@
 
                 <div class="form-group">
                     <label>OKR Title</label>
-                    <input type="text" name="okr_title" id="modal-okr-title">
+                    <input type="text" name="okr_title" id="modal-okr-title"
+                           list="okr-title-suggestions"
+                           placeholder="e.g. Increase conversion rate from 2% → 3.5%">
+                    <datalist id="okr-title-suggestions">
+                        <?php foreach ($distinct_okr_titles ?? [] as $t): ?>
+                            <option value="<?= htmlspecialchars($t, ENT_QUOTES, 'UTF-8') ?>">
+                        <?php endforeach; ?>
+                    </datalist>
                 </div>
 
                 <div class="form-group">

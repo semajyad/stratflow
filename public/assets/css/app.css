@@ -1163,9 +1163,20 @@ tbody tr:hover {
     color: var(--text);
 }
 
+/* Form inside modal must be flex so footer stays pinned at bottom */
+.modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .modal-body {
     padding: 1.5rem;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-footer {

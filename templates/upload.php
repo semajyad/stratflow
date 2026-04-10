@@ -146,7 +146,9 @@ function formatFileSize(int $bytes): string {
                       placeholder="Paste meeting notes, strategy briefs, or any strategic content here..."></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary">Upload & Extract</button>
+        <div style="padding: 0 1.5rem 1.5rem; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary">Upload &amp; Extract</button>
+        </div>
     </form>
 </section>
 
