@@ -102,10 +102,11 @@ class SystemSettings
         $filtered = array_intersect_key($data, array_flip(self::ALLOWED_KEYS));
         $merged   = array_merge($current, $filtered);
 
+        $json = json_encode($merged);
         $db->query(
-            "INSERT INTO system_settings (id, settings_json) VALUES (1, :json)
-             ON DUPLICATE KEY UPDATE settings_json = :json, updated_at = NOW()",
-            [':json' => json_encode($merged)]
+            "INSERT INTO system_settings (id, settings_json) VALUES (1, :json_insert)
+             ON DUPLICATE KEY UPDATE settings_json = :json_update, updated_at = NOW()",
+            [':json_insert' => $json, ':json_update' => $json]
         );
     }
 }

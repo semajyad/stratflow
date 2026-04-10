@@ -57,7 +57,22 @@
             An unexpected error occurred. Our team has been notified.
             Please try again in a few moments.
         </p>
-        <a href="/" class="error-link">Return to Home</a>
+        <?php
+        $backUrl   = '/';
+        $backLabel = 'Return to Home';
+        if (isset($_SESSION['user'])) {
+            $role           = $_SESSION['user']['role'] ?? 'user';
+            $isProjectAdmin = (bool) ($_SESSION['user']['is_project_admin'] ?? false);
+            if (in_array($role, ['org_admin', 'superadmin'], true) || $isProjectAdmin) {
+                $backUrl   = '/app/home';
+                $backLabel = 'Return to Dashboard';
+            } else {
+                $backUrl   = '/app/upload';
+                $backLabel = 'Return to Upload';
+            }
+        }
+        ?>
+        <a href="<?= htmlspecialchars($backUrl) ?>" class="error-link"><?= htmlspecialchars($backLabel) ?></a>
     </div>
 </body>
 </html>
