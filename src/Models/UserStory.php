@@ -8,7 +8,7 @@
  *
  * Columns: id, project_id, parent_hl_item_id, priority_number, title,
  *          description, parent_link, team_assigned, size, blocked_by,
- *          created_at, updated_at
+ *          acceptance_criteria, kr_hypothesis, created_at, updated_at
  */
 
 declare(strict_types=1);
@@ -28,7 +28,8 @@ class UserStory
      *
      * @param Database $db   Database instance
      * @param array    $data Keys: project_id, parent_hl_item_id, priority_number,
-     *                       title, description, parent_link, team_assigned, size, blocked_by
+     *                       title, description, parent_link, team_assigned, size,
+     *                       blocked_by, acceptance_criteria, kr_hypothesis
      * @return int           ID of the inserted row
      */
     public static function create(Database $db, array $data): int
@@ -36,21 +37,25 @@ class UserStory
         $db->query(
             "INSERT INTO user_stories
                 (project_id, parent_hl_item_id, priority_number, title, description,
-                 parent_link, team_assigned, size, blocked_by, status)
+                 parent_link, team_assigned, size, blocked_by,
+                 acceptance_criteria, kr_hypothesis, status)
              VALUES
                 (:project_id, :parent_hl_item_id, :priority_number, :title, :description,
-                 :parent_link, :team_assigned, :size, :blocked_by, :status)",
+                 :parent_link, :team_assigned, :size, :blocked_by,
+                 :acceptance_criteria, :kr_hypothesis, :status)",
             [
-                ':project_id'        => $data['project_id'],
-                ':parent_hl_item_id' => $data['parent_hl_item_id'] ?? null,
-                ':priority_number'   => $data['priority_number'],
-                ':title'             => $data['title'],
-                ':description'       => $data['description'] ?? null,
-                ':parent_link'       => $data['parent_link'] ?? null,
-                ':team_assigned'     => $data['team_assigned'] ?? null,
-                ':size'              => $data['size'] ?? null,
-                ':blocked_by'        => $data['blocked_by'] ?? null,
-                ':status'            => $data['status'] ?? 'backlog',
+                ':project_id'          => $data['project_id'],
+                ':parent_hl_item_id'   => $data['parent_hl_item_id'] ?? null,
+                ':priority_number'     => $data['priority_number'],
+                ':title'               => $data['title'],
+                ':description'         => $data['description'] ?? null,
+                ':parent_link'         => $data['parent_link'] ?? null,
+                ':team_assigned'       => $data['team_assigned'] ?? null,
+                ':size'                => $data['size'] ?? null,
+                ':blocked_by'          => $data['blocked_by'] ?? null,
+                ':acceptance_criteria' => $data['acceptance_criteria'] ?? null,
+                ':kr_hypothesis'       => $data['kr_hypothesis'] ?? null,
+                ':status'              => $data['status'] ?? 'backlog',
             ]
         );
 
@@ -182,7 +187,8 @@ class UserStory
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'parent_hl_item_id',
-        'parent_link', 'team_assigned', 'size', 'blocked_by', 'requires_review', 'status', 'last_jira_sync_at',
+        'parent_link', 'team_assigned', 'size', 'blocked_by',
+        'acceptance_criteria', 'kr_hypothesis', 'requires_review', 'status', 'last_jira_sync_at',
     ];
 
     public static function update(Database $db, int $id, array $data): void
