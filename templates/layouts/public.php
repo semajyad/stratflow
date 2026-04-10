@@ -13,7 +13,7 @@
 <body>
     <header class="public-header">
         <div class="container">
-            <a href="/" class="logo">StratFlow</a>
+            <a href="/" class="logo"><img src="/assets/images/stratflow-logo.png" alt="StratFlow"></a>
             <nav>
                 <a href="/pricing">Pricing</a>
                 <a href="/login">Login</a>
