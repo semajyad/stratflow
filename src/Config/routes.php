@@ -171,6 +171,11 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/integrations/git/{provider}/regenerate-secret', 'GitIntegrationController@regenerateSecret', ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/integrations/git/{provider}/reveal-secret',     'GitIntegrationController@revealSecret',     ['auth', 'admin', 'csrf']);
 
+    // Story quality rules — org-configurable AI quality constraints
+    $router->add('GET',  '/app/admin/story-quality-rules',                    'StoryQualityController@index',  ['auth', 'admin']);
+    $router->add('POST', '/app/admin/story-quality-rules',                    'StoryQualityController@store',  ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/story-quality-rules/{id}/delete',        'StoryQualityController@delete', ['auth', 'admin', 'csrf']);
+
     // Admin — static routes MUST come before {id} routes
     $router->add('GET',  '/app/admin',                       'AdminController@index',            ['auth', 'admin']);
     $router->add('GET',  '/app/admin/users',                 'AdminController@users',            ['auth', 'admin']);
