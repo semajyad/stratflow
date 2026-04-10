@@ -105,16 +105,16 @@ $formula = $isRice
         <h3>Score Work Items (<?= count($work_items) ?>)</h3>
         <span class="text-muted" style="font-size: 0.8125rem;"><?= $formula ?></span>
     </div>
-    <div class="card-body" style="padding: 0; overflow: auto; max-height: calc(100vh - 260px);">
-        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="min-width: 700px;">
+    <div class="card-body" style="padding: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 260px);">
+        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="width: 100%;">
             <thead>
                 <tr>
-                    <th style="width: 50px;">#</th>
+                    <th style="width: 36px;">#</th>
                     <th>Title</th>
                     <?php foreach ($labels as $label): ?>
-                        <th style="width: 100px; text-align: center;"><?= $label ?></th>
+                        <th style="width: 80px; text-align: center; white-space: nowrap; font-size: 0.75rem;"><?= $label ?></th>
                     <?php endforeach; ?>
-                    <th style="width: 90px; text-align: center;">Score</th>
+                    <th style="width: 70px; text-align: center; position: sticky; right: 0; background: var(--bg, #fff); z-index: 1;">Score</th>
                 </tr>
             </thead>
             <tbody>
