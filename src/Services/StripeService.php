@@ -154,6 +154,78 @@ class StripeService
     // ===========================
 
     /**
+     * Create a Stripe Checkout Session for purchasing seats.
+     *
+     * Passes quantity directly so the customer can buy N seats in one go.
+     * Attaches to an existing Stripe customer when available so payment
+     * methods are pre-filled.
+     *
+     * @param string      $priceId     Stripe price ID for the plan
+     * @param int         $quantity    Number of seats to subscribe to
+     * @param string      $successUrl  Redirect URL on success (?session_id={CHECKOUT_SESSION_ID} appended)
+     * @param string      $cancelUrl   Redirect URL on cancellation
+     * @param string|null $customerId  Existing Stripe customer ID to pre-fill (optional)
+     * @return Session                 The created Checkout Session
+     */
+    public function createSeatCheckout(
+        string $priceId,
+        int $quantity,
+        string $successUrl,
+        string $cancelUrl,
+        ?string $customerId = null
+    ): Session {
+        $params = [
+            'mode'        => 'subscription',
+            'line_items'  => [['price' => $priceId, 'quantity' => max(1, $quantity)]],
+            'success_url' => $successUrl,
+            'cancel_url'  => $cancelUrl,
+        ];
+        if ($customerId !== null) {
+            $params['customer'] = $customerId;
+        }
+        return Session::create($params);
+    }
+
+    /**
+     * List all subscriptions for a Stripe customer.
+     *
+     * Returns active, trialing, and past_due subscriptions so the billing
+     * page can show a full picture of what the org is subscribed to.
+     *
+     * @param string $customerId Stripe customer ID (cus_xxx)
+     * @return array[]           Normalised subscription data arrays
+     */
+    public function listSubscriptions(string $customerId): array
+    {
+        \Stripe\Stripe::setApiKey($this->config['secret_key']);
+        $result = \Stripe\Subscription::all([
+            'customer' => $customerId,
+            'limit'    => 20,
+            'expand'   => ['data.items.data.price'],
+        ]);
+
+        $out = [];
+        foreach ($result->data as $sub) {
+            $item = $sub->items->data[0] ?? null;
+            $out[] = [
+                'id'                   => $sub->id,
+                'status'               => $sub->status,
+                'current_period_start' => date('j M Y', $sub->current_period_start),
+                'current_period_end'   => date('j M Y', $sub->current_period_end),
+                'cancel_at_period_end' => $sub->cancel_at_period_end,
+                'quantity'             => $item?->quantity ?? 1,
+                'unit_amount'          => $item?->price->unit_amount ?? 0,
+                'currency'             => strtoupper($item?->price->currency ?? 'USD'),
+                'interval'             => $item?->price->recurring?->interval ?? 'month',
+                'product_name'         => is_string($item?->price->product)
+                                            ? $item?->price->product
+                                            : ($item?->price->product?->name ?? 'StratFlow'),
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * List up to 50 invoices for a Stripe customer.
      *
      * @param string $customerId Stripe customer ID (cus_xxx)

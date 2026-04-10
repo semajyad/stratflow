@@ -395,13 +395,18 @@ class JiraService
         });
         $sprints = array_slice($sprints, 0, $numSprints);
 
-        // Map common aliases to Jira field names
-        $fieldAliases = [
-            'story_points'  => 'story_points',
-            'customfield_10016' => 'customfield_10016',
-            'customfield_10028' => 'customfield_10028',
-        ];
-        $jiraField = $fieldAliases[$storyPointsField] ?? $storyPointsField;
+        // Candidate story-points field names in priority order.
+        // Jira Cloud almost always stores story points in customfield_10016;
+        // some instances use customfield_10028 or customfield_10004.
+        // We request all of them in one call and take the first non-zero value per issue.
+        $candidateFields = array_unique(array_filter([
+            $storyPointsField,
+            'customfield_10016',
+            'customfield_10028',
+            'customfield_10004',
+            'story_points',
+        ]));
+        $fieldsParam = implode(',', $candidateFields);
 
         $totals = [];
         foreach ($sprints as $sprint) {
@@ -412,11 +417,19 @@ class JiraService
             try {
                 $issueResult = $this->makeAuthenticatedRequest(
                     'GET',
-                    "/rest/agile/1.0/sprint/{$sprintId}/issue?jql=status%3DDone&fields={$jiraField}&maxResults=200"
+                    "/rest/agile/1.0/sprint/{$sprintId}/issue?jql=status%3DDone&fields={$fieldsParam}&maxResults=200"
                 );
                 $pts = 0;
                 foreach ($issueResult['issues'] ?? [] as $issue) {
-                    $pts += (float) ($issue['fields'][$jiraField] ?? 0);
+                    $fields = $issue['fields'] ?? [];
+                    // Take the first non-null, non-zero value across all candidate fields
+                    foreach ($candidateFields as $f) {
+                        $val = isset($fields[$f]) ? (float) $fields[$f] : 0.0;
+                        if ($val > 0) {
+                            $pts += $val;
+                            break;
+                        }
+                    }
                 }
                 $totals[] = $pts;
             } catch (\Throwable) {
@@ -428,7 +441,8 @@ class JiraService
             return null;
         }
 
-        return (int) round(array_sum($totals) / count($totals));
+        $avg = (int) round(array_sum($totals) / count($totals));
+        return $avg > 0 ? $avg : null;
     }
 
     /**

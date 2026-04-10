@@ -547,16 +547,25 @@ class AdminController
 
         $hasStripeCustomer = !empty($org['stripe_customer_id']);
 
+        // Check whether a Stripe price is configured for this org's plan type
+        $planType = $sub['plan_type'] ?? 'product';
+        $hasStripePriceConfig = !empty($this->config['stripe']['price_' . $planType] ?? '');
+        if (!$hasStripePriceConfig && !empty($this->config['stripe']['price_product'] ?? '')) {
+            $hasStripePriceConfig = true; // fall back to product price
+        }
+
         // Billing contact from org settings_json
         $orgSettings    = json_decode($org['settings_json'] ?? '{}', true) ?? [];
         $billingContact = $orgSettings['billing_contact'] ?? [];
 
-        // Load Stripe invoices for inline display
-        $stripeInvoices = [];
+        // Load Stripe invoices and subscriptions for inline display
+        $stripeInvoices       = [];
+        $stripeSubscriptions  = [];
         if ($hasStripeCustomer) {
             try {
                 $stripe = new StripeService($this->config['stripe']);
-                $stripeInvoices = $stripe->listInvoices($org['stripe_customer_id']);
+                $stripeInvoices      = $stripe->listInvoices($org['stripe_customer_id']);
+                $stripeSubscriptions = $stripe->listSubscriptions($org['stripe_customer_id']);
             } catch (\Throwable) {}
         }
 
@@ -591,8 +600,10 @@ class AdminController
             'xero_connected'      => $xeroConnected,
             'xero_tenant_name'    => $xeroTenantName,
             'pushed_to_xero'      => $pushedToXero,
-            'billing_contact'     => $billingContact,
-            'csrf_token'          => $_SESSION['csrf_token'] ?? '',
+            'billing_contact'      => $billingContact,
+            'stripe_subscriptions'    => $stripeSubscriptions,
+            'has_stripe_price_config' => $hasStripePriceConfig,
+            'csrf_token'              => $_SESSION['csrf_token'] ?? '',
             'active_page'         => 'billing',
             'flash_message'       => $_SESSION['flash_message'] ?? null,
             'flash_error'         => $_SESSION['flash_error']   ?? null,
@@ -660,6 +671,105 @@ class AdminController
 
         $_SESSION['flash_message'] = 'Billing contact saved.';
         $this->response->redirect('/app/admin/billing');
+    }
+
+    /**
+     * Purchase additional seats for an invoice-billed organisation.
+     *
+     * Increments the seat limit immediately. The updated seat count is
+     * reflected in the cost breakdown and will be included in the next invoice.
+     */
+    public function purchaseSeatsInvoice(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $sub = Subscription::findByOrgId($this->db, $orgId);
+        if (!$sub) {
+            $_SESSION['flash_error'] = 'No active subscription found.';
+            $this->response->redirect('/app/admin/billing');
+            return;
+        }
+
+        $seatsToAdd = max(1, (int) $this->request->post('seats_to_add', 0));
+        if ($seatsToAdd < 1) {
+            $_SESSION['flash_error'] = 'Please enter at least 1 seat to add.';
+            $this->response->redirect('/app/admin/billing');
+            return;
+        }
+
+        $currentLimit = Subscription::getSeatLimit($this->db, $orgId);
+        $newLimit     = $currentLimit + $seatsToAdd;
+        Subscription::updateSeatLimit($this->db, $orgId, $newLimit);
+
+        \StratFlow\Services\AuditLogger::log(
+            $this->db, (int) $user['id'],
+            \StratFlow\Services\AuditLogger::ADMIN_ACTION,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'seats_purchased_invoice', 'org_id' => $orgId,
+             'seats_added' => $seatsToAdd, 'new_limit' => $newLimit]
+        );
+
+        $pricePerSeat = (int) ($sub['price_per_seat_cents'] ?? 0);
+        $addedCost    = $pricePerSeat > 0
+            ? ' Your next invoice will include an additional $' . number_format(($pricePerSeat * $seatsToAdd) / 100, 2) . '.'
+            : '';
+
+        $_SESSION['flash_message'] = "{$seatsToAdd} seat" . ($seatsToAdd > 1 ? 's' : '') .
+            " added. New seat limit: {$newLimit}.{$addedCost}";
+        $this->response->redirect('/app/admin/billing');
+    }
+
+    /**
+     * Initiate a Stripe Checkout Session for purchasing a seat subscription.
+     *
+     * Creates a Checkout Session for the org's plan price at the requested
+     * quantity and redirects the user to the Stripe-hosted payment page.
+     */
+    public function purchaseSeatsStripe(): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $org = Organisation::findById($this->db, $orgId);
+        $sub = Subscription::findByOrgId($this->db, $orgId);
+
+        $quantity = max(1, (int) $this->request->post('seat_quantity', 1));
+        $planType = $sub['plan_type'] ?? 'product';
+
+        $priceMap = [
+            'product'     => $this->config['stripe']['price_product']     ?? '',
+            'consultancy' => $this->config['stripe']['price_consultancy'] ?? '',
+        ];
+        $priceId = $priceMap[$planType] ?? ($priceMap['product'] ?? '');
+
+        if ($priceId === '') {
+            $_SESSION['flash_error'] = 'No Stripe price configured for this plan. Contact support.';
+            $this->response->redirect('/app/admin/billing');
+            return;
+        }
+
+        $appUrl     = rtrim($this->config['app']['url'] ?? '', '/');
+        $successUrl = $appUrl . '/app/admin/billing?seats_purchased=1';
+        $cancelUrl  = $appUrl . '/app/admin/billing';
+        $customerId = !empty($org['stripe_customer_id']) ? $org['stripe_customer_id'] : null;
+
+        try {
+            $stripe  = new StripeService($this->config['stripe']);
+            $session = $stripe->createSeatCheckout($priceId, $quantity, $successUrl, $cancelUrl, $customerId);
+
+            \StratFlow\Services\AuditLogger::log(
+                $this->db, (int) $user['id'],
+                \StratFlow\Services\AuditLogger::ADMIN_ACTION,
+                $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+                ['action' => 'stripe_seat_checkout_started', 'org_id' => $orgId, 'quantity' => $quantity]
+            );
+
+            $this->response->redirect($session->url);
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Could not start checkout: ' . $e->getMessage();
+            $this->response->redirect('/app/admin/billing');
+        }
     }
 
     public function invoices(): void

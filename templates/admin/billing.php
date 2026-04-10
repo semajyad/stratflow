@@ -266,6 +266,132 @@ $billingContact  = $billing_contact ?? [];
 </div>
 
 <!-- ===========================
+     Purchase Seats
+     =========================== -->
+<?php if ($sub): ?>
+<section class="card mt-4">
+    <div class="card-header"><h2 class="card-title">Purchase Seats</h2></div>
+    <div class="card-body">
+        <?php if ($isInvoice): ?>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1.25rem;">
+                Add seats to your subscription. The additional cost will be reflected in your next invoice.
+                <?php if ($pricePerSeat > 0): ?>
+                    Current rate: <strong>$<?= number_format($pricePerSeat / 100, 2) ?>/seat/<?= strtolower($periodLabel) ?></strong>.
+                <?php endif; ?>
+            </p>
+            <form method="POST" action="/app/admin/billing/seats/invoice" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+                    <div>
+                        <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem;">Seats to Add</label>
+                        <input type="number" name="seats_to_add" id="invoice-seats-input"
+                               min="1" max="1000" value="1" class="form-control" style="width:110px;"
+                               oninput="updateInvoiceSeatPreview()">
+                    </div>
+                    <?php if ($pricePerSeat > 0): ?>
+                    <div id="invoice-seat-preview" style="font-size:0.875rem; color:#2563eb; padding-bottom:0.5rem;">
+                        <span id="invoice-preview-text">+$<?= number_format($pricePerSeat / 100, 2) ?>/<?= strtolower($periodLabel) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <button type="submit" class="btn btn-primary"
+                            onclick="return confirm('Add seats to your subscription? This will be billed on your next invoice.')">
+                        Add Seats
+                    </button>
+                </div>
+            </form>
+            <?php if ($pricePerSeat > 0): ?>
+            <script>
+            (function() {
+                var pricePerSeat    = <?= $pricePerSeat ?>;
+                var periodLabel     = <?= json_encode(strtolower($periodLabel)) ?>;
+                window.updateInvoiceSeatPreview = function() {
+                    var n    = parseInt(document.getElementById('invoice-seats-input').value, 10) || 1;
+                    var cost = (pricePerSeat * n / 100).toFixed(2);
+                    document.getElementById('invoice-preview-text').textContent =
+                        '+$' + cost + '/' + periodLabel + ' (' + n + ' seat' + (n !== 1 ? 's' : '') + ')';
+                };
+            })();
+            </script>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1.25rem;">
+                Choose how many seats you'd like and you'll be taken to our secure Stripe checkout to complete the purchase.
+            </p>
+            <?php if ($has_stripe_price_config ?? false): ?>
+            <form method="POST" action="/app/admin/billing/seats/stripe" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+                    <div>
+                        <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem;">Number of Seats</label>
+                        <input type="number" name="seat_quantity" min="1" max="1000"
+                               value="<?= (int) $seat_limit ?>"
+                               class="form-control" style="width:110px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Go to Stripe Checkout</button>
+                </div>
+            </form>
+            <?php else: ?>
+            <p style="font-size:0.875rem; color:var(--danger);">
+                Stripe pricing is not configured for this plan. Contact <a href="mailto:support@stratflow.io">support@stratflow.io</a>.
+            </p>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
+     Stripe Subscriptions (Stripe billing only)
+     =========================== -->
+<?php if (!$isInvoice && !empty($stripe_subscriptions)): ?>
+<section class="card mt-4">
+    <div class="card-header"><h2 class="card-title">Active Subscriptions</h2></div>
+    <div class="card-body" style="padding:0;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border);">
+                    <th style="padding:0.6rem 1.25rem; text-align:left; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Product</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:center; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Seats</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:right; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Price/Seat</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:left; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Billing Period</th>
+                    <th style="padding:0.6rem 1.25rem; text-align:center; font-size:0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($stripe_subscriptions as $ss): ?>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.75rem 1.25rem; font-size:0.875rem; font-weight:600;"><?= htmlspecialchars($ss['product_name']) ?></td>
+                    <td style="padding:0.75rem 1.25rem; text-align:center; font-size:0.875rem;"><?= (int) $ss['quantity'] ?></td>
+                    <td style="padding:0.75rem 1.25rem; text-align:right; font-size:0.875rem;">
+                        <?= htmlspecialchars($ss['currency']) ?>&nbsp;<?= number_format($ss['unit_amount'] / 100, 2) ?>/<?= htmlspecialchars($ss['interval']) ?>
+                    </td>
+                    <td style="padding:0.75rem 1.25rem; font-size:0.875rem; color:var(--text-muted);">
+                        <?= htmlspecialchars($ss['current_period_start']) ?> &rarr; <?= htmlspecialchars($ss['current_period_end']) ?>
+                        <?php if ($ss['cancel_at_period_end']): ?>
+                            <span style="color:var(--danger); font-size:0.75rem; margin-left:0.4rem;">(cancels at period end)</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="padding:0.75rem 1.25rem; text-align:center;">
+                        <?php
+                        $ssBadge = match($ss['status']) {
+                            'active'   => 'badge-success',
+                            'trialing' => 'badge-info',
+                            'past_due' => 'badge-warning',
+                            default    => 'badge-secondary',
+                        };
+                        ?>
+                        <span class="badge <?= $ssBadge ?>"><?= htmlspecialchars(ucfirst($ss['status'])) ?></span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ===========================
      Cost Breakdown (invoice billing only)
      =========================== -->
 <?php if ($isInvoice && $pricePerSeat > 0): ?>
