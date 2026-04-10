@@ -738,13 +738,18 @@ function applyAiSuggestions(suggestions, framework) {
         var row = document.querySelector('.prio-row[data-id="' + suggestion.id + '"]');
         if (!row) { return; }
 
-        var maxVal = framework === 'wsjf' ? 20 : 10;
-        var dropdowns = row.querySelectorAll('.score-dropdown');
+            var dropdowns = row.querySelectorAll('.score-dropdown');
+        var wsjfFib = [1, 2, 3, 5, 8, 13, 20];
         scoreFields.forEach(function(field, i) {
             var val = parseInt(suggestion[field]) || 0;
-            if (val >= 1 && val <= maxVal && dropdowns[i]) {
-                dropdowns[i].value = val;
+            if (val < 1 || !dropdowns[i]) { return; }
+            if (framework === 'wsjf') {
+                // Snap to nearest Fibonacci value in case AI returned a non-Fibonacci number
+                val = wsjfFib.reduce(function(prev, curr) {
+                    return Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev;
+                });
             }
+            dropdowns[i].value = val;
         });
 
         calculateAndSaveScore(row, String(suggestion.id), framework);
@@ -799,10 +804,13 @@ function openWorkItemModal(rowEl) {
         document.getElementById('modal-description').value = '';
         document.getElementById('modal-okr-title').value   = '';
         document.getElementById('modal-okr-desc').value    = '';
-        document.getElementById('modal-owner').value       = '';
+        var ownerEl = document.getElementById('modal-owner');
+        if (ownerEl) { ownerEl.value = ''; }
+        var sprintsEl = document.getElementById('modal-estimated-sprints');
+        if (sprintsEl) { sprintsEl.value = sprintsEl.tagName === 'SELECT' ? sprintsEl.options[0].value : ''; }
         form.action = '/app/work-items/store';
     } else {
-        // Edit mode — reuse existing data population
+        // Edit mode — populate fields from data attributes on the row
         if (modalTitle) { modalTitle.textContent = 'Edit Work Item'; }
         if (submitBtn)  { submitBtn.textContent = 'Update'; }
         if (descBtn)    { descBtn.style.display = ''; }
@@ -812,7 +820,10 @@ function openWorkItemModal(rowEl) {
         document.getElementById('modal-description').value   = rowEl.dataset.description || '';
         document.getElementById('modal-okr-title').value     = rowEl.dataset.okrTitle || '';
         document.getElementById('modal-okr-desc').value      = rowEl.dataset.okrDesc || '';
-        document.getElementById('modal-owner').value         = rowEl.dataset.owner || '';
+        var ownerSel = document.getElementById('modal-owner');
+        if (ownerSel) { ownerSel.value = rowEl.dataset.owner || ''; }
+        var sprintsSel = document.getElementById('modal-estimated-sprints');
+        if (sprintsSel) { sprintsSel.value = rowEl.dataset.estimatedSprints || ''; }
         form.action = '/app/work-items/' + currentEditId;
 
         // Mount the KR editor for this item into the modal

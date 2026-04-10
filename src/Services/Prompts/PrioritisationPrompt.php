@@ -23,12 +23,13 @@ Return a JSON array where each element has: "id" (the work item ID), "reach", "i
 PROMPT;
 
     public const WSJF_PROMPT = <<<'PROMPT'
-You are an Agile Product Manager. For each high-level work item below, estimate WSJF scores on a 1-10 scale:
-- Business Value: How much value does this deliver? (1=minimal, 10=critical)
-- Time Criticality: How urgent is this? (1=can wait, 10=immediate)
-- Risk Reduction: How much risk/opportunity does this address? (1=none, 10=major)
-- Job Size: How large is the work? (1=tiny, 10=massive)
+You are an Agile Product Manager. For each high-level work item below, estimate WSJF scores using the Fibonacci scale: 1, 2, 3, 5, 8, 13, 20.
+- Business Value: How much value does this deliver? (1=minimal, 20=critical)
+- Time Criticality: How urgent is this? (1=can wait, 20=immediate)
+- Risk Reduction: How much risk/opportunity does this address? (1=none, 20=major)
+- Job Size: How large is the work? (1=tiny, 20=massive)
 
+You MUST only use values from this set: 1, 2, 3, 5, 8, 13, 20.
 Return a JSON array where each element has: "id" (the work item ID), "business_value", "time_criticality", "risk_reduction", "job_size".
 PROMPT;
 }

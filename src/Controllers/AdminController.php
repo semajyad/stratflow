@@ -726,6 +726,8 @@ class AdminController
                 'enterprise_business_strategist' => 'Analyse the provided file to a 3-paragraph summary',
             ],
             'hl_item_default_months'       => 2,
+            'hl_item_sizing_method'        => 'sprints',
+            'sprint_length_weeks'          => 2,
             'user_story_max_size'          => 13,
             'capacity_tripwire_percent'    => 20,
             'dependency_tripwire_enabled'  => true,
@@ -866,6 +868,9 @@ class AdminController
                 'enterprise_business_strategist' => trim((string) $this->request->post('persona_enterprise_business_strategist', '')),
             ],
             'hl_item_default_months'      => (int) $this->request->post('hl_item_default_months', '2'),
+            'hl_item_sizing_method'       => in_array($this->request->post('hl_item_sizing_method'), ['sprints','weeks','months','t_shirt'], true)
+                ? $this->request->post('hl_item_sizing_method') : 'sprints',
+            'sprint_length_weeks'         => max(1, min(12, (int) $this->request->post('sprint_length_weeks', '2'))),
             'user_story_max_size'         => (int) $this->request->post('user_story_max_size', '13'),
             'capacity_tripwire_percent'   => (int) $this->request->post('capacity_tripwire_percent', '20'),
             'dependency_tripwire_enabled' => $this->request->post('dependency_tripwire_enabled') === '1',

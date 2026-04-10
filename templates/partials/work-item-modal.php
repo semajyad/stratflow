@@ -6,8 +6,19 @@
  * from data attributes on the row. Supports AI description generation.
  * Fields are wrapped in .modal-field-wrap[data-field] for order control.
  *
- * Expects $csrf_token (string) and $project (array) from the parent scope.
+ * Expects $csrf_token (string), $project (array), $teams (array),
+ * $hl_sizing_method (string) from the parent scope.
  */
+<?php
+$sizingMethod = $hl_sizing_method ?? 'sprints';
+$sizingLabels = [
+    'sprints' => 'Estimated Sprints',
+    'weeks'   => 'Estimated Weeks',
+    'months'  => 'Estimated Months',
+    't_shirt' => 'Size',
+];
+$sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
+?>
 ?>
 <div class="modal-overlay hidden" id="edit-modal">
     <div class="modal" style="max-width: 760px;">
@@ -56,15 +67,38 @@
 
                 <div class="modal-field-wrap" data-field="owner">
                     <div class="form-group">
-                        <label>Owner</label>
-                        <input type="text" name="owner" id="modal-owner" placeholder="e.g. Team Alpha">
+                        <label>Owner (Team)</label>
+                        <select name="owner" id="modal-owner" class="form-control">
+                            <option value="">-- Unassigned --</option>
+                            <?php foreach ($teams ?? [] as $team): ?>
+                                <option value="<?= htmlspecialchars($team['name']) ?>"><?= htmlspecialchars($team['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
 
                 <div class="modal-field-wrap" data-field="estimated_sprints">
                     <div class="form-group">
-                        <label>Estimated Sprints</label>
-                        <input type="number" name="estimated_sprints" id="modal-estimated-sprints" min="1" max="12" placeholder="2">
+                        <label id="modal-sizing-label"><?= htmlspecialchars($sizingLabel) ?></label>
+                        <?php if ($sizingMethod === 't_shirt'): ?>
+                            <select name="estimated_sprints" id="modal-estimated-sprints" class="form-control" style="max-width:160px;">
+                                <option value="1">XS</option>
+                                <option value="2">S</option>
+                                <option value="3">M</option>
+                                <option value="5">L</option>
+                                <option value="8">XL</option>
+                                <option value="13">XXL</option>
+                            </select>
+                        <?php else: ?>
+                            <input type="number" name="estimated_sprints" id="modal-estimated-sprints"
+                                   class="form-control" style="max-width:120px;"
+                                   min="1" max="<?= $sizingMethod === 'months' ? 24 : 52 ?>" placeholder="2">
+                        <?php endif; ?>
+                        <small class="text-muted" id="modal-sizing-hint">
+                            <?php if ($sizingMethod === 'sprints' && ($sprint_length_weeks ?? 2) > 0): ?>
+                                Each sprint = <?= (int) ($sprint_length_weeks ?? 2) ?> week<?= ($sprint_length_weeks ?? 2) !== 1 ? 's' : '' ?>
+                            <?php endif; ?>
+                        </small>
                     </div>
                 </div>
 

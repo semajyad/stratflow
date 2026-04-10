@@ -109,12 +109,16 @@ class WorkItemController
             fn($t) => $t !== null && $t !== ''
         ));
 
-        // Load field order preference from org settings
+        // Load org settings (field order, sizing method, sprint length)
         $orgRow = \StratFlow\Models\Organisation::findById($this->db, $orgId);
         $orgSettings = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
         $defaultWiOrder = ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'];
-        $fieldOrderWi = $orgSettings['field_order_work_item'] ?? $defaultWiOrder;
+        $fieldOrderWi       = $orgSettings['field_order_work_item'] ?? $defaultWiOrder;
+        $hlSizingMethod     = $orgSettings['hl_item_sizing_method'] ?? 'sprints';
+        $sprintLengthWeeks  = (int) ($orgSettings['sprint_length_weeks'] ?? 2);
+
+        $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
 
         $this->response->render('work-items', [
             'user'                 => $user,
@@ -123,7 +127,10 @@ class WorkItemController
             'krs_by_item_id'       => $krsByItemId,
             'diagram'              => $diagram,
             'distinct_okr_titles'  => $distinctOkrTitles,
+            'teams'                => $teams,
             'field_order_wi'       => $fieldOrderWi,
+            'hl_sizing_method'     => $hlSizingMethod,
+            'sprint_length_weeks'  => $sprintLengthWeeks,
             'active_page'          => 'work-items',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,

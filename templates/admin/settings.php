@@ -143,6 +143,24 @@
             <div class="accordion-body">
                 <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
                     <div class="form-group">
+                        <label class="form-label">Sprint Length (weeks)</label>
+                        <input type="number" name="sprint_length_weeks" class="form-input" style="max-width:100px;"
+                               value="<?= (int) ($settings['sprint_length_weeks'] ?? 2) ?>" min="1" max="12">
+                        <small class="text-muted">Used for sprint planning and capacity calculations.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">HL Work Item Sizing</label>
+                        <select name="hl_item_sizing_method" class="form-input">
+                            <option value="sprints" <?= ($settings['hl_item_sizing_method'] ?? 'sprints') === 'sprints' ? 'selected' : '' ?>>Sprints</option>
+                            <option value="weeks"   <?= ($settings['hl_item_sizing_method'] ?? '') === 'weeks'   ? 'selected' : '' ?>>Weeks</option>
+                            <option value="months"  <?= ($settings['hl_item_sizing_method'] ?? '') === 'months'  ? 'selected' : '' ?>>Months</option>
+                            <option value="t_shirt" <?= ($settings['hl_item_sizing_method'] ?? '') === 't_shirt' ? 'selected' : '' ?>>T-Shirt Sizes (XS → XXL)</option>
+                        </select>
+                        <small class="text-muted">Controls the size field in the work item modal.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">HL Item Default Size (months)</label>
                         <select name="hl_item_default_months" class="form-input">
                             <?php for ($m = 1; $m <= 6; $m++): ?>
