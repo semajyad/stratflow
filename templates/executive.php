@@ -102,6 +102,120 @@
 </div>
 
 <!-- ===========================
+     Critical Alerts + Governance (only if there's something to show)
+     =========================== -->
+<?php if (!empty($critical_alerts) || $governance_queue > 0): ?>
+<?php
+$changeTypeLabels = [
+    'new_story'          => 'New Story',
+    'scope_change'       => 'Scope Change',
+    'size_change'        => 'Size Change',
+    'dependency_change'  => 'Dependency Change',
+];
+?>
+<div class="card mt-6" id="needs-attention" style="border-left: 4px solid #ef4444; margin-bottom: 2rem;">
+    <div class="card-header">
+        <h2 class="card-title" style="color:#dc2626;">Needs Attention</h2>
+    </div>
+
+    <?php if (!empty($critical_alerts)): ?>
+    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700;">Critical Alerts — Action Required</div>
+    <div style="padding: 0 1.25rem 0.75rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <?php foreach ($critical_alerts as $alert):
+            $alertDetails = json_decode($alert['details_json'] ?? '{}', true);
+            $alertMsg     = $alertDetails['message'] ?? $alertDetails['description'] ?? null;
+            $alertType    = htmlspecialchars(ucwords(str_replace('_', ' ', $alert['alert_type'])), ENT_QUOTES, 'UTF-8');
+            $alertAge     = htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8');
+        ?>
+        <div class="exec-action-card exec-action-card--danger">
+            <div class="exec-action-header">
+                <div>
+                    <span class="exec-action-type-pill exec-action-type-pill--danger"><?= $alertType ?></span>
+                    <span class="exec-action-project"><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <span class="exec-action-age"><?= $alertAge ?></span>
+            </div>
+            <?php if ($alertMsg): ?>
+            <p class="exec-action-message"><?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8') ?></p>
+            <?php endif; ?>
+            <div class="exec-action-footer">
+                <span class="exec-action-ask">What's needed: <strong>Acknowledge this alert</strong></span>
+                <form method="POST" action="/app/governance/alerts/<?= (int) $alert['id'] ?>" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="action" value="acknowledge">
+                    <input type="hidden" name="redirect_to" value="/app/executive">
+                    <button type="submit" class="btn btn-sm" style="background:#dc2626; color:#fff; border-color:#dc2626;">Acknowledge</button>
+                </form>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($governance_items)): ?>
+    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700; <?= !empty($critical_alerts) ? 'border-top:1px solid #f3f4f6; margin-top:0.25rem;' : '' ?>">Pending Approvals — Your Decision Required</div>
+    <div style="padding: 0 1.25rem 1rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <?php foreach ($governance_items as $gi):
+            $giData  = json_decode($gi['proposed_change_json'] ?? '{}', true);
+            $giLabel = $changeTypeLabels[$gi['change_type']] ?? ucwords(str_replace('_', ' ', $gi['change_type']));
+            $giTitle = $giData['title'] ?? $giData['story_title'] ?? $giData['item_title'] ?? '';
+
+            // Build a human-readable summary of what changed
+            $giChangeSummary = '';
+            if ($gi['change_type'] === 'new_story' && $giTitle) {
+                $giChangeSummary = 'A new story has been proposed: "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"';
+            } elseif ($gi['change_type'] === 'scope_change') {
+                $giChangeSummary = 'Scope change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
+                if (!empty($giData['old_value']) && !empty($giData['new_value'])) {
+                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_value'], ENT_QUOTES, 'UTF-8')
+                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_value'], ENT_QUOTES, 'UTF-8');
+                }
+            } elseif ($gi['change_type'] === 'size_change') {
+                $giChangeSummary = 'Size change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
+                if (!empty($giData['old_size']) && !empty($giData['new_size'])) {
+                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_size'], ENT_QUOTES, 'UTF-8')
+                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_size'], ENT_QUOTES, 'UTF-8');
+                }
+            } elseif ($giTitle) {
+                $giChangeSummary = htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8');
+            }
+        ?>
+        <div class="exec-action-card exec-action-card--warning">
+            <div class="exec-action-header">
+                <div>
+                    <span class="exec-action-type-pill exec-action-type-pill--warning"><?= htmlspecialchars($giLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="exec-action-project"><?= htmlspecialchars($gi['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <span class="exec-action-age"><?= htmlspecialchars($gi['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <?php if ($giChangeSummary): ?>
+            <p class="exec-action-message"><?= $giChangeSummary ?></p>
+            <?php endif; ?>
+            <div class="exec-action-footer">
+                <span class="exec-action-ask">What's needed: <strong>Approve or reject this change</strong></span>
+                <div style="display:flex; gap:0.5rem;">
+                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="redirect_to" value="/app/executive">
+                        <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                    </form>
+                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="redirect_to" value="/app/executive">
+                        <button type="submit" class="btn btn-sm" style="background:#fff; color:#64748b; border:1px solid #cbd5e1;">Reject</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<!-- ===========================
      OKR Progress
      =========================== -->
 <div class="card mt-6">
@@ -317,120 +431,6 @@
         <?php endif; ?>
         <?php endforeach; ?>
     </div>
-</div>
-<?php endif; ?>
-
-<!-- ===========================
-     Critical Alerts + Governance (only if there's something to show)
-     =========================== -->
-<?php if (!empty($critical_alerts) || $governance_queue > 0): ?>
-<?php
-$changeTypeLabels = [
-    'new_story'          => 'New Story',
-    'scope_change'       => 'Scope Change',
-    'size_change'        => 'Size Change',
-    'dependency_change'  => 'Dependency Change',
-];
-?>
-<div class="card mt-6" id="needs-attention" style="border-left: 4px solid #ef4444; margin-bottom: 2rem;">
-    <div class="card-header">
-        <h2 class="card-title" style="color:#dc2626;">Needs Attention</h2>
-    </div>
-
-    <?php if (!empty($critical_alerts)): ?>
-    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700;">Critical Alerts — Action Required</div>
-    <div style="padding: 0 1.25rem 0.75rem; display:flex; flex-direction:column; gap:0.75rem;">
-        <?php foreach ($critical_alerts as $alert):
-            $alertDetails = json_decode($alert['details_json'] ?? '{}', true);
-            $alertMsg     = $alertDetails['message'] ?? $alertDetails['description'] ?? null;
-            $alertType    = htmlspecialchars(ucwords(str_replace('_', ' ', $alert['alert_type'])), ENT_QUOTES, 'UTF-8');
-            $alertAge     = htmlspecialchars($alert['created_at'], ENT_QUOTES, 'UTF-8');
-        ?>
-        <div class="exec-action-card exec-action-card--danger">
-            <div class="exec-action-header">
-                <div>
-                    <span class="exec-action-type-pill exec-action-type-pill--danger"><?= $alertType ?></span>
-                    <span class="exec-action-project"><?= htmlspecialchars($alert['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                </div>
-                <span class="exec-action-age"><?= $alertAge ?></span>
-            </div>
-            <?php if ($alertMsg): ?>
-            <p class="exec-action-message"><?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8') ?></p>
-            <?php endif; ?>
-            <div class="exec-action-footer">
-                <span class="exec-action-ask">What's needed: <strong>Acknowledge this alert</strong></span>
-                <form method="POST" action="/app/governance/alerts/<?= (int) $alert['id'] ?>" class="inline-form">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-                    <input type="hidden" name="action" value="acknowledge">
-                    <input type="hidden" name="redirect_to" value="/app/executive">
-                    <button type="submit" class="btn btn-sm" style="background:#dc2626; color:#fff; border-color:#dc2626;">Acknowledge</button>
-                </form>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-
-    <?php if (!empty($governance_items)): ?>
-    <div style="padding: 0.75rem 1.25rem 0.25rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:700; <?= !empty($critical_alerts) ? 'border-top:1px solid #f3f4f6; margin-top:0.25rem;' : '' ?>">Pending Approvals — Your Decision Required</div>
-    <div style="padding: 0 1.25rem 1rem; display:flex; flex-direction:column; gap:0.75rem;">
-        <?php foreach ($governance_items as $gi):
-            $giData  = json_decode($gi['proposed_change_json'] ?? '{}', true);
-            $giLabel = $changeTypeLabels[$gi['change_type']] ?? ucwords(str_replace('_', ' ', $gi['change_type']));
-            $giTitle = $giData['title'] ?? $giData['story_title'] ?? $giData['item_title'] ?? '';
-
-            // Build a human-readable summary of what changed
-            $giChangeSummary = '';
-            if ($gi['change_type'] === 'new_story' && $giTitle) {
-                $giChangeSummary = 'A new story has been proposed: "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"';
-            } elseif ($gi['change_type'] === 'scope_change') {
-                $giChangeSummary = 'Scope change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
-                if (!empty($giData['old_value']) && !empty($giData['new_value'])) {
-                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_value'], ENT_QUOTES, 'UTF-8')
-                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_value'], ENT_QUOTES, 'UTF-8');
-                }
-            } elseif ($gi['change_type'] === 'size_change') {
-                $giChangeSummary = 'Size change requested' . ($giTitle ? ' on "' . htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8') . '"' : '');
-                if (!empty($giData['old_size']) && !empty($giData['new_size'])) {
-                    $giChangeSummary .= ': ' . htmlspecialchars((string) $giData['old_size'], ENT_QUOTES, 'UTF-8')
-                        . ' &rarr; ' . htmlspecialchars((string) $giData['new_size'], ENT_QUOTES, 'UTF-8');
-                }
-            } elseif ($giTitle) {
-                $giChangeSummary = htmlspecialchars($giTitle, ENT_QUOTES, 'UTF-8');
-            }
-        ?>
-        <div class="exec-action-card exec-action-card--warning">
-            <div class="exec-action-header">
-                <div>
-                    <span class="exec-action-type-pill exec-action-type-pill--warning"><?= htmlspecialchars($giLabel, ENT_QUOTES, 'UTF-8') ?></span>
-                    <span class="exec-action-project"><?= htmlspecialchars($gi['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                </div>
-                <span class="exec-action-age"><?= htmlspecialchars($gi['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
-            </div>
-            <?php if ($giChangeSummary): ?>
-            <p class="exec-action-message"><?= $giChangeSummary ?></p>
-            <?php endif; ?>
-            <div class="exec-action-footer">
-                <span class="exec-action-ask">What's needed: <strong>Approve or reject this change</strong></span>
-                <div style="display:flex; gap:0.5rem;">
-                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
-                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="hidden" name="action" value="approve">
-                        <input type="hidden" name="redirect_to" value="/app/executive">
-                        <button type="submit" class="btn btn-sm btn-primary">Approve</button>
-                    </form>
-                    <form method="POST" action="/app/governance/queue/<?= (int) $gi['id'] ?>" class="inline-form">
-                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="hidden" name="action" value="reject">
-                        <input type="hidden" name="redirect_to" value="/app/executive">
-                        <button type="submit" class="btn btn-sm" style="background:#fff; color:#64748b; border:1px solid #cbd5e1;">Reject</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
 </div>
 <?php endif; ?>
 
