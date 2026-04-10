@@ -27,6 +27,7 @@ use StratFlow\Models\StrategyDiagram;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
+use StratFlow\Services\StoryQualityScorer;
 use StratFlow\Services\Prompts\WorkItemPrompt;
 
 class WorkItemController
@@ -166,11 +167,13 @@ class WorkItemController
         $input = $this->buildGenerationInput($diagram, $nodes, $documentSummary);
 
         // Inject org quality rules (splitting patterns + mandatory conditions)
+        $qualityBlock = '';
         try {
-            $input .= StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {
             // Table may not exist on a fresh deploy — proceed without config
         }
+        $input .= $qualityBlock;
 
         // Inject KR data so AI can generate accurate kr_hypothesis values
         try {
@@ -212,6 +215,8 @@ class WorkItemController
         // Delete existing work items and create new ones
         HLWorkItem::deleteByProjectId($this->db, $projectId);
 
+        $scorer = new StoryQualityScorer(new GeminiService($this->config));
+
         // First pass: create all items and build a map of priority_number => new DB id
         $priorityToId = [];
         foreach ($itemsData as $index => $item) {
@@ -240,6 +245,18 @@ class WorkItemController
                                          ? mb_substr((string) $item['kr_hypothesis'], 0, 500)
                                          : null,
             ]);
+            // Score the new item — failure is non-fatal
+            $scored = $scorer->scoreWorkItem(
+                array_merge($item, ['acceptance_criteria' => $ac]),
+                $qualityBlock
+            );
+            if ($scored['score'] !== null) {
+                HLWorkItem::update($this->db, $newId, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown']),
+                ]);
+            }
+
             $priorityToId[$priorityNumber] = $newId;
         }
 
@@ -423,6 +440,21 @@ class WorkItemController
         }
 
         HLWorkItem::update($this->db, $id, $updateData);
+
+        // Re-score after update — failure is non-fatal
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+        $scorer       = new StoryQualityScorer(new GeminiService($this->config));
+        $itemForScore = array_merge($item, $updateData);
+        $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
+        if ($scored['score'] !== null) {
+            HLWorkItem::update($this->db, (int) $id, [
+                'quality_score'     => $scored['score'],
+                'quality_breakdown' => json_encode($scored['breakdown']),
+            ]);
+        }
 
         // Flag for review if description or sprint estimate changed
         $descChanged    = $newDescription !== ($item['description'] ?? '');
