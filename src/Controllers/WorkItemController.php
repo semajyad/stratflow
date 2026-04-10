@@ -90,14 +90,9 @@ class WorkItemController
         }
         unset($item);
 
-        // Build KR map: item_id => [kr rows]
-        $krsByItemId = [];
-        foreach ($workItems as $item) {
-            $itemKrs = KeyResult::findByWorkItemId($this->db, (int) $item['id'], $orgId);
-            if (!empty($itemKrs)) {
-                $krsByItemId[(int) $item['id']] = $itemKrs;
-            }
-        }
+        // Build KR map: item_id => [kr rows] — single bulk query to avoid N+1
+        $workItemIds = array_map('intval', array_column($workItems, 'id'));
+        $krsByItemId = KeyResult::findByWorkItemIds($this->db, $workItemIds, $orgId);
 
         $this->response->render('work-items', [
             'user'                 => $user,

@@ -26,6 +26,8 @@ class KrController
         $this->config   = $config;
     }
 
+    private const VALID_STATUSES = ['not_started', 'on_track', 'at_risk', 'off_track', 'achieved'];
+
     // ===========================
     // ACTIONS
     // ===========================
@@ -68,7 +70,7 @@ class KrController
             'target_value'       => $this->request->post('target_value', ''),
             'current_value'      => $this->request->post('current_value', ''),
             'unit'               => trim((string) $this->request->post('unit', '')) ?: null,
-            'status'             => $this->request->post('status', 'not_started'),
+            'status'             => $this->sanitiseStatus($this->request->post('status', 'not_started')),
             'display_order'      => (int) $this->request->post('display_order', 0),
         ]);
 
@@ -100,6 +102,10 @@ class KrController
             }
         }
 
+        if (isset($data['status'])) {
+            $data['status'] = $this->sanitiseStatus($data['status']);
+        }
+
         KeyResult::update($this->db, $id, $orgId, $data);
         echo json_encode(['ok' => true]);
     }
@@ -127,6 +133,20 @@ class KrController
     // ===========================
     // PRIVATE HELPERS
     // ===========================
+
+    /**
+     * Validate a status string against the allowed enum values.
+     *
+     * Returns the input unchanged if it is valid, or 'not_started' as the
+     * safe default for any unrecognised value.
+     *
+     * @param string $raw User-supplied status value
+     * @return string     One of the five valid status strings
+     */
+    private function sanitiseStatus(string $raw): string
+    {
+        return in_array($raw, self::VALID_STATUSES, true) ? $raw : 'not_started';
+    }
 
     private function workItemBelongsToOrg(int $workItemId, int $orgId): bool
     {

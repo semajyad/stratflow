@@ -16,7 +16,7 @@
      =========================== -->
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
-        <?= htmlspecialchars($project['name']) ?> &mdash; Work Items
+        <?= htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8') ?> &mdash; Work Items
         <span class="page-title-count"><?= count($work_items) ?></span>
         <span class="page-info" tabindex="0" role="button" aria-label="About this page">
             <span class="page-info-btn" aria-hidden="true">i</span>
@@ -35,7 +35,7 @@
 <?php if (!empty($diagram)): ?>
 <div class="diagram-thumbnail">
     <div class="diagram-thumbnail-inner" id="mermaid-thumb-output"></div>
-    <textarea id="mermaid-thumb-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code']) ?></textarea>
+    <textarea id="mermaid-thumb-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'], ENT_QUOTES, 'UTF-8') ?></textarea>
 </div>
 <?php endif; ?>
 

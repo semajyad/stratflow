@@ -57,6 +57,40 @@ class KeyResult
         )->fetchAll();
     }
 
+    /**
+     * Fetch all KRs for multiple work item IDs in a single query.
+     *
+     * Returns an array keyed by hl_work_item_id, where each value is an
+     * array of KR rows for that work item, ordered by display_order then id.
+     *
+     * @param Database $db
+     * @param int[]    $ids   Work item IDs to load KRs for
+     * @param int      $orgId Tenant guard
+     * @return array<int, array>
+     */
+    public static function findByWorkItemIds(Database $db, array $ids, int $orgId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params       = [...$ids, $orgId];
+
+        $rows = $db->query(
+            "SELECT * FROM key_results
+              WHERE hl_work_item_id IN ({$placeholders}) AND org_id = ?
+              ORDER BY display_order ASC, id ASC",
+            $params
+        )->fetchAll();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[(int) $row['hl_work_item_id']][] = $row;
+        }
+        return $grouped;
+    }
+
     public static function findById(Database $db, int $id, int $orgId): ?array
     {
         $row = $db->query(

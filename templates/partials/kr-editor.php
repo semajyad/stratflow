@@ -112,12 +112,17 @@
                 });
                 promises.push(fetch('/app/key-results/' + krId, { method: 'POST', body: body }));
             });
-            Promise.all(promises).then(function (responses) {
-                var allOk = responses.every(function (r) { return r.ok; });
-                msg.textContent = allOk ? 'Saved.' : 'Error saving.';
-                msg.style.color = allOk ? '#10b981' : '#ef4444';
-                setTimeout(function () { msg.textContent = ''; }, 2500);
-            });
+            Promise.all(promises)
+                .then(function (responses) {
+                    var allOk = responses.every(function (r) { return r.ok; });
+                    msg.textContent = allOk ? 'Saved.' : 'Error saving.';
+                    msg.style.color = allOk ? '#10b981' : '#ef4444';
+                    setTimeout(function () { msg.textContent = ''; }, 2500);
+                })
+                .catch(function () {
+                    msg.textContent = 'Network error.';
+                    msg.style.color = '#ef4444';
+                });
         });
 
         // Add new KR row
@@ -133,6 +138,10 @@
                     if (!data.ok) { msg.textContent = 'Error adding KR.'; msg.style.color = '#ef4444'; return; }
                     tbody.insertAdjacentHTML('beforeend', buildRow(data.id));
                     attachDelete(tbody.lastElementChild.querySelector('.kr-delete-btn'));
+                })
+                .catch(function () {
+                    msg.textContent = 'Network error.';
+                    msg.style.color = '#ef4444';
                 });
         });
 
