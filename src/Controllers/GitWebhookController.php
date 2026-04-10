@@ -30,7 +30,10 @@ use StratFlow\Models\Integration;
 use StratFlow\Models\IntegrationRepo;
 use StratFlow\Services\GitHubAppClient;
 use StratFlow\Services\GitLabClient;
+use StratFlow\Services\GeminiService;
 use StratFlow\Services\GitLinkService;
+use StratFlow\Services\GitPrMatcherService;
+use StratFlow\Services\KrScoringService;
 
 class GitWebhookController
 {
@@ -174,6 +177,32 @@ class GitWebhookController
 
         http_response_code(200);
         echo json_encode(['ok' => true, 'links_affected' => $affected]);
+
+        // ── Async AI work — fires after HTTP response is sent ──────────────
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        ignore_user_abort(true);
+
+        $gemini = $this->makeGemini();
+
+        // AI PR matching: fires on opened/reopened with no explicit tag found
+        if ($affected === 0 && in_array($event['action'], ['opened', 'reopened'], true)) {
+            $matcher = new GitPrMatcherService($this->db, $gemini);
+            $matcher->matchAndLink(
+                $event['title'],
+                $event['body'],
+                $event['branch'] ?? '',
+                $event['pr_url'],
+                $orgId
+            );
+        }
+
+        // KR scoring: fires on merged PRs
+        if ($event['action'] === 'closed' && ($event['merged'] ?? false)) {
+            $scorer = new KrScoringService($this->db, $gemini);
+            $scorer->scoreForMergedPr($event['pr_url'], $orgId);
+        }
     }
 
     /**
@@ -366,6 +395,19 @@ class GitWebhookController
         $secret = $config['webhook_secret'] ?? '';
 
         return $secret !== '' ? $secret : null;
+    }
+
+    /**
+     * Build a GeminiService from config, or return null if not configured.
+     * Returning null causes AI services to gracefully no-op.
+     */
+    private function makeGemini(): ?GeminiService
+    {
+        $apiKey = $this->config['gemini']['api_key'] ?? '';
+        if ($apiKey === '') {
+            return null;
+        }
+        return new GeminiService($this->config);
     }
 
     /**
