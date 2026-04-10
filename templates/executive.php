@@ -144,43 +144,45 @@
     </div>
 
     <?php foreach ($projectOkrs as $okr):
-        // Determine worst status for this OKR
-        // Status is only meaningful if structured key_results exist;
-        // diagram-node OKRs show "OKR Set" by default.
-        $hasStructuredKrs = ((int) $okr['on_track'] + (int) $okr['at_risk'] + (int) $okr['off_track']
-                             + (int) $okr['not_started'] + (int) $okr['achieved']) > 0;
-        if ($hasStructuredKrs) {
-            $worst = 'not_started';
-            foreach (['off_track', 'at_risk', 'not_started', 'on_track', 'achieved'] as $s) {
-                if ((int) $okr[$s] > 0) { $worst = $s; break; }
-            }
-        } else {
-            $worst = 'okr_set';
-        }
-        $worstColour = match($worst) {
-            'off_track'   => '#ef4444',
-            'at_risk'     => '#f59e0b',
-            'on_track'    => '#10b981',
-            'achieved'    => '#6366f1',
-            default       => '#6366f1',  // okr_set / not_started → indigo
-        };
-        $krCount = (int) $okr['kr_count'];
+        $krLines = $okr['kr_lines'] ?? [];
+        $krCount = count($krLines);
+        $hasKrs  = $krCount > 0;
     ?>
+    <?php if ($hasKrs): ?>
+    <details class="okr-details">
+        <summary class="okr-row" style="cursor:pointer; list-style:none;">
+            <div class="okr-row-left">
+                <span class="okr-expand-icon">&#9654;</span>
+                <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
+                <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <div class="okr-row-right">
+                <span style="font-size:0.75rem; color:#6b7280;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
+            </div>
+        </summary>
+        <div class="okr-kr-list">
+            <?php foreach ($krLines as $j => $krLine):
+                $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+            ?>
+            <div class="okr-kr-item">
+                <span class="okr-kr-num"><?= (int) ($j + 1) ?>.</span>
+                <span class="okr-kr-text"><?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </details>
+    <?php else: ?>
     <div class="okr-row">
         <div class="okr-row-left">
-            <span class="okr-status-pill" style="background:<?= $worstColour ?>">
-                <?= $worst === 'okr_set' ? 'OKR Set' : htmlspecialchars(str_replace('_', ' ', $worst), ENT_QUOTES, 'UTF-8') ?>
-            </span>
+            <span style="display:inline-block; width:10px;"></span>
+            <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
             <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
         </div>
         <div class="okr-row-right">
-            <?php if ($krCount === 0): ?>
-                <span style="font-size:0.75rem; color:#9ca3af;">No KRs</span>
-            <?php else: ?>
-                <span style="font-size:0.75rem; color:#6b7280;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
-            <?php endif; ?>
+            <span style="font-size:0.75rem; color:#9ca3af;">No KRs</span>
         </div>
     </div>
+    <?php endif; ?>
     <?php endforeach; ?>
 
     <?php endforeach; ?>
@@ -354,4 +356,44 @@
     border-radius: 50%;
 }
 .mt-6 { margin-top: 1.5rem; }
+
+/* Expandable OKR rows */
+.okr-details { margin-bottom: 0.375rem; }
+.okr-details > summary { display: flex; }
+.okr-details > summary::-webkit-details-marker { display: none; }
+.okr-details[open] > summary .okr-expand-icon { transform: rotate(90deg); }
+.okr-expand-icon {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+    margin-right: 2px;
+    line-height: 1.6;
+}
+.okr-kr-list {
+    margin: 0.25rem 0 0.5rem 2.5rem;
+    border-left: 2px solid #e0e7ff;
+    padding-left: 0.75rem;
+}
+.okr-kr-item {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-start;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0.25rem;
+    background: #fafbff;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+.okr-kr-num {
+    color: #6366f1;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 1.2rem;
+    font-size: 0.75rem;
+}
+.okr-kr-text {
+    color: #374151;
+    line-height: 1.4;
+}
 </style>

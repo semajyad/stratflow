@@ -1,8 +1,9 @@
 <?php
 // stratflow/templates/executive-project.php
-// Variables: $user, $project, $projects, $okr_items, $krs_by_item_id,
-//            $risks_by_item, $deps_by_item, $health_counts,
+// Variables: $user, $project, $projects, $okr_items, $health_counts,
 //            $flash_message, $flash_error
+// $okr_items[]: id, okr_title, okr_description, kr_lines[]
+// $health_counts: total_okrs, total_krs
 ?>
 
 <?php if (!empty($flash_message)): ?>
@@ -17,9 +18,9 @@
     <div>
         <h1 class="page-title"><?= htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8') ?> &mdash; OKR Progress</h1>
         <p class="page-subtitle" style="color: #64748b; font-size: 0.875rem;">
-            <?= (int) $health_counts['on_track'] ?> on track &middot;
-            <?= (int) $health_counts['at_risk'] ?> at risk &middot;
-            <?= (int) $health_counts['off_track'] ?> off track
+            <?= (int) $health_counts['total_okrs'] ?> objective<?= $health_counts['total_okrs'] !== 1 ? 's' : '' ?>
+            &middot;
+            <?= (int) $health_counts['total_krs'] ?> key result<?= $health_counts['total_krs'] !== 1 ? 's' : '' ?>
         </p>
     </div>
     <div style="display:flex; align-items:center; gap: 0.75rem;">
@@ -40,163 +41,76 @@
 <?php if (empty($okr_items)): ?>
     <div class="card mt-6" style="text-align:center; padding:2rem; color:#6b7280;">
         <p>No OKRs defined for this project yet.</p>
-        <p style="font-size:0.875rem;">Add OKR titles to work items on the <a href="/app/work-items" style="color:#6366f1;">Work Items</a> page.</p>
+        <p style="font-size:0.875rem; margin-top:0.5rem;">Add OKR titles to roadmap nodes on the
+            <a href="/app/diagram" style="color:#6366f1;">Strategy Roadmap</a> page.
+        </p>
     </div>
 <?php endif; ?>
 
 <!-- OKR Cards -->
-<?php foreach ($okr_items as $item):
-    $itemId   = (int) $item['id'];
-    $krs      = $krs_by_item_id[$itemId] ?? [];
-    $risks    = $risks_by_item[$itemId]  ?? [];
-    $blockedBy = $deps_by_item[$itemId]['blocked_by'] ?? [];
-    $blocks    = $deps_by_item[$itemId]['blocks']     ?? [];
-
-    // Determine worst KR status for OKR badge
-    $statusOrder  = ['off_track' => 0, 'at_risk' => 1, 'not_started' => 2, 'on_track' => 3, 'achieved' => 4];
-    $worstStatus  = 'not_started';
-    foreach ($krs as $kr) {
-        if (($statusOrder[$kr['status']] ?? 99) < ($statusOrder[$worstStatus] ?? 99)) {
-            $worstStatus = $kr['status'];
-        }
-    }
-    $badgeColours = [
-        'on_track'    => '#10b981',
-        'at_risk'     => '#f59e0b',
-        'off_track'   => '#ef4444',
-        'not_started' => '#9ca3af',
-        'achieved'    => '#6366f1',
-    ];
-    $badgeColour = $badgeColours[$worstStatus] ?? '#9ca3af';
+<?php foreach ($okr_items as $i => $okr):
+    $krLines = $okr['kr_lines'] ?? [];
+    $krCount = count($krLines);
+    $borderColour = $krCount > 0 ? '#6366f1' : '#9ca3af';
 ?>
-<div class="card mb-4" style="border-top: 3px solid <?= htmlspecialchars($badgeColour, ENT_QUOTES, 'UTF-8') ?>;">
-    <div class="card-body">
+<div class="card mb-4" style="border-top: 3px solid <?= htmlspecialchars($borderColour, ENT_QUOTES, 'UTF-8') ?>;">
+    <div class="card-body" style="padding: 1rem 1.25rem;">
 
         <!-- OKR header -->
-        <div class="flex justify-between items-center" style="flex-wrap: wrap; gap: 0.5rem;">
-            <div>
-                <span style="display:inline-block; background:<?= htmlspecialchars($badgeColour, ENT_QUOTES, 'UTF-8') ?>; color:#fff; border-radius:999px; padding:2px 10px; font-size:0.7rem; text-transform:uppercase; font-weight:600; margin-right:0.5rem;">
-                    <?= htmlspecialchars(str_replace('_', ' ', $worstStatus), ENT_QUOTES, 'UTF-8') ?>
-                </span>
-                <strong style="font-size: 1rem;"><?= htmlspecialchars($item['okr_title'], ENT_QUOTES, 'UTF-8') ?></strong>
-            </div>
-            <span style="font-size:0.75rem; color:#94a3b8;"><?= htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') ?></span>
-        </div>
-
-        <?php if (!empty($krs)): ?>
-        <!-- KR rows -->
-        <div style="margin-top: 1rem;">
-            <div style="font-size:0.7rem; text-transform:uppercase; font-weight:600; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
-            <?php foreach ($krs as $kr):
-                $baseline = (float) ($kr['baseline_value'] ?? 0);
-                $target   = (float) ($kr['target_value']   ?? 0);
-                $current  = (float) ($kr['current_value']  ?? 0);
-                $unit     = htmlspecialchars((string) ($kr['unit'] ?? ''), ENT_QUOTES, 'UTF-8');
-
-                $pct = 0;
-                if ($target !== 0.0 && $target !== $baseline) {
-                    $pct = max(0, min(100, (int) round(($current - $baseline) / ($target - $baseline) * 100)));
-                }
-
-                $krBadge = $badgeColours[$kr['status']] ?? '#9ca3af';
-            ?>
-            <div class="kr-progress-row" style="margin-bottom: 0.875rem; padding: 0.625rem 0.75rem; background: #f9fafb; border-radius: 6px;">
-                <div class="flex justify-between items-center" style="margin-bottom:0.375rem;">
-                    <span style="font-size:0.8rem; font-weight:500; color:#374151;">
-                        <?= htmlspecialchars($kr['title'], ENT_QUOTES, 'UTF-8') ?>
+        <div class="flex justify-between items-start" style="gap: 0.75rem;">
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+                    <span style="display:inline-block; background:#6366f1; color:#fff; border-radius:999px; padding:2px 10px; font-size:0.65rem; text-transform:uppercase; font-weight:700; white-space:nowrap;">
+                        Objective
                     </span>
-                    <span style="display:inline-block; background:<?= htmlspecialchars($krBadge, ENT_QUOTES, 'UTF-8') ?>; color:#fff; border-radius:999px; padding:1px 8px; font-size:0.65rem; text-transform:uppercase; font-weight:600;">
-                        <?= htmlspecialchars(str_replace('_', ' ', $kr['status']), ENT_QUOTES, 'UTF-8') ?>
-                    </span>
+                    <strong style="font-size: 0.95rem; color:#1e293b;">
+                        <?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?>
+                    </strong>
                 </div>
-
-                <!-- Progress bar -->
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <div style="flex:1; background:#e5e7eb; border-radius:999px; height:8px; overflow:hidden;">
-                        <div style="width:<?= (int) $pct ?>%; background:<?= htmlspecialchars($krBadge, ENT_QUOTES, 'UTF-8') ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
-                    </div>
-                    <span style="font-size:0.75rem; color:#6b7280; white-space:nowrap;">
-                        <?php if ($target > 0): ?>
-                            <?= number_format($current, 2, '.', '') . $unit ?> &rarr; <?= number_format($target, 2, '.', '') . $unit ?>
-                        <?php else: ?>
-                            No target set
-                        <?php endif; ?>
-                    </span>
-                </div>
-
-                <?php if (!empty($kr['ai_momentum'])): ?>
-                <p style="margin: 0.375rem 0 0; font-size: 0.75rem; color: #6b7280; font-style: italic;">
-                    &ldquo;<?= htmlspecialchars($kr['ai_momentum'], ENT_QUOTES, 'UTF-8') ?>&rdquo;
-                </p>
+                <?php if (!empty($okr['description_lines'])): ?>
+                    <p style="font-size:0.8rem; color:#64748b; margin:0.25rem 0 0; line-height:1.4;">
+                        <?= htmlspecialchars(implode(' ', $okr['description_lines']), ENT_QUOTES, 'UTF-8') ?>
+                    </p>
                 <?php endif; ?>
-<?php
-$krContribs = $contributions_by_kr_id[(int) $kr['id']] ?? [];
-if (!empty($krContribs)):
-?>
-<details style="margin-top: 0.375rem;">
-    <summary style="font-size: 0.75rem; color: #6366f1; cursor: pointer; list-style: none;">
-        + <?= count($krContribs) ?> contributing PR<?= count($krContribs) !== 1 ? 's' : '' ?>
-    </summary>
-    <div style="margin-top: 0.375rem; padding-left: 0.5rem; border-left: 2px solid #e5e7eb;">
-        <?php foreach ($krContribs as $contrib): ?>
-        <div style="font-size: 0.75rem; color: #374151; margin-bottom: 0.25rem;">
-            <a href="<?= htmlspecialchars($contrib['ref_url'], ENT_QUOTES, 'UTF-8') ?>"
-               target="_blank" rel="noopener noreferrer"
-               style="color: #6366f1; text-decoration: none;">
-                <?= htmlspecialchars($contrib['ref_label'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-            </a>
-            <span style="display:inline-block; background:#f3f4f6; border-radius:999px; padding:0 6px; margin-left:4px; font-size:0.7rem; font-weight:600;">
-                <?= (int) $contrib['ai_relevance_score'] ?>/10
+            </div>
+            <span style="font-size:0.75rem; color:#94a3b8; white-space:nowrap; padding-top:3px;">
+                <?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?>
             </span>
-            <?php if (!empty($contrib['ai_rationale'])): ?>
-            <span style="color: #9ca3af; font-style: italic; margin-left: 4px;">
-                — <?= htmlspecialchars($contrib['ai_rationale'], ENT_QUOTES, 'UTF-8') ?>
-            </span>
-            <?php endif; ?>
         </div>
-        <?php endforeach; ?>
-    </div>
-</details>
-<?php endif; ?>
+
+        <?php if (!empty($krLines)): ?>
+        <!-- KR lines -->
+        <div style="margin-top: 0.875rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
+            <div style="font-size:0.68rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
+            <?php foreach ($krLines as $j => $krLine): ?>
+            <div style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0.6rem; margin-bottom:0.3rem; background:#f8fafc; border-radius:5px; border-left:3px solid #a5b4fc;">
+                <span style="font-size:0.75rem; font-weight:700; color:#6366f1; white-space:nowrap; min-width:1.5rem;">
+                    <?= (int) ($j + 1) ?>.
+                </span>
+                <span style="font-size:0.8rem; color:#374151; line-height:1.4;">
+                    <?php
+                    // Strip leading "KR1:" or "KR:" prefix for cleaner display
+                    $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+                    echo htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8');
+                    ?>
+                </span>
             </div>
             <?php endforeach; ?>
         </div>
-        <?php endif; ?>
-
-        <?php if (!empty($risks) || !empty($blockedBy) || !empty($blocks)): ?>
-        <!-- Risks + Dependencies footer -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; padding-top:1rem; border-top:1px solid #f3f4f6;">
-            <div>
-                <?php if (!empty($risks)): ?>
-                    <div style="font-size:0.7rem; text-transform:uppercase; font-weight:600; color:#94a3b8; margin-bottom:0.375rem;">Risks</div>
-                    <?php foreach ($risks as $risk):
-                        $p = (int) $risk['priority'];
-                        $sev = $p >= 15 ? ['🔴', '#ef4444'] : ($p >= 5 ? ['🟡', '#f59e0b'] : ['🟢', '#10b981']);
-                    ?>
-                    <div style="font-size:0.8rem; color:#374151; margin-bottom:0.25rem;">
-                        <?= $sev[0] ?> <?= htmlspecialchars($risk['title'], ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-            <div>
-                <?php if (!empty($blockedBy) || !empty($blocks)): ?>
-                    <div style="font-size:0.7rem; text-transform:uppercase; font-weight:600; color:#94a3b8; margin-bottom:0.375rem;">Dependencies</div>
-                    <?php foreach ($blockedBy as $dep): ?>
-                    <div style="font-size:0.8rem; color:#374151; margin-bottom:0.25rem;">
-                        &larr; Blocked by: <?= htmlspecialchars($dep['blocker_title'], ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                    <?php endforeach; ?>
-                    <?php foreach ($blocks as $dep): ?>
-                    <div style="font-size:0.8rem; color:#374151; margin-bottom:0.25rem;">
-                        &rarr; Blocks: <?= htmlspecialchars($dep['blocked_title'], ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+        <?php elseif (!empty($okr['okr_description'])): ?>
+        <!-- Description only (no KR lines detected) -->
+        <div style="margin-top:0.75rem; border-top:1px solid #f1f5f9; padding-top:0.625rem;">
+            <p style="font-size:0.8rem; color:#6b7280; white-space:pre-wrap; margin:0;">
+                <?= htmlspecialchars(trim($okr['okr_description']), ENT_QUOTES, 'UTF-8') ?>
+            </p>
         </div>
         <?php endif; ?>
 
     </div><!-- /.card-body -->
 </div><!-- /.card -->
 <?php endforeach; ?>
+
+<style>
+.mt-6 { margin-top: 1.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+</style>

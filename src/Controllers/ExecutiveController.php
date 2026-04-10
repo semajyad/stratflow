@@ -223,18 +223,26 @@ class ExecutiveController
             error_log('[Executive] diagram_nodes OKR query failed: ' . $e->getMessage());
         }
 
-        // Count KR text lines (lines starting with KR) from okr_description for each node.
+        // Parse KR text lines from okr_description for each node.
+        // Lines starting with KR (e.g. "KR1: ...") are extracted into kr_lines;
+        // other non-empty lines (e.g. description context) are kept in description_lines.
         foreach ($okrItems as &$okr) {
+            $okr['kr_lines']          = [];
+            $okr['description_lines'] = [];
             if (!empty($okr['okr_description'])) {
-                $lines = preg_split('/\r?\n/', trim($okr['okr_description']));
-                $krLineCount = 0;
-                foreach ($lines as $line) {
-                    if (preg_match('/^\s*KR\d*[\s:]/i', $line) && trim($line) !== '') {
-                        $krLineCount++;
+                foreach (preg_split('/\r?\n/', trim($okr['okr_description'])) as $line) {
+                    $line = trim($line);
+                    if ($line === '') {
+                        continue;
+                    }
+                    if (preg_match('/^\s*KR\d*[\s:]/i', $line)) {
+                        $okr['kr_lines'][] = $line;
+                    } else {
+                        $okr['description_lines'][] = $line;
                     }
                 }
-                $okr['kr_count'] = $krLineCount;
             }
+            $okr['kr_count'] = count($okr['kr_lines']);
         }
         unset($okr);
 
@@ -342,8 +350,9 @@ class ExecutiveController
      *
      * @param int $id The project ID from the route parameter.
      */
-    public function projectDashboard(int $id): void
+    public function projectDashboard($id): void
     {
+        $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
@@ -365,94 +374,51 @@ class ExecutiveController
             [':oid' => $orgId]
         )->fetchAll();
 
-        // OKR work items for this project (items with an okr_title)
-        $okrItems = $this->db->query(
-            "SELECT hwi.id, hwi.title, hwi.okr_title, hwi.okr_description,
-                    hwi.priority_number, hwi.status
-               FROM hl_work_items hwi
-              WHERE hwi.project_id = :pid
-                AND hwi.okr_title IS NOT NULL
-                AND hwi.okr_title != ''
-              ORDER BY hwi.priority_number ASC",
-            [':pid' => $id]
-        )->fetchAll();
-
-        // KRs per work item — key_results may not exist on fresh deploy
-        $krRows              = [];
-        $krsByItemId         = [];
-        $contributionsByKrId = [];
+        // Source OKRs from diagram_nodes — same data as the Strategy Roadmap page.
+        $okrItems = [];
         try {
-            $krRows = KeyResult::findByProjectOkrs($this->db, $id, $orgId);
-            foreach ($krRows as $kr) {
-                $krsByItemId[(int) $kr['work_item_id']][] = $kr;
-            }
-            $krIds = array_map(fn($kr) => (int) $kr['id'], $krRows);
-            if (!empty($krIds)) {
-                $contributionsByKrId = \StratFlow\Models\KeyResultContribution::findByKeyResultIds(
-                    $this->db, $krIds, $orgId
-                );
-            }
+            $okrItems = $this->db->query(
+                "SELECT dn.id, dn.okr_title, dn.okr_description
+                   FROM diagram_nodes dn
+                   JOIN strategy_diagrams sd ON sd.id = dn.diagram_id
+                  WHERE sd.project_id = :pid
+                    AND dn.okr_title IS NOT NULL
+                    AND TRIM(dn.okr_title) != ''
+                  ORDER BY dn.id ASC",
+                [':pid' => $id]
+            )->fetchAll();
         } catch (\Throwable $e) {
-            error_log('[Executive] projectDashboard KR query failed: ' . $e->getMessage());
+            error_log('[Executive] projectDashboard OKR query failed: ' . $e->getMessage());
         }
 
-        // Risks per work item (via risk_item_links)
-        $riskRows = $this->db->query(
-            "SELECT ril.work_item_id, r.title, r.likelihood, r.impact,
-                    (r.likelihood * r.impact) AS priority
-               FROM risk_item_links ril
-               JOIN risks r ON ril.risk_id = r.id
-               JOIN projects p ON r.project_id = p.id
-              WHERE p.id = :pid AND p.org_id = :oid",
-            [':pid' => $id, ':oid' => $orgId]
-        )->fetchAll();
-        $risksByItemId = [];
-        foreach ($riskRows as $risk) {
-            $risksByItemId[(int) $risk['work_item_id']][] = $risk;
-        }
-
-        // Dependencies per work item
-        $depRows = $this->db->query(
-            "SELECT hid.item_id, hid.depends_on_id, hid.dependency_type,
-                    blocker.title AS blocker_title, blocker.status AS blocker_status,
-                    blocked.title AS blocked_title, blocked.status AS blocked_status
-               FROM hl_item_dependencies hid
-               JOIN hl_work_items blocker ON hid.depends_on_id = blocker.id
-               JOIN projects bp ON blocker.project_id = bp.id
-               JOIN hl_work_items blocked ON hid.item_id = blocked.id
-               JOIN projects bpd ON blocked.project_id = bpd.id
-              WHERE (blocker.project_id = :pid OR blocked.project_id = :pid)
-                AND bp.org_id = :oid AND bpd.org_id = :oid",
-            [':pid' => $id, ':oid' => $orgId]
-        )->fetchAll();
-        $depsByItemId = [];
-        foreach ($depRows as $dep) {
-            $depsByItemId[(int) $dep['item_id']]['blocked_by'][]   = $dep;
-            $depsByItemId[(int) $dep['depends_on_id']]['blocks'][] = $dep;
-        }
-
-        // Overall health summary
-        $healthCounts = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
-        foreach ($krRows as $kr) {
-            $s = $kr['status'];
-            if (isset($healthCounts[$s])) {
-                $healthCounts[$s]++;
+        // Parse KR text lines from each node's okr_description.
+        foreach ($okrItems as &$okr) {
+            $okr['kr_lines'] = [];
+            if (!empty($okr['okr_description'])) {
+                foreach (preg_split('/\r?\n/', trim($okr['okr_description'])) as $line) {
+                    $line = trim($line);
+                    if ($line !== '') {
+                        $okr['kr_lines'][] = $line;
+                    }
+                }
             }
+        }
+        unset($okr);
+
+        $healthCounts = ['total_okrs' => count($okrItems), 'total_krs' => 0];
+        foreach ($okrItems as $o) {
+            $healthCounts['total_krs'] += count($o['kr_lines']);
         }
 
         $this->response->render('executive-project', [
-            'user'                   => $user,
-            'active_page'            => 'executive',
-            'project'                => $project,
-            'projects'               => $projects,
-            'okr_items'              => $okrItems,
-            'krs_by_item_id'         => $krsByItemId,
-            'risks_by_item'          => $risksByItemId,
-            'deps_by_item'           => $depsByItemId,
-            'health_counts'          => $healthCounts,
-            'contributions_by_kr_id' => $contributionsByKrId,
-            'flash_message'          => $_SESSION['flash_message'] ?? null,
-            'flash_error'            => $_SESSION['flash_error']   ?? null,
+            'user'          => $user,
+            'active_page'   => 'executive',
+            'project'       => $project,
+            'projects'      => $projects,
+            'okr_items'     => $okrItems,
+            'health_counts' => $healthCounts,
+            'flash_message' => $_SESSION['flash_message'] ?? null,
+            'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
