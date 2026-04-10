@@ -805,7 +805,10 @@ function openWorkItemModal(rowEl) {
         document.getElementById('modal-okr-title').value   = '';
         document.getElementById('modal-okr-desc').value    = '';
         var ownerEl = document.getElementById('modal-owner');
-        if (ownerEl) { ownerEl.value = ''; }
+        if (ownerEl) {
+            // Auto-select when only one real team option exists (index 0 is "-- Unassigned --")
+            ownerEl.value = ownerEl.options.length === 2 ? ownerEl.options[1].value : '';
+        }
         var sprintsEl = document.getElementById('modal-estimated-sprints');
         if (sprintsEl) { sprintsEl.value = sprintsEl.tagName === 'SELECT' ? sprintsEl.options[0].value : ''; }
         form.action = '/app/work-items/store';
@@ -823,7 +826,7 @@ function openWorkItemModal(rowEl) {
         var ownerSel = document.getElementById('modal-owner');
         if (ownerSel) { ownerSel.value = rowEl.dataset.owner || ''; }
         var sprintsSel = document.getElementById('modal-estimated-sprints');
-        if (sprintsSel) { sprintsSel.value = rowEl.dataset.estimatedSprints || ''; }
+        if (sprintsSel) { sprintsSel.value = rowEl.dataset.estimatedSprints ?? ''; }
         form.action = '/app/work-items/' + currentEditId;
 
         // Mount the KR editor for this item into the modal

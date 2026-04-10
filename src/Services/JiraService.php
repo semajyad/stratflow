@@ -512,13 +512,60 @@ class JiraService
             }
         }
 
-        // Velocity: average completed story points across last 3 sprints
-        $velocity = $this->getAverageVelocity($boardId, $storyPointsField);
+        // Velocity: try Greenhopper chart API first (no field-name guessing required),
+        // fall back to issue-by-issue calculation if it fails.
+        $velocity = $this->getVelocityFromChart($boardId)
+                 ?? $this->getAverageVelocity($boardId, $storyPointsField);
         if ($velocity !== null && $velocity > 0) {
             $result['suggested_capacity'] = $velocity;
         }
 
         return $result;
+    }
+
+    /**
+     * Fetch average velocity from Jira's Greenhopper velocity chart endpoint.
+     *
+     * This is the same data source used by Jira's built-in velocity chart and
+     * does not require knowing the story-points custom field name.
+     *
+     * @return int|null  Average completed story points across last 3 sprints, or null on failure.
+     */
+    public function getVelocityFromChart(int $boardId, int $numSprints = 3): ?int
+    {
+        try {
+            $data = $this->makeAuthenticatedRequest(
+                'GET',
+                "/rest/greenhopper/1.0/rapid/charts/velocity?rapidViewId={$boardId}"
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $entries = $data['velocityStatEntries'] ?? [];
+        if (empty($entries)) {
+            return null;
+        }
+
+        // entries is keyed by sprint ID; each has {estimated:{value}, completed:{value}}
+        // Sort by sprint ID descending so we get the most recent sprints first.
+        krsort($entries, SORT_NUMERIC);
+        $recent = array_slice($entries, 0, $numSprints);
+
+        $totals = [];
+        foreach ($recent as $entry) {
+            $completed = (float) ($entry['completed']['value'] ?? 0);
+            if ($completed > 0) {
+                $totals[] = $completed;
+            }
+        }
+
+        if (empty($totals)) {
+            return null;
+        }
+
+        $avg = (int) round(array_sum($totals) / count($totals));
+        return $avg > 0 ? $avg : null;
     }
 
     /**
