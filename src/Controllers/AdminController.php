@@ -169,11 +169,12 @@ class AdminController
         $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
         $newUserId = User::create($this->db, [
-            'org_id'        => $orgId,
-            'full_name'     => $fullName,
-            'email'         => $email,
-            'password_hash' => $randomPassword,
-            'role'          => $role,
+            'org_id'           => $orgId,
+            'full_name'        => $fullName,
+            'email'            => $email,
+            'password_hash'    => $randomPassword,
+            'role'             => $role,
+            'is_project_admin' => $role === 'org_admin' ? 1 : 0,
         ]);
 
         // Create set_password token and send welcome email
@@ -240,10 +241,16 @@ class AdminController
             return;
         }
 
+        // Org admins are always project admins; otherwise respect the form checkbox
+        $isProjectAdmin = ($role === 'org_admin')
+            ? 1
+            : ($this->request->post('is_project_admin') === '1' ? 1 : 0);
+
         $data = [
             'full_name'            => $fullName,
             'email'                => $email,
             'role'                 => $role,
+            'is_project_admin'     => $isProjectAdmin,
             'has_billing_access'   => $this->request->post('has_billing_access')   === '1' ? 1 : 0,
             'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
         ];

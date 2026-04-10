@@ -19,9 +19,11 @@
             StratFlow turns your strategy documents into a prioritised, AI-ready engineering roadmap.
         </p>
     </div>
+    <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
     <button type="button" class="btn btn-primary" onclick="document.getElementById('new-project-modal').classList.remove('hidden'); setTimeout(function(){document.getElementById('new-project-name').focus();},50);">
         + New Project
     </button>
+    <?php endif; ?>
 </div>
 
 <!-- ===========================
@@ -104,34 +106,32 @@ if ($lastProjectId && !empty($projects)) {
                         <?php endif; ?>
                     </div>
                     <div class="project-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                        <?php if (!empty($jira_connected) && !empty($jira_projects)): ?>
-                            <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/jira-link" class="inline-form" style="display:flex; align-items:center; gap:0.25rem;">
-                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                <select name="jira_project_key" class="form-control" style="font-size:0.75rem; padding:0.2rem 0.4rem; min-width:120px;"
-                                        onchange="this.form.submit()">
-                                    <option value="">Jira: None</option>
-                                    <?php foreach ($jira_projects as $jp): ?>
-                                        <option value="<?= htmlspecialchars($jp['key']) ?>"
-                                            <?= ($project['jira_project_key'] ?? '') === $jp['key'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($jp['key'] . ' - ' . $jp['name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                        <?php elseif (!empty($project['jira_project_key'])): ?>
-                            <span class="badge badge-primary" style="font-size:0.7rem;"><?= htmlspecialchars($project['jira_project_key']) ?></span>
-                        <?php endif; ?>
+                        <?php
+                        $jiraKey = $project['jira_project_key'] ?? '';
+                        $jiraLabel = 'Jira: None';
+                        if ($jiraKey) {
+                            // Find the project name from jira_projects list
+                            foreach ($jira_projects ?? [] as $jp) {
+                                if ($jp['key'] === $jiraKey) {
+                                    $jiraLabel = $jp['key'] . ' - ' . $jp['name'];
+                                    break;
+                                }
+                            }
+                            if ($jiraLabel === 'Jira: None') $jiraLabel = $jiraKey;
+                        }
+                        ?>
+                        <span class="badge" style="font-size:0.7rem; background:var(--secondary); color:#fff; white-space:nowrap;" title="Jira project">
+                            <?= htmlspecialchars($jiraLabel) ?>
+                        </span>
                         <a href="<?= htmlspecialchars($project['next_step_url'] ?? '/app/upload?project_id=' . (int) $project['id']) ?>"
                            class="btn btn-primary btn-sm"
                            title="<?= (int) ($project['steps_complete'] ?? 0) ?>/<?= (int) ($project['steps_total'] ?? 8) ?> steps complete — next: <?= htmlspecialchars($project['next_step_label'] ?? 'Upload') ?>">
                             Open Project
                         </a>
-                        <?php if (in_array($user['role'] ?? '', ['project_manager', 'org_admin', 'superadmin'])): ?>
+                        <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
-                                onclick="renameProject(<?= (int) $project['id'] ?>, this.dataset.name, this.dataset.token)"
-                                data-name="<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>"
-                                data-token="<?= htmlspecialchars($csrf_token, ENT_QUOTES) ?>">
-                            Rename
+                                onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>)">
+                            Edit
                         </button>
                         <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form"
                               onsubmit="return confirm('Delete project &quot;<?= htmlspecialchars($project['name'], ENT_QUOTES) ?>&quot;? This cannot be undone.')">
@@ -173,22 +173,55 @@ if ($lastProjectId && !empty($projects)) {
     </div>
 </div>
 
+<!-- Edit Project Modal -->
+<div id="edit-project-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;"
+     onclick="if(event.target===this) this.classList.add('hidden');">
+    <div class="card" style="max-width:500px; width:90%; margin:0;">
+        <div class="card-header flex justify-between items-center">
+            <h2 class="card-title" style="margin:0;">Edit Project</h2>
+            <button type="button" onclick="document.getElementById('edit-project-modal').classList.add('hidden');"
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <form method="POST" id="edit-project-form" action="" class="card-body">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <div class="form-group">
+                <label class="form-label" for="edit-project-name">Project Name</label>
+                <input type="text" id="edit-project-name" name="name" class="form-input"
+                       placeholder="Project name" required maxlength="255" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Jira Project</label>
+                <?php if (!empty($jira_projects)): ?>
+                <select name="jira_project_key" id="edit-jira-key" class="form-input">
+                    <option value="">None</option>
+                    <?php foreach ($jira_projects as $jp): ?>
+                        <option value="<?= htmlspecialchars($jp['key']) ?>">
+                            <?= htmlspecialchars($jp['key'] . ' — ' . $jp['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php else: ?>
+                <input type="text" name="jira_project_key" id="edit-jira-key" class="form-input"
+                       placeholder="e.g. PROJ" maxlength="20">
+                <small class="text-muted">Connect Jira in Integrations to see a project picker.</small>
+                <?php endif; ?>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-project-modal').classList.add('hidden');">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-function renameProject(id, currentName, token) {
-    var name = prompt('Rename project:', currentName);
-    if (name && name.trim()) {
-        var f = document.createElement('form');
-        f.method = 'POST';
-        f.action = '/app/projects/' + id + '/rename';
-        var t = document.createElement('input');
-        t.type = 'hidden'; t.name = '_csrf_token'; t.value = token;
-        var n = document.createElement('input');
-        n.type = 'hidden'; n.name = 'name'; n.value = name.trim();
-        f.appendChild(t);
-        f.appendChild(n);
-        document.body.appendChild(f);
-        f.submit();
-    }
+function openEditProjectModal(id, name, jiraKey) {
+    document.getElementById('edit-project-form').action = '/app/projects/' + id + '/edit';
+    document.getElementById('edit-project-name').value = name;
+    var jiraEl = document.getElementById('edit-jira-key');
+    if (jiraEl) { jiraEl.value = jiraKey || ''; }
+    document.getElementById('edit-project-modal').classList.remove('hidden');
+    setTimeout(function() { document.getElementById('edit-project-name').focus(); }, 50);
 }
 
 function filterProjectList(query) {

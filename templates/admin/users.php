@@ -85,6 +85,9 @@
                                 <?php endif; ?>
                             </td>
                             <td>
+                                <?php if ($u['is_project_admin'] ?? false): ?>
+                                    <span class="badge badge-success" title="Can create and manage projects">Projects</span>
+                                <?php endif; ?>
                                 <?php if ($u['has_billing_access']): ?>
                                     <span class="badge badge-secondary" title="Billing access">Billing</span>
                                 <?php endif; ?>
@@ -147,6 +150,12 @@
                                         <div class="form-group">
                                             <label class="form-label">Access Flags</label>
                                             <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
+                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                                    <input type="hidden" name="is_project_admin" value="0">
+                                                    <input type="checkbox" name="is_project_admin" value="1"
+                                                           <?= ($u['is_project_admin'] ?? false) ? 'checked' : '' ?>>
+                                                    Project admin (create &amp; manage projects)
+                                                </label>
                                                 <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
                                                     <input type="hidden" name="has_billing_access" value="0">
                                                     <input type="checkbox" name="has_billing_access" value="1"

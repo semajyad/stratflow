@@ -11,19 +11,27 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- Seed the single row with safe defaults
 INSERT IGNORE INTO system_settings (id, settings_json) VALUES (1, JSON_OBJECT(
-  'ai_provider',              'google',
-  'ai_model',                 'gemini-2.5-flash',
-  'default_seat_limit',       5,
-  'default_plan_type',        'product',
-  'default_billing_method',   'invoiced',
-  'feature_sounding_board',   true,
-  'feature_executive',        true,
-  'feature_xero',             true,
-  'feature_jira',             true,
-  'quality_threshold',        70,
-  'quality_enforcement',      'warn',
-  'support_email',            'support@stratflow.io',
-  'mail_from_name',           'StratFlow'
+  'ai_provider',                  'google',
+  'ai_model',                     'gemini-2.5-flash',
+  'default_seat_limit',           5,
+  'default_plan_type',            'product',
+  'default_billing_method',       'invoiced',
+  'feature_sounding_board',       true,
+  'feature_executive',            true,
+  'feature_xero',                 true,
+  'feature_jira',                 true,
+  'feature_github',               true,
+  'feature_gitlab',               true,
+  'feature_story_quality',        true,
+  'quality_threshold',            70,
+  'quality_enforcement',          'warn',
+  'support_email',                'support@stratflow.io',
+  'mail_from_name',               'StratFlow',
+  'billing_currency',             'NZD',
+  'billing_rate_monthly_cents',   0,
+  'billing_rate_quarterly_cents', 0,
+  'billing_rate_6monthly_cents',  0,
+  'billing_rate_annual_cents',    0
 ));
 
 SET FOREIGN_KEY_CHECKS = 1;

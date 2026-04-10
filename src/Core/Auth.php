@@ -64,6 +64,7 @@ class Auth
             'role' => $user['role'],
             'has_billing_access'   => (bool) ($user['has_billing_access']   ?? false),
             'has_executive_access' => (bool) ($user['has_executive_access'] ?? false),
+            'is_project_admin'     => (bool) ($user['is_project_admin']     ?? false),
         ]);
     }
 

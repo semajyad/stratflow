@@ -136,7 +136,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/projects/{id}/github/save', 'ProjectGitHubController@save', ['auth', 'csrf']);
 
     // Project management
-    $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira', ['auth', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/edit',      'HomeController@editProject',   ['auth', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira',      ['auth', 'csrf']);
     $router->add('POST', '/app/projects/{id}/rename',    'HomeController@renameProject', ['auth', 'csrf']);
     $router->add('POST', '/app/projects/{id}/delete',    'HomeController@deleteProject', ['auth', 'admin', 'csrf']);
 

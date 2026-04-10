@@ -147,6 +147,45 @@ class HomeController
     }
 
     /**
+     * Edit project — unified rename + Jira link in one POST from the Edit modal.
+     *
+     * Only accessible to project admins, org admins, and superadmins.
+     */
+    public function editProject($id): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $id;
+
+        if (!($user['is_project_admin'] ?? false) && !in_array($user['role'] ?? '', ['org_admin', 'superadmin'], true)) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $name    = trim((string) $this->request->post('name', ''));
+        $jiraKey = trim((string) $this->request->post('jira_project_key', ''));
+
+        $updates = [];
+        if ($name !== '') {
+            $updates['name'] = $name;
+        }
+        $updates['jira_project_key'] = $jiraKey ?: null;
+
+        if (!empty($updates)) {
+            Project::update($this->db, $projectId, $updates, $orgId);
+        }
+
+        $_SESSION['flash_message'] = 'Project updated.';
+        $this->response->redirect('/app/home');
+    }
+
+    /**
      * Rename a project.
      */
     public function renameProject($id): void
