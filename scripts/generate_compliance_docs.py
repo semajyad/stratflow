@@ -29,6 +29,19 @@ from datetime import datetime
 # ===== CONFIG =====
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Claude CLI — Windows Store install isn't on PATH for subprocesses; find latest version dir
+def _find_claude_bin() -> str:
+    base = os.path.expandvars(r"%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude-code")
+    if os.path.isdir(base):
+        versions = sorted(os.listdir(base), reverse=True)
+        for v in versions:
+            candidate = os.path.join(base, v, "claude.exe")
+            if os.path.isfile(candidate):
+                return candidate
+    return "claude"  # fallback: hope it's on PATH
+
+CLAUDE_BIN = _find_claude_bin()
 ENV_FILE = os.path.join(REPO, "..", ".env")  # Sentinel .env, one dir up
 
 LOG_DIR = os.path.join(REPO, "logs")
@@ -67,7 +80,7 @@ def run_claude_agent(agent_name: str, prompt: str, timeout: int = 600) -> bool:
     logger.info(f"Running agent: {agent_name}")
     result = subprocess.run(
         [
-            "claude", "--print",
+            CLAUDE_BIN, "--print",
             "--allowedTools", "Bash,Read,Write,Glob,Grep",
             "--max-turns", "25",
             "-p", prompt,
