@@ -22,6 +22,7 @@ use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
 use StratFlow\Models\GovernanceItem;
 use StratFlow\Models\StrategicBaseline;
+use StratFlow\Models\StoryQualityConfig;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\UserStoryPrompt;
 
@@ -141,6 +142,32 @@ class UserStoryController
                 $input .= "Strategic Context: {$hlItem['strategic_context']}\n";
             }
 
+            // Inject KR data from the work item's key results
+            try {
+                $krRows = $this->db->query(
+                    "SELECT title, current_value, target_value, unit
+                       FROM key_results
+                      WHERE hl_work_item_id = :wid",
+                    [':wid' => (int) $hlItemId]
+                )->fetchAll();
+                if (!empty($krRows)) {
+                    $input .= "\n--- KEY RESULTS ---\n";
+                    foreach ($krRows as $kr) {
+                        $input .= "- {$kr['title']}: current={$kr['current_value']}, target={$kr['target_value']} {$kr['unit']}\n";
+                    }
+                    $input .= "-------------------\n";
+                }
+            } catch (\Throwable) {
+                // key_results may not exist on a fresh deploy
+            }
+
+            // Inject org quality rules
+            try {
+                $input .= StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+            } catch (\Throwable) {
+                // story_quality_config may not exist on a fresh deploy
+            }
+
             try {
                 $gemini     = new GeminiService($this->config);
                 $storiesData = $gemini->generateJson(UserStoryPrompt::DECOMPOSE_PROMPT, $input);
@@ -155,13 +182,26 @@ class UserStoryController
             }
 
             foreach ($storiesData as $storyData) {
+                // Normalise acceptance_criteria to newline-delimited string
+                $acRaw = $storyData['acceptance_criteria'] ?? null;
+                $ac = null;
+                if (is_array($acRaw)) {
+                    $ac = implode("\n", $acRaw);
+                } elseif (is_string($acRaw) && $acRaw !== '') {
+                    $ac = $acRaw;
+                }
+
                 UserStory::create($this->db, [
-                    'project_id'        => $projectId,
-                    'parent_hl_item_id' => (int) $hlItemId,
-                    'priority_number'   => $priorityNumber++,
-                    'title'             => $storyData['title'] ?? 'Untitled Story',
-                    'description'       => $storyData['description'] ?? null,
-                    'size'              => isset($storyData['size']) ? (int) $storyData['size'] : null,
+                    'project_id'          => $projectId,
+                    'parent_hl_item_id'   => (int) $hlItemId,
+                    'priority_number'     => $priorityNumber++,
+                    'title'               => $storyData['title'] ?? 'Untitled Story',
+                    'description'         => $storyData['description'] ?? null,
+                    'size'                => isset($storyData['size']) ? (int) $storyData['size'] : null,
+                    'acceptance_criteria' => $ac,
+                    'kr_hypothesis'       => isset($storyData['kr_hypothesis']) && $storyData['kr_hypothesis'] !== ''
+                                             ? mb_substr((string) $storyData['kr_hypothesis'], 0, 500)
+                                             : null,
                 ]);
                 $totalCreated++;
             }
@@ -264,12 +304,17 @@ class UserStoryController
         $newSize = $size !== '' ? (int) $size : 0;
 
         UserStory::update($this->db, $id, [
-            'title'             => trim((string) $this->request->post('title', $story['title'])),
-            'description'       => trim((string) $this->request->post('description', $story['description'] ?? '')),
-            'parent_hl_item_id' => $parentHlItemId !== '' ? (int) $parentHlItemId : null,
-            'team_assigned'     => trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
-            'size'              => $size !== '' ? (int) $size : null,
-            'blocked_by'        => $blockedBy !== '' ? (int) $blockedBy : null,
+            'title'               => trim((string) $this->request->post('title', $story['title'])),
+            'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
+            'parent_hl_item_id'   => $parentHlItemId !== '' ? (int) $parentHlItemId : null,
+            'team_assigned'       => trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
+            'size'                => $size !== '' ? (int) $size : null,
+            'blocked_by'          => $blockedBy !== '' ? (int) $blockedBy : null,
+            'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
+            'kr_hypothesis'       => mb_substr(
+                trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')),
+                0, 500
+            ) ?: null,
         ]);
 
         // Flag parent work item for review if size changed significantly
