@@ -19,7 +19,10 @@ $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'v
 </div>
 
 <!-- Overview Cards — fixed structure: label top, value middle, sub bottom -->
-<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; margin-bottom:2rem;">
+<!-- The global .card + .card rule adds margin-top: 1.5rem which breaks grid alignment;
+     the .billing-overview class overrides it to zero for cards inside this grid. -->
+<style>.billing-overview .card + .card { margin-top: 0; }</style>
+<div class="billing-overview" style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; margin-bottom:2rem; align-items:stretch;">
     <?php
     // Helper: render a stat card with pinned label/value/sub positions.
     // Each card has the same three-zone layout regardless of content,
