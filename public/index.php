@@ -82,7 +82,7 @@ try {
     exit;
 }
 
-$session = new \StratFlow\Core\Session(1800, $db->getPdo());
+$session = new \StratFlow\Core\Session(86400, $db->getPdo());
 $csrf = new \StratFlow\Core\CSRF($session);
 $auth = new \StratFlow\Core\Auth($session, $db);
 $request = new \StratFlow\Core\Request();
