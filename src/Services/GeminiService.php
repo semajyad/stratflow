@@ -98,20 +98,16 @@ class GeminiService
             $text = preg_replace('/\s*```$/', '', $text);
         }
 
-        // Sanitise literal control characters inside JSON string values.
-        // Gemini occasionally embeds literal LF/CR inside string values (e.g. multi-line
-        // acceptance criteria), which json_decode rejects as JSON_ERROR_CTRL_CHAR.
-        // We find every JSON string token and replace any literal control chars with
-        // their escape-sequence equivalents; already-escaped sequences are unaffected.
-        $text = preg_replace_callback(
-            '/"((?:[^"\\\\]|\\\\.)*)"/s',
-            static function (array $m): string {
-                $inner = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $m[1]);
-                $inner = str_replace(["\r\n", "\r", "\n", "\t"], ['\\n', '\\n', '\\n', '\\t'], $inner);
-                return '"' . $inner . '"';
-            },
-            $text
-        ) ?? $text;
+        $decoded = json_decode($text, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+
+        // Gemini occasionally embeds literal control characters (LF, CR, TAB, etc.)
+        // inside JSON string values, which json_decode rejects as JSON_ERROR_CTRL_CHAR.
+        // The regex approach can fail on large responses (PCRE backtrack limit), so we
+        // walk the string character-by-character — O(n), no backtracking.
+        $text = $this->sanitizeJsonControlChars($text);
 
         $decoded = json_decode($text, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -124,6 +120,61 @@ class GeminiService
     // ===========================
     // HELPERS
     // ===========================
+
+    /**
+     * Walk the JSON string character-by-character and escape any bare control
+     * characters found inside string values. Already-escaped sequences (e.g. \\n)
+     * are left untouched. This is O(n) with no regex backtracking so it works
+     * reliably on large AI responses.
+     */
+    private function sanitizeJsonControlChars(string $text): string
+    {
+        $out      = '';
+        $inString = false;
+        $escaped  = false;
+        $len      = strlen($text);
+
+        for ($i = 0; $i < $len; $i++) {
+            $c   = $text[$i];
+            $ord = ord($c);
+
+            if ($escaped) {
+                // Character following a backslash — always pass through as-is
+                $escaped = false;
+                $out    .= $c;
+                continue;
+            }
+
+            if ($c === '\\' && $inString) {
+                $escaped = true;
+                $out    .= $c;
+                continue;
+            }
+
+            if ($c === '"') {
+                $inString = !$inString;
+                $out     .= $c;
+                continue;
+            }
+
+            if ($inString && $ord < 0x20) {
+                // Bare control character inside a string — replace with JSON escape
+                $out .= match($ord) {
+                    0x08 => '\\b',
+                    0x09 => '\\t',
+                    0x0A => '\\n',
+                    0x0C => '\\f',
+                    0x0D => '\\r',
+                    default => sprintf('\\u%04x', $ord),
+                };
+                continue;
+            }
+
+            $out .= $c;
+        }
+
+        return $out;
+    }
 
     /**
      * Build the full Gemini API endpoint URL.

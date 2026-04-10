@@ -1469,74 +1469,78 @@ document.querySelectorAll('.doc-summary-toggle').forEach(function(btn) {
 function attachDiagramNodeClicks(container) {
     if (!container) return;
     var ns = 'http://www.w3.org/2000/svg';
-    // Track which keys have already received a badge (avoid duplicates across selector matches)
     var badgedKeys = {};
-    var nodes = container.querySelectorAll('.node, .label-container, [id^="flowchart-"]');
-    nodes.forEach(function(el) {
-        // Resolve the node key from the element or its closest ancestor with an id
-        var src = el.id || (el.closest('[id^="flowchart-"]') || {}).id || '';
-        // Mermaid uses ids like "flowchart-NodeKey-42"; strip prefix and suffix index
-        var match = src.match(/^flowchart-(.+)-\d+$/);
-        if (!match) return;
+
+    // Select the canonical node <g> elements only — those with id="flowchart-KEY-N".
+    // Mermaid v11 uses this pattern for every flowchart node.
+    var nodeEls = container.querySelectorAll('[id^="flowchart-"]');
+    nodeEls.forEach(function(el) {
+        // Only process <g> elements that match the "flowchart-KEY-N" id pattern.
+        var match = (el.id || '').match(/^flowchart-(.+)-\d+$/);
+        if (!match || el.tagName.toLowerCase() !== 'g') return;
         var nodeKey = match[1];
+
+        // Skip Mermaid internal grouping keys (graph wrapper, edge paths etc.)
+        if (/^(graph|edge|label|cluster|flowchart|root|mermaid)$/i.test(nodeKey)) return;
 
         var accordion = document.querySelector('[data-node-key="' + nodeKey + '"]');
         if (!accordion) return;
 
+        // Make the whole <g> clickable with a pointer cursor
         el.style.cursor = 'pointer';
+        el.setAttribute('pointer-events', 'all');
+        el.setAttribute('role', 'button');
+        el.setAttribute('title', 'View OKR: ' + nodeKey);
+
         el.addEventListener('click', function(e) {
             e.stopPropagation();
-            // Open the accordion
             accordion.classList.add('accordion-item--open');
-            // Scroll into view smoothly
             accordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Brief highlight flash
-            accordion.style.transition = 'outline 0.1s';
+            accordion.style.transition = 'outline 0.15s';
             accordion.style.outline = '2px solid var(--primary, #4f46e5)';
-            setTimeout(function() { accordion.style.outline = ''; }, 1200);
+            setTimeout(function() { accordion.style.outline = ''; }, 1400);
         });
 
-        // Inject a key badge into the top-left corner of the SVG node shape.
-        // Only badge the canonical node <g> element (has the flowchart- id directly)
-        // and only once per key.
-        if (el.id && el.id.indexOf('flowchart-') === 0 && !badgedKeys[nodeKey]) {
-            badgedKeys[nodeKey] = true;
-            var rectEl = el.querySelector('rect, polygon, ellipse, circle');
-            if (!rectEl) return;
+        // Inject key badge into top-left corner — only once per key.
+        if (badgedKeys[nodeKey]) return;
+        badgedKeys[nodeKey] = true;
 
-            // Mermaid centers nodes at the origin of their <g> transform,
-            // so rect x/y are negative half-dimensions.
-            var rx = parseFloat(rectEl.getAttribute('x') || rectEl.getAttribute('cx') || 0);
-            var ry = parseFloat(rectEl.getAttribute('y') || rectEl.getAttribute('cy') || 0);
+        // Use getBBox() so it works for rect, path, polygon — Mermaid v11 uses <path>
+        // for rounded rects. Must query the first shape child.
+        var shapeEl = el.querySelector('rect, path, polygon, ellipse, circle');
+        if (!shapeEl) return;
 
-            var badgeW = Math.max(18, nodeKey.length * 7 + 6);
-            var badgeH = 16;
-            var bx = rx + 5;
-            var by = ry + 5;
+        var bbox;
+        try { bbox = shapeEl.getBBox(); } catch (e) { return; }
+        if (!bbox || bbox.width === 0) return;
 
-            var bg = document.createElementNS(ns, 'rect');
-            bg.setAttribute('x', bx);
-            bg.setAttribute('y', by);
-            bg.setAttribute('width', badgeW);
-            bg.setAttribute('height', badgeH);
-            bg.setAttribute('rx', 3);
-            bg.setAttribute('fill', '#4f46e5');
-            bg.setAttribute('opacity', '0.85');
-            bg.setAttribute('pointer-events', 'none');
+        var badgeW = Math.max(20, nodeKey.length * 7 + 8);
+        var badgeH = 17;
+        var bx = bbox.x + 5;
+        var by = bbox.y + 4;
 
-            var txt = document.createElementNS(ns, 'text');
-            txt.setAttribute('x', bx + badgeW / 2);
-            txt.setAttribute('y', by + badgeH - 4);
-            txt.setAttribute('text-anchor', 'middle');
-            txt.setAttribute('font-size', '10');
-            txt.setAttribute('font-weight', '700');
-            txt.setAttribute('fill', '#ffffff');
-            txt.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
-            txt.setAttribute('pointer-events', 'none');
-            txt.textContent = nodeKey;
+        var bg = document.createElementNS(ns, 'rect');
+        bg.setAttribute('x', bx);
+        bg.setAttribute('y', by);
+        bg.setAttribute('width', badgeW);
+        bg.setAttribute('height', badgeH);
+        bg.setAttribute('rx', 3);
+        bg.setAttribute('fill', '#4f46e5');
+        bg.setAttribute('pointer-events', 'none');
 
-            el.appendChild(bg);
-            el.appendChild(txt);
-        }
+        var txt = document.createElementNS(ns, 'text');
+        txt.setAttribute('x', bx + badgeW / 2);
+        txt.setAttribute('y', by + badgeH - 4);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'auto');
+        txt.setAttribute('font-size', '10');
+        txt.setAttribute('font-weight', '700');
+        txt.setAttribute('fill', '#ffffff');
+        txt.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+        txt.setAttribute('pointer-events', 'none');
+        txt.textContent = nodeKey;
+
+        el.appendChild(bg);
+        el.appendChild(txt);
     });
 }
