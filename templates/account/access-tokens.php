@@ -71,6 +71,24 @@ function copyToken() {
 </script>
 <?php endif; ?>
 
+<!-- Team membership — used by list_team_stories MCP tool -->
+<section class="card mb-4">
+    <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+            <label for="user-team" style="display:block;font-weight:600;font-size:0.875rem;margin-bottom:0.25rem;">Your team</label>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 0.5rem;">Used by <code>list_team_stories</code> in Claude Code to show your team's backlog.</p>
+        </div>
+        <form method="POST" action="/app/account/team" style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="text" id="user-team" name="team" maxlength="100"
+                   value="<?= htmlspecialchars($user['team'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                   placeholder="e.g. Backend, Platform, Mobile"
+                   class="form-control" style="width:220px;">
+            <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+        </form>
+    </div>
+</section>
+
 <!-- Claude Code MCP setup guide — always visible, collapsible -->
 <section class="card mb-4">
     <button type="button"
@@ -112,10 +130,12 @@ function copyToken() {
                 <p style="font-size:0.875rem;margin:0 0 0.5rem;"><strong>Step 2</strong> — Restart Claude Code. The following tools will be available in any project:</p>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem;">
                     <?php foreach ([
-                        ['list_my_stories', 'Stories assigned to you'],
-                        ['get_story',       'Full story + AC + KR + git links'],
-                        ['start_story',     'Set status → in progress'],
-                        ['complete_story',  'Set status → in review'],
+                        ['list_my_stories',   'Stories assigned to you'],
+                        ['list_team_stories', 'Unassigned stories for your team'],
+                        ['claim_story',       'Assign + start in one step'],
+                        ['get_story',         'Full story + AC + KR + git links'],
+                        ['start_story',       'Set status → in progress'],
+                        ['complete_story',    'Set status → in review'],
                     ] as [$tool, $desc]): ?>
                     <div style="background:var(--surface-2,#f8fafc);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;">
                         <code style="font-size:0.78rem;color:var(--primary-dark,#1d4ed8);"><?= $tool ?></code>

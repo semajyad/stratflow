@@ -24,6 +24,7 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\PersonalAccessToken;
+use StratFlow\Models\User;
 use StratFlow\Services\AuditLogger;
 
 class AccessTokenController
@@ -160,6 +161,25 @@ class AccessTokenController
             $_SESSION['_flash']['error'] = 'Token not found or already revoked.';
         }
 
+        $this->response->redirect('/app/account/tokens');
+    }
+
+    /**
+     * Save the authenticated user's team membership.
+     *
+     * Used by the team card on the Developer Tokens page so the MCP
+     * list_team_stories tool knows which team to filter by.
+     */
+    public function saveTeam(): void
+    {
+        $user   = $this->auth->user();
+        $userId = (int) $user['id'];
+
+        $team = trim((string) ($_POST['team'] ?? ''));
+
+        User::update($this->db, $userId, ['team' => $team !== '' ? $team : null]);
+
+        $_SESSION['_flash']['success'] = 'Team saved.';
         $this->response->redirect('/app/account/tokens');
     }
 }

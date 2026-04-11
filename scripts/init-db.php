@@ -53,8 +53,8 @@ try {
                 try {
                     $pdo->exec($stmt);
                 } catch (PDOException $e) {
-                    // 1060 = Duplicate column, 1061 = Duplicate key — safe to skip
-                    if (in_array($e->errorInfo[1] ?? 0, [1060, 1061])) {
+                    // 1060 = Duplicate column, 1061 = Duplicate key, 1826 = Duplicate FK name — safe to skip
+                    if (in_array($e->errorInfo[1] ?? 0, [1060, 1061, 1826])) {
                         echo "  Skipped (already applied): {$e->errorInfo[2]}\n";
                     } else {
                         echo "  Warning: {$e->getMessage()}\n";

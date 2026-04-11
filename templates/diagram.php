@@ -203,8 +203,14 @@ $hasSummary = !empty($document_summary);
             <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Strategic Initiative <span style="color:#ef4444;">*</span></label>
-                    <input type="text" name="label" class="form-control" required maxlength="200"
-                           placeholder="e.g. Expand into New Markets">
+                    <select name="node_id" class="form-control" required>
+                        <option value="">-- Select a strategic initiative --</option>
+                        <?php foreach ($nodes as $n): ?>
+                        <option value="<?= (int) $n['id'] ?>">
+                            <?= htmlspecialchars($n['node_key'] . ': ' . $n['label'], ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Objective</label>

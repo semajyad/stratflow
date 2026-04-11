@@ -85,7 +85,7 @@ class User
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'full_name', 'email', 'password_hash', 'role', 'is_active',
+        'full_name', 'email', 'password_hash', 'role', 'is_active', 'team',
     ];
 
     public static function update(Database $db, int $id, array $data): void

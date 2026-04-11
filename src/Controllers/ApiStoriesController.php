@@ -20,6 +20,7 @@ use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
+use StratFlow\Models\User;
 use StratFlow\Models\UserStory;
 use StratFlow\Services\AuditLogger;
 
@@ -311,6 +312,112 @@ class ApiStoriesController
             'sf_ref' => 'SF-' . $storyId,
             'status' => $newStatus,
         ]]);
+    }
+
+    // ===========================
+    // UPDATE MY TEAM
+    // ===========================
+
+    /**
+     * POST /api/v1/me/team
+     *
+     * Set the authenticated user's team membership.
+     * Body: {"team": "Backend"}
+     */
+    public function setMyTeam(): void
+    {
+        $user   = $this->auth->user();
+        $userId = (int) $user['id'];
+        $body   = $this->request->json();
+        $team   = trim((string) ($body['team'] ?? ''));
+
+        if ($team === '') {
+            $this->jsonError('team is required', 422);
+            return;
+        }
+
+        if (strlen($team) > 100) {
+            $this->jsonError('team name must be 100 characters or fewer', 422);
+            return;
+        }
+
+        User::update($this->db, $userId, ['team' => $team]);
+
+        $this->json(['data' => ['team' => $team]]);
+    }
+
+    // ===========================
+    // TEAM STORIES
+    // ===========================
+
+    /**
+     * GET /api/v1/stories/team
+     *
+     * Returns stories assigned to the authenticated user's team.
+     * Requires the user to have a `team` set on their account.
+     */
+    public function teamStories(): void
+    {
+        $user   = $this->auth->user();
+        $orgId  = (int) $user['org_id'];
+        $team   = trim((string) ($user['team'] ?? ''));
+
+        if ($team === '') {
+            $this->jsonError(
+                'No team set on your account. Set your team at /app/account/tokens.',
+                422
+            );
+            return;
+        }
+
+        $limitRaw = (int) $this->request->get('limit', '50');
+        $limit    = min(max($limitRaw, 1), 200);
+
+        // Optional status filter
+        $statusRaw = $this->request->get('status', '');
+        $where  = ['p.org_id = :org_id', 'us.team_assigned = :team'];
+        $params = [':org_id' => $orgId, ':team' => $team];
+
+        if ($statusRaw !== '') {
+            $requested = array_filter(array_map('trim', explode(',', $statusRaw)));
+            $valid = array_intersect($requested, self::ALLOWED_STATUSES);
+            if (!empty($valid)) {
+                $placeholders = implode(', ', array_map(fn($i) => ":status{$i}", array_keys($valid)));
+                $where[] = "us.status IN ({$placeholders})";
+                foreach (array_values($valid) as $i => $s) {
+                    $params[":status{$i}"] = $s;
+                }
+            }
+        }
+
+        $whereClause = implode(' AND ', $where);
+
+        $rows = $this->db->query(
+            "SELECT us.id, us.title, us.status, us.size, us.assignee_user_id,
+                    u.full_name AS assignee_name,
+                    p.id AS project_id, p.name AS project_name,
+                    us.updated_at
+             FROM user_stories us
+             JOIN projects p ON p.id = us.project_id
+             LEFT JOIN users u ON u.id = us.assignee_user_id
+             WHERE {$whereClause}
+             ORDER BY us.priority_number ASC
+             LIMIT :lim",
+            array_merge($params, [':lim' => $limit])
+        )->fetchAll();
+
+        $data = array_map(fn($r) => [
+            'id'       => (int) $r['id'],
+            'sf_ref'   => 'SF-' . $r['id'],
+            'title'    => $r['title'],
+            'status'   => $r['status'],
+            'size'     => $r['size'] !== null ? (int) $r['size'] : null,
+            'assignee' => $r['assignee_name'],
+            'project'  => ['id' => (int) $r['project_id'], 'name' => $r['project_name']],
+            'updated_at' => $r['updated_at'],
+        ], $rows);
+
+        $this->json(['team' => $team, 'data' => $data, 'count' => count($data)]);
     }
 
     // ===========================

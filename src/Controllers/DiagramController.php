@@ -404,6 +404,7 @@ class DiagramController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
+        $nodeId    = (int) $this->request->post('node_id', 0);
 
         $project = Project::findById($this->db, $projectId, $orgId);
         if ($project === null) {
@@ -411,72 +412,41 @@ class DiagramController
             return;
         }
 
-        $label          = trim((string) $this->request->post('label', ''));
+        if ($nodeId === 0) {
+            $_SESSION['flash_message'] = 'Please select a strategic initiative.';
+            $this->response->redirect('/app/diagram?project_id=' . $projectId);
+            return;
+        }
+
         $okrTitle       = trim((string) $this->request->post('okr_title', ''));
         $okrDescription = trim((string) $this->request->post('okr_description', ''));
 
-        if ($label === '') {
-            $_SESSION['flash_message'] = 'Initiative name is required.';
+        // Confirm node belongs to a diagram in this project (org-scoped)
+        $row = $this->db->query(
+            "SELECT dn.id FROM diagram_nodes dn
+             JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
+             WHERE dn.id = :node_id AND sd.project_id = :project_id LIMIT 1",
+            [':node_id' => $nodeId, ':project_id' => $projectId]
+        )->fetch();
+
+        if (!$row) {
+            $_SESSION['flash_message'] = 'Initiative not found.';
             $this->response->redirect('/app/diagram?project_id=' . $projectId);
             return;
         }
-
-        $diagram = StrategyDiagram::findByProjectId($this->db, $projectId);
-        if ($diagram === null) {
-            $_SESSION['flash_message'] = 'Generate a strategy diagram first before adding OKRs.';
-            $this->response->redirect('/app/diagram?project_id=' . $projectId);
-            return;
-        }
-
-        // Generate the next node key (A, B, C … Z, AA, AB …)
-        $existingNodes = DiagramNode::findByDiagramId($this->db, (int) $diagram['id']);
-        $usedKeys = array_map(fn($n) => strtoupper($n['node_key']), $existingNodes);
-        $nextKey = $this->nextNodeKey($usedKeys);
 
         $this->db->query(
-            "INSERT INTO diagram_nodes (diagram_id, node_key, label, okr_title, okr_description)
-             VALUES (:diagram_id, :node_key, :label, :okr_title, :okr_description)",
-            [
-                ':diagram_id'     => (int) $diagram['id'],
-                ':node_key'       => $nextKey,
-                ':label'          => $label,
-                ':okr_title'      => $okrTitle,
-                ':okr_description' => $okrDescription,
-            ]
+            "UPDATE diagram_nodes SET okr_title = :okr_title, okr_description = :okr_description WHERE id = :id",
+            [':okr_title' => $okrTitle ?: null, ':okr_description' => $okrDescription ?: null, ':id' => $nodeId]
         );
 
-        $_SESSION['flash_message'] = 'OKR added.';
+        $_SESSION['flash_message'] = 'OKR saved.';
         $this->response->redirect('/app/diagram?project_id=' . $projectId);
     }
 
     /**
      * Generate the next node key after the existing set.
      * Follows Excel-column-style progression: A … Z, AA, AB …
-     *
-     * @param string[] $usedKeys Uppercase existing node keys
-     */
-    private function nextNodeKey(array $usedKeys): string
-    {
-        $candidate = 'A';
-        while (in_array($candidate, $usedKeys, true)) {
-            // Increment like spreadsheet columns
-            $len = strlen($candidate);
-            $i = $len - 1;
-            while ($i >= 0) {
-                if ($candidate[$i] < 'Z') {
-                    $candidate[$i] = chr(ord($candidate[$i]) + 1);
-                    break;
-                }
-                $candidate[$i] = 'A';
-                $i--;
-            }
-            if ($i < 0) {
-                $candidate = 'A' . $candidate;
-            }
-        }
-        return $candidate;
-    }
-
     /**
      * Delete a single OKR node (org-scoped).
      */

@@ -238,10 +238,13 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/account/tokens',             'AccessTokenController@index',  ['auth']);
     $router->add('POST', '/app/account/tokens',             'AccessTokenController@create', ['auth', 'csrf']);
     $router->add('POST', '/app/account/tokens/{id}/revoke', 'AccessTokenController@revoke', ['auth', 'csrf']);
+    $router->add('POST', '/app/account/team',               'AccessTokenController@saveTeam', ['auth', 'csrf']);
 
     // ====== JSON API — PAT-authenticated, no CSRF, no session ======
     // CSRF-exempt precedent: /webhook/stripe, /webhook/git/*
     $router->add('GET',  '/api/v1/me',                      'ApiStoriesController@me',           ['api_auth']);
+    $router->add('POST', '/api/v1/me/team',                 'ApiStoriesController@setMyTeam',     ['api_auth']);
+    $router->add('GET',  '/api/v1/stories/team',            'ApiStoriesController@teamStories',   ['api_auth']);
     $router->add('GET',  '/api/v1/stories',                 'ApiStoriesController@index',        ['api_auth']);
     $router->add('GET',  '/api/v1/stories/{id}',            'ApiStoriesController@show',         ['api_auth']);
     $router->add('POST', '/api/v1/stories/{id}/status',     'ApiStoriesController@updateStatus', ['api_auth']);
