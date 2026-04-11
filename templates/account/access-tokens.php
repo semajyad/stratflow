@@ -126,7 +126,7 @@ function copyToken() {
             </div>
 
             <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">
-                Commits with <code>Refs SF-{id}</code> in the message are automatically linked to stories via the GitHub App.
+                When you run <code>start_story</code>, a git hook is automatically installed in your repo. Every commit will include <code>Refs SF-{id}</code> until you run <code>complete_story</code> — no manual copy-paste needed.
             </p>
 
         </div>
