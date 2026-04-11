@@ -130,6 +130,32 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-jira-preview-close')) {
+        e.preventDefault();
+        closeJiraSyncPreviewModal();
+        return;
+    }
+
+    var jiraPreviewSubmit = e.target.closest('.js-jira-preview-submit');
+    if (jiraPreviewSubmit) {
+        e.preventDefault();
+        submitJiraSyncPreview(jiraPreviewSubmit.dataset.projectId || '');
+        return;
+    }
+
+    if (e.target.closest('.js-git-links-add')) {
+        e.preventDefault();
+        addGitLink();
+        return;
+    }
+
+    var gitLinksDelete = e.target.closest('.js-git-links-delete');
+    if (gitLinksDelete) {
+        e.preventDefault();
+        deleteGitLink(gitLinksDelete.dataset.linkId || '');
+        return;
+    }
+
     if (!e.target.closest('.row-actions-menu')) {
         document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
             m.classList.remove('row-actions-menu--open');
@@ -168,6 +194,15 @@ document.addEventListener('submit', function(e) {
     if (confirmMessage && !window.confirm(confirmMessage)) {
         e.preventDefault();
     }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' || !e.target.matches('#git-links-ref-input')) {
+        return;
+    }
+
+    e.preventDefault();
+    addGitLink();
 });
 
 // ===========================
@@ -1482,6 +1517,205 @@ function getCsrfTokenValue() {
     return csrfToken ? csrfToken.value : '';
 }
 
+window.loadGitLinks = function(localType, localId) {
+    if (!localType || !localId) { return; }
+
+    window._gitLinksLocalType = localType;
+    window._gitLinksLocalId = localId;
+
+    var loading = document.getElementById('git-links-loading');
+    var list = document.getElementById('git-links-list');
+    if (!list) { return; }
+
+    if (loading) {
+        loading.style.display = 'inline';
+    }
+    list.innerHTML = '';
+
+    fetch('/app/git-links?local_type=' + encodeURIComponent(localType) + '&local_id=' + encodeURIComponent(localId), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        if (data.ok) {
+            renderGitLinks(data.links);
+        }
+    })
+    .catch(function() {
+        if (loading) {
+            loading.style.display = 'none';
+        }
+    });
+};
+
+function renderGitLinks(links) {
+    var list = document.getElementById('git-links-list');
+    if (!list) { return; }
+
+    if (!links || links.length === 0) {
+        list.innerHTML = '<p style="font-size:0.8125rem; color:var(--text-muted,#6b7280); margin:0;">No git links yet.</p>';
+        return;
+    }
+
+    list.innerHTML = links.map(function(link) {
+        var statusClass = {
+            'open': 'badge-info',
+            'merged': 'badge-success',
+            'closed': 'badge-secondary',
+            'unknown': 'badge-secondary'
+        }[link.status] || 'badge-secondary';
+
+        var label = escapeHtml(link.ref_label || link.ref_url);
+        var urlEscaped = escapeHtml(link.ref_url);
+        var linkHtml = link.ref_url.startsWith('http')
+            ? '<a href="' + urlEscaped + '" target="_blank" rel="noopener" style="font-size:0.8125rem;">' + label + '</a>'
+            : '<span style="font-size:0.8125rem;">' + label + '</span>';
+
+        return '<div class="git-link-row" data-link-id="' + escapeHtml(String(link.id)) + '" ' +
+            'style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.375rem;">' +
+            '<span class="badge ' + statusClass + '" style="font-size:0.7rem;min-width:52px;text-align:center;">' +
+                escapeHtml(link.status) +
+            '</span>' +
+            linkHtml +
+            '<button type="button" class="js-git-links-delete" data-link-id="' + escapeHtml(String(link.id)) + '" ' +
+            'style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--danger,#dc3545);font-size:1rem;line-height:1;padding:0 4px;" ' +
+            'title="Remove link">&times;</button>' +
+            '</div>';
+    }).join('');
+}
+
+function addGitLink() {
+    var input = document.getElementById('git-links-ref-input');
+    var errorEl = document.getElementById('git-links-error');
+    var addBtn = document.getElementById('git-links-add-btn');
+    var refUrl = input ? input.value.trim() : '';
+
+    if (!refUrl) {
+        showGitLinksError('Please enter a PR URL, commit SHA, or branch name.');
+        return;
+    }
+
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
+    if (addBtn) {
+        addBtn.disabled = true;
+        addBtn.textContent = 'Linking...';
+    }
+
+    var body = new URLSearchParams({
+        _csrf_token: getCsrfTokenValue(),
+        local_type: window._gitLinksLocalType || '',
+        local_id: String(window._gitLinksLocalId || ''),
+        ref_url: refUrl
+    });
+
+    fetch('/app/git-links', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: body.toString()
+    })
+    .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
+    .then(function(r) {
+        if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.textContent = 'Link';
+        }
+
+        if (r.data.ok) {
+            input.value = '';
+            window.loadGitLinks(window._gitLinksLocalType, window._gitLinksLocalId);
+            refreshGitLinkBadge(window._gitLinksLocalType, window._gitLinksLocalId);
+        } else {
+            showGitLinksError(r.data.error || 'Failed to add link.');
+        }
+    })
+    .catch(function() {
+        if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.textContent = 'Link';
+        }
+        showGitLinksError('Network error. Please try again.');
+    });
+}
+
+function deleteGitLink(linkId) {
+    if (!linkId || !window.confirm('Remove this git link?')) { return; }
+
+    var body = new URLSearchParams({
+        _csrf_token: getCsrfTokenValue(),
+        local_type: window._gitLinksLocalType || '',
+        local_id: String(window._gitLinksLocalId || '')
+    });
+
+    fetch('/app/git-links/' + linkId + '/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: body.toString()
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            window.loadGitLinks(window._gitLinksLocalType, window._gitLinksLocalId);
+            refreshGitLinkBadge(window._gitLinksLocalType, window._gitLinksLocalId);
+        } else {
+            showGitLinksError(data.error || 'Delete failed.');
+        }
+    })
+    .catch(function() {
+        showGitLinksError('Network error. Please try again.');
+    });
+}
+
+function refreshGitLinkBadge(localType, localId) {
+    fetch('/app/git-links?local_type=' + encodeURIComponent(localType) + '&local_id=' + encodeURIComponent(localId), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (!data.ok) { return; }
+
+        var count = data.links ? data.links.length : 0;
+        var rowSelector = localType === 'user_story' ? '.story-row' : '.work-item-row';
+        var row = document.querySelector(rowSelector + '[data-id="' + localId + '"]');
+        if (!row) { return; }
+
+        var badge = row.querySelector('.git-link-badge');
+
+        if (count > 0) {
+            if (badge) {
+                badge.textContent = 'Git: ' + count;
+            } else {
+                var infoDiv = row.querySelector('.story-info, .work-item-info');
+                if (infoDiv) {
+                    var newBadge = document.createElement('span');
+                    newBadge.className = 'badge badge-secondary git-link-badge';
+                    newBadge.textContent = 'Git: ' + count;
+                    infoDiv.appendChild(newBadge);
+                }
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+    });
+}
+
+function showGitLinksError(msg) {
+    var errorEl = document.getElementById('git-links-error');
+    if (!errorEl) { return; }
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+}
+
 // Password visibility toggle
 function togglePassword(btn) {
     var wrapper = btn.closest('.password-wrapper');
@@ -1524,14 +1758,18 @@ function showJiraSyncPreview(form) {
         modal.id = 'jira-sync-preview-modal';
         modal.className = 'modal-overlay';
         modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
-        modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeJiraSyncPreviewModal();
+            }
+        });
         document.body.appendChild(modal);
     }
 
     modal.innerHTML = '<div class="card" style="max-width:560px; width:90%; margin:0;">' +
         '<div class="card-header flex justify-between items-center">' +
             '<h2 class="card-title" style="margin:0;">Preview Jira Sync</h2>' +
-            '<button type="button" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>' +
+            '<button type="button" class="js-jira-preview-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>' +
         '</div>' +
         '<div class="card-body" id="jira-preview-body">' +
             '<div style="text-align:center; padding:1.5rem;">' +
@@ -1559,7 +1797,7 @@ function showJiraSyncPreview(form) {
         if (data.error) {
             body.innerHTML = '<p style="color:var(--danger); margin:0;">Error: ' + escapeHtml(data.error) + '</p>' +
                 '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
-                    '<button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Close</button>' +
+                    '<button type="button" class="btn btn-secondary js-jira-preview-close">Close</button>' +
                 '</div>';
             return;
         }
@@ -1604,9 +1842,9 @@ function showJiraSyncPreview(form) {
         }
 
         html += '<div class="flex justify-end gap-2" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">';
-        html += '  <button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Cancel</button>';
+        html += '  <button type="button" class="btn btn-secondary js-jira-preview-close">Cancel</button>';
         if (pushCount > 0 || pullCount > 0) {
-            html += '  <button type="button" class="btn btn-primary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove(); document.querySelector(\'.jira-sync-form[data-project-id=\\\''+projectId+'\\\']\').submit();">Confirm Sync</button>';
+            html += '  <button type="button" class="btn btn-primary js-jira-preview-submit" data-project-id="' + escapeHtml(String(projectId)) + '">Confirm Sync</button>';
         }
         html += '</div>';
 
@@ -1617,11 +1855,26 @@ function showJiraSyncPreview(form) {
         if (body) {
             body.innerHTML = '<p style="color:var(--danger);">Failed to load preview: ' + escapeHtml(err.message) + '</p>' +
                 '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
-                    '<button type="button" class="btn btn-secondary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove();">Close</button>' +
-                    '<button type="button" class="btn btn-primary" onclick="document.getElementById(\'jira-sync-preview-modal\').remove(); document.querySelector(\'.jira-sync-form[data-project-id=\\\''+projectId+'\\\']\').submit();">Sync Anyway</button>' +
+                    '<button type="button" class="btn btn-secondary js-jira-preview-close">Close</button>' +
+                    '<button type="button" class="btn btn-primary js-jira-preview-submit" data-project-id="' + escapeHtml(String(projectId)) + '">Sync Anyway</button>' +
                 '</div>';
         }
     });
+}
+
+function closeJiraSyncPreviewModal() {
+    var modal = document.getElementById('jira-sync-preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function submitJiraSyncPreview(projectId) {
+    closeJiraSyncPreviewModal();
+    var form = document.querySelector('.jira-sync-form[data-project-id="' + projectId + '"]');
+    if (form) {
+        form.submit();
+    }
 }
 
 
