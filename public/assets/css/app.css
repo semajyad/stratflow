@@ -2721,6 +2721,10 @@ tbody tr:hover {
     color: var(--text-light);
 }
 
+.user-table tbody td {
+    vertical-align: top;
+}
+
 /* Admin inline edit form rows */
 .admin-inline-form .form-row {
     display: flex;
