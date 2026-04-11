@@ -235,11 +235,11 @@ class ApiStoriesController
             [':sid' => $storyId]
         )->fetch() ?: null;
 
-        // Git links (last 10)
+        // Git links (last 10) — columns match migration 018 schema
         $gitLinks = $this->db->query(
-            "SELECT link_type, url, pr_title, sha, created_at
+            "SELECT ref_type, ref_url, ref_label, status, author, created_at
              FROM story_git_links
-             WHERE local_item_type = 'user_story' AND local_item_id = :sid
+             WHERE local_type = 'user_story' AND local_id = :sid
              ORDER BY created_at DESC
              LIMIT 10",
             [':sid' => $storyId]
@@ -273,10 +273,11 @@ class ApiStoriesController
                 'end_date'   => $sprint['end_date'],
             ] : null,
             'git_links'           => array_map(fn($g) => [
-                'type'       => $g['link_type'],
-                'url'        => $g['url'],
-                'title'      => $g['pr_title'],
-                'sha'        => $g['sha'],
+                'type'       => $g['ref_type'],
+                'url'        => $g['ref_url'],
+                'label'      => $g['ref_label'],
+                'status'     => $g['status'],
+                'author'     => $g['author'],
                 'created_at' => $g['created_at'],
             ], $gitLinks),
             'commit_trailer_hint' => 'Include "Refs SF-' . $story['id'] . '" in your commit message or PR description to auto-link.',
