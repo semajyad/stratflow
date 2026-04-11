@@ -224,12 +224,9 @@ $billingContact  = $billing_contact ?? [];
                     Use the Stripe Customer Portal to manage your subscription, update payment methods, change seat quantities, or cancel.
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <form method="POST" action="/app/admin/billing/portal" class="inline-form">
-                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            Open Billing Portal
-                        </button>
-                    </form>
+                    <a href="/app/admin/billing/portal" class="btn btn-primary" style="width: 100%; text-align: center;">
+                        Open Billing Portal
+                    </a>
                     <a href="/app/admin/invoices" class="btn btn-secondary" style="width: 100%; text-align: center;">
                         View Invoices
                     </a>

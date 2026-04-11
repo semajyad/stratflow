@@ -201,6 +201,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/settings',              'AdminController@saveSettings',     ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/test-ai',               'AdminController@testAi',           ['auth', 'admin', 'csrf']);
     $router->add('GET',  '/app/admin/billing',                 'AdminController@billing',            ['auth', 'billing']);
+    $router->add('GET',  '/app/admin/billing/portal',         'AdminController@billingPortal',      ['auth', 'billing']);
     $router->add('POST', '/app/admin/billing/portal',         'AdminController@billingPortal',      ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/billing/contact',        'AdminController@saveBillingContact',  ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/billing/seats/invoice',  'AdminController@purchaseSeatsInvoice', ['auth', 'billing', 'csrf']);
