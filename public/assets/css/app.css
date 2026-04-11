@@ -540,6 +540,10 @@ body.sidebar-collapsed .app-main {
     overflow: hidden;
 }
 
+.card--allow-overflow {
+    overflow: visible;
+}
+
 .card-header {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border);

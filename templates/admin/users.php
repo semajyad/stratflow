@@ -48,7 +48,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
 <!-- ===========================
      User List
      =========================== -->
-<section class="card">
+<section class="card card--allow-overflow">
     <div class="card-header flex justify-between items-center">
         <h2 class="card-title">Organisation Users</h2>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-user-section').classList.toggle('hidden')">
@@ -229,7 +229,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
 <!-- ===========================
      Add User Form
      =========================== -->
-<section id="add-user-section" class="card mt-4 hidden">
+<section id="add-user-section" class="card card--allow-overflow mt-4 hidden">
     <div class="card-header">
         <h2 class="card-title">Add New User</h2>
     </div>
