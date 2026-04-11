@@ -15,7 +15,7 @@
     <div class="modal" style="max-width: 760px;">
         <div class="modal-header">
             <h3 id="story-modal-title">Add User Story</h3>
-            <button class="modal-close" onclick="toggleStoryModal()">&times;</button>
+            <button class="modal-close js-toggle-story-modal" type="button">&times;</button>
         </div>
         <form method="POST" id="story-form" action="/app/user-stories/store">
             <div class="modal-body">
@@ -146,7 +146,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="toggleStoryModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary js-toggle-story-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary" id="story-submit-btn">Save</button>
             </div>
         </form>

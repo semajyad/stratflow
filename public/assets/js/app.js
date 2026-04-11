@@ -82,6 +82,54 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-close-edit-modal')) {
+        e.preventDefault();
+        closeEditModal();
+        return;
+    }
+
+    if (e.target.closest('.js-toggle-story-modal')) {
+        e.preventDefault();
+        toggleStoryModal();
+        return;
+    }
+
+    if (e.target.closest('.js-close-sounding-board')) {
+        e.preventDefault();
+        closeSoundingBoard();
+        return;
+    }
+
+    if (e.target.closest('.js-run-sounding-board')) {
+        e.preventDefault();
+        runSoundingBoard();
+        return;
+    }
+
+    var personaAction = e.target.closest('.js-persona-response');
+    if (personaAction) {
+        e.preventDefault();
+        var evalId = parseInt(personaAction.dataset.evalId || '', 10);
+        var memberIndex = parseInt(personaAction.dataset.memberIndex || '', 10);
+        var action = personaAction.dataset.action || '';
+        if (!Number.isNaN(evalId) && !Number.isNaN(memberIndex) && action !== '') {
+            respondToPersona(evalId, memberIndex, action);
+        }
+        return;
+    }
+
+    if (e.target.closest('.js-onboarding-skip')) {
+        e.preventDefault();
+        dismissOnboarding();
+        return;
+    }
+
+    if (e.target.closest('.js-onboarding-next')) {
+        e.preventDefault();
+        nextOnboardingStep();
+        return;
+    }
+
     if (!e.target.closest('.row-actions-menu')) {
         document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
             m.classList.remove('row-actions-menu--open');
@@ -1267,8 +1315,8 @@ function renderSoundingBoardResults(data) {
             + '</div>'
             + '<div class="persona-response">' + escapeHtml(result.response).replace(/\n/g, '<br>') + '</div>'
             + '<div class="persona-actions">'
-            + '<button class="btn btn-sm btn-primary" onclick="respondToPersona(' + data.id + ', ' + index + ', \'accept\')">Accept</button>'
-            + '<button class="btn btn-sm btn-secondary" onclick="respondToPersona(' + data.id + ', ' + index + ', \'reject\')">Reject</button>'
+            + '<button class="btn btn-sm btn-primary js-persona-response" data-eval-id="' + data.id + '" data-member-index="' + index + '" data-action="accept">Accept</button>'
+            + '<button class="btn btn-sm btn-secondary js-persona-response" data-eval-id="' + data.id + '" data-member-index="' + index + '" data-action="reject">Reject</button>'
             + '</div>'
             + '</div>';
     });
@@ -1316,6 +1364,51 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', openSoundingBoard);
     });
 });
+
+var onboardingCurrentStep = 1;
+var onboardingTotalSteps = 4;
+
+function nextOnboardingStep() {
+    var currentStepEl = document.getElementById('onboarding-step-' + onboardingCurrentStep);
+    var dots = document.querySelectorAll('.onboarding-dot');
+    if (!currentStepEl || dots.length === 0) {
+        return;
+    }
+
+    currentStepEl.style.display = 'none';
+    if (dots[onboardingCurrentStep - 1]) {
+        dots[onboardingCurrentStep - 1].classList.remove('onboarding-dot--active');
+        dots[onboardingCurrentStep - 1].style.background = 'var(--border)';
+    }
+
+    onboardingCurrentStep++;
+
+    if (onboardingCurrentStep > onboardingTotalSteps) {
+        dismissOnboarding();
+        return;
+    }
+
+    var nextStepEl = document.getElementById('onboarding-step-' + onboardingCurrentStep);
+    if (nextStepEl) {
+        nextStepEl.style.display = 'block';
+    }
+
+    if (dots[onboardingCurrentStep - 1]) {
+        dots[onboardingCurrentStep - 1].style.background = 'var(--primary)';
+    }
+
+    var nextBtn = document.getElementById('onboarding-next');
+    if (nextBtn && onboardingCurrentStep === onboardingTotalSteps) {
+        nextBtn.textContent = 'Get Started';
+    }
+}
+
+function dismissOnboarding() {
+    var modal = document.getElementById('onboarding-wizard');
+    if (modal) {
+        modal.remove();
+    }
+}
 
 // ===========================
 // Enterprise Loading States

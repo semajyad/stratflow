@@ -10,7 +10,7 @@
     <div class="modal-content modal-lg">
         <div class="modal-header">
             <h3>Strategic Sounding Board</h3>
-            <button class="modal-close" onclick="closeSoundingBoard()">&times;</button>
+            <button class="modal-close js-close-sounding-board" type="button">&times;</button>
         </div>
 
         <!-- Configuration Form -->
@@ -30,7 +30,7 @@
                     <option value="gordon_ramsay">Gordon Ramsay &mdash; No holds barred</option>
                 </select>
             </div>
-            <button class="btn btn-primary" id="sb-evaluate-btn" onclick="runSoundingBoard()">Evaluate</button>
+            <button class="btn btn-primary js-run-sounding-board" id="sb-evaluate-btn" type="button">Evaluate</button>
         </div>
 
         <!-- Loading State -->

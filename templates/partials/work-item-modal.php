@@ -22,7 +22,7 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
     <div class="modal" style="max-width: 760px;">
         <div class="modal-header">
             <h3>Edit Work Item</h3>
-            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            <button class="modal-close js-close-edit-modal" type="button">&times;</button>
         </div>
         <form method="POST" id="edit-form" action="/app/work-items/store">
             <div class="modal-body">
@@ -156,7 +156,7 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary js-close-edit-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">Update</button>
             </div>
         </form>

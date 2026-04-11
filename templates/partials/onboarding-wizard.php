@@ -106,43 +106,10 @@ $roleHint = match($userRole) {
                     <span class="onboarding-dot" style="width:8px; height:8px; border-radius:50%; background:var(--border);"></span>
                 </div>
                 <div class="flex gap-2">
-                    <button type="button" id="onboarding-skip" class="btn btn-secondary btn-sm" onclick="dismissOnboarding()">Skip</button>
-                    <button type="button" id="onboarding-next" class="btn btn-primary" onclick="nextOnboardingStep()">Next &rarr;</button>
+                    <button type="button" id="onboarding-skip" class="btn btn-secondary btn-sm js-onboarding-skip">Skip</button>
+                    <button type="button" id="onboarding-next" class="btn btn-primary js-onboarding-next">Next &rarr;</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-(function() {
-    var currentStep = 1;
-    var totalSteps = 4;
-
-    window.nextOnboardingStep = function() {
-        document.getElementById('onboarding-step-' + currentStep).style.display = 'none';
-        document.querySelectorAll('.onboarding-dot')[currentStep - 1].classList.remove('onboarding-dot--active');
-        document.querySelectorAll('.onboarding-dot')[currentStep - 1].style.background = 'var(--border)';
-
-        currentStep++;
-
-        if (currentStep > totalSteps) {
-            dismissOnboarding();
-            return;
-        }
-
-        document.getElementById('onboarding-step-' + currentStep).style.display = 'block';
-        document.querySelectorAll('.onboarding-dot')[currentStep - 1].style.background = 'var(--primary)';
-
-        var nextBtn = document.getElementById('onboarding-next');
-        if (currentStep === totalSteps) {
-            nextBtn.textContent = 'Get Started';
-        }
-    };
-
-    window.dismissOnboarding = function() {
-        var modal = document.getElementById('onboarding-wizard');
-        if (modal) modal.remove();
-    };
-})();
-</script>
