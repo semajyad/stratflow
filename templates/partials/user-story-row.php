@@ -59,6 +59,8 @@
         $row_id             = (int) $story['id'];
         $row_delete_action  = '/app/user-stories/' . (int) $story['id'] . '/delete';
         $row_delete_confirm = 'Delete this user story?';
+        $row_close_action   = '/app/user-stories/' . (int) $story['id'] . '/close';
+        $row_extra_items_html = null;
         include __DIR__ . '/row-actions-menu.php';
     ?>
 </summary>

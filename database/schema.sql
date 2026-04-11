@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS hl_work_items (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     requires_review TINYINT(1) NOT NULL DEFAULT 0,
-    status ENUM('backlog','in_progress','in_review','done') NOT NULL DEFAULT 'backlog',
+    status ENUM('backlog','in_progress','in_review','done','closed') NOT NULL DEFAULT 'backlog',
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (diagram_id) REFERENCES strategy_diagrams(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -155,9 +155,14 @@ CREATE TABLE IF NOT EXISTS risks (
     impact TINYINT UNSIGNED NOT NULL DEFAULT 3,
     mitigation TEXT NULL,
     priority DECIMAL(5,2) NULL,
+    status ENUM('open','closed') NOT NULL DEFAULT 'open',
+    roam_status ENUM('resolved','owned','accepted','mitigated') NULL,
+    owner_user_id BIGINT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT fk_risks_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    KEY idx_risks_owner (owner_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS risk_item_links (
@@ -185,7 +190,7 @@ CREATE TABLE IF NOT EXISTS user_stories (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     requires_review TINYINT(1) NOT NULL DEFAULT 0,
-    status ENUM('backlog','in_progress','in_review','done') NOT NULL DEFAULT 'backlog',
+    status ENUM('backlog','in_progress','in_review','done','closed') NOT NULL DEFAULT 'backlog',
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_hl_item_id) REFERENCES hl_work_items(id) ON DELETE SET NULL,
     FOREIGN KEY (blocked_by) REFERENCES user_stories(id) ON DELETE SET NULL,

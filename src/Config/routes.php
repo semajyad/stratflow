@@ -65,6 +65,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'csrf']);
     $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
     $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/close',                'WorkItemController@close',              ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
     $router->add('POST', '/app/work-items/{id}/improve',              'WorkItemController@improve',             ['auth', 'csrf']);
     $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
@@ -79,6 +80,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'csrf']);
     $router->add('POST', '/app/risks',                'RiskController@store',              ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/close',     'RiskController@close',              ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/roam',      'RiskController@setRoam',            ['auth', 'csrf']);
     $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
     $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
 
@@ -91,6 +94,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
     $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/close',            'UserStoryController@close',           ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
     $router->add('POST', '/app/user-stories/{id}/improve',          'UserStoryController@improve',         ['auth', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);

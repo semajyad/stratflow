@@ -2,16 +2,18 @@
 /**
  * Row Actions Menu Partial
  *
- * A compact kebab (three-dot) menu containing Edit and Delete actions
- * for list rows (work items, user stories, risks, etc.).
+ * A compact kebab (three-dot) menu containing Edit, optional Close, optional
+ * extra items, and Delete actions for list rows.
  *
  * Expects (from parent scope):
- *   $row_edit_class    string  JS class on the Edit button (e.g. 'edit-item-btn')
- *   $row_id            int     The row's id (used for data-id)
- *   $row_delete_action string  POST URL for delete
- *   $row_delete_confirm string Confirm message (defaults to "Delete this item?")
- *   $csrf_token        string
- *   $project           array
+ *   $row_edit_class       string  JS class on the Edit button (e.g. 'edit-item-btn')
+ *   $row_id               int     The row's id (used for data-id)
+ *   $row_delete_action    string  POST URL for delete
+ *   $row_delete_confirm   string  Confirm message (defaults to "Delete this item?")
+ *   $row_close_action     string  (optional) POST URL for close; omit to hide Close
+ *   $row_extra_items_html string  (optional) Raw HTML injected before Delete (e.g. ROAM items)
+ *   $csrf_token           string
+ *   $project              array
  */
 $confirmMsg = $row_delete_confirm ?? 'Delete this item?';
 ?>
@@ -30,6 +32,21 @@ $confirmMsg = $row_delete_confirm ?? 'Delete this item?';
             </svg>
             Edit
         </button>
+        <?php if (!empty($row_close_action)): ?>
+        <form method="POST" action="<?= htmlspecialchars($row_close_action) ?>" class="row-actions-form">
+            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+            <button type="submit" class="row-actions-item" role="menuitem">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="8 12 12 16 16 12"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                </svg>
+                Close
+            </button>
+        </form>
+        <?php endif; ?>
+        <?php if (!empty($row_extra_items_html)) echo $row_extra_items_html; ?>
         <form method="POST" action="<?= htmlspecialchars($row_delete_action) ?>" class="row-actions-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">

@@ -404,10 +404,14 @@ $changeTypeLabels = [
             $band    = $pri >= 15 ? ['#ef4444','#fee2e2'] : ($pri >= 5 ? ['#f59e0b','#fef3c7'] : ['#10b981','#f0fdf4']);
             $hasDetail = !empty($r['description']) || !empty($r['mitigation']);
         ?>
+        <?php
+            $riskRef = 'RP' . (int) $r['id'];
+        ?>
         <?php if ($hasDetail): ?>
         <details class="exec-risk-item">
             <summary class="exec-risk-summary">
                 <span class="exec-risk-expand-icon">&#9654;</span>
+                <span class="exec-risk-ref" style="font-size:0.75rem; font-weight:600; color:#6366f1; flex-shrink:0; min-width:3.5rem;"><?= htmlspecialchars($riskRef) ?></span>
                 <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
                 <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
                 <span class="exec-risk-scores">
@@ -430,6 +434,7 @@ $changeTypeLabels = [
         <?php else: ?>
         <div class="exec-risk-item exec-risk-item--plain">
             <span style="display:inline-block; width:14px; flex-shrink:0;"></span>
+            <span class="exec-risk-ref" style="font-size:0.75rem; font-weight:600; color:#6366f1; flex-shrink:0; min-width:3.5rem;"><?= htmlspecialchars($riskRef) ?></span>
             <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
             <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
             <span class="exec-risk-scores">

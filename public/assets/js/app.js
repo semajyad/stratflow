@@ -452,6 +452,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('risk-likelihood').value  = row.dataset.likelihood || '3';
             document.getElementById('risk-impact').value      = row.dataset.impact || '3';
             document.getElementById('risk-form').action       = '/app/risks/' + riskId;
+            var ownerSelect = document.getElementById('risk-owner');
+            if (ownerSelect) { ownerSelect.value = row.dataset.ownerUserId || ''; }
 
             // Update RPN preview
             updateRpnPreview();
@@ -876,6 +878,8 @@ function toggleRiskModal() {
         document.getElementById('risk-likelihood').value = '3';
         document.getElementById('risk-impact').value = '3';
         updateRpnPreview();
+        var ownerSelect = document.getElementById('risk-owner');
+        if (ownerSelect) { ownerSelect.value = ''; }
         document.querySelectorAll('.work-item-checkbox').forEach(function(cb) {
             cb.checked = false;
         });

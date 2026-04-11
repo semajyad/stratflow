@@ -58,10 +58,12 @@
     <?php endif; ?>
     <span class="work-item-owner"><?= htmlspecialchars($item['owner'] ?? 'Unassigned') ?></span>
     <?php
-        $row_edit_class     = 'edit-item-btn';
-        $row_id             = (int) $item['id'];
-        $row_delete_action  = '/app/work-items/' . (int) $item['id'] . '/delete';
-        $row_delete_confirm = 'Delete this work item?';
+        $row_edit_class       = 'edit-item-btn';
+        $row_id               = (int) $item['id'];
+        $row_delete_action    = '/app/work-items/' . (int) $item['id'] . '/delete';
+        $row_delete_confirm   = 'Delete this work item?';
+        $row_close_action     = '/app/work-items/' . (int) $item['id'] . '/close';
+        $row_extra_items_html = null;
         include __DIR__ . '/row-actions-menu.php';
     ?>
 </summary>

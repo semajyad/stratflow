@@ -20,6 +20,7 @@ use StratFlow\Models\Project;
 use StratFlow\Models\Risk;
 use StratFlow\Models\RiskItemLink;
 use StratFlow\Models\Subscription;
+use StratFlow\Models\User;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\RiskPrompt;
 
@@ -68,6 +69,7 @@ class RiskController
 
         $risks     = Risk::findByProjectId($this->db, $projectId);
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
+        $orgUsers  = User::findByOrgId($this->db, $orgId);
 
         // Build work item lookup by ID for display
         $workItemMap = [];
@@ -107,6 +109,7 @@ class RiskController
             'risks'                => $risks,
             'work_items'           => $workItems,
             'work_item_map'        => $workItemMap,
+            'org_users'            => $orgUsers,
             'heatmap'              => $heatmap,
             'active_page'          => 'risks',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
@@ -226,10 +229,12 @@ class RiskController
             return;
         }
 
-        $title      = trim((string) $this->request->post('title', ''));
+        $title       = trim((string) $this->request->post('title', ''));
         $description = trim((string) $this->request->post('description', ''));
         $likelihood  = max(1, min(5, (int) $this->request->post('likelihood', 3)));
         $impact      = max(1, min(5, (int) $this->request->post('impact', 3)));
+        $ownerRaw    = $this->request->post('owner_user_id', '');
+        $ownerUserId = $ownerRaw !== '' ? (int) $ownerRaw : null;
 
         if ($title === '') {
             $_SESSION['flash_error'] = 'Risk title is required.';
@@ -238,12 +243,13 @@ class RiskController
         }
 
         $riskId = Risk::create($this->db, [
-            'project_id'  => $projectId,
-            'title'       => $title,
-            'description' => $description ?: null,
-            'likelihood'  => $likelihood,
-            'impact'      => $impact,
-            'priority'    => $likelihood * $impact,
+            'project_id'   => $projectId,
+            'title'        => $title,
+            'description'  => $description ?: null,
+            'likelihood'   => $likelihood,
+            'impact'       => $impact,
+            'priority'     => $likelihood * $impact,
+            'owner_user_id' => $ownerUserId,
         ]);
 
         // Link work items
@@ -285,6 +291,8 @@ class RiskController
         $description = trim((string) $this->request->post('description', ''));
         $likelihood  = max(1, min(5, (int) $this->request->post('likelihood', 3)));
         $impact      = max(1, min(5, (int) $this->request->post('impact', 3)));
+        $ownerRaw    = $this->request->post('owner_user_id', '');
+        $ownerUserId = $ownerRaw !== '' ? (int) $ownerRaw : null;
 
         if ($title === '') {
             $_SESSION['flash_error'] = 'Risk title is required.';
@@ -293,11 +301,12 @@ class RiskController
         }
 
         Risk::update($this->db, $id, [
-            'title'       => $title,
-            'description' => $description ?: null,
-            'likelihood'  => $likelihood,
-            'impact'      => $impact,
-            'priority'    => $likelihood * $impact,
+            'title'         => $title,
+            'description'   => $description ?: null,
+            'likelihood'    => $likelihood,
+            'impact'        => $impact,
+            'priority'      => $likelihood * $impact,
+            'owner_user_id' => $ownerUserId,
         ]);
 
         // Re-create links
@@ -308,6 +317,59 @@ class RiskController
         }
 
         $_SESSION['flash_message'] = 'Risk updated successfully.';
+        $this->response->redirect('/app/risks?project_id=' . $projectId);
+    }
+
+    /**
+     * Close a risk (sets status to 'closed').
+     */
+    public function close($id): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $riskId    = (int) $id;
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $risk = Risk::findById($this->db, $riskId);
+        if ($risk === null || (int) $risk['project_id'] !== $projectId) {
+            $this->response->redirect('/app/risks?project_id=' . $projectId);
+            return;
+        }
+
+        // Verify project belongs to org
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        Risk::update($this->db, $riskId, ['status' => 'closed']);
+        $this->response->redirect('/app/risks?project_id=' . $projectId);
+    }
+
+    /**
+     * Set the ROAM status on a risk (Resolved/Owned/Accepted/Mitigated).
+     */
+    public function setRoam($id): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $riskId    = (int) $id;
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $allowed = ['resolved', 'owned', 'accepted', 'mitigated'];
+        $roam    = strtolower(trim((string) $this->request->post('roam_status', '')));
+
+        $project = Project::findById($this->db, $projectId, $orgId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        if (in_array($roam, $allowed, true)) {
+            Risk::update($this->db, $riskId, ['roam_status' => $roam]);
+        }
+
         $this->response->redirect('/app/risks?project_id=' . $projectId);
     }
 

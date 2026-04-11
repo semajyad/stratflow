@@ -556,6 +556,26 @@ class WorkItemController
     }
 
     /**
+     * Close a work item (sets status to 'closed').
+     */
+    public function close($id): void
+    {
+        $user   = $this->auth->user();
+        $orgId  = (int) $user['org_id'];
+        $item   = HLWorkItem::findById($this->db, (int) $id);
+
+        if ($item === null || (int) $item['org_id'] !== $orgId) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $projectId = (int) $item['project_id'];
+        HLWorkItem::update($this->db, (int) $id, ['status' => 'closed']);
+
+        $this->response->redirect('/app/work-items?project_id=' . $projectId);
+    }
+
+    /**
      * Delete a single work item and re-number remaining priorities.
      *
      * @param int $id Work item primary key (from route parameter)

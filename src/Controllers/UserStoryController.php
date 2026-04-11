@@ -495,6 +495,32 @@ class UserStoryController
     }
 
     /**
+     * Close a user story (sets status to 'closed').
+     */
+    public function close($id): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $storyId   = (int) $id;
+
+        $story = $this->db->query(
+            "SELECT us.id, us.project_id FROM user_stories us
+             JOIN projects p ON p.id = us.project_id
+             WHERE us.id = :id AND p.org_id = :org_id LIMIT 1",
+            [':id' => $storyId, ':org_id' => $orgId]
+        )->fetch();
+
+        if (!$story) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        UserStory::update($this->db, $storyId, ['status' => 'closed']);
+
+        $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
+    }
+
+    /**
      * Delete a single user story and re-number remaining priorities.
      *
      * @param int $id User story primary key (from route parameter)

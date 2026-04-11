@@ -86,6 +86,15 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                 <div class="form-group" style="margin-top: 0.5rem;">
                     <label>RPN Preview: <span id="rpn-preview" class="risk-rpn">9</span></label>
                 </div>
+                <div class="form-group">
+                    <label for="risk-owner">Owner</label>
+                    <select id="risk-owner" name="owner_user_id" class="form-control">
+                        <option value="">— Unassigned —</option>
+                        <?php foreach ($org_users as $u): ?>
+                            <option value="<?= (int) $u['id'] ?>"><?= htmlspecialchars($u['full_name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <?php if (!empty($work_items)): ?>
                 <div class="form-group">
                     <label>Linked Work Items</label>

@@ -34,17 +34,18 @@ class Risk
     {
         $db->query(
             "INSERT INTO risks
-                (project_id, title, description, likelihood, impact, mitigation, priority)
+                (project_id, title, description, likelihood, impact, mitigation, priority, owner_user_id)
              VALUES
-                (:project_id, :title, :description, :likelihood, :impact, :mitigation, :priority)",
+                (:project_id, :title, :description, :likelihood, :impact, :mitigation, :priority, :owner_user_id)",
             [
-                ':project_id'  => $data['project_id'],
-                ':title'       => $data['title'],
-                ':description' => $data['description'] ?? null,
-                ':likelihood'  => $data['likelihood'] ?? 3,
-                ':impact'      => $data['impact'] ?? 3,
-                ':mitigation'  => $data['mitigation'] ?? null,
-                ':priority'    => $data['priority'] ?? null,
+                ':project_id'    => $data['project_id'],
+                ':title'         => $data['title'],
+                ':description'   => $data['description'] ?? null,
+                ':likelihood'    => $data['likelihood'] ?? 3,
+                ':impact'        => $data['impact'] ?? 3,
+                ':mitigation'    => $data['mitigation'] ?? null,
+                ':priority'      => $data['priority'] ?? null,
+                ':owner_user_id' => $data['owner_user_id'] ?? null,
             ]
         );
 
@@ -106,6 +107,7 @@ class Risk
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'title', 'description', 'likelihood', 'impact', 'mitigation', 'priority',
+        'status', 'roam_status', 'owner_user_id',
     ];
 
     public static function update(Database $db, int $id, array $data): void
