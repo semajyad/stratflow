@@ -80,10 +80,22 @@ function copyToken() {
         </div>
         <form method="POST" action="/app/account/team" style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-            <input type="text" id="user-team" name="team" maxlength="100"
-                   value="<?= htmlspecialchars($user['team'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                   placeholder="e.g. Backend, Platform, Mobile"
-                   class="form-control" style="width:220px;">
+            <?php if (!empty($team_options)): ?>
+                <select id="user-team" name="team" class="form-control" style="width:220px;">
+                    <option value="">-- Select your team --</option>
+                    <?php foreach ($team_options as $opt): ?>
+                        <option value="<?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>"
+                            <?= ($user['team'] ?? '') === $opt ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else: ?>
+                <input type="text" id="user-team" name="team" maxlength="100"
+                       value="<?= htmlspecialchars($user['team'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                       placeholder="e.g. Backend, Platform, Mobile"
+                       class="form-control" style="width:220px;">
+            <?php endif; ?>
             <button type="submit" class="btn btn-secondary btn-sm">Save</button>
         </form>
     </div>

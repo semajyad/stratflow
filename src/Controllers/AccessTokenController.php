@@ -67,11 +67,34 @@ class AccessTokenController
         $newTokenRaw = $_SESSION['_flash']['new_pat'] ?? null;
         unset($_SESSION['_flash']['new_pat']);
 
+        // Build team options: formal teams + distinct values already in use
+        $teamNames = [];
+        $formalTeams = $this->db->query(
+            "SELECT name FROM teams WHERE org_id = :org_id ORDER BY name ASC",
+            [':org_id' => $orgId]
+        )->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($formalTeams as $t) {
+            $teamNames[$t] = true;
+        }
+        $usedTeams = $this->db->query(
+            "SELECT DISTINCT team_assigned FROM hl_work_items
+             JOIN projects ON projects.id = hl_work_items.project_id
+             WHERE projects.org_id = :org_id AND team_assigned IS NOT NULL AND team_assigned != ''
+             ORDER BY team_assigned ASC",
+            [':org_id' => $orgId]
+        )->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($usedTeams as $t) {
+            $teamNames[$t] = true;
+        }
+        $teamOptions = array_keys($teamNames);
+        sort($teamOptions);
+
         $this->response->render('account/access-tokens', [
             'user'          => $user,
             'tokens'        => $tokens,
             'new_token_raw' => $newTokenRaw,
             'app_url'       => rtrim($this->config['app']['url'] ?? '', '/'),
+            'team_options'  => $teamOptions,
             'active_page'   => 'account-tokens',
         ], 'app');
     }
