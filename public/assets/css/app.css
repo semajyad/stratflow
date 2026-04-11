@@ -2783,6 +2783,17 @@ tbody tr:hover {
     overflow-x: auto;
 }
 
+.table-responsive--popovers {
+    overflow: visible;
+}
+
+@media (max-width: 1024px) {
+    .table-responsive--popovers {
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+}
+
 /* Badge variants */
 .badge-primary {
     background: var(--primary);

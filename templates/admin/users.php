@@ -59,7 +59,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
     <?php if (empty($users)): ?>
         <p class="empty-state">No users found.</p>
     <?php else: ?>
-        <div class="table-responsive">
+        <div class="table-responsive table-responsive--popovers">
             <table class="table user-table">
                 <thead>
                     <tr>
