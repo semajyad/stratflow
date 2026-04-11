@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - link "View source on Github":
+    - /url: https://github.com/requests/httpbin
+    - img [ref=e2] [cursor=pointer]
+  - img
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - heading "httpbin.org 0.9.2" [level=2] [ref=e13]:
+          - text: httpbin.org
+          - generic [ref=e15]: 0.9.2
+        - generic [ref=e16]: "[ Base URL: httpbin.org/ ]"
+      - paragraph [ref=e19]:
+        - text: A simple HTTP Request & Response Service.
+        - text: "Run locally:"
+        - code [ref=e20]: $ docker run -p 80:80 kennethreitz/httpbin
+      - generic [ref=e21]:
+        - link "the developer - Website" [ref=e23] [cursor=pointer]:
+          - /url: https://kennethreitz.org
+        - link "Send email to the developer" [ref=e24] [cursor=pointer]:
+          - /url: mailto:me@kennethreitz.org
+    - generic [ref=e25]:
+      - generic: loading
+  - generic [ref=e26]:
+    - text: "[Powered by"
+    - link "Flasgger" [ref=e27] [cursor=pointer]:
+      - /url: https://github.com/rochacbruno/flasgger
+    - text: "]"
+  - generic [ref=e31]:
+    - heading "Other Utilities" [level=2] [ref=e32]
+    - list [ref=e33]:
+      - listitem [ref=e34]:
+        - link "HTML form" [ref=e35] [cursor=pointer]:
+          - /url: /forms/post
+        - text: that posts to /post /forms/post

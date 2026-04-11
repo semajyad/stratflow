@@ -1,0 +1,51 @@
+env:
+  contexts:
+  - excludePaths: []
+    name: baseline
+    urls:
+    - https://stratflow-app-production.up.railway.app
+  parameters:
+    failOnError: true
+    progressToStdout: false
+jobs:
+- parameters:
+    enableTags: false
+    maxAlertsPerRule: 10
+  type: passiveScan-config
+- parameters:
+    maxDuration: 10
+    url: https://stratflow-app-production.up.railway.app
+  type: spider
+- parameters:
+    maxDuration: 10
+    url: https://stratflow-app-production.up.railway.app
+  type: spiderAjax
+- parameters:
+    maxDuration: 15
+  type: passiveScan-wait
+- parameters:
+    format: Long
+    summaryFile: /home/zap/zap_out.json
+  rules: []
+  type: outputSummary
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: /zap/wrk/zap-baseline-20260412-101004.html
+    reportTitle: ZAP Scanning Report
+    template: traditional-html
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: /zap/wrk/zap-baseline-20260412-101004.md
+    reportTitle: ZAP Scanning Report
+    template: traditional-md
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: /zap/wrk/zap-baseline-20260412-101004.json
+    reportTitle: ZAP Scanning Report
+    template: traditional-json
+  type: report
