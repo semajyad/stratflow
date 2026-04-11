@@ -9,21 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime(__DIR__ . '/../../public/assets/css/app.css') ?: '1' ?>">
-    <script>
-    // Restore sidebar collapsed state before paint to avoid FOUC
-    (function() {
-        try {
-            if (localStorage.getItem('stratflow.sidebarCollapsed') === '1') {
-                document.documentElement.classList.add('sidebar-collapsed-preload');
-            }
-        } catch (e) {}
-    })();
-    </script>
-    <style>
-    /* Applied early (before JS runs) if collapsed state was saved */
-    html.sidebar-collapsed-preload .sidebar { width: var(--sidebar-width-collapsed); }
-    html.sidebar-collapsed-preload .app-main { margin-left: var(--sidebar-width-collapsed); }
-    </style>
+    <script src="/assets/js/app-preload.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/app-preload.js') ?: '1' ?>"></script>
 </head>
 <body class="app-layout">
     <div class="app-wrapper">

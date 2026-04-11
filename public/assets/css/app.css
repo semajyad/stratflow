@@ -233,6 +233,10 @@ main.container {
     width: var(--sidebar-width-collapsed);
 }
 
+html.sidebar-collapsed-preload .sidebar {
+    width: var(--sidebar-width-collapsed);
+}
+
 /* Collapsed brand: show the compact mark, hide the full name */
 .sidebar-brand-mark { display: none; }
 .sidebar.is-collapsed .sidebar-brand-full { display: none; }
@@ -283,6 +287,10 @@ main.container {
 /* Matching main-content offset shift */
 .sidebar.is-collapsed ~ .app-main,
 body.sidebar-collapsed .app-main {
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+html.sidebar-collapsed-preload .app-main {
     margin-left: var(--sidebar-width-collapsed);
 }
 
