@@ -39,6 +39,7 @@ $roamStatus = $risk['roam_status'] ?? null;
      data-impact="<?= (int) $risk['impact'] ?>"
      data-owner-user-id="<?= (int) ($risk['owner_user_id'] ?? 0) ?>"
      data-roam-status="<?= htmlspecialchars($roamStatus ?? '') ?>"
+     data-closed="<?= ($risk['status'] ?? 'open') === 'closed' ? '1' : '0' ?>"
      data-linked-ids="<?= htmlspecialchars(json_encode(array_map('intval', $linkedItemIds))) ?>">
     <div class="risk-info">
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">

@@ -18,7 +18,8 @@
          data-estimated-sprints="<?= (int) ($item['estimated_sprints'] ?? 2) ?>"
          data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>"
          data-acceptance-criteria="<?= htmlspecialchars($item['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-         data-kr-hypothesis="<?= htmlspecialchars($item['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+         data-kr-hypothesis="<?= htmlspecialchars($item['kr_hypothesis'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+         data-closed="<?= ($item['status'] ?? '') === 'closed' ? '1' : '0' ?>">
     <span class="drag-handle" title="Drag to reorder">&#x2807;</span>
     <span class="priority-number"><?= (int) $item['priority_number'] ?></span>
     <div class="work-item-info">
@@ -34,8 +35,8 @@
             </a>
         <?php endif; ?>
         <?php
-            $statusLabels = ['in_progress' => 'In progress', 'in_review' => 'In review', 'done' => 'Done'];
-            $statusBadges = ['in_progress' => 'badge-info', 'in_review' => 'badge-warning', 'done' => 'badge-success'];
+            $statusLabels = ['in_progress' => 'In progress', 'in_review' => 'In review', 'done' => 'Done', 'closed' => 'Closed'];
+            $statusBadges = ['in_progress' => 'badge-info', 'in_review' => 'badge-warning', 'done' => 'badge-success', 'closed' => 'badge-secondary'];
             $itemStatus   = $item['status'] ?? 'backlog';
             if ($itemStatus !== 'backlog' && isset($statusLabels[$itemStatus])):
         ?>

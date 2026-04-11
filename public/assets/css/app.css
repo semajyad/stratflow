@@ -4301,3 +4301,18 @@ details[open] > summary .trace-chevron {
 #prioritisation-table .work-item-desc-preview {
     font-size: 0.75rem;
 }
+
+/* === Closed item indicator ================================================ */
+
+.risk-row[data-closed="1"],
+summary.story-row[data-closed="1"],
+summary.work-item-row[data-closed="1"] {
+    opacity: 0.55;
+}
+
+.risk-row[data-closed="1"] strong,
+summary.story-row[data-closed="1"] strong,
+summary.work-item-row[data-closed="1"] strong {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
