@@ -68,6 +68,27 @@ class ApiStoriesController
         ]);
     }
 
+    /**
+     * POST /api/v1/me/team
+     *
+     * Sets the authenticated user's team membership.
+     * Body: {"team": "SCRUM Team"} or {"team": null} to clear.
+     */
+    public function setMyTeam(): void
+    {
+        $user   = $this->auth->user();
+        $userId = (int) $user['id'];
+        $orgId  = (int) $user['org_id'];
+
+        $body   = $this->request->json();
+        $team   = isset($body['team']) ? trim((string) $body['team']) : null;
+        $team   = ($team !== null && $team !== '') ? $team : null;
+
+        User::update($this->db, $userId, ['team' => $team]);
+
+        $this->json(['ok' => true, 'team' => $team]);
+    }
+
     // ===========================
     // LIST
     // ===========================
