@@ -17,6 +17,9 @@ if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
     ob_start('ob_gzhandler');
 }
 
+header_remove('X-Powered-By');
+@ini_set('expose_php', '0');
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../src/Config/config.php';
@@ -42,6 +45,7 @@ if ($config['app']['debug']) {
             ));
 
             if (!headers_sent()) {
+                \StratFlow\Core\Response::applySecurityHeaders();
                 http_response_code(500);
                 include __DIR__ . '/../templates/errors/500.php';
             }
@@ -59,6 +63,7 @@ if ($config['app']['debug']) {
         ));
 
         if (!headers_sent()) {
+            \StratFlow\Core\Response::applySecurityHeaders();
             http_response_code(500);
             include __DIR__ . '/../templates/errors/500.php';
         }
@@ -73,6 +78,7 @@ try {
     // Catch any connection failure (PDOException, Exception, or driver-level errors
     // such as caching_sha2_password auth failures that may not surface as PDOException).
     error_log('[StratFlow] Database connection failed: ' . $e->getMessage());
+    \StratFlow\Core\Response::applySecurityHeaders();
     http_response_code(503);
     if ($config['app']['debug']) {
         echo '<h1>Database connection failed</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre>';

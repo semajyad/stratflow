@@ -114,6 +114,7 @@ class Router
         }
 
         // No route matched
+        Response::applySecurityHeaders();
         http_response_code(404);
         include __DIR__ . '/../../templates/errors/404.php';
     }

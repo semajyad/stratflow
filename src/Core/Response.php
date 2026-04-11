@@ -31,7 +31,7 @@ class Response
      */
     public function render(string $template, array $data = [], string $layout = 'public'): void
     {
-        $this->setSecurityHeaders();
+        self::applySecurityHeaders();
 
         $data['csrf_token'] = $this->csrf->getToken();
 
@@ -74,7 +74,7 @@ class Response
      */
     public function json(array $data, int $status = 200): void
     {
-        $this->setSecurityHeaders();
+        self::applySecurityHeaders();
         http_response_code($status);
         header('Content-Type: application/json');
         echo json_encode($data);
@@ -87,7 +87,7 @@ class Response
      */
     public function redirect(string $url): void
     {
-        $this->setSecurityHeaders();
+        self::applySecurityHeaders();
         header('Location: ' . $url);
         exit;
     }
@@ -101,7 +101,7 @@ class Response
      */
     public function download(string $content, string $filename, string $contentType): void
     {
-        $this->setSecurityHeaders();
+        self::applySecurityHeaders();
         header('Content-Type: ' . $contentType);
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($content));
@@ -114,8 +114,9 @@ class Response
      * Covers OWASP A05 (Security Misconfiguration), HIPAA transport
      * security, PCI-DSS strong cryptography, and SOC 2 access controls.
      */
-    private function setSecurityHeaders(): void
+    public static function applySecurityHeaders(): void
     {
+        header_remove('X-Powered-By');
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         header('X-XSS-Protection: 1; mode=block');
@@ -123,7 +124,7 @@ class Response
         header('Origin-Agent-Cluster: ?1');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
-        if ($this->isSecureTransport()) {
+        if (self::isSecureTransport()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
         header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com");
@@ -133,7 +134,23 @@ class Response
         header('Pragma: no-cache');
     }
 
-    private function isSecureTransport(): bool
+    public static function applyStaticAssetHeaders(string $contentType, int $contentLength, int $maxAge = 86400): void
+    {
+        header_remove('X-Powered-By');
+        header('Content-Type: ' . $contentType);
+        header('Content-Length: ' . $contentLength);
+        header('Cache-Control: public, max-age=' . $maxAge);
+        header('X-Content-Type-Options: nosniff');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+        header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+        header('Cross-Origin-Opener-Policy: same-origin');
+        header('Cross-Origin-Resource-Policy: same-origin');
+        if (self::isSecureTransport()) {
+            header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+        }
+    }
+
+    private static function isSecureTransport(): bool
     {
         if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
             return true;
