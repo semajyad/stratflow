@@ -1320,6 +1320,17 @@ document.addEventListener('DOMContentLoaded', function() {
             showProcessingOverlay(form.getAttribute('data-overlay'));
         });
     });
+
+    document.querySelectorAll('.password-wrapper').forEach(function(wrapper) {
+        syncPasswordToggle(wrapper);
+
+        var input = wrapper.querySelector('input');
+        if (!input) return;
+
+        input.addEventListener('input', function() {
+            syncPasswordToggle(wrapper);
+        });
+    });
 });
 
 // Password visibility toggle
@@ -1337,6 +1348,15 @@ function togglePassword(btn) {
         eyeOn.style.display = 'block';
         eyeOff.style.display = 'none';
     }
+}
+
+function syncPasswordToggle(wrapper) {
+    var input = wrapper.querySelector('input');
+    var button = wrapper.querySelector('.password-toggle');
+    if (!input || !button) return;
+
+    var hasValue = input.value.length > 0;
+    button.style.display = hasValue ? 'flex' : 'none';
 }
 
 // ===========================
