@@ -136,7 +136,12 @@ class Session
             return true;
         }
 
-        return (string) ($_SERVER['HTTP_X_FORWARDED_PORT'] ?? '') === '443';
+        if ((string) ($_SERVER['HTTP_X_FORWARDED_PORT'] ?? '') === '443') {
+            return true;
+        }
+
+        $appUrl = (string) ($_ENV['APP_URL'] ?? '');
+        return str_starts_with($appUrl, 'https://');
     }
 
     /**
