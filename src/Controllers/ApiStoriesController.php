@@ -60,10 +60,11 @@ class ApiStoriesController
     {
         $user = $this->auth->user();
         $this->json([
-            'id'    => (int) $user['id'],
-            'name'  => $user['name'] ?? '',
-            'email' => $user['email'],
+            'id'     => (int) $user['id'],
+            'name'   => $user['name'] ?? ($user['full_name'] ?? ''),
+            'email'  => $user['email'],
             'org_id' => (int) $user['org_id'],
+            'team'   => $user['team'] ?? null,
         ]);
     }
 

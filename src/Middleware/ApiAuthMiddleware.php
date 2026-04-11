@@ -56,7 +56,8 @@ class ApiAuthMiddleware
         // Load the full user row — needed to populate the principal
         $user = $db->query(
             'SELECT id, org_id, full_name, email, role,
-                    has_billing_access, has_executive_access, is_project_admin
+                    has_billing_access, has_executive_access, is_project_admin,
+                    jira_account_id, team
              FROM users
              WHERE id = :id AND org_id = :org_id
              LIMIT 1',
