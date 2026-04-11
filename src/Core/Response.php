@@ -87,6 +87,7 @@ class Response
      */
     public function redirect(string $url): void
     {
+        $this->setSecurityHeaders();
         header('Location: ' . $url);
         exit;
     }
@@ -100,6 +101,7 @@ class Response
      */
     public function download(string $content, string $filename, string $contentType): void
     {
+        $this->setSecurityHeaders();
         header('Content-Type: ' . $contentType);
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($content));
@@ -117,13 +119,52 @@ class Response
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         header('X-XSS-Protection: 1; mode=block');
+        header('X-Permitted-Cross-Domain-Policies: none');
+        header('Origin-Agent-Cluster: ?1');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
-        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com");
+        if ($this->isSecureTransport()) {
+            header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+        }
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com");
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
         header('Cache-Control: no-store, no-cache, must-revalidate, private');
         header('Pragma: no-cache');
+    }
+
+    private function isSecureTransport(): bool
+    {
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+
+        if (strtolower((string) ($_SERVER['REQUEST_SCHEME'] ?? '')) === 'https') {
+            return true;
+        }
+
+        if (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+            return true;
+        }
+
+        if (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '')) === 'on') {
+            return true;
+        }
+
+        if ((string) ($_SERVER['HTTP_X_FORWARDED_PORT'] ?? '') === '443') {
+            return true;
+        }
+
+        if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+            return true;
+        }
+
+        $cfVisitor = (string) ($_SERVER['HTTP_CF_VISITOR'] ?? '');
+        if ($cfVisitor !== '' && str_contains($cfVisitor, '"scheme":"https"')) {
+            return true;
+        }
+
+        $appUrl = (string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '');
+        return str_starts_with($appUrl, 'https://');
     }
 }

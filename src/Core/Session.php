@@ -28,6 +28,7 @@ class Session
 
         if (session_status() === PHP_SESSION_NONE) {
             $isSecure = $this->isSecureRequest();
+            session_name($isSecure ? '__Host-stratflow_session' : 'stratflow_session');
 
             // Use database session handler if PDO available
             if ($pdo !== null) {
@@ -38,6 +39,10 @@ class Session
             // Hardened session configuration (SOC 2 / PCI-DSS)
             ini_set('session.use_strict_mode', '1');
             ini_set('session.use_only_cookies', '1');
+            ini_set('session.cookie_httponly', '1');
+            ini_set('session.cookie_samesite', 'Lax');
+            ini_set('session.sid_length', '48');
+            ini_set('session.sid_bits_per_character', '6');
 
             session_set_cookie_params([
                 'lifetime' => 0,           // Browser session only
@@ -126,6 +131,11 @@ class Session
             return true;
         }
 
+        $requestScheme = strtolower((string) ($_SERVER['REQUEST_SCHEME'] ?? ''));
+        if ($requestScheme === 'https') {
+            return true;
+        }
+
         $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
         if ($forwardedProto === 'https') {
             return true;
@@ -140,7 +150,16 @@ class Session
             return true;
         }
 
-        $appUrl = (string) ($_ENV['APP_URL'] ?? '');
+        if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+            return true;
+        }
+
+        $cfVisitor = (string) ($_SERVER['HTTP_CF_VISITOR'] ?? '');
+        if ($cfVisitor !== '' && str_contains($cfVisitor, '"scheme":"https"')) {
+            return true;
+        }
+
+        $appUrl = (string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '');
         return str_starts_with($appUrl, 'https://');
     }
 
