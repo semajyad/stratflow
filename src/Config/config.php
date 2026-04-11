@@ -80,6 +80,7 @@ return [
         'resend_api_key'      => $_ENV['RESEND_API_KEY'] ?? '',
         'smtp_host'           => $_ENV['MAIL_SMTP_HOST'] ?? '',
         'smtp_port'           => $_ENV['MAIL_SMTP_PORT'] ?? '465',
+        'smtp_encryption'     => $_ENV['MAIL_SMTP_ENCRYPTION'] ?? 'auto',
         'smtp_user'           => $_ENV['MAIL_SMTP_USER'] ?? '',
         'smtp_pass'           => $_ENV['MAIL_SMTP_PASS'] ?? '',
     ],

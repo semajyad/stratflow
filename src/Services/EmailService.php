@@ -3,7 +3,7 @@
  * EmailService
  *
  * Sends transactional emails via configured SMTP, with MailerSend fallback.
- * SMTP supports implicit TLS on port 465 and plain SMTP on other ports.
+ * SMTP supports implicit TLS on 465 and STARTTLS on 587.
  */
 
 declare(strict_types=1);
@@ -32,6 +32,7 @@ class EmailService
         $fromEmail = $this->config['mail']['from_email'] ?? '';
         $smtpHost = trim((string)($this->config['mail']['smtp_host'] ?? ''));
         $smtpPort = (int)($this->config['mail']['smtp_port'] ?? 465);
+        $smtpEncryption = strtolower(trim((string)($this->config['mail']['smtp_encryption'] ?? 'auto')));
         $smtpUser = trim((string)($this->config['mail']['smtp_user'] ?? ''));
         $smtpPass = (string)($this->config['mail']['smtp_pass'] ?? '');
 
@@ -40,6 +41,7 @@ class EmailService
                 $sent = $this->sendViaSmtp(
                     $smtpHost,
                     $smtpPort,
+                    $smtpEncryption,
                     $smtpUser,
                     $smtpPass,
                     $fromName,
@@ -128,6 +130,7 @@ class EmailService
     private function sendViaSmtp(
         string $host,
         int $port,
+        string $encryption,
         string $user,
         string $pass,
         string $fromName,
@@ -137,7 +140,8 @@ class EmailService
         string $htmlBody
     ): bool
     {
-        $transport = $port === 465 ? 'ssl://' : '';
+        $mode = $this->resolveSmtpEncryptionMode($port, $encryption);
+        $transport = $mode === 'ssl' ? 'ssl://' : '';
         $socket = @fsockopen($transport . $host, $port, $errno, $errstr, 15);
         if (!$socket) {
             throw new \RuntimeException("SMTP connect failed: {$errstr} ({$errno})");
@@ -145,6 +149,15 @@ class EmailService
 
         $this->smtpRead($socket); // 220 greeting
         $this->smtpCommand($socket, "EHLO stratflow.app", 250);
+
+        if ($mode === 'tls') {
+            $this->smtpCommand($socket, "STARTTLS", 220);
+            $cryptoEnabled = stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            if ($cryptoEnabled !== true) {
+                throw new \RuntimeException('SMTP STARTTLS negotiation failed');
+            }
+            $this->smtpCommand($socket, "EHLO stratflow.app", 250);
+        }
 
         // AUTH LOGIN
         $this->smtpCommand($socket, "AUTH LOGIN", 334);
@@ -176,6 +189,19 @@ class EmailService
         fclose($socket);
 
         return true;
+    }
+
+    private function resolveSmtpEncryptionMode(int $port, string $encryption): string
+    {
+        if ($encryption === 'ssl' || $encryption === 'tls' || $encryption === 'none') {
+            return $encryption;
+        }
+
+        return match ($port) {
+            465 => 'ssl',
+            587 => 'tls',
+            default => 'none',
+        };
     }
 
     private function smtpCommand($socket, string $command, int $expectedCode): string
