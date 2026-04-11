@@ -72,7 +72,7 @@ $icon = function (string $name): string {
     <div class="sidebar-project">
         <span class="sidebar-project-label">CURRENT PROJECT</span>
         <?php if (!empty($all_projects)): ?>
-        <select class="sidebar-project-select" onchange="if(this.value) window.location='<?= htmlspecialchars($currentPath) ?>?project_id='+this.value">
+        <select class="sidebar-project-select js-project-switcher" data-project-base-url="<?= htmlspecialchars($currentPath) ?>">
             <option value="">Select a project...</option>
             <?php foreach ($all_projects as $ap): ?>
                 <option value="<?= (int) $ap['id'] ?>" <?= $pid === (int) $ap['id'] ? 'selected' : '' ?>>
@@ -180,9 +180,8 @@ $icon = function (string $name): string {
         </a>
     </nav>
 
-    <button type="button" class="sidebar-collapse-btn" id="sidebar-collapse-btn"
-            aria-label="Collapse sidebar" aria-pressed="false"
-            onclick="toggleSidebarCollapsed()">
+    <button type="button" class="sidebar-collapse-btn js-sidebar-collapse" id="sidebar-collapse-btn"
+            aria-label="Collapse sidebar" aria-pressed="false">
         <?= $icon('chevron-left') ?>
         <span class="nav-label">Collapse</span>
     </button>

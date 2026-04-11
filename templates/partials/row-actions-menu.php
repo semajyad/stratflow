@@ -18,8 +18,7 @@
 $confirmMsg = $row_delete_confirm ?? 'Delete this item?';
 ?>
 <div class="row-actions-menu">
-    <button type="button" class="row-actions-toggle" aria-label="Actions" aria-haspopup="menu" aria-expanded="false"
-            onclick="toggleRowActions(event, this)">
+    <button type="button" class="row-actions-toggle js-row-actions-toggle" aria-label="Actions" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
         </svg>
@@ -51,7 +50,7 @@ $confirmMsg = $row_delete_confirm ?? 'Delete this item?';
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <button type="submit" class="row-actions-item row-actions-item--danger" role="menuitem"
-                    onclick="return confirm('<?= htmlspecialchars($confirmMsg, ENT_QUOTES) ?>')">
+                    data-confirm="<?= htmlspecialchars($confirmMsg, ENT_QUOTES) ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6"/>
                     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>

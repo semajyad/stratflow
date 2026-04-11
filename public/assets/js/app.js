@@ -39,7 +39,6 @@ window.toggleSidebarCollapsed = function() {
 // ===========================
 // Row Actions Kebab Menu
 // ===========================
-// Exposed globally so inline onclick on the toggle button can reach it.
 window.toggleRowActions = function(event, btn) {
     event.preventDefault();
     event.stopPropagation();
@@ -60,6 +59,29 @@ window.toggleRowActions = function(event, btn) {
 
 // Global click-outside / Escape handlers to dismiss open kebab menus.
 document.addEventListener('click', function(e) {
+    var rowActionsToggle = e.target.closest('.js-row-actions-toggle');
+    if (rowActionsToggle) {
+        window.toggleRowActions(e, rowActionsToggle);
+        return;
+    }
+
+    var sidebarCollapseToggle = e.target.closest('.js-sidebar-collapse');
+    if (sidebarCollapseToggle) {
+        e.preventDefault();
+        window.toggleSidebarCollapsed();
+        return;
+    }
+
+    var sprintEditToggle = e.target.closest('.js-toggle-sprint-edit');
+    if (sprintEditToggle) {
+        e.preventDefault();
+        var sprintId = parseInt(sprintEditToggle.dataset.sprintId || '', 10);
+        if (!Number.isNaN(sprintId)) {
+            toggleSprintEditForm(sprintId);
+        }
+        return;
+    }
+
     if (!e.target.closest('.row-actions-menu')) {
         document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
             m.classList.remove('row-actions-menu--open');
@@ -75,6 +97,28 @@ document.addEventListener('keydown', function(e) {
             var t = m.querySelector('.row-actions-toggle');
             if (t) t.setAttribute('aria-expanded', 'false');
         });
+    }
+});
+
+document.addEventListener('change', function(e) {
+    var projectSwitcher = e.target.closest('.js-project-switcher');
+    if (!projectSwitcher || !projectSwitcher.value) {
+        return;
+    }
+
+    var baseUrl = projectSwitcher.dataset.projectBaseUrl || '/app/home';
+    window.location = baseUrl + '?project_id=' + encodeURIComponent(projectSwitcher.value);
+});
+
+document.addEventListener('submit', function(e) {
+    var submitter = e.submitter;
+    if (!submitter) {
+        return;
+    }
+
+    var confirmMessage = submitter.dataset.confirm;
+    if (confirmMessage && !window.confirm(confirmMessage)) {
+        e.preventDefault();
     }
 });
 

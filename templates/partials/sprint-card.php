@@ -28,12 +28,12 @@
             <span class="capacity-label"><?= $totalSize ?> / <?= $sprint['team_capacity'] ?? '?' ?> pts</span>
         </div>
         <div class="sprint-actions">
-            <button type="button" class="btn btn-sm btn-secondary edit-sprint-btn"
-                    onclick="toggleSprintEditForm(<?= (int) $sprint['id'] ?>)">Edit</button>
+            <button type="button" class="btn btn-sm btn-secondary edit-sprint-btn js-toggle-sprint-edit"
+                    data-sprint-id="<?= (int) $sprint['id'] ?>">Edit</button>
             <form method="POST" action="/app/sprints/<?= (int) $sprint['id'] ?>/delete" class="inline-form">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete sprint? Stories will return to backlog.')">Delete</button>
+                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Delete sprint? Stories will return to backlog.">Delete</button>
             </form>
         </div>
     </div>
@@ -50,7 +50,7 @@
                 <input type="date" name="end_date" value="<?= htmlspecialchars($sprint['end_date'] ?? '') ?>" class="form-control form-control-sm">
                 <input type="number" name="team_capacity" value="<?= $sprint['team_capacity'] ?? '' ?>" placeholder="Capacity" class="form-control form-control-sm" min="1" style="width: 80px;">
                 <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="toggleSprintEditForm(<?= (int) $sprint['id'] ?>)">Cancel</button>
+                <button type="button" class="btn btn-sm btn-secondary js-toggle-sprint-edit" data-sprint-id="<?= (int) $sprint['id'] ?>">Cancel</button>
             </div>
         </form>
     </div>
