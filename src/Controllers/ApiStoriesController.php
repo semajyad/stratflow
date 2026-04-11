@@ -84,9 +84,26 @@ class ApiStoriesController
         $team   = isset($body['team']) ? trim((string) $body['team']) : null;
         $team   = ($team !== null && $team !== '') ? $team : null;
 
-        User::update($this->db, $userId, ['team' => $team]);
+        // Direct UPDATE with row-count verification to diagnose write failures on Railway
+        $stmt = $this->db->query(
+            'UPDATE users SET `team` = :team WHERE id = :id AND org_id = :org_id',
+            [':team' => $team, ':id' => $userId, ':org_id' => $orgId]
+        );
+        $rowCount = $stmt->rowCount();
 
-        $this->json(['ok' => true, 'team' => $team]);
+        $after = $this->db->query(
+            'SELECT `team` FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
+            [':id' => $userId, ':org_id' => $orgId]
+        )->fetch();
+
+        $this->json([
+            'ok'        => $rowCount > 0,
+            'rows'      => $rowCount,
+            'set_to'    => $team,
+            'db_reads'  => $after['team'] ?? null,
+            'user_id'   => $userId,
+            'org_id'    => $orgId,
+        ]);
     }
 
     // ===========================
@@ -339,38 +356,6 @@ class ApiStoriesController
             'sf_ref' => 'SF-' . $storyId,
             'status' => $newStatus,
         ]]);
-    }
-
-    // ===========================
-    // UPDATE MY TEAM
-    // ===========================
-
-    /**
-     * POST /api/v1/me/team
-     *
-     * Set the authenticated user's team membership.
-     * Body: {"team": "Backend"}
-     */
-    public function setMyTeam(): void
-    {
-        $user   = $this->auth->user();
-        $userId = (int) $user['id'];
-        $body   = $this->request->json();
-        $team   = trim((string) ($body['team'] ?? ''));
-
-        if ($team === '') {
-            $this->jsonError('team is required', 422);
-            return;
-        }
-
-        if (strlen($team) > 100) {
-            $this->jsonError('team name must be 100 characters or fewer', 422);
-            return;
-        }
-
-        User::update($this->db, $userId, ['team' => $team]);
-
-        $this->json(['data' => ['team' => $team]]);
     }
 
     // ===========================
