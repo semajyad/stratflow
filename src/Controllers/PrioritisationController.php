@@ -18,6 +18,7 @@ use StratFlow\Core\Response;
 use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\Subscription;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\PrioritisationPrompt;
 
@@ -58,7 +59,7 @@ class PrioritisationController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -98,7 +99,7 @@ class PrioritisationController
             $framework = 'rice';
         }
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -139,7 +140,7 @@ class PrioritisationController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -168,7 +169,7 @@ class PrioritisationController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -207,7 +208,7 @@ class PrioritisationController
         $body      = json_decode($this->request->body(), true);
         $projectId = (int) ($body['project_id'] ?? 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Project not found'], 404);
             return;

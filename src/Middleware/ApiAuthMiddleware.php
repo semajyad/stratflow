@@ -54,10 +54,31 @@ class ApiAuthMiddleware
         }
 
         // Load the full user row — needed to populate the principal
+        $selectColumns = [
+            'id', 'org_id', 'full_name', 'email', 'role',
+            'has_billing_access', 'has_executive_access', 'is_project_admin',
+            'jira_account_id', 'team',
+        ];
+
+        try {
+            $hasAccountType = (bool) $db->query(
+                "SELECT 1
+                 FROM information_schema.columns
+                 WHERE table_schema = DATABASE()
+                   AND table_name = 'users'
+                   AND column_name = 'account_type'
+                 LIMIT 1"
+            )->fetch();
+
+            if ($hasAccountType) {
+                $selectColumns[] = 'account_type';
+            }
+        } catch (\Throwable) {
+            // Older databases do not have account_type yet.
+        }
+
         $user = $db->query(
-            'SELECT id, org_id, full_name, email, role,
-                    has_billing_access, has_executive_access, is_project_admin,
-                    jira_account_id, team
+            'SELECT ' . implode(', ', $selectColumns) . '
              FROM users
              WHERE id = :id AND org_id = :org_id
              LIMIT 1',

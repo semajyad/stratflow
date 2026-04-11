@@ -19,6 +19,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\FileProcessor;
 use StratFlow\Services\GeminiService;
@@ -55,10 +56,9 @@ class UploadController
     public function index(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -89,10 +89,9 @@ class UploadController
     public function store(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -197,12 +196,10 @@ class UploadController
     public function generateSummary(): void
     {
         $user       = $this->auth->user();
-        $orgId      = (int) $user['org_id'];
         $documentId = (int) $this->request->post('document_id', 0);
         $projectId  = (int) $this->request->post('project_id', 0);
 
-        // Verify the project belongs to this org
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;

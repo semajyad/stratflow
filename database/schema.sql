@@ -24,8 +24,12 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     role ENUM('viewer','user','project_manager','org_admin','superadmin','developer') NOT NULL DEFAULT 'user',
+    account_type ENUM('viewer','member','manager','org_admin','superadmin','developer') NOT NULL DEFAULT 'member',
     jira_account_id    VARCHAR(255) NULL,
     has_billing_access TINYINT(1) NOT NULL DEFAULT 0,
+    has_executive_access TINYINT(1) NOT NULL DEFAULT 0,
+    is_project_admin TINYINT(1) NOT NULL DEFAULT 0,
+    team VARCHAR(255) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     password_changed_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,11 +65,57 @@ CREATE TABLE IF NOT EXISTS projects (
     selected_framework ENUM('rice','wsjf') NULL,
     created_by INT UNSIGNED NOT NULL,
     jira_project_key VARCHAR(20) NULL,
+    visibility ENUM('everyone','restricted') NOT NULL DEFAULT 'everyone',
     jira_board_id INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_members (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_project_user (project_id, user_id),
+    KEY idx_project (project_id),
+    KEY idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_memberships (
+    project_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    membership_role ENUM('viewer','editor','project_admin') NOT NULL DEFAULT 'viewer',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id),
+    KEY idx_membership_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS capabilities (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `key` VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS account_type_capabilities (
+    account_type ENUM('viewer','member','manager','org_admin','superadmin','developer') NOT NULL,
+    capability_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (account_type, capability_id),
+    CONSTRAINT fk_account_type_capability_capability
+        FOREIGN KEY (capability_id) REFERENCES capabilities(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_capabilities (
+    user_id INT UNSIGNED NOT NULL,
+    capability_id INT UNSIGNED NOT NULL,
+    effect ENUM('grant','deny') NOT NULL DEFAULT 'grant',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, capability_id),
+    CONSTRAINT fk_user_capabilities_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_capabilities_capability
+        FOREIGN KEY (capability_id) REFERENCES capabilities(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS documents (

@@ -86,6 +86,9 @@ $roleLabels = [
                                 <span class="badge <?= $roleBadge ?>">
                                     <?= $roleLabel ?>
                                 </span>
+                                <div class="text-muted" style="font-size:0.75rem; margin-top:0.35rem;">
+                                    Account type: <?= htmlspecialchars(ucwords(str_replace('_', ' ', $u['account_type'] ?? $u['role']))) ?>
+                                </div>
                             </td>
                             <td>
                                 <?php if ($u['is_active']): ?>
@@ -103,6 +106,11 @@ $roleLabels = [
                                 <?php endif; ?>
                                 <?php if ($u['has_executive_access']): ?>
                                     <span class="badge badge-info" title="Executive dashboard access">Exec</span>
+                                <?php endif; ?>
+                                <?php if (!empty($u['access_summary'])): ?>
+                                    <div class="text-muted" style="font-size:0.75rem; margin-top:0.4rem; line-height:1.45;">
+                                        <?= htmlspecialchars(implode(' | ', $u['access_summary'])) ?>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <td>

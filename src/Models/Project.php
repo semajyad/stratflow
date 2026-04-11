@@ -93,20 +93,25 @@ class Project
             'is_project_admin' => $isProjectAdmin,
         ];
 
-        if (PermissionService::can($principal, PermissionService::PROJECT_VIEW_ALL)) {
+        if (PermissionService::can($principal, PermissionService::PROJECT_VIEW_ALL, $db)) {
             return self::findByOrgId($db, $orgId);
         }
 
+        $membershipTable = $db->tableExists('project_memberships') ? 'project_memberships' : 'project_members';
+        $canViewOrgWide = PermissionService::can($principal, PermissionService::WORKFLOW_VIEW, $db);
+        $visibilityPredicate = $canViewOrgWide
+            ? "p.visibility = 'everyone' OR EXISTS (
+                   SELECT 1 FROM {$membershipTable} pm
+                   WHERE pm.project_id = p.id AND pm.user_id = :user_id
+               )"
+            : "EXISTS (
+                   SELECT 1 FROM {$membershipTable} pm
+                   WHERE pm.project_id = p.id AND pm.user_id = :user_id
+               )";
         $stmt = $db->query(
             "SELECT p.* FROM projects p
              WHERE p.org_id = :org_id
-               AND (
-                     p.visibility = 'everyone'
-                  OR EXISTS (
-                       SELECT 1 FROM project_members pm
-                       WHERE pm.project_id = p.id AND pm.user_id = :user_id
-                     )
-               )
+               AND ({$visibilityPredicate})
              ORDER BY p.created_at DESC",
             [':org_id' => $orgId, ':user_id' => $userId]
         );
@@ -127,15 +132,35 @@ class Project
      * @param int   $projectId Project ID
      * @param int[] $userIds   User IDs to grant access
      */
-    public static function setMembers(Database $db, int $projectId, array $userIds): void
+    public static function setMembers(Database $db, int $projectId, array $members): void
     {
-        $db->query("DELETE FROM project_members WHERE project_id = :pid", [':pid' => $projectId]);
+        $normalised = self::normaliseMembershipPayload($members);
 
-        foreach (array_unique(array_filter(array_map('intval', $userIds))) as $uid) {
-            $db->query(
-                "INSERT IGNORE INTO project_members (project_id, user_id) VALUES (:pid, :uid)",
-                [':pid' => $projectId, ':uid' => $uid]
-            );
+        if ($db->tableExists('project_memberships')) {
+            $db->query("DELETE FROM project_memberships WHERE project_id = :pid", [':pid' => $projectId]);
+
+            foreach ($normalised as $member) {
+                $db->query(
+                    "INSERT INTO project_memberships (project_id, user_id, membership_role)
+                     VALUES (:pid, :uid, :membership_role)",
+                    [
+                        ':pid' => $projectId,
+                        ':uid' => $member['user_id'],
+                        ':membership_role' => $member['membership_role'],
+                    ]
+                );
+            }
+        }
+
+        if ($db->tableExists('project_members')) {
+            $db->query("DELETE FROM project_members WHERE project_id = :pid", [':pid' => $projectId]);
+
+            foreach ($normalised as $member) {
+                $db->query(
+                    "INSERT IGNORE INTO project_members (project_id, user_id) VALUES (:pid, :uid)",
+                    [':pid' => $projectId, ':uid' => $member['user_id']]
+                );
+            }
         }
     }
 
@@ -146,12 +171,48 @@ class Project
      */
     public static function getMemberIds(Database $db, int $projectId): array
     {
+        $rows = self::getMemberships($db, $projectId);
+
+        return array_column($rows, 'user_id');
+    }
+
+    /**
+     * Return project memberships keyed by membership role when available.
+     *
+     * @return array<int, array{user_id:int,membership_role:string}>
+     */
+    public static function getMemberships(Database $db, int $projectId): array
+    {
+        if ($db->tableExists('project_memberships')) {
+            $rows = $db->query(
+                "SELECT user_id, membership_role
+                 FROM project_memberships
+                 WHERE project_id = :pid
+                 ORDER BY user_id ASC",
+                [':pid' => $projectId]
+            )->fetchAll();
+
+            return array_map(
+                fn(array $row): array => [
+                    'user_id' => (int) $row['user_id'],
+                    'membership_role' => (string) ($row['membership_role'] ?? 'viewer'),
+                ],
+                $rows
+            );
+        }
+
         $rows = $db->query(
             "SELECT user_id FROM project_members WHERE project_id = :pid",
             [':pid' => $projectId]
         )->fetchAll();
 
-        return array_column($rows, 'user_id');
+        return array_map(
+            fn(array $row): array => [
+                'user_id' => (int) $row['user_id'],
+                'membership_role' => 'editor',
+            ],
+            $rows
+        );
     }
 
     /**
@@ -245,5 +306,39 @@ class Project
         }
 
         $db->query($sql, $params);
+    }
+
+    /**
+     * @param array<int, int|array{user_id?:mixed,membership_role?:mixed}> $members
+     * @return array<int, array{user_id:int,membership_role:string}>
+     */
+    private static function normaliseMembershipPayload(array $members): array
+    {
+        $normalised = [];
+
+        foreach ($members as $key => $member) {
+            if (is_array($member)) {
+                $userId = (int) ($member['user_id'] ?? $key);
+                $role = (string) ($member['membership_role'] ?? 'editor');
+            } else {
+                $userId = (int) $member;
+                $role = 'editor';
+            }
+
+            if ($userId <= 0) {
+                continue;
+            }
+
+            if (!in_array($role, ['viewer', 'editor', 'project_admin'], true)) {
+                $role = 'editor';
+            }
+
+            $normalised[$userId] = [
+                'user_id' => $userId,
+                'membership_role' => $role,
+            ];
+        }
+
+        return array_values($normalised);
     }
 }

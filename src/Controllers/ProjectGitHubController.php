@@ -26,6 +26,7 @@ use StratFlow\Core\Response;
 use StratFlow\Models\IntegrationRepo;
 use StratFlow\Models\Project;
 use StratFlow\Models\ProjectRepoLink;
+use StratFlow\Security\ProjectPolicy;
 
 class ProjectGitHubController
 {
@@ -66,7 +67,7 @@ class ProjectGitHubController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
-        $project = Project::findById($this->db, $id, $orgId);
+        $project = ProjectPolicy::findManageableProject($this->db, $user, $id);
         if ($project === null) {
             $_SESSION['flash_error'] = 'Project not found.';
             $this->response->redirect('/app/home');
@@ -113,7 +114,7 @@ class ProjectGitHubController
         $orgId  = (int) $user['org_id'];
         $userId = (int) $user['id'];
 
-        $project = Project::findById($this->db, $id, $orgId);
+        $project = ProjectPolicy::findManageableProject($this->db, $user, $id);
         if ($project === null) {
             $_SESSION['flash_error'] = 'Project not found.';
             $this->response->redirect('/app/home');

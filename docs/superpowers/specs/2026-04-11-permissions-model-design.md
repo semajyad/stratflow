@@ -55,9 +55,19 @@ The real access model already depends on:
 
 That is reasonable in concept, but it is not expressed as a formal permission model.
 
-### 2.3 Read-only access is not consistently enforced
+### 2.3 Read-only access has improved, but the long-term model is still not complete
 
-The UI presents `viewer` as read-only, but many standard workflow routes currently allow authenticated non-developer users without a dedicated write-permission check.
+The UI presents `viewer` as read-only, and the current implementation now enforces that much more consistently:
+
+- workflow write routes are centrally gated
+- main project-scoped workflow controllers now apply project visibility and edit policy checks
+- PAT mutation endpoints also require project edit access
+
+What is still missing is the full long-term design:
+
+- named capability catalog tables
+- explicit per-membership roles beyond simple membership visibility
+- central "effective access" explanation tooling
 
 ### 2.4 Project access is too coarse
 
@@ -483,13 +493,29 @@ This avoids a risky big-bang rewrite while still giving StratFlow a durable perm
 
 ## 15. Implementation Checklist
 
-- [ ] Centralise supported account types in one source of truth
-- [ ] Fix admin create/update validation to match supported account types
-- [ ] Fix `User::update()` to persist role-adjacent access fields actually used by the UI
-- [ ] Add capability resolver service
-- [ ] Convert middleware to capability checks
-- [ ] Add project policy layer
-- [ ] Replace `project_members` with role-based `project_memberships`
-- [ ] Add tests for effective permission resolution
-- [ ] Add an admin-facing effective access summary UI
-- [ ] Update user guide and API docs after implementation
+- [x] Centralise supported account types in one source of truth
+- [x] Fix admin create/update validation to match supported account types
+- [x] Fix `User::update()` to persist role-adjacent access fields actually used by the UI
+- [x] Add capability resolver service
+- [x] Convert middleware to capability checks
+- [x] Add project policy layer
+- [x] Replace `project_members` with role-based `project_memberships`
+- [x] Add tests for effective permission resolution
+- [x] Add an admin-facing effective access summary UI
+- [x] Update user guide and API docs after implementation
+
+## 16. Implementation Status
+
+As of 2026-04-11, the main permissions rework described here is now implemented in StratFlow:
+
+- capability-backed permission resolution with compatibility fallback to legacy role/flag logic
+- `users.account_type` plus seeded capability catalog migration
+- user-level capability override support
+- role-based project memberships
+- project policy enforcement across the main workflow controllers and PAT story API
+- admin UI summaries showing account type, extra grants/flags, and project-membership counts
+
+The remaining future work is evolutionary rather than foundational:
+
+- decide when to retire legacy `role`, flag, and `project_members` compatibility paths
+- expand admin UX if finer-grained capability editing becomes a product requirement

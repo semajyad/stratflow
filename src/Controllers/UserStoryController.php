@@ -23,6 +23,7 @@ use StratFlow\Models\UserStory;
 use StratFlow\Models\GovernanceItem;
 use StratFlow\Models\StrategicBaseline;
 use StratFlow\Models\StoryQualityConfig;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\StoryQualityScorer;
 use StratFlow\Services\StoryImprovementService;
@@ -65,7 +66,7 @@ class UserStoryController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -126,7 +127,7 @@ class UserStoryController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -262,7 +263,7 @@ class UserStoryController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -322,7 +323,7 @@ class UserStoryController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $story['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -434,7 +435,7 @@ class UserStoryController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $story['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -503,14 +504,14 @@ class UserStoryController
         $orgId     = (int) $user['org_id'];
         $storyId   = (int) $id;
 
-        $story = $this->db->query(
-            "SELECT us.id, us.project_id FROM user_stories us
-             JOIN projects p ON p.id = us.project_id
-             WHERE us.id = :id AND p.org_id = :org_id LIMIT 1",
-            [':id' => $storyId, ':org_id' => $orgId]
-        )->fetch();
+        $story = UserStory::findById($this->db, $storyId);
+        if ($story === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
 
-        if (!$story) {
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
+        if ($project === null) {
             $this->response->redirect('/app/home');
             return;
         }
@@ -537,7 +538,7 @@ class UserStoryController
         }
 
         $projectId = (int) $story['project_id'];
-        $project   = Project::findById($this->db, $projectId, $orgId);
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -585,7 +586,7 @@ class UserStoryController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $firstStory['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $firstStory['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -623,7 +624,7 @@ class UserStoryController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $story['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -664,7 +665,7 @@ class UserStoryController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -753,7 +754,7 @@ PROMPT;
         $projectId = (int) $this->request->get('project_id', 0);
         $format    = strtolower((string) $this->request->get('format', 'csv'));
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -842,7 +843,7 @@ PROMPT;
             return;
         }
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;

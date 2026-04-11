@@ -255,27 +255,59 @@ The remaining provisioning gap was the create-user form not exposing the same ac
 - `has_billing_access`
 - `has_executive_access`
 
-### 2. Viewer is labelled read-only, but not fully enforced yet
+### 2. Viewer read-only enforcement is now in the main workflow paths
 
-Today, the biggest enforced boundaries are:
+Today, the main enforced boundaries are:
 
 - `admin`
 - `billing`
 - `executive`
 - `superadmin`
-- `developer-only account tokens`
+- workflow write actions via central capability checks
+- project-scoped visibility and edit checks on the main workflow controllers
 
-Standard workflow routes are broadly available to authenticated non-developer users.
+That means:
+
+- `viewer` can browse accessible projects and read workflow pages
+- `viewer` cannot use workflow write actions
+- restricted projects are hidden or blocked unless the user is a member or has broader project visibility capability
+
+There may still be edge cases to tighten over time, but the old "viewer can probably still write on normal pages" caveat is no longer the right mental model.
 
 ### 3. Access flags are part of the real permission model
 
 In practice, who can do what depends on:
 
-- Base role
+- Base role / account type
 - `is_project_admin`
 - `has_billing_access`
 - `has_executive_access`
-- Project visibility membership
+- Project membership role (`viewer`, `editor`, `project_admin`) for restricted projects
+
+### 4. StratFlow now has a schema-backed capability model
+
+The current backend can resolve permissions from database-backed account types and capability tables when the latest migration has been applied.
+
+That includes:
+
+- `users.account_type`
+- capability catalog tables
+- user-level capability grants or denies
+- role-based project memberships in `project_memberships`
+
+Legacy columns and the older `project_members` table are still read as a compatibility fallback, so older environments can keep working during rollout.
+
+### 5. Project access is now more expressive
+
+Restricted-project membership is no longer just "is this user on the list?"
+
+Membership roles now support:
+
+- `viewer`: view only
+- `editor`: view and edit workflow content
+- `project_admin`: manage project settings and access for that project
+
+The dashboard project modal now lets admins assign those roles directly when editing restricted-project access.
 
 ## Admin Checklist
 

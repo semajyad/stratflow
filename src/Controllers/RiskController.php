@@ -21,6 +21,7 @@ use StratFlow\Models\Risk;
 use StratFlow\Models\RiskItemLink;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\User;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\RiskPrompt;
 
@@ -61,7 +62,7 @@ class RiskController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -132,7 +133,7 @@ class RiskController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -223,7 +224,7 @@ class RiskController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -281,7 +282,7 @@ class RiskController
         }
 
         $projectId = (int) $risk['project_id'];
-        $project   = Project::findById($this->db, $projectId, $orgId);
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -342,7 +343,7 @@ class RiskController
         }
 
         // Verify project belongs to org
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -365,7 +366,7 @@ class RiskController
         $allowed = ['resolved', 'owned', 'accepted', 'mitigated'];
         $roam    = strtolower(trim((string) $this->request->post('roam_status', '')));
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -395,7 +396,7 @@ class RiskController
         }
 
         $projectId = (int) $risk['project_id'];
-        $project   = Project::findById($this->db, $projectId, $orgId);
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -426,7 +427,7 @@ class RiskController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $risk['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $risk['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;

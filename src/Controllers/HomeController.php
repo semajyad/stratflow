@@ -63,8 +63,9 @@ class HomeController
             $p['steps_complete']  = $stage['steps_complete'];
             $p['steps_total']     = $stage['steps_total'];
             $p['completion']      = $stage['completion'];
-            // Attach current member IDs for edit modal
-            $p['member_ids']      = Project::getMemberIds($this->db, (int) $p['id']);
+            // Attach current memberships for the edit modal.
+            $p['memberships']     = Project::getMemberships($this->db, (int) $p['id']);
+            $p['member_ids']      = array_column($p['memberships'], 'user_id');
         }
         unset($p);
 
@@ -132,8 +133,7 @@ class HomeController
         // Set visibility and initial members if restricted
         Project::update($this->db, $projectId, ['visibility' => $visibility], $orgId);
         if ($visibility === 'restricted') {
-            $memberIds = array_map('intval', (array) ($this->request->post('member_ids') ?? []));
-            Project::setMembers($this->db, $projectId, $memberIds);
+            Project::setMembers($this->db, $projectId, $this->normalisePostedMemberships());
         }
 
         $_SESSION['flash_message'] = 'Project "' . $name . '" created successfully.';
@@ -198,8 +198,7 @@ class HomeController
 
         // Replace member list when restricted (empty list = nobody extra)
         if ($visibility === 'restricted') {
-            $memberIds = array_map('intval', (array) ($this->request->post('member_ids') ?? []));
-            Project::setMembers($this->db, $projectId, $memberIds);
+            Project::setMembers($this->db, $projectId, $this->normalisePostedMemberships());
         } else {
             // Switching back to 'everyone' — clear any stored members
             Project::setMembers($this->db, $projectId, []);
@@ -379,5 +378,46 @@ class HomeController
         $completion['governance'] = ($stmt->fetch()['c'] ?? 0) > 0;
 
         return $completion;
+    }
+
+    /**
+     * @return array<int, array{user_id:int,membership_role:string}>
+     */
+    private function normalisePostedMemberships(): array
+    {
+        $rawRoles = (array) ($this->request->post('member_roles') ?? []);
+        $memberships = [];
+
+        foreach ($rawRoles as $userId => $membershipRole) {
+            $uid = (int) $userId;
+            if ($uid <= 0) {
+                continue;
+            }
+
+            $role = (string) $membershipRole;
+            if (!in_array($role, ['viewer', 'editor', 'project_admin'], true)) {
+                $role = 'editor';
+            }
+
+            $memberships[] = [
+                'user_id' => $uid,
+                'membership_role' => $role,
+            ];
+        }
+
+        // Backward-compatible fallback for older forms still posting member_ids[] only.
+        if ($memberships === []) {
+            foreach (array_map('intval', (array) ($this->request->post('member_ids') ?? [])) as $uid) {
+                if ($uid <= 0) {
+                    continue;
+                }
+                $memberships[] = [
+                    'user_id' => $uid,
+                    'membership_role' => 'editor',
+                ];
+            }
+        }
+
+        return $memberships;
     }
 }

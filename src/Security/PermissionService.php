@@ -35,26 +35,24 @@ final class PermissionService
     public const API_USE_OWN_TOKENS    = 'api.use_own_tokens';
     public const SUPERADMIN_ACCESS     = 'superadmin.access';
 
-    private const ROLE_CAPABILITIES = [
+    private const ACCOUNT_TYPE_CAPABILITIES = [
         'viewer' => [
             self::WORKFLOW_VIEW,
             self::TOKENS_MANAGE_OWN,
             self::API_USE_OWN_TOKENS,
         ],
-        'user' => [
+        'member' => [
             self::WORKFLOW_VIEW,
             self::WORKFLOW_EDIT,
             self::TOKENS_MANAGE_OWN,
             self::API_USE_OWN_TOKENS,
         ],
-        'project_manager' => [
+        'manager' => [
             self::WORKFLOW_VIEW,
             self::WORKFLOW_EDIT,
             self::PROJECT_CREATE,
-            self::PROJECT_VIEW_ALL,
             self::PROJECT_EDIT_SETTINGS,
             self::PROJECT_MANAGE_ACCESS,
-            self::PROJECT_DELETE,
             self::TOKENS_MANAGE_OWN,
             self::API_USE_OWN_TOKENS,
         ],
@@ -75,9 +73,44 @@ final class PermissionService
             self::TOKENS_MANAGE_OWN,
             self::API_USE_OWN_TOKENS,
         ],
+        'superadmin' => ['*'],
         'developer' => [
             self::TOKENS_MANAGE_OWN,
             self::API_USE_OWN_TOKENS,
+        ],
+    ];
+
+    private const ROLE_TO_ACCOUNT_TYPE = [
+        'viewer' => 'viewer',
+        'user' => 'member',
+        'project_manager' => 'manager',
+        'org_admin' => 'org_admin',
+        'superadmin' => 'superadmin',
+        'developer' => 'developer',
+    ];
+
+    private const ACCOUNT_TYPE_TO_ROLE = [
+        'viewer' => 'viewer',
+        'member' => 'user',
+        'manager' => 'project_manager',
+        'org_admin' => 'org_admin',
+        'superadmin' => 'superadmin',
+        'developer' => 'developer',
+    ];
+
+    private const PROJECT_MEMBERSHIP_CAPABILITIES = [
+        'viewer' => [
+            self::WORKFLOW_VIEW,
+        ],
+        'editor' => [
+            self::WORKFLOW_VIEW,
+            self::WORKFLOW_EDIT,
+        ],
+        'project_admin' => [
+            self::WORKFLOW_VIEW,
+            self::WORKFLOW_EDIT,
+            self::PROJECT_EDIT_SETTINGS,
+            self::PROJECT_MANAGE_ACCESS,
         ],
     ];
 
@@ -103,7 +136,7 @@ final class PermissionService
     /**
      * @return string[]
      */
-    public static function capabilitiesFor(?array $user): array
+    public static function capabilitiesFor(?array $user, ?Database $db = null, ?int $projectId = null): array
     {
         if (!$user) {
             return [];
@@ -113,40 +146,29 @@ final class PermissionService
             return ['*'];
         }
 
-        $role = (string) ($user['role'] ?? 'user');
-        $capabilities = self::ROLE_CAPABILITIES[$role] ?? self::ROLE_CAPABILITIES['user'];
-
-        if ((bool) ($user['is_project_admin'] ?? false)) {
-            $capabilities = array_merge($capabilities, [
-                self::PROJECT_CREATE,
-                self::PROJECT_VIEW_ALL,
-                self::PROJECT_EDIT_SETTINGS,
-                self::PROJECT_MANAGE_ACCESS,
-                self::PROJECT_DELETE,
-            ]);
+        if ($db === null || !self::supportsDatabaseBackedCapabilities($db)) {
+            return self::legacyCapabilitiesFor($user, $projectId, $db);
         }
 
-        if ((bool) ($user['has_billing_access'] ?? false)) {
-            $capabilities = array_merge($capabilities, [
-                self::BILLING_VIEW,
-                self::BILLING_MANAGE,
-            ]);
-        }
+        $capabilities = self::databaseCapabilitiesFor($db, $user);
+        $capabilities = self::applyFlagCapabilities($capabilities, $user);
 
-        if ((bool) ($user['has_executive_access'] ?? false)) {
-            $capabilities[] = self::EXECUTIVE_VIEW;
+        $capabilities = self::applyRoleCompatibilityCapabilities($capabilities, $user);
+
+        if ($projectId !== null) {
+            $capabilities = array_merge($capabilities, self::projectMembershipCapabilitiesFor($db, $user, $projectId));
         }
 
         return array_values(array_unique($capabilities));
     }
 
-    public static function can(?array $user, string $capability): bool
+    public static function can(?array $user, string $capability, ?Database $db = null, ?int $projectId = null): bool
     {
         if (!$user) {
             return false;
         }
 
-        $caps = self::capabilitiesFor($user);
+        $caps = self::capabilitiesFor($user, $db, $projectId);
         return in_array('*', $caps, true) || in_array($capability, $caps, true);
     }
 
@@ -156,7 +178,7 @@ final class PermissionService
             return false;
         }
 
-        if (self::can($user, self::BILLING_VIEW)) {
+        if (self::can($user, self::BILLING_VIEW, $db)) {
             return true;
         }
 
@@ -183,18 +205,267 @@ final class PermissionService
         return self::can($user, self::EXECUTIVE_VIEW);
     }
 
+    public static function accountTypeFor(?array $user): string
+    {
+        $accountType = (string) ($user['account_type'] ?? '');
+        if ($accountType !== '') {
+            return $accountType;
+        }
+
+        $role = (string) ($user['role'] ?? 'user');
+        return self::ROLE_TO_ACCOUNT_TYPE[$role] ?? 'member';
+    }
+
+    public static function roleForAccountType(string $accountType): string
+    {
+        return self::ACCOUNT_TYPE_TO_ROLE[$accountType] ?? 'user';
+    }
+
+    public static function accountTypeOptions(): array
+    {
+        return ['viewer', 'member', 'manager', 'org_admin', 'superadmin', 'developer'];
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function describeAccessSummary(?array $user, ?Database $db = null, ?int $projectMembershipCount = null): array
+    {
+        if (!$user) {
+            return [];
+        }
+
+        $summary = [];
+        $accountType = self::accountTypeFor($user);
+        $summary[] = 'Account type: ' . str_replace('_', ' ', $accountType);
+
+        $extras = [];
+        if ((bool) ($user['is_project_admin'] ?? false) && !in_array($accountType, ['manager', 'org_admin', 'superadmin'], true)) {
+            $extras[] = 'project admin flag';
+        }
+        if ((bool) ($user['has_billing_access'] ?? false)) {
+            $extras[] = 'billing';
+        }
+        if ((bool) ($user['has_executive_access'] ?? false)) {
+            $extras[] = 'executive';
+        }
+
+        if ($db !== null && self::supportsDatabaseBackedCapabilities($db) && isset($user['id'])) {
+            [$grants, $denies] = self::userCapabilityOverrides($db, (int) $user['id']);
+            if ($grants !== []) {
+                $extras[] = 'grants: ' . implode(', ', $grants);
+            }
+            if ($denies !== []) {
+                $extras[] = 'denies: ' . implode(', ', $denies);
+            }
+        }
+
+        if ($projectMembershipCount !== null) {
+            $extras[] = $projectMembershipCount . ' project membership' . ($projectMembershipCount === 1 ? '' : 's');
+        }
+
+        if ($extras !== []) {
+            $summary[] = 'Extras: ' . implode(' | ', $extras);
+        }
+
+        return $summary;
+    }
+
     public static function isSuperadmin(?array $user): bool
     {
-        return (string) ($user['role'] ?? '') === 'superadmin';
+        return self::accountTypeFor($user) === 'superadmin' || (string) ($user['role'] ?? '') === 'superadmin';
     }
 
     public static function isOrgAdmin(?array $user): bool
     {
-        return (string) ($user['role'] ?? '') === 'org_admin';
+        return self::accountTypeFor($user) === 'org_admin' || (string) ($user['role'] ?? '') === 'org_admin';
     }
 
     public static function isDeveloper(?array $user): bool
     {
-        return (string) ($user['role'] ?? '') === 'developer';
+        return self::accountTypeFor($user) === 'developer' || (string) ($user['role'] ?? '') === 'developer';
+    }
+
+    private static function supportsDatabaseBackedCapabilities(Database $db): bool
+    {
+        return $db->tableExists('capabilities')
+            && $db->tableExists('account_type_capabilities')
+            && $db->tableExists('user_capabilities');
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function legacyCapabilitiesFor(?array $user, ?int $projectId = null, ?Database $db = null): array
+    {
+        if (!$user) {
+            return [];
+        }
+
+        $accountType = self::accountTypeFor($user);
+        $capabilities = self::ACCOUNT_TYPE_CAPABILITIES[$accountType] ?? self::ACCOUNT_TYPE_CAPABILITIES['member'];
+        $capabilities = self::applyFlagCapabilities($capabilities, $user);
+        $capabilities = self::applyRoleCompatibilityCapabilities($capabilities, $user);
+
+        if ($projectId !== null && $db !== null) {
+            $capabilities = array_merge($capabilities, self::projectMembershipCapabilitiesFor($db, $user, $projectId));
+        }
+
+        return array_values(array_unique($capabilities));
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function databaseCapabilitiesFor(Database $db, array $user): array
+    {
+        $accountType = self::accountTypeFor($user);
+        $capabilities = [];
+
+        try {
+            $rows = $db->query(
+                "SELECT c.`key`
+                 FROM account_type_capabilities atc
+                 JOIN capabilities c ON c.id = atc.capability_id
+                 WHERE atc.account_type = :account_type",
+                [':account_type' => $accountType]
+            )->fetchAll();
+
+            $capabilities = array_column($rows, 'key');
+        } catch (\Throwable) {
+            $capabilities = self::ACCOUNT_TYPE_CAPABILITIES[$accountType] ?? self::ACCOUNT_TYPE_CAPABILITIES['member'];
+        }
+
+        if (!isset($user['id'])) {
+            return array_values(array_unique($capabilities));
+        }
+
+        [$grants, $denies] = self::userCapabilityOverrides($db, (int) $user['id']);
+        $capabilities = array_values(array_diff(array_merge($capabilities, $grants), $denies));
+
+        return array_values(array_unique($capabilities));
+    }
+
+    /**
+     * @return array{0:string[],1:string[]}
+     */
+    private static function userCapabilityOverrides(Database $db, int $userId): array
+    {
+        try {
+            $rows = $db->query(
+                "SELECT c.`key`, uc.effect
+                 FROM user_capabilities uc
+                 JOIN capabilities c ON c.id = uc.capability_id
+                 WHERE uc.user_id = :user_id",
+                [':user_id' => $userId]
+            )->fetchAll();
+        } catch (\Throwable) {
+            return [[], []];
+        }
+
+        $grants = [];
+        $denies = [];
+        foreach ($rows as $row) {
+            $key = (string) ($row['key'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+
+            if (($row['effect'] ?? 'grant') === 'deny') {
+                $denies[] = $key;
+            } else {
+                $grants[] = $key;
+            }
+        }
+
+        return [array_values(array_unique($grants)), array_values(array_unique($denies))];
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function applyFlagCapabilities(array $capabilities, array $user): array
+    {
+        if ((bool) ($user['is_project_admin'] ?? false)) {
+            $capabilities = array_merge($capabilities, [
+                self::PROJECT_CREATE,
+                self::PROJECT_VIEW_ALL,
+                self::PROJECT_EDIT_SETTINGS,
+                self::PROJECT_MANAGE_ACCESS,
+                self::PROJECT_DELETE,
+            ]);
+        }
+
+        if ((bool) ($user['has_billing_access'] ?? false)) {
+            $capabilities = array_merge($capabilities, [
+                self::BILLING_VIEW,
+                self::BILLING_MANAGE,
+            ]);
+        }
+
+        if ((bool) ($user['has_executive_access'] ?? false)) {
+            $capabilities[] = self::EXECUTIVE_VIEW;
+        }
+
+        return $capabilities;
+    }
+
+    /**
+     * Preserve legacy role behaviour while the UI and existing rows still
+     * expose legacy role names alongside account_type.
+     *
+     * @return string[]
+     */
+    private static function applyRoleCompatibilityCapabilities(array $capabilities, array $user): array
+    {
+        if ((string) ($user['role'] ?? '') === 'project_manager') {
+            $capabilities = array_merge($capabilities, [
+                self::PROJECT_VIEW_ALL,
+                self::PROJECT_DELETE,
+            ]);
+        }
+
+        return $capabilities;
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function projectMembershipCapabilitiesFor(Database $db, array $user, int $projectId): array
+    {
+        if (!isset($user['id']) || $projectId <= 0) {
+            return [];
+        }
+
+        try {
+            if ($db->tableExists('project_memberships')) {
+                $row = $db->query(
+                    "SELECT membership_role
+                     FROM project_memberships
+                     WHERE project_id = :project_id AND user_id = :user_id
+                     LIMIT 1",
+                    [':project_id' => $projectId, ':user_id' => (int) $user['id']]
+                )->fetch();
+
+                $role = (string) ($row['membership_role'] ?? '');
+                return self::PROJECT_MEMBERSHIP_CAPABILITIES[$role] ?? [];
+            }
+
+            if ($db->tableExists('project_members')) {
+                $row = $db->query(
+                    "SELECT 1
+                     FROM project_members
+                     WHERE project_id = :project_id AND user_id = :user_id
+                     LIMIT 1",
+                    [':project_id' => $projectId, ':user_id' => (int) $user['id']]
+                )->fetch();
+
+                return $row ? self::PROJECT_MEMBERSHIP_CAPABILITIES['editor'] : [];
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return [];
     }
 }

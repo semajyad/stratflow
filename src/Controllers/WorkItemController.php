@@ -26,6 +26,7 @@ use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\StrategyDiagram;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\StoryQualityConfig;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\StoryQualityScorer;
 use StratFlow\Services\StoryImprovementService;
@@ -65,10 +66,9 @@ class WorkItemController
     public function index(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -153,7 +153,7 @@ class WorkItemController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -302,7 +302,7 @@ class WorkItemController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -346,7 +346,7 @@ class WorkItemController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -417,7 +417,7 @@ class WorkItemController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -495,7 +495,7 @@ class WorkItemController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -564,12 +564,18 @@ class WorkItemController
         $orgId  = (int) $user['org_id'];
         $item   = HLWorkItem::findById($this->db, (int) $id);
 
-        if ($item === null || (int) $item['org_id'] !== $orgId) {
+        if ($item === null) {
             $this->response->redirect('/app/home');
             return;
         }
 
         $projectId = (int) $item['project_id'];
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
         HLWorkItem::update($this->db, (int) $id, ['status' => 'closed']);
 
         $this->response->redirect('/app/work-items?project_id=' . $projectId);
@@ -592,7 +598,7 @@ class WorkItemController
         }
 
         $projectId = (int) $item['project_id'];
-        $project   = Project::findById($this->db, $projectId, $orgId);
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -640,7 +646,7 @@ class WorkItemController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $firstItem['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $firstItem['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -678,7 +684,7 @@ class WorkItemController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -728,7 +734,7 @@ class WorkItemController
         $projectId = (int) $this->request->get('project_id', 0);
         $format    = strtolower((string) $this->request->get('format', 'csv'));
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;

@@ -103,6 +103,43 @@ class AdminController
         $users     = User::findByOrgId($this->db, $orgId);
         $seatLimit = Subscription::getSeatLimit($this->db, $orgId);
         $userCount = User::countByOrgId($this->db, $orgId);
+        $membershipCounts = [];
+
+        if ($this->db->tableExists('project_memberships')) {
+            $rows = $this->db->query(
+                "SELECT user_id, COUNT(*) AS membership_count
+                 FROM project_memberships pm
+                 JOIN projects p ON p.id = pm.project_id
+                 WHERE p.org_id = :org_id
+                 GROUP BY user_id",
+                [':org_id' => $orgId]
+            )->fetchAll();
+            foreach ($rows as $row) {
+                $membershipCounts[(int) $row['user_id']] = (int) $row['membership_count'];
+            }
+        } elseif ($this->db->tableExists('project_members')) {
+            $rows = $this->db->query(
+                "SELECT user_id, COUNT(*) AS membership_count
+                 FROM project_members pm
+                 JOIN projects p ON p.id = pm.project_id
+                 WHERE p.org_id = :org_id
+                 GROUP BY user_id",
+                [':org_id' => $orgId]
+            )->fetchAll();
+            foreach ($rows as $row) {
+                $membershipCounts[(int) $row['user_id']] = (int) $row['membership_count'];
+            }
+        }
+
+        foreach ($users as &$managedUser) {
+            $managedUser['account_type'] = PermissionService::accountTypeFor($managedUser);
+            $managedUser['access_summary'] = PermissionService::describeAccessSummary(
+                $managedUser,
+                $this->db,
+                $membershipCounts[(int) $managedUser['id']] ?? 0
+            );
+        }
+        unset($managedUser);
 
         $this->response->render('admin/users', [
             'user'          => $user,
@@ -178,6 +215,7 @@ class AdminController
             'email'                => $email,
             'password_hash'        => $randomPassword,
             'role'                 => $role,
+            'account_type'         => PermissionService::accountTypeFor(['role' => $role]),
             'is_project_admin'     => $isProjectAdmin,
             'has_billing_access'   => $this->request->post('has_billing_access') === '1' ? 1 : 0,
             'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
@@ -253,6 +291,7 @@ class AdminController
             'full_name'            => $fullName,
             'email'                => $email,
             'role'                 => $role,
+            'account_type'         => PermissionService::accountTypeFor(['role' => $role]),
             'is_project_admin'     => $isProjectAdmin,
             'has_billing_access'   => $this->request->post('has_billing_access')   === '1' ? 1 : 0,
             'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,

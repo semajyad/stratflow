@@ -1028,7 +1028,7 @@ class IntegrationController
         $projectId = (int) $this->request->post('project_id', 0);
         $syncType  = (string) $this->request->post('sync_type', 'all');
 
-        $project = \StratFlow\Models\Project::findById($this->db, $projectId, $orgId);
+        $project = \StratFlow\Security\ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if (!$project || empty($project['jira_project_key'])) {
             $_SESSION['flash_error'] = 'Project has no Jira link. Set one on the Home page.';
             $this->response->redirect($_SERVER['HTTP_REFERER'] ?? '/app/home');
@@ -1177,7 +1177,7 @@ class IntegrationController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = \StratFlow\Models\Project::findById($this->db, $projectId, $orgId);
+        $project = \StratFlow\Security\ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if (!$project || empty($project['jira_project_key'])) {
             $this->response->json(['error' => 'No Jira link'], 400);
             return;

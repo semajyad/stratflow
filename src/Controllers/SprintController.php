@@ -20,6 +20,7 @@ use StratFlow\Models\Sprint;
 use StratFlow\Models\SprintStory;
 use StratFlow\Models\Subscription;
 use StratFlow\Models\UserStory;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\SprintPrompt;
 
@@ -60,7 +61,7 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -116,7 +117,7 @@ class SprintController
         $projectId = (int) $this->request->get('project_id', 0);
         $boardId   = (int) $this->request->get('board_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Not found'], 404);
             return;
@@ -173,7 +174,7 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -220,7 +221,7 @@ class SprintController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $sprint['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $sprint['project_id']);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -261,7 +262,7 @@ class SprintController
         }
 
         $projectId = (int) $sprint['project_id'];
-        $project   = Project::findById($this->db, $projectId, $orgId);
+        $project   = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -311,7 +312,7 @@ class SprintController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $sprint['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $sprint['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -355,7 +356,7 @@ class SprintController
             return;
         }
 
-        $project = Project::findById($this->db, (int) $sprint['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $sprint['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -380,7 +381,7 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -469,7 +470,7 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -523,7 +524,7 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;

@@ -20,6 +20,7 @@ use StratFlow\Models\PersonaMember;
 use StratFlow\Models\PersonaPanel;
 use StratFlow\Models\Project;
 use StratFlow\Models\Subscription;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\SoundingBoardService;
 
@@ -89,11 +90,9 @@ class SoundingBoardController
         }
 
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) ($body['project_id'] ?? 0);
 
-        // Verify project access
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Project not found'], 404);
             return;
@@ -176,7 +175,7 @@ class SoundingBoardController
         }
 
         // Verify org access via project
-        $project = Project::findById($this->db, (int) $eval['project_id'], $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, (int) $eval['project_id']);
         if ($project === null) {
             $this->response->json(['error' => 'Access denied'], 403);
             return;
@@ -214,7 +213,7 @@ class SoundingBoardController
         }
 
         // Verify org access via project
-        $project = Project::findById($this->db, (int) $eval['project_id'], $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $eval['project_id']);
         if ($project === null) {
             $this->response->json(['error' => 'Access denied'], 403);
             return;
@@ -274,7 +273,7 @@ class SoundingBoardController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Project not found'], 404);
             return;

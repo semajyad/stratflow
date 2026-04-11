@@ -19,6 +19,7 @@ use StratFlow\Models\HLWorkItem;
 use StratFlow\Models\Project;
 use StratFlow\Models\StoryGitLink;
 use StratFlow\Models\UserStory;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GitLinkService;
 
 class GitLinkController
@@ -207,8 +208,6 @@ class GitLinkController
             return false;
         }
 
-        $project = Project::findById($this->db, (int) $item['project_id'], $orgId);
-
-        return $project !== null;
+        return ProjectPolicy::findEditableProject($this->db, $this->auth->user(), (int) $item['project_id']) !== null;
     }
 }

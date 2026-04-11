@@ -22,7 +22,10 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\User;
 use StratFlow\Models\UserStory;
+use StratFlow\Models\Project;
 use StratFlow\Models\Integration;
+use StratFlow\Security\PermissionService;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\JiraService;
 
@@ -124,6 +127,7 @@ class ApiStoriesController
         // Build WHERE clauses
         $where  = ['p.org_id = :org_id'];
         $params = [':org_id' => $orgId];
+        $this->appendProjectVisibilityConstraint($where, $params, $user, 'p');
 
         if ($mine) {
             $where[]          = 'us.assignee_user_id = :user_id';
@@ -146,11 +150,8 @@ class ApiStoriesController
 
         // Project filter — must belong to this org
         if ($projectId > 0) {
-            $projCheck = $this->db->query(
-                'SELECT id FROM projects WHERE id = :id AND org_id = :org_id LIMIT 1',
-                [':id' => $projectId, ':org_id' => $orgId]
-            )->fetch();
-            if (!$projCheck) {
+            $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
+            if ($project === null) {
                 $this->jsonError('Project not found or not in your organisation', 404);
                 return;
             }
@@ -201,6 +202,7 @@ class ApiStoriesController
      */
     public function show(string $id): void
     {
+        $user = $this->auth->user();
         $orgId = (int) $this->auth->orgId();
         $storyId = (int) $id;
 
@@ -221,6 +223,11 @@ class ApiStoriesController
 
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
+            return;
+        }
+
+        if (ProjectPolicy::findViewableProject($this->db, $user, (int) $story['project_id']) === null) {
+            $this->jsonError('Story not found or not accessible', 404);
             return;
         }
 
@@ -317,7 +324,7 @@ class ApiStoriesController
 
         // Verify story exists and belongs to this org
         $story = $this->db->query(
-            "SELECT us.id, us.status, p.org_id AS project_org_id
+            "SELECT us.id, us.status, us.project_id, p.org_id AS project_org_id
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
              WHERE us.id = :id",
@@ -326,6 +333,11 @@ class ApiStoriesController
 
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
+            return;
+        }
+
+        if (ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']) === null) {
+            $this->jsonError('Story not editable', 403);
             return;
         }
 
@@ -390,6 +402,7 @@ class ApiStoriesController
         // Match team on the story directly OR inherited from parent work item
         $where  = ['p.org_id = :org_id', 'COALESCE(us.team_assigned, hw.team_assigned) = :team'];
         $params = [':org_id' => $orgId, ':team' => $team];
+        $this->appendProjectVisibilityConstraint($where, $params, $user, 'p');
 
         if ($statusRaw !== '') {
             $requested = array_filter(array_map('trim', explode(',', $statusRaw)));
@@ -452,7 +465,7 @@ class ApiStoriesController
         $storyId = (int) $id;
 
         $story = $this->db->query(
-            "SELECT us.id, us.title, p.org_id AS project_org_id
+            "SELECT us.id, us.title, us.project_id, p.org_id AS project_org_id
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
              WHERE us.id = :id",
@@ -461,6 +474,11 @@ class ApiStoriesController
 
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
+            return;
+        }
+
+        if (ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']) === null) {
+            $this->jsonError('Story not editable', 403);
             return;
         }
 
@@ -518,6 +536,20 @@ class ApiStoriesController
     private function jsonError(string $message, int $status): void
     {
         $this->json(['error' => $message], $status);
+    }
+
+    private function appendProjectVisibilityConstraint(array &$where, array &$params, array $user, string $projectAlias): void
+    {
+        if (PermissionService::can($user, PermissionService::PROJECT_VIEW_ALL, $this->db)) {
+            return;
+        }
+
+        $membershipTable = $this->db->tableExists('project_memberships') ? 'project_memberships' : 'project_members';
+        $where[] = "({$projectAlias}.visibility = 'everyone' OR EXISTS (
+            SELECT 1 FROM {$membershipTable} pm
+            WHERE pm.project_id = {$projectAlias}.id AND pm.user_id = :visibility_user_id
+        ))";
+        $params[':visibility_user_id'] = (int) $user['id'];
     }
 
     /**

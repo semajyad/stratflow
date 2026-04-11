@@ -19,6 +19,7 @@ use StratFlow\Models\DiagramNode;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
 use StratFlow\Models\StrategyDiagram;
+use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
 use StratFlow\Services\Prompts\DiagramPrompt;
 
@@ -53,10 +54,9 @@ class DiagramController
     public function index(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -106,10 +106,9 @@ class DiagramController
     public function generate(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -224,11 +223,10 @@ class DiagramController
     public function save(): void
     {
         $user        = $this->auth->user();
-        $orgId       = (int) $user['org_id'];
         $projectId   = (int) $this->request->post('project_id', 0);
         $mermaidCode = trim((string) $this->request->post('mermaid_code', ''));
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -283,22 +281,19 @@ class DiagramController
     public function saveOkr(): void
     {
         $user           = $this->auth->user();
-        $orgId          = (int) $user['org_id'];
         $nodeId         = (int) $this->request->post('node_id', 0);
         $okrTitle       = trim((string) $this->request->post('okr_title', ''));
         $okrDescription = trim((string) $this->request->post('okr_description', ''));
 
-        // Verify node belongs to a diagram in a project owned by the user's org
-        $stmt = $this->db->query(
-            "SELECT dn.id FROM diagram_nodes dn
+        $row = $this->db->query(
+            "SELECT dn.id, sd.project_id FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
-             JOIN projects p ON sd.project_id = p.id
-             WHERE dn.id = :node_id AND p.org_id = :org_id
+             WHERE dn.id = :node_id
              LIMIT 1",
-            [':node_id' => $nodeId, ':org_id' => $orgId]
-        );
+            [':node_id' => $nodeId]
+        )->fetch();
 
-        if (!$stmt->fetch()) {
+        if (!$row || ProjectPolicy::findEditableProject($this->db, $user, (int) $row['project_id']) === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
         }
@@ -317,10 +312,9 @@ class DiagramController
     public function generateOkrs(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -402,11 +396,10 @@ class DiagramController
     public function addOkr(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
         $nodeId    = (int) $this->request->post('node_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -453,18 +446,21 @@ class DiagramController
     public function deleteOkr(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $nodeId    = (int) $this->request->post('node_id', 0);
         $projectId = (int) $this->request->post('project_id', 0);
 
-        // Verify the node belongs to this org before deleting
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
         $stmt = $this->db->query(
             "SELECT dn.id FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
-             JOIN projects p ON sd.project_id = p.id
-             WHERE dn.id = :node_id AND p.org_id = :org_id
+             WHERE dn.id = :node_id AND sd.project_id = :project_id
              LIMIT 1",
-            [':node_id' => $nodeId, ':org_id' => $orgId]
+            [':node_id' => $nodeId, ':project_id' => $projectId]
         );
 
         if (!$stmt->fetch()) {
@@ -482,10 +478,9 @@ class DiagramController
     public function saveAllOkrs(): void
     {
         $user      = $this->auth->user();
-        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
 
-        $project = Project::findById($this->db, $projectId, $orgId);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
@@ -500,6 +495,19 @@ class DiagramController
         foreach ($nodes as $nodeData) {
             $nodeId = (int) ($nodeData['id'] ?? 0);
             if ($nodeId <= 0) continue;
+
+            $row = $this->db->query(
+                "SELECT dn.id
+                   FROM diagram_nodes dn
+                   JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
+                  WHERE dn.id = :node_id AND sd.project_id = :project_id
+                  LIMIT 1",
+                [':node_id' => $nodeId, ':project_id' => $projectId]
+            )->fetch();
+
+            if (!$row) {
+                continue;
+            }
 
             DiagramNode::update($this->db, (int) $nodeId, [
                 'okr_title'       => trim((string) ($nodeData['okr_title'] ?? '')),

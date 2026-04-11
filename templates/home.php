@@ -136,7 +136,7 @@ if ($lastProjectId && !empty($projects)) {
                         </a>
                         <?php if (\StratFlow\Security\ProjectPolicy::canManageProject(\StratFlow\Core\Database::getInstance(), $user, $project)): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
-                                onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['visibility'] ?? 'everyone'), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['member_ids'] ?? []), ENT_QUOTES) ?>)">
+                                onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['visibility'] ?? 'everyone'), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['memberships'] ?? []), ENT_QUOTES) ?>)">
                             Edit
                         </button>
                         <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form"
@@ -255,7 +255,7 @@ var _orgUsers = <?= $orgUsersJson ?? '[]' ?>;
 
 // ── Modal helpers ──────────────────────────────────────────────────────────────
 
-function openEditProjectModal(id, name, jiraKey, visibility, memberIds) {
+function openEditProjectModal(id, name, jiraKey, visibility, memberships) {
     document.getElementById('edit-project-form').action = '/app/projects/' + id + '/edit';
     document.getElementById('edit-project-name').value = name;
     var jiraEl = document.getElementById('edit-jira-key');
@@ -267,7 +267,7 @@ function openEditProjectModal(id, name, jiraKey, visibility, memberIds) {
         toggleMemberPicker('edit', visEl.value);
     }
 
-    preloadMemberPicker('edit', Array.isArray(memberIds) ? memberIds.map(Number) : []);
+    preloadMemberPicker('edit', Array.isArray(memberships) ? memberships : []);
 
     document.getElementById('edit-project-modal').classList.remove('hidden');
     setTimeout(function() { document.getElementById('edit-project-name').focus(); }, 50);
@@ -327,22 +327,31 @@ function addMemberChip(resultItem) {
     var picker = resultItem.closest('.member-picker-wrap');
     var id = parseInt(resultItem.dataset.id, 10);
     var label = resultItem.dataset.label;
+    var membershipRole = resultItem.dataset.role || 'editor';
 
     // Add chip
     var chipsEl = picker.querySelector('.member-chips');
     var chip = document.createElement('span');
     chip.className = 'member-chip';
     chip.dataset.memberId = id;
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;background:var(--primary);color:#fff;border-radius:4px;font-size:0.8rem;';
-    chip.innerHTML = _escHtml(label) +
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.45rem;padding:0.25rem 0.5rem;background:var(--primary);color:#fff;border-radius:6px;font-size:0.8rem;';
+    chip.innerHTML = '<span>' + _escHtml(label) + '</span>' +
+        '<select style="font-size:0.75rem;border:none;border-radius:4px;padding:0.15rem 0.35rem;" ' +
+        'onchange="updateMemberRole(this)">' +
+            '<option value="viewer"' + (membershipRole === 'viewer' ? ' selected' : '') + '>Viewer</option>' +
+            '<option value="editor"' + (membershipRole === 'editor' ? ' selected' : '') + '>Editor</option>' +
+            '<option value="project_admin"' + (membershipRole === 'project_admin' ? ' selected' : '') + '>Project Admin</option>' +
+        '</select>' +
         '<button type="button" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" ' +
         'onclick="removeMemberChip(this)" title="Remove">&times;</button>';
     chipsEl.appendChild(chip);
 
     // Hidden input for form submission
     var hidden = document.createElement('input');
-    hidden.type = 'hidden'; hidden.name = 'member_ids[]';
-    hidden.value = id; hidden.dataset.memberId = id;
+    hidden.type = 'hidden';
+    hidden.name = 'member_roles[' + id + ']';
+    hidden.value = membershipRole;
+    hidden.dataset.memberId = id;
     picker.appendChild(hidden);
 
     // Clear search
@@ -359,41 +368,61 @@ function removeMemberChip(btn) {
     chip.remove();
 }
 
+function updateMemberRole(select) {
+    var chip = select.closest('.member-chip');
+    var picker = chip.closest('.member-picker-wrap');
+    var id = chip.dataset.memberId;
+    var hidden = picker.querySelector('input[type="hidden"][data-member-id="' + id + '"]');
+    if (hidden) {
+        hidden.value = select.value;
+    }
+}
+
 function clearMemberPicker(prefix) {
     var picker = document.getElementById(prefix + '-member-picker');
     if (!picker) return;
     var wrap = picker.querySelector('.member-picker-wrap');
     if (!wrap) return;
     wrap.querySelectorAll('.member-chip').forEach(function(c) { c.remove(); });
-    wrap.querySelectorAll('input[type="hidden"][name="member_ids[]"]').forEach(function(i) { i.remove(); });
+    wrap.querySelectorAll('input[type="hidden"][data-member-id]').forEach(function(i) { i.remove(); });
     var si = wrap.querySelector('.member-search-input');
     if (si) si.value = '';
     var sr = wrap.querySelector('.member-search-results');
     if (sr) sr.style.display = 'none';
 }
 
-function preloadMemberPicker(prefix, ids) {
+function preloadMemberPicker(prefix, memberships) {
     clearMemberPicker(prefix);
-    if (!ids.length) return;
+    if (!memberships.length) return;
     var picker = document.getElementById(prefix + '-member-picker');
     if (!picker) return;
     var wrap = picker.querySelector('.member-picker-wrap');
     if (!wrap) return;
-    ids.forEach(function(id) {
+    memberships.forEach(function(entry) {
+        var id = parseInt(entry.user_id || entry.id, 10);
+        var role = entry.membership_role || 'editor';
         var user = _orgUsers.find(function(u) { return u.id === id; });
         if (!user) return;
         var chipsEl = wrap.querySelector('.member-chips');
         var chip = document.createElement('span');
         chip.className = 'member-chip';
         chip.dataset.memberId = id;
-        chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;background:var(--primary);color:#fff;border-radius:4px;font-size:0.8rem;';
-        chip.innerHTML = _escHtml(user.label) +
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:0.45rem;padding:0.25rem 0.5rem;background:var(--primary);color:#fff;border-radius:6px;font-size:0.8rem;';
+        chip.innerHTML = '<span>' + _escHtml(user.label) + '</span>' +
+            '<select style="font-size:0.75rem;border:none;border-radius:4px;padding:0.15rem 0.35rem;" ' +
+            'onchange="updateMemberRole(this)">' +
+                '<option value="viewer"' + (role === 'viewer' ? ' selected' : '') + '>Viewer</option>' +
+                '<option value="editor"' + (role === 'editor' ? ' selected' : '') + '>Editor</option>' +
+                '<option value="project_admin"' + (role === 'project_admin' ? ' selected' : '') + '>Project Admin</option>' +
+            '</select>' +
             '<button type="button" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" ' +
             'onclick="removeMemberChip(this)" title="Remove">&times;</button>';
         chipsEl.appendChild(chip);
         var hidden = document.createElement('input');
-        hidden.type = 'hidden'; hidden.name = 'member_ids[]';
-        hidden.value = id; hidden.dataset.memberId = id;
+        hidden.type = 'hidden';
+        hidden.name = 'member_roles[' + id + ']';
+        hidden.value = role;
+        hidden.dataset.memberId = id;
         wrap.appendChild(hidden);
     });
 }

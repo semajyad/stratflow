@@ -10,6 +10,9 @@
 <div class="member-picker-wrap" style="margin-top:0.25rem;">
     <!-- Selected user chips -->
     <div class="member-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.5rem; min-height:0;"></div>
+    <p class="text-muted" style="font-size:0.75rem; margin:0 0 0.5rem;">
+        Add users, then choose whether each person is a viewer, editor, or project admin for this project.
+    </p>
     <!-- Search input + dropdown -->
     <div style="position:relative;">
         <input type="text" class="form-input member-search-input"
