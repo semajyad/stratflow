@@ -990,6 +990,118 @@ function openWorkItemModal(rowEl) {
     modal.classList.remove('hidden');
 }
 
+function initKrEditor(itemId) {
+    var container = document.querySelector('.kr-editor[data-item-id="' + itemId + '"]');
+    if (!container || container.dataset.krInit) { return; }
+    container.dataset.krInit = '1';
+
+    var tbody = document.getElementById('kr-rows-' + itemId);
+    var msg = container.querySelector('.kr-status-msg');
+    var saveBtn = container.querySelector('.kr-save-btn');
+    var addBtn = container.querySelector('.kr-add-btn');
+
+    if (!tbody || !saveBtn || !addBtn) { return; }
+
+    saveBtn.addEventListener('click', function() {
+        var rows = tbody.querySelectorAll('.kr-row[data-kr-id]');
+        var promises = [];
+
+        rows.forEach(function(row) {
+            var krId = row.dataset.krId;
+            var body = new FormData();
+            body.append('_csrf_token', getCsrfTokenValue());
+            row.querySelectorAll('.kr-field').forEach(function(field) {
+                body.append(field.dataset.field, field.value);
+            });
+            promises.push(fetch('/app/key-results/' + krId, { method: 'POST', body: body }));
+        });
+
+        Promise.all(promises)
+            .then(function(responses) {
+                var allOk = responses.every(function(response) { return response.ok; });
+                msg.textContent = allOk ? 'Saved.' : 'Error saving.';
+                msg.style.color = allOk ? '#10b981' : '#ef4444';
+                setTimeout(function() { msg.textContent = ''; }, 2500);
+            })
+            .catch(function() {
+                msg.textContent = 'Network error.';
+                msg.style.color = '#ef4444';
+            });
+    });
+
+    addBtn.addEventListener('click', function() {
+        var body = new FormData();
+        body.append('_csrf_token', getCsrfTokenValue());
+        body.append('hl_work_item_id', String(itemId));
+        body.append('title', 'New Key Result');
+        body.append('status', 'not_started');
+
+        fetch('/app/key-results', { method: 'POST', body: body })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    msg.textContent = 'Error adding KR.';
+                    msg.style.color = '#ef4444';
+                    return;
+                }
+                tbody.insertAdjacentHTML('beforeend', buildKrRow(data.id));
+                attachKrDelete(tbody.lastElementChild.querySelector('.kr-delete-btn'));
+            })
+            .catch(function() {
+                msg.textContent = 'Network error.';
+                msg.style.color = '#ef4444';
+            });
+    });
+
+    tbody.querySelectorAll('.kr-delete-btn').forEach(attachKrDelete);
+}
+
+function attachKrDelete(btn) {
+    if (!btn || btn.dataset.krDeleteBound === '1') { return; }
+    btn.dataset.krDeleteBound = '1';
+
+    btn.addEventListener('click', function(e) {
+        var krId = e.currentTarget.dataset.krId;
+        var body = new FormData();
+        body.append('_csrf_token', getCsrfTokenValue());
+        fetch('/app/key-results/' + krId + '/delete', { method: 'POST', body: body })
+            .then(function() {
+                var row = e.currentTarget.closest('.kr-row');
+                if (row) {
+                    row.remove();
+                }
+            });
+    });
+}
+
+function buildKrRow(id) {
+    return '<tr class="kr-row" data-kr-id="' + id + '" style="border-bottom:1px solid #f3f4f6;">' +
+        '<td style="padding:4px 6px;"><input type="text" class="kr-field" data-field="title" value="New Key Result" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
+        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="baseline_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
+        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="current_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
+        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="target_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
+        '<td style="padding:4px 6px;"><input type="text" class="kr-field" data-field="unit" value="" placeholder="%" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
+        '<td style="padding:4px 6px;"><select class="kr-field" data-field="status" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 4px;">' +
+        '<option value="not_started" selected>Not Started</option>' +
+        '<option value="on_track">On Track</option>' +
+        '<option value="at_risk">At Risk</option>' +
+        '<option value="off_track">Off Track</option>' +
+        '<option value="achieved">Achieved</option>' +
+        '</select></td>' +
+        '<td style="padding:4px 6px;text-align:center;"><button type="button" class="kr-delete-btn" data-kr-id="' + id + '" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;" title="Delete">&times;</button></td>' +
+        '</tr>';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.kr-editor').forEach(function(el) {
+        initKrEditor(Number(el.dataset.itemId));
+    });
+});
+
+document.addEventListener('kr-editor-mounted', function(e) {
+    initKrEditor(e.detail.itemId);
+});
+
 // ===========================
 // Global: Risk Modal Toggle
 // ===========================
