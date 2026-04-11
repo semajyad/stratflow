@@ -13,6 +13,9 @@
     <div class="auth-card">
 
         <div class="auth-card-header">
+            <div class="auth-logo">
+                <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow">
+            </div>
             <h2 class="auth-heading">Reset your password</h2>
         </div>
 

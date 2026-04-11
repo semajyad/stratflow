@@ -330,6 +330,10 @@ class EmailService
 
     private function buildEmailHtml(string $heading, string $bodyHtml, string $buttonText, string $buttonUrl, string $footerText): string
     {
+        $appUrl = rtrim((string) ($this->config['app_url'] ?? ''), '/');
+        $logoUrl = $appUrl !== ''
+            ? htmlspecialchars($appUrl . '/assets/images/StratFlow_logo.webp', ENT_QUOTES, 'UTF-8')
+            : '';
         $buttonBlock = '';
         if ($buttonText !== '' && $buttonUrl !== '') {
             $safeUrl = htmlspecialchars($buttonUrl, ENT_QUOTES, 'UTF-8');
@@ -344,6 +348,9 @@ class EmailService
 
         $safeHeading = htmlspecialchars($heading, ENT_QUOTES, 'UTF-8');
         $safeFooter = htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8');
+        $logoBlock = $logoUrl !== ''
+            ? '<img src="' . $logoUrl . '" alt="StratFlow" style="display:inline-block; width:auto; height:56px; max-width:220px;">'
+            : '<span style="color:#ffffff; font-size:24px; font-weight:700;">StratFlow</span>';
 
         return <<<HTML
         <!DOCTYPE html>
@@ -352,7 +359,7 @@ class EmailService
         <body style="margin: 0; padding: 0; background: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="max-width: 560px; margin: 40px auto;">
                 <div style="background: #4f46e5; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700;">StratFlow</h1>
+                    {$logoBlock}
                 </div>
                 <div style="padding: 32px; background: white; border: 1px solid #e2e8f0; border-top: none;">
                     <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 20px;">{$safeHeading}</h2>
