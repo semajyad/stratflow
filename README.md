@@ -65,6 +65,12 @@ docker compose exec php php scripts/create-admin.php
 | [docs/TESTING.md](docs/TESTING.md) | Running and writing tests |
 | [docs/GEMINI_PROMPTS.md](docs/GEMINI_PROMPTS.md) | AI prompt reference |
 
+## Security Scanning
+
+- `GitHub Actions`: `.github/workflows/security-zap.yml` adds manual and scheduled OWASP ZAP scanning for the Railway test deployment.
+- `Local Shannon`: run `powershell -ExecutionPolicy Bypass -File .\scripts\run-shannon-official.ps1 -TargetUrl https://stratflow-app-production.up.railway.app`
+- `Pipeline testing`: add `-PipelineTesting` to the Shannon command for a faster, lower-cost validation run before a full pentest.
+
 ## License
 
 Proprietary — Copyright ThreePoints Solutions. All rights reserved.

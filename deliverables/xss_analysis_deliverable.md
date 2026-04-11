@@ -1,0 +1,1 @@
+# XSS Analysis Report\n\nAnalysis complete. No XSS vulnerabilities identified.

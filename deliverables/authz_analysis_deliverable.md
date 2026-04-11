@@ -1,0 +1,1 @@
+# Authorization Analysis Report\n\nAnalysis complete. No authorization vulnerabilities identified.
