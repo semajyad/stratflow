@@ -65,7 +65,7 @@ class Auth
     public function attempt(string $email, string $password): bool
     {
         $stmt = $this->db->query(
-            'SELECT * FROM users WHERE email = ? LIMIT 1',
+            'SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1',
             [$email]
         );
 
@@ -87,7 +87,9 @@ class Auth
     public function login(array $user): void
     {
         // Regenerate session ID to prevent session fixation attacks
-        session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
 
         $this->session->set('user', [
             'id' => $user['id'],
@@ -121,7 +123,33 @@ class Auth
         if ($this->apiPrincipal !== null) {
             return true;
         }
-        return $this->session->has('user');
+
+        $sessionUser = $this->session->get('user');
+        if (!is_array($sessionUser) || empty($sessionUser['id']) || empty($sessionUser['org_id'])) {
+            return false;
+        }
+
+        $row = $this->db->query(
+            'SELECT u.id
+             FROM users u
+             JOIN organisations o ON o.id = u.org_id
+             WHERE u.id = :user_id
+               AND u.org_id = :org_id
+               AND u.is_active = 1
+               AND o.is_active = 1
+             LIMIT 1',
+            [
+                ':user_id' => (int) $sessionUser['id'],
+                ':org_id'  => (int) $sessionUser['org_id'],
+            ]
+        )->fetch();
+
+        if (!$row) {
+            $this->session->destroy();
+            return false;
+        }
+
+        return true;
     }
 
     /**

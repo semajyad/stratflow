@@ -27,7 +27,7 @@ class Session
         $this->timeout = $timeout;
 
         if (session_status() === PHP_SESSION_NONE) {
-            $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+            $isSecure = $this->isSecureRequest();
 
             // Use database session handler if PDO available
             if ($pdo !== null) {
@@ -118,6 +118,25 @@ class Session
         // (Railway, Cloudflare, etc.) cause false session invalidation
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
         return hash('sha256', $ua);
+    }
+
+    private function isSecureRequest(): bool
+    {
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+
+        $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        if ($forwardedProto === 'https') {
+            return true;
+        }
+
+        $forwardedSsl = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_SSL'] ?? ''));
+        if ($forwardedSsl === 'on') {
+            return true;
+        }
+
+        return (string) ($_SERVER['HTTP_X_FORWARDED_PORT'] ?? '') === '443';
     }
 
     /**

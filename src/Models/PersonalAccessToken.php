@@ -22,6 +22,15 @@ use StratFlow\Core\Database;
 
 class PersonalAccessToken
 {
+    public const DEFAULT_SCOPES = [
+        'profile:read',
+        'profile:write',
+        'projects:read',
+        'stories:read',
+        'stories:write-status',
+        'stories:assign',
+    ];
+
     // ===========================
     // TOKEN GENERATION
     // ===========================
@@ -71,6 +80,7 @@ class PersonalAccessToken
      * @param string                 $name        Human-readable label
      * @param string                 $raw         Raw token from generate()
      * @param string                 $prefix      Prefix from generate()
+     * @param array|null             $scopes      Allowed API scopes
      * @param \DateTimeImmutable|null $expiresAt   Null = no expiry
      * @return array  Row data including 'raw' key (not in DB)
      */
@@ -81,22 +91,25 @@ class PersonalAccessToken
         string $name,
         string $raw,
         string $prefix,
+        ?array $scopes = null,
         ?\DateTimeImmutable $expiresAt = null
     ): array {
         $tokenHash = self::hash($raw);
         $expiresAtStr = $expiresAt?->format('Y-m-d H:i:s');
+        $scopesJson = json_encode($scopes ?? self::DEFAULT_SCOPES, JSON_UNESCAPED_SLASHES);
 
         $db->query(
             "INSERT INTO personal_access_tokens
-                (user_id, org_id, name, token_hash, token_prefix, expires_at)
+                (user_id, org_id, name, token_hash, token_prefix, scopes, expires_at)
              VALUES
-                (:user_id, :org_id, :name, :token_hash, :token_prefix, :expires_at)",
+                (:user_id, :org_id, :name, :token_hash, :token_prefix, :scopes, :expires_at)",
             [
                 ':user_id'      => $userId,
                 ':org_id'       => $orgId,
                 ':name'         => $name,
                 ':token_hash'   => $tokenHash,
                 ':token_prefix' => $prefix,
+                ':scopes'       => $scopesJson,
                 ':expires_at'   => $expiresAtStr,
             ]
         );
@@ -109,6 +122,7 @@ class PersonalAccessToken
             'org_id'       => $orgId,
             'name'         => $name,
             'token_prefix' => $prefix,
+            'scopes'       => json_decode($scopesJson, true),
             'expires_at'   => $expiresAtStr,
             'created_at'   => date('Y-m-d H:i:s'),
             'raw'          => $raw, // Caller shows this once — not persisted
@@ -153,10 +167,10 @@ class PersonalAccessToken
     public static function listForUser(Database $db, int $userId, int $orgId): array
     {
         return $db->query(
-            "SELECT id, name, token_prefix, last_used_at, expires_at, created_at
-             FROM personal_access_tokens
-             WHERE user_id = :user_id
-               AND org_id  = :org_id
+            "SELECT id, name, token_prefix, scopes, last_used_at, expires_at, created_at
+              FROM personal_access_tokens
+              WHERE user_id = :user_id
+                AND org_id  = :org_id
                AND revoked_at IS NULL
              ORDER BY created_at DESC",
             [':user_id' => $userId, ':org_id' => $orgId]

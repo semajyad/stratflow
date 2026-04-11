@@ -260,6 +260,11 @@ class FileProcessor
         };
     }
 
+    private function externalAiProcessingEnabled(): bool
+    {
+        return (bool) ($this->appConfig['upload']['allow_external_ai_processing'] ?? false);
+    }
+
     // ===========================
     // SECURITY HELPERS
     // ===========================
@@ -437,6 +442,11 @@ class FileProcessor
 
     private function extractPdfViaGemini(string $filePath): string
     {
+        if (!$this->externalAiProcessingEnabled()) {
+            error_log('[FileProcessor] External AI PDF extraction disabled by policy');
+            return '';
+        }
+
         // Try multiple sources for the API key
         $apiKey = $this->appConfig['gemini']['api_key']
                ?? $_ENV['GEMINI_API_KEY']
@@ -657,6 +667,11 @@ class FileProcessor
      */
     private function extractMediaViaGemini(string $filePath, string $mimeType): string
     {
+        if (!$this->externalAiProcessingEnabled()) {
+            error_log('[FileProcessor] External AI media transcription disabled by policy');
+            return '';
+        }
+
         $apiKey = $this->appConfig['gemini']['api_key']
                ?? $_ENV['GEMINI_API_KEY']
                ?? getenv('GEMINI_API_KEY')

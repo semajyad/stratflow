@@ -86,6 +86,7 @@ return [
     ],
     'upload' => [
         'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 52428800),
+        'allow_external_ai_processing' => filter_var($_ENV['ALLOW_EXTERNAL_AI_PROCESSING'] ?? false, FILTER_VALIDATE_BOOLEAN),
         'allowed_types' => [
             'text/plain',
             'application/pdf',

@@ -27,6 +27,15 @@ use StratFlow\Models\PersonalAccessToken;
 
 class ApiAuthMiddleware
 {
+    private const DEFAULT_SCOPES = [
+        'profile:read',
+        'profile:write',
+        'projects:read',
+        'stories:read',
+        'stories:write-status',
+        'stories:assign',
+    ];
+
     /**
      * Validate the PAT and inject a principal into $auth.
      *
@@ -79,8 +88,8 @@ class ApiAuthMiddleware
 
         $user = $db->query(
             'SELECT ' . implode(', ', $selectColumns) . '
-             FROM users
-             WHERE id = :id AND org_id = :org_id
+              FROM users
+             WHERE id = :id AND org_id = :org_id AND is_active = 1
              LIMIT 1',
             [':id' => $token['user_id'], ':org_id' => $token['org_id']]
         )->fetch();
@@ -88,6 +97,11 @@ class ApiAuthMiddleware
         if (!$user) {
             // Token exists but user was deleted or moved to a different org
             $this->unauthorized($response, 'Token owner not found');
+            return false;
+        }
+
+        if (!$this->isScopeAllowed($token)) {
+            $this->forbidden($response, 'Token scope does not permit this action.');
             return false;
         }
 
@@ -109,5 +123,61 @@ class ApiAuthMiddleware
         header('Content-Type: application/json');
         echo json_encode(['error' => 'unauthorized', 'message' => $message], JSON_UNESCAPED_SLASHES);
         exit;
+    }
+
+    private function forbidden(Response $response, string $message): void
+    {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'forbidden', 'message' => $message], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    private function isScopeAllowed(array $token): bool
+    {
+        $requiredScope = $this->requiredScopeForRequest();
+        if ($requiredScope === null) {
+            return true;
+        }
+
+        $scopes = $this->extractScopes($token['scopes'] ?? null);
+        return in_array($requiredScope, $scopes, true);
+    }
+
+    private function extractScopes(mixed $rawScopes): array
+    {
+        if (is_string($rawScopes) && $rawScopes !== '') {
+            $decoded = json_decode($rawScopes, true);
+            if (is_array($decoded)) {
+                $rawScopes = $decoded;
+            }
+        }
+
+        if (!is_array($rawScopes) || $rawScopes === []) {
+            return self::DEFAULT_SCOPES;
+        }
+
+        $scopes = array_values(array_filter(array_map(
+            static fn(mixed $scope): string => is_string($scope) ? trim($scope) : '',
+            $rawScopes
+        )));
+
+        return $scopes === [] ? self::DEFAULT_SCOPES : $scopes;
+    }
+
+    private function requiredScopeForRequest(): ?string
+    {
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+
+        return match (true) {
+            $method === 'GET'  && $path === '/api/v1/me' => 'profile:read',
+            $method === 'POST' && $path === '/api/v1/me/team' => 'profile:write',
+            $method === 'GET'  && $path === '/api/v1/projects' => 'projects:read',
+            $method === 'GET'  && ($path === '/api/v1/stories' || $path === '/api/v1/stories/team' || preg_match('#^/api/v1/stories/\d+$#', $path) === 1) => 'stories:read',
+            $method === 'POST' && preg_match('#^/api/v1/stories/\d+/status$#', $path) === 1 => 'stories:write-status',
+            $method === 'POST' && preg_match('#^/api/v1/stories/\d+/assign$#', $path) === 1 => 'stories:assign',
+            default => null,
+        };
     }
 }

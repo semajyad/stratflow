@@ -161,6 +161,16 @@ class AuthFlowTest extends TestCase
     }
 
     #[Test]
+    public function testInactiveUserCannotLogin(): void
+    {
+        $this->db->query("UPDATE users SET is_active = 0 WHERE id = ?", [$this->userId]);
+
+        $result = $this->auth->attempt(self::TEST_EMAIL, self::TEST_PASSWORD);
+
+        $this->assertFalse($result);
+    }
+
+    #[Test]
     public function testFailedLoginDoesNotSetSession(): void
     {
         $this->auth->attempt(self::TEST_EMAIL, 'WrongPassword!');

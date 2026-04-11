@@ -53,20 +53,20 @@ return function (\StratFlow\Core\Router $router) {
     // Prioritisation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/prioritisation',             'PrioritisationController@index',           ['auth']);
     $router->add('POST', '/app/prioritisation/framework',   'PrioritisationController@selectFramework', ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/prioritisation/scores',      'PrioritisationController@saveScores',      ['auth', 'workflow_write']);
+    $router->add('POST', '/app/prioritisation/scores',      'PrioritisationController@saveScores',      ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/prioritisation/rerank',      'PrioritisationController@rerank',          ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth', 'workflow_write']);
+    $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth', 'workflow_write', 'csrf']);
 
     // Work items — static routes MUST come before {id} routes
     $router->add('GET',  '/app/work-items',                           'WorkItemController@index',               ['auth']);
     $router->add('POST', '/app/work-items/generate',                  'WorkItemController@generate',            ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/work-items/store',                     'WorkItemController@store',               ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth', 'workflow_write']);
+    $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
     $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/close',                'WorkItemController@close',              ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/work-items/{id}/improve',              'WorkItemController@improve',             ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'workflow_write', 'csrf']);
 
@@ -82,20 +82,20 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/risks/{id}/close',     'RiskController@close',              ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/risks/{id}/roam',      'RiskController@setRoam',            ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'workflow_write', 'csrf']);
 
     // User stories — static routes MUST come before {id} routes
     $router->add('GET',  '/app/user-stories',                       'UserStoryController@index',           ['auth']);
     $router->add('POST', '/app/user-stories/generate',              'UserStoryController@generate',        ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/store',                 'UserStoryController@store',           ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth', 'workflow_write']);
+    $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
     $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/close',            'UserStoryController@close',           ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth', 'workflow_write']);
+    $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}/improve',          'UserStoryController@improve',         ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'workflow_write', 'csrf']);
 
@@ -103,8 +103,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/sprints',               'SprintController@index',         ['auth']);
     $router->add('GET',  '/app/sprints/jira-defaults', 'SprintController@jiraDefaults',  ['auth']);
     $router->add('POST', '/app/sprints/store',         'SprintController@store',         ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth', 'workflow_write']);
-    $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/sprints/auto-generate', 'SprintController@autoGenerate',  ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/sprints/auto-fill',     'SprintController@autoFill',      ['auth', 'workflow_write', 'csrf']);
@@ -128,14 +128,14 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/governance/queue/{id}',   'DriftController@reviewChange',   ['auth', 'workflow_write', 'csrf']);
 
     // Sounding Board — AI persona evaluations
-    $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/sounding-board/results/{id}',          'SoundingBoardController@results',  ['auth']);
-    $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth', 'workflow_write']);
+    $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/sounding-board/history',               'SoundingBoardController@history',  ['auth']);
 
     // Jira sync from workflow pages
     $router->add('POST', '/app/jira/sync',         'IntegrationController@contextualSync', ['auth', 'workflow_write', 'csrf']);
-    $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth', 'workflow_write']);
+    $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth', 'workflow_write', 'csrf']);
 
     // Project GitHub repo subscription
     $router->add('GET',  '/app/projects/{id}/github/edit', 'ProjectGitHubController@edit', ['auth']);

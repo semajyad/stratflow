@@ -70,7 +70,7 @@ class PasswordResetFlowTest extends TestCase
         $row = PasswordToken::findByToken($this->db, $token);
 
         $this->assertNotNull($row);
-        $this->assertSame($token, $row['token']);
+        $this->assertNotSame($token, $row['token']);
         $this->assertSame((string) $this->userId, (string) $row['user_id']);
         $this->assertSame('reset_password', $row['type']);
     }
@@ -87,7 +87,7 @@ class PasswordResetFlowTest extends TestCase
         $this->db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at)
              VALUES (?, ?, ?, ?)",
-            [$this->userId, $expiredToken, 'reset_password', date('Y-m-d H:i:s', time() - 7200)]
+            [$this->userId, hash('sha256', $expiredToken), 'reset_password', date('Y-m-d H:i:s', time() - 7200)]
         );
 
         $row = PasswordToken::findByToken($this->db, $expiredToken);
@@ -138,8 +138,8 @@ class PasswordResetFlowTest extends TestCase
 
         $this->db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
-            [$this->userId, $tokenA, 'reset_password', $future,
-             $this->userId, $tokenB, 'reset_password', $future]
+            [$this->userId, hash('sha256', $tokenA), 'reset_password', $future,
+             $this->userId, hash('sha256', $tokenB), 'reset_password', $future]
         );
 
         PasswordToken::invalidateForUser($this->db, $this->userId);

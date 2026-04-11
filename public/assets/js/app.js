@@ -357,7 +357,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    _csrf_token: getCsrfTokenValue()
+                })
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -413,7 +415,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    _csrf_token: getCsrfTokenValue()
+                })
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -579,7 +583,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    _csrf_token: getCsrfTokenValue()
+                })
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -659,14 +665,13 @@ function calculateAndSaveScore(row, itemId, framework) {
     var scores = {};
     scoreFields.forEach(function(field, i) { scores[field] = values[i]; });
 
-    var csrfToken = document.querySelector('input[name="_csrf_token"]');
     fetch('/app/prioritisation/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
             item_id: parseInt(itemId),
             scores: scores,
-            _csrf_token: csrfToken ? csrfToken.value : ''
+            _csrf_token: getCsrfTokenValue()
         })
     });
 }
@@ -690,8 +695,6 @@ function requestAiBaseline() {
     if (!btn || !prioTable) { return; }
 
     var framework  = prioTable.dataset.framework;
-    var csrfToken  = document.querySelector('input[name="_csrf_token"]');
-
     // Extract project_id from the page's hidden form
     var projectInput = document.querySelector('input[name="project_id"]');
     var projectId    = projectInput ? parseInt(projectInput.value) : 0;
@@ -704,7 +707,7 @@ function requestAiBaseline() {
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
             project_id: projectId,
-            _csrf_token: csrfToken ? csrfToken.value : ''
+            _csrf_token: getCsrfTokenValue()
         })
     })
     .then(function(res) { return res.json(); })
@@ -1025,7 +1028,8 @@ function assignStoryToSprint(sprintId, storyId) {
         },
         body: JSON.stringify({
             sprint_id: parseInt(sprintId),
-            story_id: parseInt(storyId)
+            story_id: parseInt(storyId),
+            _csrf_token: getCsrfTokenValue()
         })
     }).then(function(res) { return res.json(); })
       .then(function(data) {
@@ -1050,7 +1054,8 @@ function unassignStoryFromSprint(sprintId, storyId) {
         },
         body: JSON.stringify({
             sprint_id: parseInt(sprintId),
-            story_id: parseInt(storyId)
+            story_id: parseInt(storyId),
+            _csrf_token: getCsrfTokenValue()
         })
     }).then(function(res) { return res.json(); })
       .then(function(data) {
@@ -1178,7 +1183,8 @@ function runSoundingBoard() {
             panel_type: panelType,
             evaluation_level: evalLevel,
             screen_context: screenContext,
-            screen_content: mainContent.substring(0, 5000)
+            screen_content: mainContent.substring(0, 5000),
+            _csrf_token: getCsrfTokenValue()
         })
     })
     .then(function(r) { return r.json(); })
@@ -1242,7 +1248,8 @@ function respondToPersona(evalId, memberIndex, action) {
         },
         body: JSON.stringify({
             member_index: memberIndex,
-            action: action
+            action: action,
+            _csrf_token: getCsrfTokenValue()
         })
     })
     .then(function(r) { return r.json(); })
@@ -1332,6 +1339,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function getCsrfTokenValue() {
+    var csrfToken = document.querySelector('input[name="_csrf_token"]');
+    return csrfToken ? csrfToken.value : '';
+}
 
 // Password visibility toggle
 function togglePassword(btn) {

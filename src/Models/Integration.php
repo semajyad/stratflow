@@ -18,9 +18,16 @@ declare(strict_types=1);
 namespace StratFlow\Models;
 
 use StratFlow\Core\Database;
+use StratFlow\Core\SecretManager;
 
 class Integration
 {
+    private const CONFIG_SECRET_PATHS = [
+        'access_token',
+        'refresh_token',
+        'webhook_secret',
+    ];
+
     // ===========================
     // UPDATABLE COLUMNS
     // ===========================
@@ -40,17 +47,15 @@ class Integration
      */
     public static function encryptToken(string $plaintext): array
     {
-        $key = $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '';
-        if ($key === '') {
+        $protected = SecretManager::protectString($plaintext);
+        if (!is_array($protected)) {
             return ['ciphertext' => $plaintext, 'iv' => null, 'tag' => null];
         }
-        $iv = random_bytes(12);
-        $tag = '';
-        $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, 0, $iv, $tag);
+
         return [
-            'ciphertext' => $ciphertext,
-            'iv'         => base64_encode($iv),
-            'tag'        => base64_encode($tag),
+            'ciphertext' => json_encode($protected, JSON_UNESCAPED_SLASHES),
+            'iv'         => null,
+            'tag'        => null,
         ];
     }
 
@@ -59,12 +64,19 @@ class Integration
      */
     public static function decryptToken(string $ciphertext, ?string $iv, ?string $tag): string
     {
-        $key = $_ENV['TOKEN_ENCRYPTION_KEY'] ?? '';
-        if ($key === '' || $iv === null || $tag === null) {
-            return $ciphertext; // Not encrypted, return as-is
+        $decoded = json_decode($ciphertext, true);
+        if (is_array($decoded)) {
+            $plaintext = SecretManager::unprotectString($decoded);
+            return $plaintext ?? $ciphertext;
         }
-        $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, 0, base64_decode($iv), base64_decode($tag));
-        return $plaintext !== false ? $plaintext : $ciphertext;
+
+        $plaintext = SecretManager::unprotectString([
+            '__enc_v1'   => true,
+            'ciphertext' => $ciphertext,
+            'iv'         => $iv,
+            'tag'        => $tag,
+        ]);
+        return $plaintext ?? $ciphertext;
     }
 
     // ===========================
@@ -82,6 +94,7 @@ class Integration
      */
     public static function create(Database $db, array $data): int
     {
+        $protected = self::prepareForStorage($data);
         $db->query(
             "INSERT INTO integrations
                 (org_id, provider, display_name, cloud_id, access_token,
@@ -92,18 +105,18 @@ class Integration
                  :refresh_token, :token_expires_at, :site_url, :config_json, :status,
                  :installation_id, :account_login)",
             [
-                ':org_id'           => $data['org_id'],
-                ':provider'         => $data['provider'],
-                ':display_name'     => $data['display_name'] ?? '',
-                ':cloud_id'         => $data['cloud_id'] ?? null,
-                ':access_token'     => $data['access_token'] ?? null,
-                ':refresh_token'    => $data['refresh_token'] ?? null,
-                ':token_expires_at' => $data['token_expires_at'] ?? null,
-                ':site_url'         => $data['site_url'] ?? null,
-                ':config_json'      => $data['config_json'] ?? null,
-                ':status'           => $data['status'] ?? 'disconnected',
-                ':installation_id'  => $data['installation_id'] ?? null,
-                ':account_login'    => $data['account_login'] ?? null,
+                ':org_id'           => $protected['org_id'],
+                ':provider'         => $protected['provider'],
+                ':display_name'     => $protected['display_name'] ?? '',
+                ':cloud_id'         => $protected['cloud_id'] ?? null,
+                ':access_token'     => $protected['access_token'] ?? null,
+                ':refresh_token'    => $protected['refresh_token'] ?? null,
+                ':token_expires_at' => $protected['token_expires_at'] ?? null,
+                ':site_url'         => $protected['site_url'] ?? null,
+                ':config_json'      => $protected['config_json'] ?? null,
+                ':status'           => $protected['status'] ?? 'disconnected',
+                ':installation_id'  => $protected['installation_id'] ?? null,
+                ':account_login'    => $protected['account_login'] ?? null,
             ]
         );
 
@@ -131,8 +144,7 @@ class Integration
             [':org_id' => $orgId, ':provider' => $provider]
         );
         $row = $stmt->fetch();
-
-        return $row !== false ? $row : null;
+        return $row !== false ? self::hydrateRow($db, $row) : null;
     }
 
     /**
@@ -149,7 +161,10 @@ class Integration
             [':org_id' => $orgId]
         );
 
-        return $stmt->fetchAll();
+        return array_map(
+            static fn(array $row): array => self::hydrateRow($db, $row),
+            $stmt->fetchAll() ?: []
+        );
     }
 
     /**
@@ -201,7 +216,10 @@ class Integration
             [':org_id' => $orgId]
         );
 
-        return $stmt->fetchAll();
+        return array_map(
+            static fn(array $row): array => self::hydrateRow($db, $row),
+            $stmt->fetchAll() ?: []
+        );
     }
 
     /**
@@ -218,8 +236,7 @@ class Integration
             [':id' => $id]
         );
         $row = $stmt->fetch();
-
-        return $row !== false ? $row : null;
+        return $row !== false ? self::hydrateRow($db, $row) : null;
     }
 
     // ===========================
@@ -239,6 +256,8 @@ class Integration
         if (empty($data)) {
             return;
         }
+
+        $data = self::prepareForStorage($data);
 
         $setClauses = implode(
             ', ',
@@ -265,15 +284,21 @@ class Integration
      */
     public static function updateTokens(Database $db, int $id, string $accessToken, string $refreshToken, string $expiresAt): void
     {
+        $protectedAccess = self::encryptToken($accessToken);
+        $protectedRefresh = self::encryptToken($refreshToken);
         $db->query(
             "UPDATE integrations
              SET access_token = :access_token,
-                 refresh_token = :refresh_token,
-                 token_expires_at = :expires_at
-             WHERE id = :id",
-            [
-                ':access_token'  => $accessToken,
-                ':refresh_token' => $refreshToken,
+                  refresh_token = :refresh_token,
+                  token_iv = :token_iv,
+                  token_tag = :token_tag,
+                  token_expires_at = :expires_at
+              WHERE id = :id",
+             [
+                ':access_token'  => $protectedAccess['ciphertext'],
+                ':refresh_token' => $protectedRefresh['ciphertext'],
+                ':token_iv'      => $protectedAccess['iv'],
+                ':token_tag'     => $protectedAccess['tag'],
                 ':expires_at'    => $expiresAt,
                 ':id'            => $id,
             ]
@@ -333,5 +358,128 @@ class Integration
     public static function delete(Database $db, int $id): void
     {
         $db->query("DELETE FROM integrations WHERE id = :id", [':id' => $id]);
+    }
+
+    private static function prepareForStorage(array $data): array
+    {
+        if (array_key_exists('access_token', $data)) {
+            $token = $data['access_token'];
+            if (is_string($token) && $token !== '') {
+                $protected = self::encryptToken($token);
+                $data['access_token'] = $protected['ciphertext'];
+                $data['token_iv'] = $protected['iv'];
+                $data['token_tag'] = $protected['tag'];
+            } else {
+                $data['token_iv'] = null;
+                $data['token_tag'] = null;
+            }
+        }
+
+        if (array_key_exists('refresh_token', $data)) {
+            $token = $data['refresh_token'];
+            if (is_string($token) && $token !== '') {
+                $protected = self::encryptToken($token);
+                $data['refresh_token'] = $protected['ciphertext'];
+            }
+        }
+
+        if (array_key_exists('config_json', $data) && is_string($data['config_json']) && $data['config_json'] !== '') {
+            $decoded = json_decode($data['config_json'], true);
+            if (is_array($decoded)) {
+                $data['config_json'] = SecretManager::protectJson($decoded, self::CONFIG_SECRET_PATHS);
+            }
+        }
+
+        return $data;
+    }
+
+    private static function hydrateRow(Database $db, array $row): array
+    {
+        $needsBackfill = false;
+
+        if (SecretManager::isConfigured()) {
+            if (!empty($row['access_token']) && json_decode((string) $row['access_token'], true) === null && empty($row['token_iv']) && empty($row['token_tag'])) {
+                $needsBackfill = true;
+            }
+
+            if (!empty($row['refresh_token']) && json_decode((string) $row['refresh_token'], true) === null && empty($row['token_iv']) && empty($row['token_tag'])) {
+                $needsBackfill = true;
+            }
+
+            if (!empty($row['config_json']) && is_string($row['config_json']) && self::jsonNeedsProtection($row['config_json'], self::CONFIG_SECRET_PATHS)) {
+                $needsBackfill = true;
+            }
+        }
+
+        if (!empty($row['access_token'])) {
+            $row['access_token'] = self::decryptToken(
+                (string) $row['access_token'],
+                $row['token_iv'] ?? null,
+                $row['token_tag'] ?? null
+            );
+        }
+
+        if (!empty($row['refresh_token'])) {
+            $row['refresh_token'] = self::decryptToken(
+                (string) $row['refresh_token'],
+                $row['token_iv'] ?? null,
+                $row['token_tag'] ?? null
+            );
+        }
+
+        if (!empty($row['config_json']) && is_string($row['config_json'])) {
+            $row['config_json'] = SecretManager::unprotectJson($row['config_json'], self::CONFIG_SECRET_PATHS);
+        }
+
+        if ($needsBackfill && !empty($row['id'])) {
+            $data = [];
+            if (!empty($row['access_token'])) {
+                $data['access_token'] = $row['access_token'];
+            }
+            if (!empty($row['refresh_token'])) {
+                $data['refresh_token'] = $row['refresh_token'];
+            }
+            if (!empty($row['config_json'])) {
+                $data['config_json'] = $row['config_json'];
+            }
+            if ($data !== []) {
+                self::update($db, (int) $row['id'], $data);
+            }
+        }
+
+        return $row;
+    }
+
+    private static function jsonNeedsProtection(string $json, array $paths): bool
+    {
+        $payload = json_decode($json, true);
+        if (!is_array($payload)) {
+            return false;
+        }
+
+        foreach ($paths as $path) {
+            $value = self::valueAtPath($payload, $path);
+            if (is_string($value) && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function valueAtPath(array $payload, string $path): mixed
+    {
+        $segments = explode('.', $path);
+        $node = $payload;
+
+        foreach ($segments as $segment) {
+            if (!is_array($node) || !array_key_exists($segment, $node)) {
+                return null;
+            }
+
+            $node = $node[$segment];
+        }
+
+        return $node;
     }
 }

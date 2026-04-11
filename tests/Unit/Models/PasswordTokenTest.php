@@ -92,7 +92,7 @@ class PasswordTokenTest extends TestCase
         $row = PasswordToken::findByToken(self::$db, $token);
 
         $this->assertNotNull($row);
-        $this->assertSame($token, $row['token']);
+        $this->assertNotSame($token, $row['token']);
         $this->assertSame((string) self::$userId, (string) $row['user_id']);
     }
 
@@ -103,7 +103,7 @@ class PasswordTokenTest extends TestCase
         self::$db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at)
              VALUES (?, ?, ?, ?)",
-            [self::$userId, 'expiredtoken' . str_repeat('a', 52), 'reset_password', date('Y-m-d H:i:s', time() - 3600)]
+            [self::$userId, hash('sha256', 'expiredtoken' . str_repeat('a', 52)), 'reset_password', date('Y-m-d H:i:s', time() - 3600)]
         );
 
         $row = PasswordToken::findByToken(self::$db, 'expiredtoken' . str_repeat('a', 52));
@@ -119,7 +119,7 @@ class PasswordTokenTest extends TestCase
         self::$db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at, used_at)
              VALUES (?, ?, ?, ?, NOW())",
-            [self::$userId, $usedToken, 'reset_password', date('Y-m-d H:i:s', time() + 86400)]
+            [self::$userId, hash('sha256', $usedToken), 'reset_password', date('Y-m-d H:i:s', time() + 86400)]
         );
 
         $row = PasswordToken::findByToken(self::$db, $usedToken);
@@ -167,8 +167,8 @@ class PasswordTokenTest extends TestCase
 
         self::$db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
-            [self::$userId, $tokenA, 'set_password', $future,
-             self::$userId, $tokenB, 'reset_password', $future]
+            [self::$userId, hash('sha256', $tokenA), 'set_password', $future,
+             self::$userId, hash('sha256', $tokenB), 'reset_password', $future]
         );
 
         PasswordToken::invalidateForUser(self::$db, self::$userId);
@@ -189,7 +189,7 @@ class PasswordTokenTest extends TestCase
         self::$db->query(
             "INSERT INTO password_tokens (user_id, token, type, expires_at)
              VALUES (?, ?, ?, ?)",
-            [self::$userId, $expiredToken, 'set_password', date('Y-m-d H:i:s', time() - 3600)]
+            [self::$userId, hash('sha256', $expiredToken), 'set_password', date('Y-m-d H:i:s', time() - 3600)]
         );
 
         // Insert a valid token for comparison
@@ -200,11 +200,27 @@ class PasswordTokenTest extends TestCase
         // Expired one should be gone from the DB
         $stmt = self::$db->query(
             "SELECT id FROM password_tokens WHERE token = ?",
-            [$expiredToken]
+            [hash('sha256', $expiredToken)]
         );
         $this->assertFalse($stmt->fetch());
 
         // Valid one should still be retrievable
         $this->assertNotNull(PasswordToken::findByToken(self::$db, $validToken));
+    }
+
+    #[Test]
+    public function testLegacyPlaintextTokenStillFindsForCompatibility(): void
+    {
+        $legacyToken = str_repeat('c', 64);
+        self::$db->query(
+            "INSERT INTO password_tokens (user_id, token, type, expires_at)
+             VALUES (?, ?, ?, ?)",
+            [self::$userId, $legacyToken, 'set_password', date('Y-m-d H:i:s', time() + 3600)]
+        );
+
+        $row = PasswordToken::findByToken(self::$db, $legacyToken);
+
+        $this->assertNotNull($row);
+        $this->assertSame($legacyToken, $row['token']);
     }
 }

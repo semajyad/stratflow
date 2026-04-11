@@ -180,4 +180,18 @@ class ApiAuthMiddlewareTest extends TestCase
         $result = $this->runMiddleware('Bearer ' . $gen['raw']);
         $this->assertFalse($result);
     }
+
+    #[Test]
+    public function testInactiveUserTokenFails(): void
+    {
+        $gen = PersonalAccessToken::generate();
+        PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'inactive', $gen['raw'], $gen['prefix']);
+        self::$db->query("UPDATE users SET is_active = 0 WHERE id = ?", [self::$userId]);
+
+        $this->expectOutputRegex('/unauthorized/');
+        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+
+        self::$db->query("UPDATE users SET is_active = 1 WHERE id = ?", [self::$userId]);
+        $this->assertFalse($result);
+    }
 }

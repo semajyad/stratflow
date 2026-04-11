@@ -168,7 +168,6 @@ class WebhookController
                 $emailService = new EmailService($this->config);
                 $sent = $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
                 error_log("[StratFlow] Welcome email to {$customerEmail}: " . ($sent ? 'SENT' : 'FAILED'));
-                error_log("[StratFlow] Set password URL: {$setPasswordUrl}");
             }
         }
     }

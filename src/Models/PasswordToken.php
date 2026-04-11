@@ -16,6 +16,11 @@ use StratFlow\Core\Database;
 
 class PasswordToken
 {
+    private static function hashToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
     /**
      * Create a new password token for a user.
      *
@@ -33,6 +38,7 @@ class PasswordToken
         self::invalidateForUser($db, $userId);
 
         $token     = bin2hex(random_bytes(32));
+        $tokenHash = self::hashToken($token);
         $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 hours
 
         $db->query(
@@ -40,7 +46,7 @@ class PasswordToken
              VALUES (:user_id, :token, :type, :expires_at)",
             [
                 ':user_id'    => $userId,
-                ':token'      => $token,
+                ':token'      => $tokenHash,
                 ':type'       => $type,
                 ':expires_at' => $expiresAt,
             ]
@@ -58,13 +64,17 @@ class PasswordToken
      */
     public static function findByToken(Database $db, string $token): ?array
     {
+        $hashedToken = self::hashToken($token);
         $stmt = $db->query(
             "SELECT * FROM password_tokens
-             WHERE token = :token
+             WHERE (token = :token OR token = :legacy_token)
                AND expires_at > NOW()
                AND used_at IS NULL
              LIMIT 1",
-            [':token' => $token]
+            [
+                ':token'        => $hashedToken,
+                ':legacy_token' => $token,
+            ]
         );
 
         $row = $stmt->fetch();

@@ -135,7 +135,8 @@ class AccessTokenController
             $orgId,
             $name,
             $generated['raw'],
-            $generated['prefix']
+            $generated['prefix'],
+            PersonalAccessToken::DEFAULT_SCOPES
         );
 
         // Flash the raw token — shown once, not stored in DB

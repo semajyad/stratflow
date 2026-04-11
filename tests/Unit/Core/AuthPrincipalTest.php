@@ -27,8 +27,6 @@ class AuthPrincipalTest extends TestCase
         $session = $this->createMock(Session::class);
         $db      = $this->createMock(Database::class);
 
-        $session->method('has')->with('user')->willReturn($sessionHasUser);
-
         $sessionUser = $sessionHasUser ? [
             'id'     => 1,
             'org_id' => 10,
@@ -38,6 +36,12 @@ class AuthPrincipalTest extends TestCase
         ] : null;
 
         $session->method('get')->with('user')->willReturn($sessionUser);
+
+        if ($sessionHasUser) {
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->method('fetch')->willReturn(['id' => 1]);
+            $db->method('query')->willReturn($stmt);
+        }
 
         return new Auth($session, $db);
     }

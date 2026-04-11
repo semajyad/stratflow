@@ -13,9 +13,14 @@ declare(strict_types=1);
 namespace StratFlow\Models;
 
 use StratFlow\Core\Database;
+use StratFlow\Core\SecretManager;
 
 class Organisation
 {
+    private const SETTINGS_SECRET_PATHS = [
+        'ai.api_key',
+    ];
+
     /**
      * Insert a new organisation row and return its new ID.
      *
@@ -53,7 +58,7 @@ class Organisation
         );
 
         $row = $stmt->fetch();
-        return $row !== false ? $row : null;
+        return $row !== false ? self::hydrateRow($db, $row) : null;
     }
 
     /**
@@ -89,7 +94,10 @@ class Organisation
              ORDER BY o.created_at DESC"
         );
 
-        return $stmt->fetchAll();
+        return array_map(
+            static fn(array $row): array => self::hydrateRow($db, $row),
+            $stmt->fetchAll() ?: []
+        );
     }
 
     /**
@@ -196,6 +204,13 @@ class Organisation
             return;
         }
 
+        if (array_key_exists('settings_json', $data) && is_string($data['settings_json']) && $data['settings_json'] !== '') {
+            $decoded = json_decode($data['settings_json'], true);
+            if (is_array($decoded)) {
+                $data['settings_json'] = SecretManager::protectJson($decoded, self::SETTINGS_SECRET_PATHS);
+            }
+        }
+
         $setClauses = implode(
             ', ',
             array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
@@ -211,5 +226,56 @@ class Organisation
             "UPDATE organisations SET {$setClauses} WHERE id = :id",
             $bound
         );
+    }
+
+    private static function hydrateRow(Database $db, array $row): array
+    {
+        $needsBackfill = SecretManager::isConfigured()
+            && !empty($row['settings_json'])
+            && is_string($row['settings_json'])
+            && self::jsonNeedsProtection($row['settings_json'], self::SETTINGS_SECRET_PATHS);
+
+        if (!empty($row['settings_json']) && is_string($row['settings_json'])) {
+            $row['settings_json'] = SecretManager::unprotectJson($row['settings_json'], self::SETTINGS_SECRET_PATHS);
+        }
+
+        if ($needsBackfill && !empty($row['id'])) {
+            self::update($db, (int) $row['id'], ['settings_json' => $row['settings_json']]);
+        }
+
+        return $row;
+    }
+
+    private static function jsonNeedsProtection(string $json, array $paths): bool
+    {
+        $payload = json_decode($json, true);
+        if (!is_array($payload)) {
+            return false;
+        }
+
+        foreach ($paths as $path) {
+            $value = self::valueAtPath($payload, $path);
+            if (is_string($value) && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function valueAtPath(array $payload, string $path): mixed
+    {
+        $segments = explode('.', $path);
+        $node = $payload;
+
+        foreach ($segments as $segment) {
+            if (!is_array($node) || !array_key_exists($segment, $node)) {
+                return null;
+            }
+
+            $node = $node[$segment];
+        }
+
+        return $node;
     }
 }
