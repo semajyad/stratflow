@@ -97,8 +97,8 @@ class WebhookController
             error_log("[StratFlow] Failed to expand checkout session: " . $e->getMessage());
         }
 
-        $customerEmail    = $session->customer_details->email ?? $session->customer_email ?? '';
-        $stripeCustomerId = $session->customer ?? '';
+        $customerEmail    = $this->extractCustomerEmail($session);
+        $stripeCustomerId = $this->extractStripeCustomerId($session->customer ?? null);
         $stripeSubId      = $session->subscription ?? '';
 
         error_log("[StratFlow] Checkout completed: email={$customerEmail}, customer={$stripeCustomerId}, sub={$stripeSubId}");
@@ -137,7 +137,7 @@ class WebhookController
         }
 
         // Create the subscription record
-        if (!empty($stripeSubId)) {
+        if (!empty($stripeSubId) && Subscription::findByStripeId($this->db, $stripeSubId) === null) {
             Subscription::create($this->db, [
                 'org_id'                 => $orgId,
                 'stripe_subscription_id' => $stripeSubId,
@@ -171,6 +171,42 @@ class WebhookController
                 error_log("[StratFlow] Set password URL: {$setPasswordUrl}");
             }
         }
+    }
+
+    /**
+     * Stripe may return the customer as either a string ID or an expanded object.
+     */
+    private function extractStripeCustomerId(mixed $customer): string
+    {
+        if (is_string($customer)) {
+            return $customer;
+        }
+
+        if (is_object($customer) && isset($customer->id) && is_string($customer->id)) {
+            return $customer->id;
+        }
+
+        return '';
+    }
+
+    /**
+     * Prefer the checkout session's customer details, with safe fallbacks.
+     */
+    private function extractCustomerEmail(object $session): string
+    {
+        if (isset($session->customer_details->email) && is_string($session->customer_details->email)) {
+            return $session->customer_details->email;
+        }
+
+        if (isset($session->customer_email) && is_string($session->customer_email)) {
+            return $session->customer_email;
+        }
+
+        if (is_object($session->customer ?? null) && isset($session->customer->email) && is_string($session->customer->email)) {
+            return $session->customer->email;
+        }
+
+        return '';
     }
 
     /**
