@@ -16,9 +16,9 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $reportBase = "zap-$Mode-$timestamp"
-$htmlReport = "/zap/wrk/$reportBase.html"
-$jsonReport = "/zap/wrk/$reportBase.json"
-$mdReport = "/zap/wrk/$reportBase.md"
+$htmlReport = "$reportBase.html"
+$jsonReport = "$reportBase.json"
+$mdReport = "$reportBase.md"
 
 $cmd = if ($Mode -eq "full") { "zap-full-scan.py" } else { "zap-baseline.py" }
 $scanArgs = if ($Mode -eq "full") {

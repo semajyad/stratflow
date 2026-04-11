@@ -12,6 +12,7 @@ C/
 # Playwright
 tests/Playwright/node_modules/
 tests/Playwright/test-results/
+security-reports/
 
 # Claude Code — ephemeral markers
 .claude/.security-audit-ok
