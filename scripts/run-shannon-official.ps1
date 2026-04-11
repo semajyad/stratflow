@@ -4,7 +4,7 @@ param(
 
     [string]$Workspace = ("stratflow-" + (Get-Date -Format "yyyyMMdd-HHmmss")),
 
-    [string]$RepoPath = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
+    [string]$RepoPath = "",
 
     [string]$ConfigPath = "",
 
@@ -17,6 +17,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+    $RepoPath = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+}
 
 function Import-DotEnvValue {
     param(
