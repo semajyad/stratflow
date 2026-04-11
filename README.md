@@ -57,6 +57,8 @@ docker compose exec php php scripts/create-admin.php
 |-----|-------------|
 | [docs/SETUP.md](docs/SETUP.md) | Local development setup guide |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | cPanel production deployment |
+| [docs/USER_ROLES_GUIDE.md](docs/USER_ROLES_GUIDE.md) | User-facing guide to roles, flags, and project access |
+| [docs/superpowers/specs/2026-04-11-permissions-model-design.md](docs/superpowers/specs/2026-04-11-permissions-model-design.md) | Proposed redesign for a more robust permissions model |
 | [docs/API.md](docs/API.md) | All application routes |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema, tables, and relationships |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and request lifecycle |

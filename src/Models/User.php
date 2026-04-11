@@ -62,14 +62,24 @@ class User
     public static function create(Database $db, array $data): int
     {
         $db->query(
-            "INSERT INTO users (org_id, full_name, email, password_hash, role)
-             VALUES (:org_id, :full_name, :email, :password_hash, :role)",
+            "INSERT INTO users (
+                org_id, full_name, email, password_hash, role,
+                team, is_project_admin, has_billing_access, has_executive_access, password_changed_at
+             ) VALUES (
+                :org_id, :full_name, :email, :password_hash, :role,
+                :team, :is_project_admin, :has_billing_access, :has_executive_access, :password_changed_at
+             )",
             [
                 ':org_id'        => $data['org_id'],
                 ':full_name'     => $data['full_name'],
                 ':email'         => $data['email'],
                 ':password_hash' => $data['password_hash'],
                 ':role'          => $data['role'] ?? 'user',
+                ':team'          => $data['team'] ?? null,
+                ':is_project_admin' => $data['is_project_admin'] ?? 0,
+                ':has_billing_access' => $data['has_billing_access'] ?? 0,
+                ':has_executive_access' => $data['has_executive_access'] ?? 0,
+                ':password_changed_at' => $data['password_changed_at'] ?? null,
             ]
         );
 
@@ -86,6 +96,7 @@ class User
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
         'full_name', 'email', 'password_hash', 'role', 'is_active', 'team',
+        'is_project_admin', 'has_billing_access', 'has_executive_access', 'password_changed_at',
     ];
 
     public static function update(Database $db, int $id, array $data): void

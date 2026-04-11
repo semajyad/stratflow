@@ -15,6 +15,7 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Project;
+use StratFlow\Security\ProjectPolicy;
 
 class HomeController
 {
@@ -149,7 +150,7 @@ class HomeController
         $projectId = (int) $id;
 
         $project = Project::findById($this->db, $projectId, $orgId);
-        if ($project === null) {
+        if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
             return;
         }
@@ -178,13 +179,8 @@ class HomeController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $id;
 
-        if (!($user['is_project_admin'] ?? false) && !in_array($user['role'] ?? '', ['org_admin', 'superadmin'], true)) {
-            $this->response->redirect('/app/home');
-            return;
-        }
-
         $project = Project::findById($this->db, $projectId, $orgId);
-        if ($project === null) {
+        if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
             return;
         }
@@ -230,7 +226,7 @@ class HomeController
         }
 
         $project = Project::findById($this->db, $projectId, $orgId);
-        if ($project === null) {
+        if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
             return;
         }
@@ -250,7 +246,7 @@ class HomeController
         $projectId = (int) $id;
 
         $project = Project::findById($this->db, $projectId, $orgId);
-        if ($project === null) {
+        if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
             return;
         }

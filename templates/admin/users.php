@@ -8,6 +8,15 @@
  * Variables: $user (array), $users (array), $seat_limit (int),
  *            $user_count (int), $csrf_token (string)
  */
+$assignable_roles = $assignable_roles ?? ['viewer', 'user', 'project_manager', 'org_admin'];
+$roleLabels = [
+    'viewer' => 'Viewer (read-only)',
+    'user' => 'User (edit items)',
+    'project_manager' => 'Project Manager',
+    'org_admin' => 'Organisation Admin',
+    'developer' => 'Developer',
+    'superadmin' => 'Superadmin',
+];
 ?>
 
 <!-- ===========================
@@ -69,6 +78,7 @@
                                         'superadmin' => 'Superadmin',
                                         'org_admin' => 'Org Admin',
                                         'project_manager' => 'Project Manager',
+                                        'developer' => 'Developer',
                                         'viewer' => 'Viewer',
                                         default => 'User',
                                     };
@@ -127,14 +137,13 @@
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">Role</label>
+                                            <?php $editableRoles = array_values(array_unique(array_merge([$u['role']], $assignable_roles))); ?>
                                             <select name="role" class="form-input">
-                                                <option value="viewer" <?= $u['role'] === 'viewer' ? 'selected' : '' ?>>Viewer (read-only)</option>
-                                                <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>User (edit items)</option>
-                                                <option value="project_manager" <?= $u['role'] === 'project_manager' ? 'selected' : '' ?>>Project Manager</option>
-                                                <option value="org_admin" <?= $u['role'] === 'org_admin' ? 'selected' : '' ?>>Organisation Admin</option>
-                                                <?php if (($user['role'] ?? '') === 'superadmin'): ?>
-                                                <option value="superadmin" <?= $u['role'] === 'superadmin' ? 'selected' : '' ?>>Superadmin</option>
-                                                <?php endif; ?>
+                                                <?php foreach ($editableRoles as $assignableRole): ?>
+                                                <option value="<?= htmlspecialchars($assignableRole) ?>" <?= $u['role'] === $assignableRole ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($roleLabels[$assignableRole] ?? ucwords(str_replace('_', ' ', $assignableRole))) ?>
+                                                </option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </div>
                                         <div class="form-group">
@@ -207,14 +216,32 @@
             <div class="form-group">
                 <label class="form-label">Role</label>
                 <select name="role" class="form-input">
-                    <option value="viewer">Viewer (read-only)</option>
-                    <option value="user" selected>User (edit items)</option>
-                    <option value="project_manager">Project Manager</option>
-                    <option value="org_admin">Organisation Admin</option>
-                    <?php if (($user['role'] ?? '') === 'superadmin'): ?>
-                    <option value="superadmin">Superadmin</option>
-                    <?php endif; ?>
+                    <?php foreach ($assignable_roles as $assignableRole): ?>
+                    <option value="<?= htmlspecialchars($assignableRole) ?>" <?= $assignableRole === 'user' ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($roleLabels[$assignableRole] ?? ucwords(str_replace('_', ' ', $assignableRole))) ?>
+                    </option>
+                    <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Access Flags</label>
+                <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                        <input type="hidden" name="is_project_admin" value="0">
+                        <input type="checkbox" name="is_project_admin" value="1">
+                        Project admin (create &amp; manage projects)
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                        <input type="hidden" name="has_billing_access" value="0">
+                        <input type="checkbox" name="has_billing_access" value="1">
+                        Billing access
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                        <input type="hidden" name="has_executive_access" value="0">
+                        <input type="checkbox" name="has_executive_access" value="1">
+                        Executive dashboard
+                    </label>
+                </div>
             </div>
         </div>
         <p style="color: #64748b; font-size: 14px; margin-top: 8px;">A welcome email will be sent so the user can set their own password.</p>

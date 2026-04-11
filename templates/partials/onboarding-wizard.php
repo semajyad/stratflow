@@ -15,6 +15,7 @@ $roleHint = match($userRole) {
     'viewer'          => 'As a viewer, you can browse all projects and track progress without making changes.',
     'project_manager' => 'As a project manager, you\'ll create and manage projects through the entire workflow.',
     'org_admin'       => 'As an organisation admin, you can manage users, teams, and integrations alongside the core workflow.',
+    'developer'       => 'As a developer, your primary workspace is personal access tokens and API-driven access to StratFlow data.',
     'superadmin'      => 'As a superadmin, you have full access including cross-organisation management.',
     default           => 'You\'ll work through 8 steps from strategy document to prioritised Jira backlog.',
 };

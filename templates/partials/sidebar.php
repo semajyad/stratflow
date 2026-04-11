@@ -6,6 +6,15 @@ if ($pid) { $_SESSION['_last_project_id'] = $pid; }
 
 // Determine current page path for project switcher (stay on same page)
 $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/app/upload', '?');
+$canViewExecutive = \StratFlow\Security\PermissionService::canViewExecutive($user ?? null);
+$canAccessAdmin = \StratFlow\Security\PermissionService::can(
+    $user ?? null,
+    \StratFlow\Security\PermissionService::ADMIN_ACCESS
+);
+$showBilling = \StratFlow\Security\PermissionService::canViewBilling(
+    $user ?? null,
+    \StratFlow\Core\Database::getInstance()
+);
 
 // ---- Icon helper: returns an inline SVG by name (stroke-based, 20x20) ----
 $icon = function (string $name): string {
@@ -134,13 +143,13 @@ $icon = function (string $name): string {
             <?= $icon('traceability') ?><span class="nav-label">Traceability</span>
         </a>
 
-        <?php if (($user['role'] ?? '') === 'superadmin' || !empty($user['has_executive_access'])): ?>
+        <?php if ($canViewExecutive): ?>
         <a href="/app/executive" class="nav-link <?= ($active_page ?? '') === 'executive' ? 'active' : '' ?>" data-label="Executive">
             <?= $icon('executive') ?><span class="nav-label">Executive</span>
         </a>
         <?php endif; ?>
 
-        <?php if (in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
+        <?php if ($canAccessAdmin): ?>
             <hr class="sidebar-divider">
             <a href="/app/admin" class="nav-link <?= ($active_page ?? '') === 'admin' ? 'active' : '' ?>" data-label="Admin">
                 <?= $icon('admin') ?><span class="nav-label">Admin</span>
@@ -153,19 +162,6 @@ $icon = function (string $name): string {
             </a>
         <?php endif; ?>
 
-        <?php
-        // Billing visible to: superadmin, explicit billing flag, or org_admin when no dedicated billing user exists
-        $showBilling = ($user['role'] ?? '') === 'superadmin' || ($user['has_billing_access'] ?? false);
-        if (!$showBilling && ($user['role'] ?? '') === 'org_admin') {
-            try {
-                $billingUsers = \StratFlow\Core\Database::getInstance()->query(
-                    "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :oid AND has_billing_access = 1",
-                    [':oid' => $user['org_id']]
-                )->fetch();
-                $showBilling = ((int) ($billingUsers['cnt'] ?? 0) === 0);
-            } catch (\Throwable $e) { $showBilling = true; }
-        }
-        ?>
         <?php if ($showBilling): ?>
             <a href="/app/admin/billing" class="nav-link <?= ($active_page ?? '') === 'billing' ? 'active' : '' ?>" data-label="Billing">
                 <?= $icon('billing') ?><span class="nav-label">Billing</span>

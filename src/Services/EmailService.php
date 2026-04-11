@@ -2,9 +2,8 @@
 /**
  * EmailService
  *
- * Sends transactional emails via Resend API (primary) with Gmail SMTP fallback.
- * Resend: simple HTTP POST, high deliverability, no PHP extensions needed.
- * Gmail SMTP: fallback via fsockopen with STARTTLS.
+ * Sends transactional emails via configured SMTP, with MailerSend fallback.
+ * SMTP supports implicit TLS on port 465 and plain SMTP on other ports.
  */
 
 declare(strict_types=1);
@@ -25,13 +24,40 @@ class EmailService
     // =========================================================================
 
     /**
-     * Send an HTML email via MailerSend API (primary) with Gmail SMTP fallback.
+     * Send an HTML email via configured SMTP, with MailerSend fallback.
      */
     public function send(string $to, string $subject, string $htmlBody): bool
     {
         $fromName = $this->config['mail']['from_name'] ?? 'StratFlow';
+        $fromEmail = $this->config['mail']['from_email'] ?? '';
+        $smtpHost = trim((string)($this->config['mail']['smtp_host'] ?? ''));
+        $smtpPort = (int)($this->config['mail']['smtp_port'] ?? 465);
+        $smtpUser = trim((string)($this->config['mail']['smtp_user'] ?? ''));
+        $smtpPass = (string)($this->config['mail']['smtp_pass'] ?? '');
 
-        // Primary: MailerSend API (HTTP — works on Railway, sends to anyone)
+        if ($smtpHost !== '' && $smtpUser !== '' && $smtpPass !== '' && $fromEmail !== '') {
+            try {
+                $sent = $this->sendViaSmtp(
+                    $smtpHost,
+                    $smtpPort,
+                    $smtpUser,
+                    $smtpPass,
+                    $fromName,
+                    $fromEmail,
+                    $to,
+                    $subject,
+                    $htmlBody
+                );
+                if ($sent) {
+                    error_log("[StratFlow] Email sent via SMTP to {$to}");
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                error_log("[StratFlow] SMTP failed: {$e->getMessage()}");
+            }
+        }
+
+        // Fallback: MailerSend API (HTTP — works on Railway, sends to anyone)
         $mailerSendKey = $this->config['mail']['mailersend_api_key'] ?? '';
         $mailerSendFrom = $this->config['mail']['mailersend_from'] ?? '';
 
@@ -44,22 +70,6 @@ class EmailService
                 }
             } catch (\Throwable $e) {
                 error_log("[StratFlow] MailerSend failed: {$e->getMessage()}");
-            }
-        }
-
-        // Fallback: Gmail SMTP (works locally, blocked on Railway)
-        $smtpUser = $this->config['mail']['smtp_user'] ?? '';
-        $smtpPass = $this->config['mail']['smtp_pass'] ?? '';
-
-        if ($smtpUser !== '' && $smtpPass !== '') {
-            try {
-                $sent = $this->sendViaGmailSmtp($smtpUser, $smtpPass, $fromName, $to, $subject, $htmlBody);
-                if ($sent) {
-                    error_log("[StratFlow] Email sent via Gmail SMTP to {$to}");
-                    return true;
-                }
-            } catch (\Throwable $e) {
-                error_log("[StratFlow] Gmail SMTP also failed: {$e->getMessage()}");
             }
         }
 
@@ -112,62 +122,25 @@ class EmailService
     }
 
     // =========================================================================
-    // RESEND API
+    // SMTP
     // =========================================================================
 
-    /**
-     * Send email via Resend HTTP API.
-     * https://resend.com/docs/api-reference/emails/send-email
-     */
-    private function sendViaResend(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+    private function sendViaSmtp(
+        string $host,
+        int $port,
+        string $user,
+        string $pass,
+        string $fromName,
+        string $fromEmail,
+        string $to,
+        string $subject,
+        string $htmlBody
+    ): bool
     {
-        $payload = json_encode([
-            'from' => "{$fromName} <{$fromEmail}>",
-            'to' => [$to],
-            'subject' => $subject,
-            'html' => $htmlBody,
-        ]);
-
-        $ch = curl_init('https://api.resend.com/emails');
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 15,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            throw new \RuntimeException("Resend cURL error: {$curlError}");
-        }
-
-        if ($httpCode >= 200 && $httpCode < 300) {
-            return true;
-        }
-
-        $body = json_decode($response, true);
-        $errorMsg = $body['message'] ?? $body['error'] ?? "HTTP {$httpCode}";
-        throw new \RuntimeException("Resend API error: {$errorMsg}");
-    }
-
-    // =========================================================================
-    // GMAIL SMTP (SSL on port 465 — no STARTTLS needed)
-    // =========================================================================
-
-    private function sendViaGmailSmtp(string $user, string $pass, string $fromName, string $to, string $subject, string $htmlBody): bool
-    {
-        // Use ssl:// on port 465 — implicit TLS, no STARTTLS negotiation needed
-        $socket = @fsockopen('ssl://smtp.gmail.com', 465, $errno, $errstr, 15);
+        $transport = $port === 465 ? 'ssl://' : '';
+        $socket = @fsockopen($transport . $host, $port, $errno, $errstr, 15);
         if (!$socket) {
-            throw new \RuntimeException("Gmail SMTP connect failed: {$errstr} ({$errno})");
+            throw new \RuntimeException("SMTP connect failed: {$errstr} ({$errno})");
         }
 
         $this->smtpRead($socket); // 220 greeting
@@ -179,15 +152,18 @@ class EmailService
         $this->smtpCommand($socket, base64_encode($pass), 235);
 
         // Envelope
-        $this->smtpCommand($socket, "MAIL FROM:<{$user}>", 250);
+        $this->smtpCommand($socket, "MAIL FROM:<{$fromEmail}>", 250);
         $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
 
         // Message
         $this->smtpCommand($socket, "DATA", 354);
 
-        $message = "From: {$fromName} <{$user}>\r\n";
+        $safeSubject = str_replace(["\r", "\n"], '', $subject);
+
+        $message = "From: {$fromName} <{$fromEmail}>\r\n";
         $message .= "To: {$to}\r\n";
-        $message .= "Subject: {$subject}\r\n";
+        $message .= "Reply-To: {$fromName} <{$fromEmail}>\r\n";
+        $message .= "Subject: {$safeSubject}\r\n";
         $message .= "MIME-Version: 1.0\r\n";
         $message .= "Content-Type: text/html; charset=UTF-8\r\n";
         $message .= "\r\n";

@@ -10,7 +10,10 @@ use StratFlow\Middleware\AuthMiddleware;
 use StratFlow\Middleware\BillingMiddleware;
 use StratFlow\Middleware\CSRFMiddleware;
 use StratFlow\Middleware\ExecutiveMiddleware;
+use StratFlow\Middleware\ProjectCreateMiddleware;
+use StratFlow\Middleware\ProjectManageMiddleware;
 use StratFlow\Middleware\SuperadminMiddleware;
+use StratFlow\Middleware\WorkflowWriteMiddleware;
 
 /**
  * HTTP Router
@@ -145,6 +148,9 @@ class Router
                 'executive'  => (new ExecutiveMiddleware())->handle($this->auth, $this->response),
                 'superadmin' => (new SuperadminMiddleware())->handle($this->auth, $this->response),
                 'api_auth'   => (new ApiAuthMiddleware())->handle($this->auth, $this->db, $this->response),
+                'workflow_write' => (new WorkflowWriteMiddleware())->handle($this->auth, $this->response),
+                'project_create' => (new ProjectCreateMiddleware())->handle($this->auth, $this->response),
+                'project_manage' => (new ProjectManageMiddleware())->handle($this->auth, $this->response),
                 default      => true,
             };
 

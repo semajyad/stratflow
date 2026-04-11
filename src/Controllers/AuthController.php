@@ -19,6 +19,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\PasswordToken;
 use StratFlow\Models\User;
+use StratFlow\Security\PermissionService;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\EmailService;
 
@@ -50,7 +51,7 @@ class AuthController
         if ($this->auth->check()) {
             unset($_SESSION['_intended_url']);
             $user = $this->auth->user();
-            $redirect = ($user['role'] ?? '') === 'developer' ? '/app/account/tokens' : '/app/home';
+            $redirect = PermissionService::isDeveloper($user) ? '/app/account/tokens' : '/app/home';
             $this->response->redirect($redirect);
         }
 
@@ -98,7 +99,7 @@ class AuthController
             $role = $user['role'] ?? 'user';
 
             // Developers always land on token management — MCP is their primary interface.
-            if ($role === 'developer') {
+            if (PermissionService::isDeveloper($user)) {
                 unset($_SESSION['_intended_url']);
                 $this->response->redirect('/app/account/tokens');
                 return;
@@ -116,11 +117,9 @@ class AuthController
 
             // Role-aware landing: viewers with billing flag go to billing,
             // superadmins go to their dashboard, everyone else goes home.
-            $hasBilling = (bool) ($user['has_billing_access'] ?? false);
-
-            if ($role === 'superadmin') {
+            if (PermissionService::isSuperadmin($user)) {
                 $this->response->redirect('/superadmin');
-            } elseif ($role === 'viewer' && $hasBilling) {
+            } elseif ($role === 'viewer' && PermissionService::canViewBilling($user, $this->db)) {
                 $this->response->redirect('/app/admin/billing');
             } else {
                 $this->response->redirect('/app/home');

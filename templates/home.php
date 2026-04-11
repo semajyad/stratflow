@@ -8,6 +8,12 @@
  * Variables: $user (array), $projects (array), $csrf_token (string)
  */
 ?>
+<?php
+$canCreateProjects = \StratFlow\Security\PermissionService::can(
+    $user,
+    \StratFlow\Security\PermissionService::PROJECT_CREATE
+);
+?>
 
 <!-- ===========================
      Welcome Section
@@ -19,7 +25,7 @@
             StratFlow turns your strategy documents into a prioritised, AI-ready engineering roadmap.
         </p>
     </div>
-    <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
+    <?php if ($canCreateProjects): ?>
     <button type="button" class="btn btn-primary" onclick="document.getElementById('new-project-modal').classList.remove('hidden'); clearMemberPicker('new'); setTimeout(function(){document.getElementById('new-project-name').focus();},50);">
         + New Project
     </button>
@@ -128,7 +134,7 @@ if ($lastProjectId && !empty($projects)) {
                            title="<?= (int) ($project['steps_complete'] ?? 0) ?>/<?= (int) ($project['steps_total'] ?? 8) ?> steps complete — next: <?= htmlspecialchars($project['next_step_label'] ?? 'Upload') ?>">
                             Open Project
                         </a>
-                        <?php if (($user['is_project_admin'] ?? false) || in_array($user['role'] ?? '', ['org_admin', 'superadmin'])): ?>
+                        <?php if (\StratFlow\Security\ProjectPolicy::canManageProject(\StratFlow\Core\Database::getInstance(), $user, $project)): ?>
                         <button type="button" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
                                 onclick="openEditProjectModal(<?= (int) $project['id'] ?>, <?= htmlspecialchars(json_encode($project['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($jiraKey), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['visibility'] ?? 'everyone'), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($project['member_ids'] ?? []), ENT_QUOTES) ?>)">
                             Edit

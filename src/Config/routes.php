@@ -33,83 +33,83 @@ return function (\StratFlow\Core\Router $router) {
 
     // App — authenticated pages
     $router->add('GET',  '/app/home',     'HomeController@index',         ['auth']);
-    $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'csrf']);
+    $router->add('POST', '/app/projects', 'HomeController@createProject', ['auth', 'project_create', 'csrf']);
 
     // Document upload
     $router->add('GET',  '/app/upload',           'UploadController@index',           ['auth']);
-    $router->add('POST', '/app/upload',           'UploadController@store',           ['auth', 'csrf']);
-    $router->add('POST', '/app/upload/summarise', 'UploadController@generateSummary', ['auth', 'csrf']);
+    $router->add('POST', '/app/upload',           'UploadController@store',           ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/upload/summarise', 'UploadController@generateSummary', ['auth', 'workflow_write', 'csrf']);
 
     // Strategy diagram
     $router->add('GET',  '/app/diagram',          'DiagramController@index',    ['auth']);
-    $router->add('POST', '/app/diagram/generate', 'DiagramController@generate', ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/save-okr',      'DiagramController@saveOkr',     ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/save-all-okrs', 'DiagramController@saveAllOkrs', ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/generate-okrs', 'DiagramController@generateOkrs', ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/add-okr',       'DiagramController@addOkr',       ['auth', 'csrf']);
-    $router->add('POST', '/app/diagram/delete-okr',    'DiagramController@deleteOkr',    ['auth', 'csrf']);
+    $router->add('POST', '/app/diagram/generate', 'DiagramController@generate', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/save',     'DiagramController@save',     ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/save-okr',      'DiagramController@saveOkr',     ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/save-all-okrs', 'DiagramController@saveAllOkrs', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/generate-okrs', 'DiagramController@generateOkrs', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/add-okr',       'DiagramController@addOkr',       ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/diagram/delete-okr',    'DiagramController@deleteOkr',    ['auth', 'workflow_write', 'csrf']);
 
     // Prioritisation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/prioritisation',             'PrioritisationController@index',           ['auth']);
-    $router->add('POST', '/app/prioritisation/framework',   'PrioritisationController@selectFramework', ['auth', 'csrf']);
-    $router->add('POST', '/app/prioritisation/scores',      'PrioritisationController@saveScores',      ['auth']);
-    $router->add('POST', '/app/prioritisation/rerank',      'PrioritisationController@rerank',          ['auth', 'csrf']);
-    $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth']);
+    $router->add('POST', '/app/prioritisation/framework',   'PrioritisationController@selectFramework', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/prioritisation/scores',      'PrioritisationController@saveScores',      ['auth', 'workflow_write']);
+    $router->add('POST', '/app/prioritisation/rerank',      'PrioritisationController@rerank',          ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/prioritisation/ai-baseline', 'PrioritisationController@aiBaseline',      ['auth', 'workflow_write']);
 
     // Work items — static routes MUST come before {id} routes
     $router->add('GET',  '/app/work-items',                           'WorkItemController@index',               ['auth']);
-    $router->add('POST', '/app/work-items/generate',                  'WorkItemController@generate',            ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/store',                     'WorkItemController@store',               ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth']);
-    $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/generate',                  'WorkItemController@generate',            ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/work-items/store',                     'WorkItemController@store',               ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/work-items/reorder',                   'WorkItemController@reorder',             ['auth', 'workflow_write']);
+    $router->add('POST', '/app/work-items/regenerate-sizing',         'WorkItemController@regenerateSizing',    ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/work-items/export',                    'WorkItemController@export',              ['auth']);
-    $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/{id}/close',                'WorkItemController@close',              ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth']);
-    $router->add('POST', '/app/work-items/{id}/improve',              'WorkItemController@improve',             ['auth', 'csrf']);
-    $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/delete',               'WorkItemController@delete',             ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/close',                'WorkItemController@close',              ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}/generate-description', 'WorkItemController@generateDescription', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/work-items/{id}/improve',              'WorkItemController@improve',             ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/work-items/{id}',                      'WorkItemController@update',              ['auth', 'workflow_write', 'csrf']);
 
     // Key Results — KR CRUD (static /delete route MUST come before {id} catch-all)
-    $router->add('POST', '/app/key-results',             'KrController@store',  ['auth', 'csrf']);
-    $router->add('POST', '/app/key-results/{id}/delete', 'KrController@delete', ['auth', 'csrf']);
-    $router->add('POST', '/app/key-results/{id}',        'KrController@update', ['auth', 'csrf']);
+    $router->add('POST', '/app/key-results',             'KrController@store',  ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/key-results/{id}/delete', 'KrController@delete', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/key-results/{id}',        'KrController@update', ['auth', 'workflow_write', 'csrf']);
 
     // Risk modelling — static routes MUST come before {id} routes
     $router->add('GET',  '/app/risks',                'RiskController@index',              ['auth']);
-    $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'csrf']);
-    $router->add('POST', '/app/risks',                'RiskController@store',              ['auth', 'csrf']);
-    $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'csrf']);
-    $router->add('POST', '/app/risks/{id}/close',     'RiskController@close',              ['auth', 'csrf']);
-    $router->add('POST', '/app/risks/{id}/roam',      'RiskController@setRoam',            ['auth', 'csrf']);
-    $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth']);
-    $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'csrf']);
+    $router->add('POST', '/app/risks/generate',       'RiskController@generate',           ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/risks',                'RiskController@store',              ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/delete',    'RiskController@delete',             ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/close',     'RiskController@close',              ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/roam',      'RiskController@setRoam',            ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/risks/{id}/mitigation', 'RiskController@generateMitigation', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/risks/{id}',           'RiskController@update',             ['auth', 'workflow_write', 'csrf']);
 
     // User stories — static routes MUST come before {id} routes
     $router->add('GET',  '/app/user-stories',                       'UserStoryController@index',           ['auth']);
-    $router->add('POST', '/app/user-stories/generate',              'UserStoryController@generate',        ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/store',                 'UserStoryController@store',           ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth']);
-    $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/generate',              'UserStoryController@generate',        ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/store',                 'UserStoryController@store',           ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/reorder',               'UserStoryController@reorder',         ['auth', 'workflow_write']);
+    $router->add('POST', '/app/user-stories/regenerate-sizing',     'UserStoryController@regenerateSizing', ['auth', 'workflow_write', 'csrf']);
     $router->add('GET',  '/app/user-stories/export',                'UserStoryController@export',          ['auth']);
-    $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/close',            'UserStoryController@close',           ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth']);
-    $router->add('POST', '/app/user-stories/{id}/improve',          'UserStoryController@improve',         ['auth', 'csrf']);
-    $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'csrf']);
+    $router->add('POST', '/app/user-stories/delete-all',            'UserStoryController@deleteAll',       ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/delete',           'UserStoryController@delete',          ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/close',            'UserStoryController@close',           ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}/suggest-size',     'UserStoryController@suggestSize',     ['auth', 'workflow_write']);
+    $router->add('POST', '/app/user-stories/{id}/improve',          'UserStoryController@improve',         ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/user-stories/{id}',                  'UserStoryController@update',          ['auth', 'workflow_write', 'csrf']);
 
     // Sprint allocation — static routes MUST come before {id} routes
     $router->add('GET',  '/app/sprints',               'SprintController@index',         ['auth']);
     $router->add('GET',  '/app/sprints/jira-defaults', 'SprintController@jiraDefaults',  ['auth']);
-    $router->add('POST', '/app/sprints/store',         'SprintController@store',         ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth']);
-    $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth']);
-    $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/auto-generate', 'SprintController@autoGenerate',  ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/auto-fill',     'SprintController@autoFill',      ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'csrf']);
-    $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'csrf']);
+    $router->add('POST', '/app/sprints/store',         'SprintController@store',         ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/assign',       'SprintController@assignStory',   ['auth', 'workflow_write']);
+    $router->add('POST', '/app/sprints/unassign',     'SprintController@unassignStory', ['auth', 'workflow_write']);
+    $router->add('POST', '/app/sprints/ai-allocate',    'SprintController@aiAllocate',    ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/auto-generate', 'SprintController@autoGenerate',  ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/auto-fill',     'SprintController@autoFill',      ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/{id}/delete',  'SprintController@delete',        ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/sprints/{id}',          'SprintController@update',        ['auth', 'workflow_write', 'csrf']);
 
     // Executive Dashboard — org-wide rollup (gated by has_executive_access flag or superadmin)
     $router->add('GET',  '/app/executive',               'ExecutiveController@dashboard',  ['auth', 'executive']);
@@ -122,30 +122,30 @@ return function (\StratFlow\Core\Router $router) {
 
     // Governance — drift detection and change control
     $router->add('GET',  '/app/governance',              'DriftController@dashboard',      ['auth']);
-    $router->add('POST', '/app/governance/baseline',     'DriftController@createBaseline', ['auth', 'csrf']);
-    $router->add('POST', '/app/governance/detect',       'DriftController@runDetection',   ['auth', 'csrf']);
-    $router->add('POST', '/app/governance/alerts/{id}',  'DriftController@acknowledgeAlert', ['auth', 'csrf']);
-    $router->add('POST', '/app/governance/queue/{id}',   'DriftController@reviewChange',   ['auth', 'csrf']);
+    $router->add('POST', '/app/governance/baseline',     'DriftController@createBaseline', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/governance/detect',       'DriftController@runDetection',   ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/governance/alerts/{id}',  'DriftController@acknowledgeAlert', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/governance/queue/{id}',   'DriftController@reviewChange',   ['auth', 'workflow_write', 'csrf']);
 
     // Sounding Board — AI persona evaluations
-    $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth']);
+    $router->add('POST', '/app/sounding-board/evaluate',              'SoundingBoardController@evaluate', ['auth', 'workflow_write']);
     $router->add('GET',  '/app/sounding-board/results/{id}',          'SoundingBoardController@results',  ['auth']);
-    $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth']);
+    $router->add('POST', '/app/sounding-board/results/{id}/respond',  'SoundingBoardController@respond',  ['auth', 'workflow_write']);
     $router->add('GET',  '/app/sounding-board/history',               'SoundingBoardController@history',  ['auth']);
 
     // Jira sync from workflow pages
-    $router->add('POST', '/app/jira/sync',         'IntegrationController@contextualSync', ['auth', 'csrf']);
-    $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth']);
+    $router->add('POST', '/app/jira/sync',         'IntegrationController@contextualSync', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/jira/sync/preview',  'IntegrationController@syncPreview',    ['auth', 'workflow_write']);
 
     // Project GitHub repo subscription
     $router->add('GET',  '/app/projects/{id}/github/edit', 'ProjectGitHubController@edit', ['auth']);
-    $router->add('POST', '/app/projects/{id}/github/save', 'ProjectGitHubController@save', ['auth', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/github/save', 'ProjectGitHubController@save', ['auth', 'project_manage', 'csrf']);
 
     // Project management
-    $router->add('POST', '/app/projects/{id}/edit',      'HomeController@editProject',   ['auth', 'csrf']);
-    $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira',      ['auth', 'csrf']);
-    $router->add('POST', '/app/projects/{id}/rename',    'HomeController@renameProject', ['auth', 'csrf']);
-    $router->add('POST', '/app/projects/{id}/delete',    'HomeController@deleteProject', ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/edit',      'HomeController@editProject',   ['auth', 'project_manage', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/jira-link', 'HomeController@linkJira',      ['auth', 'project_manage', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/rename',    'HomeController@renameProject', ['auth', 'project_manage', 'csrf']);
+    $router->add('POST', '/app/projects/{id}/delete',    'HomeController@deleteProject', ['auth', 'project_manage', 'csrf']);
 
     // Integrations (static routes BEFORE {id})
     $router->add('GET',  '/app/admin/integrations',                 'IntegrationController@index',            ['auth', 'admin']);
@@ -173,8 +173,8 @@ return function (\StratFlow\Core\Router $router) {
 
     // Git links — manual CRUD (static routes BEFORE {id} routes)
     $router->add('GET',  '/app/git-links',            'GitLinkController@index',  ['auth']);
-    $router->add('POST', '/app/git-links',            'GitLinkController@create', ['auth', 'csrf']);
-    $router->add('POST', '/app/git-links/{id}/delete','GitLinkController@delete', ['auth', 'csrf']);
+    $router->add('POST', '/app/git-links',            'GitLinkController@create', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/git-links/{id}/delete','GitLinkController@delete', ['auth', 'workflow_write', 'csrf']);
 
     // Git integrations — admin management
     $router->add('POST', '/app/admin/integrations/git/{provider}/connect',           'GitIntegrationController@connect',          ['auth', 'admin', 'csrf']);

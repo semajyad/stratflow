@@ -25,6 +25,7 @@ use StratFlow\Models\Subscription;
 use StratFlow\Models\Team;
 use StratFlow\Models\TeamMember;
 use StratFlow\Models\User;
+use StratFlow\Security\PermissionService;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\EmailService;
 use StratFlow\Services\StripeService;
@@ -108,6 +109,7 @@ class AdminController
             'users'         => $users,
             'seat_limit'    => $seatLimit,
             'user_count'    => $userCount,
+            'assignable_roles' => PermissionService::assignableRolesFor($user),
             'active_page'   => 'admin',
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
@@ -149,13 +151,15 @@ class AdminController
             return;
         }
 
-        $allowedRoles = ['user', 'org_admin'];
-        if (($this->auth->user()['role'] ?? '') === 'superadmin') {
-            $allowedRoles[] = 'superadmin';
-        }
+        $allowedRoles = PermissionService::assignableRolesFor($user);
         if (!in_array($role, $allowedRoles, true)) {
             $role = 'user';
         }
+
+        // Org admins are always project admins; otherwise respect the form checkbox.
+        $isProjectAdmin = ($role === 'org_admin')
+            ? 1
+            : ($this->request->post('is_project_admin') === '1' ? 1 : 0);
 
         // Check email uniqueness
         $existing = User::findByEmail($this->db, $email);
@@ -169,12 +173,14 @@ class AdminController
         $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
         $newUserId = User::create($this->db, [
-            'org_id'           => $orgId,
-            'full_name'        => $fullName,
-            'email'            => $email,
-            'password_hash'    => $randomPassword,
-            'role'             => $role,
-            'is_project_admin' => $role === 'org_admin' ? 1 : 0,
+            'org_id'               => $orgId,
+            'full_name'            => $fullName,
+            'email'                => $email,
+            'password_hash'        => $randomPassword,
+            'role'                 => $role,
+            'is_project_admin'     => $isProjectAdmin,
+            'has_billing_access'   => $this->request->post('has_billing_access') === '1' ? 1 : 0,
+            'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
         ]);
 
         // Create set_password token and send welcome email
@@ -225,10 +231,7 @@ class AdminController
             return;
         }
 
-        $allowedRoles = ['user', 'org_admin'];
-        if (($this->auth->user()['role'] ?? '') === 'superadmin') {
-            $allowedRoles[] = 'superadmin';
-        }
+        $allowedRoles = PermissionService::assignableRolesFor($user);
         if (!in_array($role, $allowedRoles, true)) {
             $role = 'user';
         }

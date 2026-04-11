@@ -5,6 +5,7 @@ namespace StratFlow\Middleware;
 
 use StratFlow\Core\Auth;
 use StratFlow\Core\Response;
+use StratFlow\Security\PermissionService;
 
 /**
  * Superadmin Middleware
@@ -24,7 +25,7 @@ class SuperadminMiddleware
     public function handle(Auth $auth, Response $response): bool
     {
         $user = $auth->user();
-        if (!$user || $user['role'] !== 'superadmin') {
+        if (!$user || !PermissionService::can($user, PermissionService::SUPERADMIN_ACCESS)) {
             $response->redirect('/app/home');
             return false;
         }

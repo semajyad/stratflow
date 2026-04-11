@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace StratFlow\Models;
 
 use StratFlow\Core\Database;
+use StratFlow\Security\PermissionService;
 
 class Project
 {
@@ -85,8 +86,14 @@ class Project
         string $role,
         bool $isProjectAdmin = false
     ): array {
-        // Admins and superadmins always see everything
-        if (in_array($role, ['org_admin', 'superadmin'], true) || $isProjectAdmin) {
+        $principal = [
+            'id' => $userId,
+            'org_id' => $orgId,
+            'role' => $role,
+            'is_project_admin' => $isProjectAdmin,
+        ];
+
+        if (PermissionService::can($principal, PermissionService::PROJECT_VIEW_ALL)) {
             return self::findByOrgId($db, $orgId);
         }
 

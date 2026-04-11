@@ -5,6 +5,7 @@ namespace StratFlow\Middleware;
 
 use StratFlow\Core\Auth;
 use StratFlow\Core\Response;
+use StratFlow\Security\PermissionService;
 
 /**
  * Admin Middleware
@@ -24,7 +25,7 @@ class AdminMiddleware
     public function handle(Auth $auth, Response $response): bool
     {
         $user = $auth->user();
-        if (!$user || !in_array($user['role'], ['org_admin', 'superadmin'])) {
+        if (!$user || !PermissionService::can($user, PermissionService::ADMIN_ACCESS)) {
             $response->redirect('/app/home');
             return false;
         }

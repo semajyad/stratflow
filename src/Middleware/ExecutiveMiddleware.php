@@ -5,6 +5,7 @@ namespace StratFlow\Middleware;
 
 use StratFlow\Core\Auth;
 use StratFlow\Core\Response;
+use StratFlow\Security\PermissionService;
 
 /**
  * Executive Middleware
@@ -24,10 +25,7 @@ class ExecutiveMiddleware
             return false;
         }
 
-        $isSuperadmin    = $user['role'] === 'superadmin';
-        $hasExecAccess   = (bool) ($user['has_executive_access'] ?? false);
-
-        if (!$isSuperadmin && !$hasExecAccess) {
+        if (!PermissionService::canViewExecutive($user)) {
             $response->redirect('/app/home');
             return false;
         }
