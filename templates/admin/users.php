@@ -17,6 +17,17 @@ $roleLabels = [
     'developer' => 'Developer',
     'superadmin' => 'Superadmin',
 ];
+
+$roleHelpText = 'Viewer: read-only access across assigned areas. '
+    . 'User: can create and edit roadmap content. '
+    . 'Project Manager: manages delivery planning and team workflows. '
+    . 'Organisation Admin: manages users, settings, and organisation administration. '
+    . 'Developer: intended for API, PAT, and developer workflow access where enabled. '
+    . 'Superadmin: full system-wide access.';
+
+$accessFlagsHelpText = 'Project admin: can create, update, and manage projects. '
+    . 'Billing access: can open billing pages, invoices, and subscription controls. '
+    . 'Executive dashboard: can view executive reporting and roll-up dashboards.';
 ?>
 
 <!-- ===========================
@@ -144,7 +155,13 @@ $roleLabels = [
                                                    value="<?= htmlspecialchars($u['email']) ?>" required>
                                         </div>
                                         <div class="form-group">
-                                            <label class="form-label">Role</label>
+                                            <label class="form-label">
+                                                Role
+                                                <span class="page-info" tabindex="0" role="button" aria-label="Role help">
+                                                    <span class="page-info-btn" aria-hidden="true">i</span>
+                                                    <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($roleHelpText) ?></span>
+                                                </span>
+                                            </label>
                                             <?php $editableRoles = array_values(array_unique(array_merge([$u['role']], $assignable_roles))); ?>
                                             <select name="role" class="form-input">
                                                 <?php foreach ($editableRoles as $assignableRole): ?>
@@ -165,7 +182,13 @@ $roleLabels = [
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="form-label">Access Flags</label>
+                                            <label class="form-label">
+                                                Access Flags
+                                                <span class="page-info" tabindex="0" role="button" aria-label="Access flag help">
+                                                    <span class="page-info-btn" aria-hidden="true">i</span>
+                                                    <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($accessFlagsHelpText) ?></span>
+                                                </span>
+                                            </label>
                                             <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
                                                 <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
                                                     <input type="hidden" name="is_project_admin" value="0">
@@ -222,7 +245,13 @@ $roleLabels = [
                 <input type="email" name="email" class="form-input" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Role</label>
+                <label class="form-label">
+                    Role
+                    <span class="page-info" tabindex="0" role="button" aria-label="Role help">
+                        <span class="page-info-btn" aria-hidden="true">i</span>
+                        <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($roleHelpText) ?></span>
+                    </span>
+                </label>
                 <select name="role" class="form-input">
                     <?php foreach ($assignable_roles as $assignableRole): ?>
                     <option value="<?= htmlspecialchars($assignableRole) ?>" <?= $assignableRole === 'user' ? 'selected' : '' ?>>
@@ -232,7 +261,13 @@ $roleLabels = [
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Access Flags</label>
+                <label class="form-label">
+                    Access Flags
+                    <span class="page-info" tabindex="0" role="button" aria-label="Access flag help">
+                        <span class="page-info-btn" aria-hidden="true">i</span>
+                        <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($accessFlagsHelpText) ?></span>
+                    </span>
+                </label>
                 <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
                     <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
                         <input type="hidden" name="is_project_admin" value="0">
