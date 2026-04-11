@@ -59,12 +59,21 @@ class ApiStoriesController
     public function me(): void
     {
         $user = $this->auth->user();
+
+        // DEBUG: also do a fresh SELECT to compare with middleware-loaded principal
+        $fresh = $this->db->query(
+            'SELECT id, org_id, team, jira_account_id FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
+            [':id' => (int) $user['id'], ':org_id' => (int) $user['org_id']]
+        )->fetch();
+
         $this->json([
-            'id'     => (int) $user['id'],
-            'name'   => $user['name'] ?? ($user['full_name'] ?? ''),
-            'email'  => $user['email'],
-            'org_id' => (int) $user['org_id'],
-            'team'   => $user['team'] ?? null,
+            'id'          => (int) $user['id'],
+            'name'        => $user['name'] ?? ($user['full_name'] ?? ''),
+            'email'       => $user['email'],
+            'org_id'      => (int) $user['org_id'],
+            'team'        => $user['team'] ?? null,
+            '_debug_principal_keys' => array_keys($user),
+            '_debug_fresh_team'     => $fresh['team'] ?? 'NO_ROW',
         ]);
     }
 
