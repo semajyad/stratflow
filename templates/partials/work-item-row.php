@@ -14,6 +14,7 @@
          data-okr-title="<?= htmlspecialchars($item['okr_title'] ?? '') ?>"
          data-okr-desc="<?= htmlspecialchars($item['okr_description'] ?? '') ?>"
          data-owner="<?= htmlspecialchars($item['owner'] ?? '') ?>"
+         data-team-assigned="<?= htmlspecialchars($item['team_assigned'] ?? '') ?>"
          data-estimated-sprints="<?= (int) ($item['estimated_sprints'] ?? 2) ?>"
          data-strategic-context="<?= htmlspecialchars($item['strategic_context'] ?? '') ?>"
          data-acceptance-criteria="<?= htmlspecialchars($item['acceptance_criteria'] ?? '', ENT_QUOTES, 'UTF-8') ?>"

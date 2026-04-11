@@ -125,7 +125,7 @@ class HLWorkItem
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'strategic_context',
         'okr_title', 'okr_description', 'acceptance_criteria', 'kr_hypothesis', 'quality_score', 'quality_breakdown',
-        'owner', 'estimated_sprints',
+        'owner', 'team_assigned', 'estimated_sprints',
         'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
         'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
         'final_score', 'requires_review', 'status', 'last_jira_sync_at',

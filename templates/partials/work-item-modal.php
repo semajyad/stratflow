@@ -75,6 +75,16 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
                     </div>
                 </div>
 
+                <div class="modal-field-wrap" data-field="team_assigned">
+                    <div class="form-group">
+                        <label>Assigned Team <small class="text-muted">(inherited by stories)</small></label>
+                        <input type="text" name="team_assigned" id="modal-team-assigned"
+                               class="form-control" maxlength="100"
+                               placeholder="e.g. Backend, Platform, Mobile">
+                        <small class="text-muted">Stories under this work item will inherit this team. Developers filter their queue by team in the IDE.</small>
+                    </div>
+                </div>
+
                 <div class="modal-field-wrap" data-field="estimated_sprints">
                     <div class="form-group">
                         <label id="modal-sizing-label"><?= htmlspecialchars($sizingLabel) ?></label>

@@ -426,12 +426,15 @@ class WorkItemController
         $newDescription     = trim((string) $this->request->post('description', $item['description'] ?? ''));
         $newEstimatedSprints = $this->request->post('estimated_sprints', '');
 
+        $teamAssigned = trim((string) $this->request->post('team_assigned', $item['team_assigned'] ?? '')) ?: null;
+
         $updateData = [
             'title'               => trim((string) $this->request->post('title', $item['title'])),
             'description'         => $newDescription,
             'okr_title'           => trim((string) $this->request->post('okr_title', $item['okr_title'] ?? '')),
             'okr_description'     => trim((string) $this->request->post('okr_description', $item['okr_description'] ?? '')),
             'owner'               => trim((string) $this->request->post('owner', $item['owner'] ?? '')),
+            'team_assigned'       => $teamAssigned,
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $item['acceptance_criteria'] ?? '')) ?: null,
             'kr_hypothesis'       => mb_substr(
                 trim((string) $this->request->post('kr_hypothesis', $item['kr_hypothesis'] ?? '')),
@@ -450,15 +453,17 @@ class WorkItemController
         try {
             $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {}
-        $scorer       = new StoryQualityScorer(new GeminiService($this->config));
-        $itemForScore = array_merge($item, $updateData);
-        $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
-        if ($scored['score'] !== null) {
-            HLWorkItem::update($this->db, (int) $id, [
-                'quality_score'     => $scored['score'],
-                'quality_breakdown' => json_encode($scored['breakdown']),
-            ]);
-        }
+        try {
+            $scorer       = new StoryQualityScorer(new GeminiService($this->config));
+            $itemForScore = array_merge($item, $updateData);
+            $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
+            if ($scored['score'] !== null) {
+                HLWorkItem::update($this->db, (int) $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown']),
+                ]);
+            }
+        } catch (\Throwable) {}
 
         // Flag for review if description or sprint estimate changed
         $descChanged    = $newDescription !== ($item['description'] ?? '');

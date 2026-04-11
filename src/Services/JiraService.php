@@ -237,6 +237,47 @@ class JiraService
     }
 
     /**
+     * Assign a Jira issue to a user by their Jira account ID.
+     *
+     * @param string      $issueKey        Issue key (e.g. 'PROJ-123')
+     * @param string|null $jiraAccountId   Jira account ID, or null to unassign
+     */
+    public function assignIssue(string $issueKey, ?string $jiraAccountId): void
+    {
+        $this->makeAuthenticatedRequest(
+            'PUT',
+            '/rest/api/3/issue/' . $issueKey . '/assignee',
+            ['accountId' => $jiraAccountId]
+        );
+    }
+
+    /**
+     * Transition a Jira issue to a new status by looking up the transition name.
+     *
+     * Fetches available transitions and finds the first one whose name contains
+     * $statusName (case-insensitive). Silently returns if no match found.
+     *
+     * @param string $issueKey   Issue key (e.g. 'PROJ-123')
+     * @param string $statusName Partial status name to match (e.g. 'In Progress')
+     */
+    public function transitionIssue(string $issueKey, string $statusName): void
+    {
+        $result = $this->makeAuthenticatedRequest('GET', '/rest/api/3/issue/' . $issueKey . '/transitions');
+        $transitions = $result['transitions'] ?? [];
+
+        foreach ($transitions as $t) {
+            if (stripos($t['name'] ?? '', $statusName) !== false) {
+                $this->makeAuthenticatedRequest(
+                    'POST',
+                    '/rest/api/3/issue/' . $issueKey . '/transitions',
+                    ['transition' => ['id' => $t['id']]]
+                );
+                return;
+            }
+        }
+    }
+
+    /**
      * Get a single Jira issue by key.
      *
      * @param string $issueKey     Issue key (e.g. 'PROJ-123')

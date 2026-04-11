@@ -217,6 +217,7 @@ class UserStoryController
                     'priority_number'     => $priorityNumber++,
                     'title'               => $storyData['title'] ?? 'Untitled Story',
                     'description'         => $storyData['description'] ?? null,
+                    'team_assigned'       => $hlItem['team_assigned'] ?? null,
                     'size'                => isset($storyData['size']) ? (int) $storyData['size'] : null,
                     'acceptance_criteria' => $ac,
                     'kr_hypothesis'       => isset($storyData['kr_hypothesis']) && $storyData['kr_hypothesis'] !== ''
@@ -280,13 +281,23 @@ class UserStoryController
         $blockedBy      = $this->request->post('blocked_by', '');
         $size           = $this->request->post('size', '');
 
+        // Inherit team from parent work item if one is selected
+        $resolvedParentId = $parentHlItemId !== '' ? (int) $parentHlItemId : null;
+        $teamAssigned = trim((string) $this->request->post('team_assigned', '')) ?: null;
+        if ($resolvedParentId !== null) {
+            $parentItem = HLWorkItem::findById($this->db, $resolvedParentId);
+            if ($parentItem && !empty($parentItem['team_assigned'])) {
+                $teamAssigned = $parentItem['team_assigned'];
+            }
+        }
+
         UserStory::create($this->db, [
             'project_id'        => $projectId,
-            'parent_hl_item_id' => $parentHlItemId !== '' ? (int) $parentHlItemId : null,
+            'parent_hl_item_id' => $resolvedParentId,
             'priority_number'   => $existingCount + 1,
             'title'             => $title,
             'description'       => trim((string) $this->request->post('description', '')) ?: null,
-            'team_assigned'     => trim((string) $this->request->post('team_assigned', '')) ?: null,
+            'team_assigned'     => $teamAssigned,
             'size'              => $size !== '' ? (int) $size : null,
             'blocked_by'        => $blockedBy !== '' ? (int) $blockedBy : null,
         ]);
@@ -338,11 +349,21 @@ class UserStoryController
             }
         }
 
+        // Inherit team from parent work item if one is set
+        $resolvedParentId = $parentHlItemId !== '' ? (int) $parentHlItemId : null;
+        $inheritedTeam = null;
+        if ($resolvedParentId !== null) {
+            $parent = HLWorkItem::findById($this->db, $resolvedParentId);
+            if ($parent && !empty($parent['team_assigned'])) {
+                $inheritedTeam = $parent['team_assigned'];
+            }
+        }
+
         UserStory::update($this->db, $id, [
             'title'               => trim((string) $this->request->post('title', $story['title'])),
             'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
-            'parent_hl_item_id'   => $parentHlItemId !== '' ? (int) $parentHlItemId : null,
-            'team_assigned'       => trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
+            'parent_hl_item_id'   => $resolvedParentId,
+            'team_assigned'       => $inheritedTeam ?? trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
             'assignee_user_id'    => $assigneeUserId,
             'size'                => $size !== '' ? (int) $size : null,
             'blocked_by'          => $blockedBy !== '' ? (int) $blockedBy : null,
@@ -358,20 +379,22 @@ class UserStoryController
         try {
             $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {}
-        $scorer = new StoryQualityScorer(new GeminiService($this->config));
-        $storyForScore = array_merge($story, [
-            'title'               => trim((string) $this->request->post('title', $story['title'])),
-            'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
-            'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
-            'kr_hypothesis'       => mb_substr(trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')), 0, 500) ?: null,
-        ]);
-        $scored = $scorer->scoreStory($storyForScore, $qualityBlock);
-        if ($scored['score'] !== null) {
-            UserStory::update($this->db, (int) $id, [
-                'quality_score'     => $scored['score'],
-                'quality_breakdown' => json_encode($scored['breakdown']),
+        try {
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
+            $storyForScore = array_merge($story, [
+                'title'               => trim((string) $this->request->post('title', $story['title'])),
+                'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
+                'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
+                'kr_hypothesis'       => mb_substr(trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')), 0, 500) ?: null,
             ]);
-        }
+            $scored = $scorer->scoreStory($storyForScore, $qualityBlock);
+            if ($scored['score'] !== null) {
+                UserStory::update($this->db, (int) $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown']),
+                ]);
+            }
+        } catch (\Throwable) {}
 
         // Flag parent work item for review if size changed significantly
         if ($oldSize > 0 && $newSize > 0 && abs($newSize - $oldSize) >= 2 && $story['parent_hl_item_id']) {

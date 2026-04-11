@@ -323,6 +323,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-okr-title').value            = row.dataset.okrTitle || '';
             document.getElementById('modal-okr-desc').value             = row.dataset.okrDesc || '';
             document.getElementById('modal-owner').value                = row.dataset.owner || '';
+            var teamEl = document.getElementById('modal-team-assigned');
+            if (teamEl) { teamEl.value = row.dataset.teamAssigned || ''; }
             document.getElementById('modal-acceptance-criteria').value  = row.dataset.acceptanceCriteria || '';
             document.getElementById('modal-kr-hypothesis').value        = row.dataset.krHypothesis || '';
             var sprintsEl = document.getElementById('modal-estimated-sprints');

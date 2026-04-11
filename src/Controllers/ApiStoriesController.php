@@ -22,7 +22,9 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\User;
 use StratFlow\Models\UserStory;
+use StratFlow\Models\Integration;
 use StratFlow\Services\AuditLogger;
+use StratFlow\Services\JiraService;
 
 class ApiStoriesController
 {
@@ -298,6 +300,9 @@ class ApiStoriesController
 
         UserStory::update($this->db, $storyId, ['status' => $newStatus]);
 
+        // Sync status transition to Jira non-fatally
+        $this->syncToJira($storyId, null, $newStatus);
+
         AuditLogger::log(
             $this->db,
             (int) $user['id'],
@@ -375,7 +380,8 @@ class ApiStoriesController
 
         // Optional status filter
         $statusRaw = $this->request->get('status', '');
-        $where  = ['p.org_id = :org_id', 'us.team_assigned = :team'];
+        // Match team on the story directly OR inherited from parent work item
+        $where  = ['p.org_id = :org_id', 'COALESCE(us.team_assigned, hw.team_assigned) = :team'];
         $params = [':org_id' => $orgId, ':team' => $team];
 
         if ($statusRaw !== '') {
@@ -399,6 +405,7 @@ class ApiStoriesController
                     us.updated_at
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
+             LEFT JOIN hl_work_items hw ON hw.id = us.parent_hl_item_id
              LEFT JOIN users u ON u.id = us.assignee_user_id
              WHERE {$whereClause}
              ORDER BY us.priority_number ASC
@@ -452,6 +459,9 @@ class ApiStoriesController
 
         UserStory::update($this->db, $storyId, ['assignee_user_id' => $userId]);
 
+        // Sync assignee to Jira non-fatally
+        $this->syncToJira($storyId, $user['jira_account_id'] ?? null, null);
+
         AuditLogger::log(
             $this->db,
             $userId,
@@ -495,5 +505,86 @@ class ApiStoriesController
         $text = preg_replace('/[^a-z0-9\s-]/', '', $text);
         $text = preg_replace('/[\s-]+/', '-', trim($text));
         return substr($text, 0, 50);
+    }
+
+    /**
+     * Build a Jira service for the authenticated org, or return null if not configured.
+     */
+    private function jiraService(): ?JiraService
+    {
+        $orgId       = (int) $this->auth->user()['org_id'];
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+        if ($integration === null) {
+            return null;
+        }
+        try {
+            return new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Look up the Jira issue key for a story via sync_mappings.
+     *
+     * @return string|null e.g. 'PROJ-42', or null if no mapping exists
+     */
+    private function storyJiraKey(int $storyId): ?string
+    {
+        $row = $this->db->query(
+            "SELECT external_key FROM sync_mappings
+             WHERE local_type = 'user_story' AND local_id = :id LIMIT 1",
+            [':id' => $storyId]
+        )->fetch();
+
+        return ($row && $row['external_key'] !== '') ? $row['external_key'] : null;
+    }
+
+    /**
+     * Map a StratFlow status string to a Jira status name fragment for transitions.
+     *
+     * Jira workflows vary between projects, but these names are common defaults.
+     */
+    private function jiraStatusName(string $stratflowStatus): ?string
+    {
+        return match ($stratflowStatus) {
+            'in_progress' => 'In Progress',
+            'in_review'   => 'In Review',
+            'done'        => 'Done',
+            default       => null,
+        };
+    }
+
+    /**
+     * Sync a story assignment and/or status to Jira non-fatally.
+     * Failures are silently swallowed so they never affect the MCP response.
+     *
+     * @param int         $storyId          Local story ID
+     * @param string|null $jiraAccountId    Jira account ID to assign, or null to skip
+     * @param string|null $newStatus        StratFlow status to transition to, or null to skip
+     */
+    private function syncToJira(int $storyId, ?string $jiraAccountId, ?string $newStatus): void
+    {
+        try {
+            $jira     = $this->jiraService();
+            $jiraKey  = $this->storyJiraKey($storyId);
+
+            if ($jira === null || $jiraKey === null) {
+                return;
+            }
+
+            if ($jiraAccountId !== null) {
+                $jira->assignIssue($jiraKey, $jiraAccountId);
+            }
+
+            if ($newStatus !== null) {
+                $jiraStatusName = $this->jiraStatusName($newStatus);
+                if ($jiraStatusName !== null) {
+                    $jira->transitionIssue($jiraKey, $jiraStatusName);
+                }
+            }
+        } catch (\Throwable) {
+            // Jira sync is best-effort — never block the MCP response
+        }
     }
 }
