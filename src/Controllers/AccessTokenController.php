@@ -95,6 +95,7 @@ class AccessTokenController
             'new_token_raw' => $newTokenRaw,
             'app_url'       => rtrim($this->config['app']['url'] ?? '', '/'),
             'team_options'  => $teamOptions,
+            'csrf_token'    => $_SESSION['csrf_token'] ?? '',
             'active_page'   => 'account-tokens',
         ], 'app');
     }
