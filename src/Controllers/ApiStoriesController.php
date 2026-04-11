@@ -463,10 +463,26 @@ class ApiStoriesController
             return;
         }
 
-        UserStory::update($this->db, $storyId, ['assignee_user_id' => $userId]);
+        // Build update payload — guard columns that may not exist on all deployments
+        $updateData = ['status' => 'in_progress'];
+        $storyRow = $this->db->query(
+            'SELECT * FROM user_stories WHERE id = :id LIMIT 1',
+            [':id' => $storyId]
+        )->fetch();
+        if ($storyRow && array_key_exists('assignee_user_id', $storyRow)) {
+            $updateData['assignee_user_id'] = $userId;
+        }
 
-        // Sync assignee to Jira non-fatally
-        $this->syncToJira($storyId, $user['jira_account_id'] ?? null, null);
+        try {
+            UserStory::update($this->db, $storyId, $updateData);
+        } catch (\Throwable $e) {
+            $this->jsonError('Failed to claim story: ' . $e->getMessage(), 500);
+            return;
+        }
+
+        // Sync assignee + status to Jira non-fatally
+        $jiraAccountId = $user['jira_account_id'] ?? null;
+        $this->syncToJira($storyId, $jiraAccountId, 'in_progress');
 
         AuditLogger::log(
             $this->db,
@@ -474,14 +490,15 @@ class ApiStoriesController
             AuditLogger::ADMIN_ACTION,
             $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'story_assigned', 'story_id' => $storyId, 'assignee_user_id' => $userId, 'source' => 'mcp']
+            ['action' => 'story_claimed', 'story_id' => $storyId, 'assignee_user_id' => $userId, 'source' => 'mcp']
         );
 
         $this->json(['data' => [
             'id'       => $storyId,
             'sf_ref'   => 'SF-' . $storyId,
             'title'    => $story['title'],
-            'assignee' => $user['name'] ?? $user['email'],
+            'status'   => 'in_progress',
+            'assignee' => $user['name'] ?? ($user['full_name'] ?? $user['email']),
         ]]);
     }
 
