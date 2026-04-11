@@ -66,6 +66,7 @@ class WorkItemController
     public function index(): void
     {
         $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
 
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
