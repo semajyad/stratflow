@@ -349,8 +349,12 @@ class UserStoryController
             }
         }
 
-        // Inherit team from parent work item if one is set
-        $resolvedParentId = $parentHlItemId !== '' ? (int) $parentHlItemId : null;
+        // Inherit team from parent work item if one is set.
+        // Fall back to the story's existing parent if the form didn't send one.
+        $resolvedParentId = $parentHlItemId !== ''
+            ? (int) $parentHlItemId
+            : ((int) ($story['parent_hl_item_id'] ?? 0) ?: null);
+
         $inheritedTeam = null;
         if ($resolvedParentId !== null) {
             $parent = HLWorkItem::findById($this->db, $resolvedParentId);
@@ -380,7 +384,7 @@ class UserStoryController
             $storyUpdateData['assignee_user_id'] = $assigneeUserId;
         }
 
-        UserStory::update($this->db, $id, $storyUpdateData);
+        UserStory::update($this->db, (int) $id, $storyUpdateData);
 
         // Re-score after update — failure is non-fatal
         $qualityBlock = '';
@@ -617,7 +621,7 @@ class UserStoryController
         $reasoning = $result['reasoning'] ?? '';
 
         // Save the suggested size
-        UserStory::update($this->db, $id, ['size' => $size]);
+        UserStory::update($this->db, (int) $id, ['size' => $size]);
 
         $this->response->json(['status' => 'ok', 'size' => $size, 'reasoning' => $reasoning]);
     }
