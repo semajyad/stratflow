@@ -359,12 +359,10 @@ class UserStoryController
             }
         }
 
-        UserStory::update($this->db, $id, [
+        $storyUpdateData = [
             'title'               => trim((string) $this->request->post('title', $story['title'])),
             'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
             'parent_hl_item_id'   => $resolvedParentId,
-            'team_assigned'       => $inheritedTeam ?? trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? '')),
-            'assignee_user_id'    => $assigneeUserId,
             'size'                => $size !== '' ? (int) $size : null,
             'blocked_by'          => $blockedBy !== '' ? (int) $blockedBy : null,
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
@@ -372,7 +370,17 @@ class UserStoryController
                 trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')),
                 0, 500
             ) ?: null,
-        ]);
+        ];
+
+        // Only include columns that exist on this deployment
+        if (array_key_exists('team_assigned', $story)) {
+            $storyUpdateData['team_assigned'] = $inheritedTeam ?? trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? ''));
+        }
+        if (array_key_exists('assignee_user_id', $story)) {
+            $storyUpdateData['assignee_user_id'] = $assigneeUserId;
+        }
+
+        UserStory::update($this->db, $id, $storyUpdateData);
 
         // Re-score after update — failure is non-fatal
         $qualityBlock = '';

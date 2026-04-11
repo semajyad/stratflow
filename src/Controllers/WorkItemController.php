@@ -426,21 +426,23 @@ class WorkItemController
         $newDescription     = trim((string) $this->request->post('description', $item['description'] ?? ''));
         $newEstimatedSprints = $this->request->post('estimated_sprints', '');
 
-        $teamAssigned = trim((string) $this->request->post('team_assigned', $item['team_assigned'] ?? '')) ?: null;
-
         $updateData = [
             'title'               => trim((string) $this->request->post('title', $item['title'])),
             'description'         => $newDescription,
             'okr_title'           => trim((string) $this->request->post('okr_title', $item['okr_title'] ?? '')),
             'okr_description'     => trim((string) $this->request->post('okr_description', $item['okr_description'] ?? '')),
             'owner'               => trim((string) $this->request->post('owner', $item['owner'] ?? '')),
-            'team_assigned'       => $teamAssigned,
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $item['acceptance_criteria'] ?? '')) ?: null,
             'kr_hypothesis'       => mb_substr(
                 trim((string) $this->request->post('kr_hypothesis', $item['kr_hypothesis'] ?? '')),
                 0, 500
             ) ?: null,
         ];
+
+        // Only update team_assigned if the column exists on this deployment
+        if (array_key_exists('team_assigned', $item)) {
+            $updateData['team_assigned'] = trim((string) $this->request->post('team_assigned', $item['team_assigned'] ?? '')) ?: null;
+        }
 
         if ($newEstimatedSprints !== '') {
             $updateData['estimated_sprints'] = (int) $newEstimatedSprints;
