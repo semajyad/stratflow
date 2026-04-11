@@ -43,20 +43,20 @@ $formula = $isRice
      =========================== -->
 <div class="card mb-6">
     <div class="card-body flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
-        <form method="POST" action="/app/prioritisation/framework" class="flex items-center gap-2">
+        <form method="POST" action="/app/prioritisation/framework" class="flex items-center gap-2 js-framework-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <label for="framework-select" style="margin-bottom: 0; white-space: nowrap;">Framework:</label>
-            <select name="framework" id="framework-select" class="score-select" style="width: auto; min-width: 120px;" onchange="this.form.submit()">
+            <select name="framework" id="framework-select" class="score-select js-framework-select" style="width: auto; min-width: 120px;">
                 <option value="rice" <?= $isRice ? 'selected' : '' ?>>RICE</option>
                 <option value="wsjf" <?= !$isRice ? 'selected' : '' ?>>WSJF</option>
             </select>
         </form>
         <div class="flex items-center gap-2">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFrameworkInfo()">
+            <button type="button" class="btn btn-secondary btn-sm js-toggle-framework-info">
                 Formula Info
             </button>
-            <button type="button" id="ai-suggest-btn" class="btn btn-ai btn-sm ai-suggest-btn" onclick="requestAiBaseline()">
+            <button type="button" id="ai-suggest-btn" class="btn btn-ai btn-sm ai-suggest-btn js-request-ai-baseline">
                 AI Suggest Scores
             </button>
         </div>
@@ -70,7 +70,7 @@ $formula = $isRice
     <div class="modal">
         <div class="modal-header">
             <h3>Prioritisation Frameworks</h3>
-            <button class="modal-close" onclick="toggleFrameworkInfo()">&times;</button>
+            <button class="modal-close js-toggle-framework-info" type="button">&times;</button>
         </div>
         <div class="modal-body">
             <h4>RICE</h4>
@@ -91,7 +91,7 @@ $formula = $isRice
             </ul>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary btn-sm" onclick="toggleFrameworkInfo()">Close</button>
+            <button class="btn btn-secondary btn-sm js-toggle-framework-info" type="button">Close</button>
         </div>
     </div>
 </div>
@@ -179,7 +179,7 @@ $formula = $isRice
           data-loading="Re-ranking by score...">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-        <button type="submit" class="btn btn-primary" onclick="return confirm('Re-rank all items by their calculated score?')">
+        <button type="submit" class="btn btn-primary" data-confirm="Re-rank all items by their calculated score?">
             Re-rank by Score
         </button>
     </form>

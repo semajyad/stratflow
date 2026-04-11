@@ -130,6 +130,18 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-toggle-framework-info')) {
+        e.preventDefault();
+        toggleFrameworkInfo();
+        return;
+    }
+
+    if (e.target.closest('.js-request-ai-baseline')) {
+        e.preventDefault();
+        requestAiBaseline();
+        return;
+    }
+
     if (e.target.closest('.js-jira-preview-close')) {
         e.preventDefault();
         closeJiraSyncPreviewModal();
@@ -177,6 +189,17 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('change', function(e) {
     var projectSwitcher = e.target.closest('.js-project-switcher');
     if (!projectSwitcher || !projectSwitcher.value) {
+        if (!e.target.closest('.js-framework-select')) {
+            return;
+        }
+    }
+
+    var frameworkSelect = e.target.closest('.js-framework-select');
+    if (frameworkSelect) {
+        var frameworkForm = frameworkSelect.closest('.js-framework-form');
+        if (frameworkForm) {
+            frameworkForm.submit();
+        }
         return;
     }
 
