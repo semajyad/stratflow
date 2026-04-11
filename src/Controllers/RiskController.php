@@ -300,6 +300,10 @@ class RiskController
             return;
         }
 
+        $allowedRoam = ['resolved', 'owned', 'accepted', 'mitigated'];
+        $roamRaw     = strtolower(trim((string) $this->request->post('roam_status', '')));
+        $roamStatus  = in_array($roamRaw, $allowedRoam, true) ? $roamRaw : null;
+
         Risk::update($this->db, $id, [
             'title'         => $title,
             'description'   => $description ?: null,
@@ -307,6 +311,7 @@ class RiskController
             'impact'        => $impact,
             'priority'      => $likelihood * $impact,
             'owner_user_id' => $ownerUserId,
+            'roam_status'   => $roamStatus,
         ]);
 
         // Re-create links

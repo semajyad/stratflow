@@ -454,6 +454,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('risk-form').action       = '/app/risks/' + riskId;
             var ownerSelect = document.getElementById('risk-owner');
             if (ownerSelect) { ownerSelect.value = row.dataset.ownerUserId || ''; }
+            var roamSelect = document.getElementById('risk-roam');
+            if (roamSelect) { roamSelect.value = row.dataset.roamStatus || ''; }
 
             // Update RPN preview
             updateRpnPreview();
@@ -880,6 +882,8 @@ function toggleRiskModal() {
         updateRpnPreview();
         var ownerSelect = document.getElementById('risk-owner');
         if (ownerSelect) { ownerSelect.value = ''; }
+        var roamSelect = document.getElementById('risk-roam');
+        if (roamSelect) { roamSelect.value = ''; }
         document.querySelectorAll('.work-item-checkbox').forEach(function(cb) {
             cb.checked = false;
         });

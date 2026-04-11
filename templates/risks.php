@@ -87,6 +87,16 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                     <label>RPN Preview: <span id="rpn-preview" class="risk-rpn">9</span></label>
                 </div>
                 <div class="form-group">
+                    <label for="risk-roam">ROAM Status</label>
+                    <select id="risk-roam" name="roam_status" class="form-control">
+                        <option value="">— None —</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="owned">Owned</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="mitigated">Mitigated</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="risk-owner">Owner</label>
                     <select id="risk-owner" name="owner_user_id" class="form-control">
                         <option value="">— Unassigned —</option>

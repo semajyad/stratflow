@@ -31,19 +31,6 @@ $roamLabels = [
 ];
 $roamStatus = $risk['roam_status'] ?? null;
 
-// Build ROAM extra items HTML
-$roamHtml  = '<div class="row-actions-separator" role="separator" style="height:1px;background:#e5e7eb;margin:4px 0;"></div>';
-foreach ($roamLabels as $val => $info) {
-    $active = ($roamStatus === $val) ? ' row-actions-item--active' : '';
-    $roamHtml .= '<form method="POST" action="/app/risks/' . $riskId . '/roam" class="row-actions-form">'
-        . '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars($csrf_token, ENT_QUOTES) . '">'
-        . '<input type="hidden" name="project_id" value="' . (int) $project['id'] . '">'
-        . '<input type="hidden" name="roam_status" value="' . htmlspecialchars($val) . '">'
-        . '<button type="submit" class="row-actions-item' . $active . '" role="menuitem">'
-        . htmlspecialchars($info['label'])
-        . '</button>'
-        . '</form>';
-}
 ?>
 <div class="risk-row" data-id="<?= $riskId ?>"
      data-title="<?= htmlspecialchars($risk['title']) ?>"
@@ -51,6 +38,7 @@ foreach ($roamLabels as $val => $info) {
      data-likelihood="<?= (int) $risk['likelihood'] ?>"
      data-impact="<?= (int) $risk['impact'] ?>"
      data-owner-user-id="<?= (int) ($risk['owner_user_id'] ?? 0) ?>"
+     data-roam-status="<?= htmlspecialchars($roamStatus ?? '') ?>"
      data-linked-ids="<?= htmlspecialchars(json_encode(array_map('intval', $linkedItemIds))) ?>">
     <div class="risk-info">
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
@@ -92,7 +80,7 @@ foreach ($roamLabels as $val => $info) {
         $row_delete_action    = '/app/risks/' . $riskId . '/delete';
         $row_delete_confirm   = 'Delete this risk?';
         $row_close_action     = '/app/risks/' . $riskId . '/close';
-        $row_extra_items_html = $roamHtml;
+        $row_extra_items_html = null;
         include __DIR__ . '/row-actions-menu.php';
     ?>
 </div>
