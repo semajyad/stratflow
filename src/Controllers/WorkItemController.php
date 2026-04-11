@@ -448,7 +448,7 @@ class WorkItemController
             $updateData['estimated_sprints'] = (int) $newEstimatedSprints;
         }
 
-        HLWorkItem::update($this->db, $id, $updateData);
+        HLWorkItem::update($this->db, (int) $id, $updateData);
 
         // Re-score after update — failure is non-fatal
         $qualityBlock = '';
