@@ -31,7 +31,7 @@ class Response
      */
     public function render(string $template, array $data = [], string $layout = 'public'): void
     {
-        self::applySecurityHeaders();
+        self::applySecurityHeaders($layout);
 
         $data['csrf_token'] = $this->csrf->getToken();
 
@@ -74,7 +74,7 @@ class Response
      */
     public function json(array $data, int $status = 200): void
     {
-        self::applySecurityHeaders();
+        self::applySecurityHeaders('app');
         http_response_code($status);
         header('Content-Type: application/json');
         echo json_encode($data);
@@ -87,7 +87,7 @@ class Response
      */
     public function redirect(string $url): void
     {
-        self::applySecurityHeaders();
+        self::applySecurityHeaders('app');
         header('Location: ' . $url);
         exit;
     }
@@ -101,7 +101,7 @@ class Response
      */
     public function download(string $content, string $filename, string $contentType): void
     {
-        self::applySecurityHeaders();
+        self::applySecurityHeaders('app');
         header('Content-Type: ' . $contentType);
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($content));
@@ -114,7 +114,7 @@ class Response
      * Covers OWASP A05 (Security Misconfiguration), HIPAA transport
      * security, PCI-DSS strong cryptography, and SOC 2 access controls.
      */
-    public static function applySecurityHeaders(): void
+    public static function applySecurityHeaders(string $profile = 'app'): void
     {
         header_remove('X-Powered-By');
         header('X-Content-Type-Options: nosniff');
@@ -127,7 +127,7 @@ class Response
         if (self::isSecureTransport()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com");
+        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy($profile));
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
         header('Cache-Control: no-store, no-cache, must-revalidate, private');
@@ -183,5 +183,14 @@ class Response
 
         $appUrl = (string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '');
         return str_starts_with($appUrl, 'https://');
+    }
+
+    private static function buildContentSecurityPolicy(string $profile): string
+    {
+        if ($profile === 'public') {
+            return "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+        }
+
+        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
     }
 }

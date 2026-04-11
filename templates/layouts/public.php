@@ -34,5 +34,6 @@
             <p>&copy; <?= date('Y') ?> ThreePoints Solutions</p>
         </div>
     </footer>
+    <script src="/assets/js/auth.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/auth.js') ?: '1' ?>" defer></script>
 </body>
 </html>
