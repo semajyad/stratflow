@@ -200,7 +200,11 @@ class AccessTokenController
 
         $team = trim((string) ($_POST['team'] ?? ''));
 
-        User::update($this->db, $userId, ['team' => $team !== '' ? $team : null]);
+        $teamValue = $team !== '' ? $team : null;
+        User::update($this->db, $userId, ['team' => $teamValue]);
+
+        // Refresh session so the page shows the updated value immediately
+        $_SESSION['user']['team'] = $teamValue;
 
         $_SESSION['_flash']['success'] = 'Team saved.';
         $this->response->redirect('/app/account/tokens');
