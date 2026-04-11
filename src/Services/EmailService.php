@@ -2,7 +2,7 @@
 /**
  * EmailService
  *
- * Sends transactional emails via configured SMTP, with MailerSend fallback.
+ * Sends transactional emails via configured SMTP, with API fallbacks.
  * SMTP supports implicit TLS on 465 and STARTTLS on 587.
  */
 
@@ -24,7 +24,7 @@ class EmailService
     // =========================================================================
 
     /**
-     * Send an HTML email via configured SMTP, with MailerSend fallback.
+     * Send an HTML email via configured SMTP, with API fallbacks.
      */
     public function send(string $to, string $subject, string $htmlBody): bool
     {
@@ -60,6 +60,19 @@ class EmailService
         }
 
         // Fallback: MailerSend API (HTTP — works on Railway, sends to anyone)
+        $resendApiKey = trim((string)($this->config['mail']['resend_api_key'] ?? ''));
+        if ($resendApiKey !== '' && $fromEmail !== '') {
+            try {
+                $sent = $this->sendViaResendApi($resendApiKey, $fromName, $fromEmail, $to, $subject, $htmlBody);
+                if ($sent) {
+                    error_log("[StratFlow] Email sent via Resend API to {$to}");
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                error_log("[StratFlow] Resend API failed: {$e->getMessage()}");
+            }
+        }
+
         $mailerSendKey = $this->config['mail']['mailersend_api_key'] ?? '';
         $mailerSendFrom = $this->config['mail']['mailersend_from'] ?? '';
 
@@ -83,7 +96,47 @@ class EmailService
     // MAILERSEND API
     // =========================================================================
 
-    private function sendViaMailerSend(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+    protected function sendViaResendApi(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+    {
+        $payload = json_encode([
+            'from' => "{$fromName} <{$fromEmail}>",
+            'to' => [$to],
+            'subject' => $subject,
+            'html' => $htmlBody,
+            'reply_to' => $fromEmail,
+        ]);
+
+        $ch = curl_init('https://api.resend.com/emails');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            throw new \RuntimeException("Resend cURL error: {$curlError}");
+        }
+
+        if ($httpCode === 200) {
+            return true;
+        }
+
+        $body = json_decode((string)$response, true);
+        $errorMsg = $body['message'] ?? $body['error'] ?? "HTTP {$httpCode}";
+        throw new \RuntimeException("Resend API error: {$errorMsg}");
+    }
+
+    protected function sendViaMailerSend(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
     {
         $payload = json_encode([
             'from' => ['email' => $fromEmail, 'name' => $fromName],
@@ -127,7 +180,7 @@ class EmailService
     // SMTP
     // =========================================================================
 
-    private function sendViaSmtp(
+    protected function sendViaSmtp(
         string $host,
         int $port,
         string $encryption,

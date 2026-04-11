@@ -131,4 +131,83 @@ class EmailServiceTest extends TestCase
         // No button block when buttonText and buttonUrl are empty strings
         $this->assertStringNotContainsString('<a href=""', $html);
     }
+
+    #[Test]
+    public function testSendFallsBackToResendApiAfterSmtpFailure(): void
+    {
+        $service = new class([
+            'mail' => [
+                'from_name' => 'StratFlow Test',
+                'from_email' => 'support@4168411.xyz',
+                'smtp_host' => 'smtp.resend.com',
+                'smtp_port' => 587,
+                'smtp_encryption' => 'auto',
+                'smtp_user' => 'resend',
+                'smtp_pass' => 're_test',
+                'resend_api_key' => 're_test',
+            ],
+        ]) extends EmailService {
+            public array $calls = [];
+
+            protected function sendViaSmtp(
+                string $host,
+                int $port,
+                string $encryption,
+                string $user,
+                string $pass,
+                string $fromName,
+                string $fromEmail,
+                string $to,
+                string $subject,
+                string $htmlBody
+            ): bool {
+                $this->calls[] = 'smtp';
+                throw new \RuntimeException('SMTP unavailable');
+            }
+
+            protected function sendViaResendApi(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+            {
+                $this->calls[] = 'resend';
+                return true;
+            }
+        };
+
+        $result = $service->send('user@example.com', 'Subject', '<p>Hello</p>');
+
+        $this->assertTrue($result);
+        $this->assertSame(['smtp', 'resend'], $service->calls);
+    }
+
+    #[Test]
+    public function testSendUsesMailerSendOnlyAfterResendFallbackFails(): void
+    {
+        $service = new class([
+            'mail' => [
+                'from_name' => 'StratFlow Test',
+                'from_email' => 'support@4168411.xyz',
+                'resend_api_key' => 're_test',
+                'mailersend_api_key' => 'mlsn_test',
+                'mailersend_from' => 'support@4168411.xyz',
+            ],
+        ]) extends EmailService {
+            public array $calls = [];
+
+            protected function sendViaResendApi(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+            {
+                $this->calls[] = 'resend';
+                throw new \RuntimeException('Resend unavailable');
+            }
+
+            protected function sendViaMailerSend(string $apiKey, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
+            {
+                $this->calls[] = 'mailersend';
+                return true;
+            }
+        };
+
+        $result = $service->send('user@example.com', 'Subject', '<p>Hello</p>');
+
+        $this->assertTrue($result);
+        $this->assertSame(['resend', 'mailersend'], $service->calls);
+    }
 }
