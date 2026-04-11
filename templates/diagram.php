@@ -347,6 +347,25 @@ function saveNodeOkr() {
         status.textContent = 'Connection error';
     });
 }
+
+// Auto-open OKR panel when arriving from executive dashboard (?node=A)
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var nodeKey = params.get('node');
+    if (nodeKey) {
+        // Wait for Mermaid to render before opening the panel
+        var attempts = 0;
+        var interval = setInterval(function () {
+            attempts++;
+            if (typeof openNodeOkrPanel === 'function') {
+                clearInterval(interval);
+                openNodeOkrPanel(nodeKey);
+            } else if (attempts > 40) {
+                clearInterval(interval);
+            }
+        }, 150);
+    }
+}());
 </script>
 <?php endif; ?>
 

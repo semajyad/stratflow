@@ -209,7 +209,7 @@ class ExecutiveController
         $okrItems = [];
         try {
             $okrItems = $this->db->query(
-                "SELECT dn.id AS item_id, dn.okr_title, dn.okr_description,
+                "SELECT dn.id AS item_id, dn.node_key, dn.okr_title, dn.okr_description,
                         p.id AS project_id, p.name AS project_name,
                         0 AS on_track, 0 AS at_risk, 0 AS off_track,
                         0 AS not_started, 0 AS achieved, 0 AS kr_count

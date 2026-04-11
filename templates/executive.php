@@ -268,12 +268,16 @@ $changeTypeLabels = [
         $barColour = $pct >= 80 ? '#10b981' : ($pct >= 40 ? '#f59e0b' : '#6366f1');
     ?>
     <?php if ($hasKrs): ?>
+    <?php
+        $nodeKey    = htmlspecialchars($okr['node_key'] ?? '', ENT_QUOTES, 'UTF-8');
+        $roadmapUrl = '/app/diagram?project_id=' . (int) $okr['project_id'] . '&node=' . urlencode($okr['node_key'] ?? '');
+    ?>
     <details class="okr-details">
         <summary class="okr-row" style="cursor:pointer; list-style:none; display:flex; align-items:center;">
             <div class="okr-row-left">
                 <span class="okr-expand-icon">&#9654;</span>
                 <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
-                <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+                <a href="<?= $roadmapUrl ?>" class="okr-title" title="Open on roadmap" onclick="event.stopPropagation();"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
             </div>
             <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
                 <?php if ($sp['total'] > 0): ?>
@@ -306,7 +310,8 @@ $changeTypeLabels = [
             ];
             ?>
             <?php if (!empty($structuredKrs)): ?>
-                <?php foreach ($structuredKrs as $skr):
+                <?php foreach ($structuredKrs as $skrIdx => $skr):
+                    $skrLabel = $nodeKey . '-KR' . ($skrIdx + 1);
                     $baseline = (float) ($skr['baseline_value'] ?? 0);
                     $target   = (float) ($skr['target_value']   ?? 0);
                     $current  = (float) ($skr['current_value']  ?? 0);
@@ -318,7 +323,7 @@ $changeTypeLabels = [
                 ?>
                 <div class="okr-kr-item okr-kr-item--structured">
                     <div class="okr-kr-item-header">
-                        <span class="okr-kr-text"><?= htmlspecialchars($skr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <span class="okr-kr-text"><span class="okr-kr-num"><?= htmlspecialchars($skrLabel, ENT_QUOTES, 'UTF-8') ?></span> <?= htmlspecialchars($skr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
                         <span class="okr-kr-status-badge" style="background:<?= $krBg ?>; color:<?= $krColor ?>;"><?= $krStatusLabels[$krStatus] ?? ucwords(str_replace('_', ' ', $krStatus)) ?></span>
                     </div>
                     <div class="okr-kr-progress-row">
@@ -334,10 +339,14 @@ $changeTypeLabels = [
                 <?php endforeach; ?>
             <?php else: ?>
                 <?php foreach ($krLines as $j => $krLine):
+                    // Extract KR number from line prefix (e.g. "KR2: ..." → 2); fallback to j+1
+                    preg_match('/^\s*KR(\d+)/i', $krLine, $krNumMatch);
+                    $krNum       = isset($krNumMatch[1]) ? (int) $krNumMatch[1] : ($j + 1);
                     $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
+                    $krLabel     = $nodeKey . '-KR' . $krNum;
                 ?>
                 <div class="okr-kr-item">
-                    <span class="okr-kr-num"><?= (int) ($j + 1) ?>.</span>
+                    <span class="okr-kr-num"><?= htmlspecialchars($krLabel, ENT_QUOTES, 'UTF-8') ?></span>
                     <span class="okr-kr-text"><?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
                 <?php endforeach; ?>
@@ -358,7 +367,7 @@ $changeTypeLabels = [
         <div class="okr-row-left">
             <span style="display:inline-block; width:10px;"></span>
             <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
-            <span class="okr-title"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+            <a href="<?= $roadmapUrl ?>" class="okr-title" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
         </div>
         <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
             <?php if ($sp['total'] > 0): ?>
@@ -513,6 +522,11 @@ $changeTypeLabels = [
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;
+}
+a.okr-title:hover {
+    color: #4f46e5;
+    text-decoration: underline;
 }
 .kr-pip {
     display: inline-block;
