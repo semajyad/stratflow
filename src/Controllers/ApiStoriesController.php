@@ -314,6 +314,55 @@ class ApiStoriesController
     }
 
     // ===========================
+    // ASSIGN
+    // ===========================
+
+    /**
+     * POST /api/v1/stories/{id}/assign
+     *
+     * Assigns the story to the authenticated user (self-assign).
+     * Body: {} — no body needed; the assignee is always the PAT owner.
+     */
+    public function assign(string $id): void
+    {
+        $user    = $this->auth->user();
+        $orgId   = (int) $user['org_id'];
+        $userId  = (int) $user['id'];
+        $storyId = (int) $id;
+
+        $story = $this->db->query(
+            "SELECT us.id, us.title, p.org_id AS project_org_id
+             FROM user_stories us
+             JOIN projects p ON p.id = us.project_id
+             WHERE us.id = :id",
+            [':id' => $storyId]
+        )->fetch();
+
+        if (!$story || (int) $story['project_org_id'] !== $orgId) {
+            $this->jsonError('Story not found or not in your organisation', 404);
+            return;
+        }
+
+        UserStory::update($this->db, $storyId, ['assignee_user_id' => $userId]);
+
+        AuditLogger::log(
+            $this->db,
+            $userId,
+            AuditLogger::ADMIN_ACTION,
+            $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'story_assigned', 'story_id' => $storyId, 'assignee_user_id' => $userId, 'source' => 'mcp']
+        );
+
+        $this->json(['data' => [
+            'id'       => $storyId,
+            'sf_ref'   => 'SF-' . $storyId,
+            'title'    => $story['title'],
+            'assignee' => $user['name'] ?? $user['email'],
+        ]]);
+    }
+
+    // ===========================
     // PRIVATE HELPERS
     // ===========================
 

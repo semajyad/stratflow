@@ -245,5 +245,6 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/api/v1/stories',                 'ApiStoriesController@index',        ['api_auth']);
     $router->add('GET',  '/api/v1/stories/{id}',            'ApiStoriesController@show',         ['api_auth']);
     $router->add('POST', '/api/v1/stories/{id}/status',     'ApiStoriesController@updateStatus', ['api_auth']);
+    $router->add('POST', '/api/v1/stories/{id}/assign',     'ApiStoriesController@assign',        ['api_auth']);
     $router->add('GET',  '/api/v1/projects',                'ApiProjectsController@index',       ['api_auth']);
 };
