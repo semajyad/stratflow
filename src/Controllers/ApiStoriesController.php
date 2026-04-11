@@ -58,22 +58,22 @@ class ApiStoriesController
      */
     public function me(): void
     {
-        $user = $this->auth->user();
+        $user   = $this->auth->user();
+        $userId = (int) $user['id'];
+        $orgId  = (int) $user['org_id'];
 
-        // DEBUG: also do a fresh SELECT to compare with middleware-loaded principal
-        $fresh = $this->db->query(
-            'SELECT id, org_id, team, jira_account_id FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
-            [':id' => (int) $user['id'], ':org_id' => (int) $user['org_id']]
+        // Read team fresh from DB — principal/session may predate migration 032
+        $teamRow = $this->db->query(
+            'SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
+            [':id' => $userId, ':org_id' => $orgId]
         )->fetch();
 
         $this->json([
-            'id'          => (int) $user['id'],
-            'name'        => $user['name'] ?? ($user['full_name'] ?? ''),
-            'email'       => $user['email'],
-            'org_id'      => (int) $user['org_id'],
-            'team'        => $user['team'] ?? null,
-            '_debug_principal_keys' => array_keys($user),
-            '_debug_fresh_team'     => $fresh['team'] ?? 'NO_ROW',
+            'id'     => $userId,
+            'name'   => $user['name'] ?? ($user['full_name'] ?? ''),
+            'email'  => $user['email'],
+            'org_id' => $orgId,
+            'team'   => $teamRow['team'] ?? null,
         ]);
     }
 
@@ -87,32 +87,14 @@ class ApiStoriesController
     {
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
-        $orgId  = (int) $user['org_id'];
 
         $body   = $this->request->json();
         $team   = isset($body['team']) ? trim((string) $body['team']) : null;
         $team   = ($team !== null && $team !== '') ? $team : null;
 
-        // Direct UPDATE with row-count verification to diagnose write failures on Railway
-        $stmt = $this->db->query(
-            'UPDATE users SET `team` = :team WHERE id = :id AND org_id = :org_id',
-            [':team' => $team, ':id' => $userId, ':org_id' => $orgId]
-        );
-        $rowCount = $stmt->rowCount();
+        User::update($this->db, $userId, ['team' => $team]);
 
-        $after = $this->db->query(
-            'SELECT `team` FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
-            [':id' => $userId, ':org_id' => $orgId]
-        )->fetch();
-
-        $this->json([
-            'ok'        => $rowCount > 0,
-            'rows'      => $rowCount,
-            'set_to'    => $team,
-            'db_reads'  => $after['team'] ?? null,
-            'user_id'   => $userId,
-            'org_id'    => $orgId,
-        ]);
+        $this->json(['team' => $team]);
     }
 
     // ===========================
@@ -381,7 +363,15 @@ class ApiStoriesController
     {
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
-        $team   = trim((string) ($user['team'] ?? ''));
+        $userId = (int) $user['id'];
+
+        // Always read team fresh from DB — the principal/session may be stale
+        // (e.g. session set before the team column was added, or cached before saveTeam ran).
+        $teamRow = $this->db->query(
+            'SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
+            [':id' => $userId, ':org_id' => $orgId]
+        )->fetch();
+        $team = trim((string) ($teamRow['team'] ?? ''));
 
         if ($team === '') {
             $this->jsonError(
