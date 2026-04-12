@@ -49,11 +49,12 @@
 </div>
 <?php else: ?>
 
+<div id="sprints-page" data-project-id="<?= (int) $project['id'] ?>"></div>
+
 <div class="card mb-6" style="border-left: 4px solid var(--primary);">
     <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;">
         <label class="form-label" style="margin: 0; white-space: nowrap; font-weight: 600;">Team (Board):</label>
-        <select id="active-team-selector" class="form-control" style="max-width: 300px;"
-                onchange="filterSprintsByTeam(this.value)">
+        <select id="active-team-selector" class="form-control js-sprint-team-selector" style="max-width: 300px;">
             <?php foreach ($teams as $t): ?>
                 <option value="<?= (int) $t['id'] ?>"
                         data-capacity="<?= (int) ($t['capacity'] ?? 0) ?>"
@@ -88,7 +89,7 @@
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Start</label>
-                    <input type="date" name="start_date" id="sprint-start-date" class="form-control" onchange="autoSetSprintEndDate()">
+                    <input type="date" name="start_date" id="sprint-start-date" class="form-control">
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">End</label>
@@ -103,113 +104,6 @@
         </form>
     </div>
 </div>
-<script>
-(function() {
-    var PROJECT_ID    = <?= (int) $project['id'] ?>;
-    var JIRA_ENABLED  = <?= json_encode(!empty($jira_connected)) ?>;
-    var sprintLengthDays = 14; // updated by loadJiraDefaults
-
-    function tomorrow() {
-        var d = new Date();
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().slice(0, 10);
-    }
-    function addDays(isoDate, days) {
-        var d = new Date(isoDate);
-        d.setDate(d.getDate() + days);
-        return d.toISOString().slice(0, 10);
-    }
-
-    // Populate all sprint forms with fetched/fallback defaults
-    function applyDefaults(data) {
-        sprintLengthDays = data.sprint_length_days || 14;
-
-        var start = data.suggested_start || tomorrow();
-
-        // Create Sprint — name
-        var nameEl = document.getElementById('sprint-name-input');
-        if (nameEl && !nameEl.value && data.next_sprint_number) {
-            nameEl.value       = 'Sprint ' + data.next_sprint_number;
-            nameEl.placeholder = 'Sprint ' + data.next_sprint_number;
-        }
-
-        // Create Sprint — start date
-        var startEl = document.getElementById('sprint-start-date');
-        if (startEl && !startEl.value) {
-            startEl.value = start;
-        }
-
-        // Create Sprint — end date (sprint length - 1 so start+end are inclusive)
-        var endEl = document.getElementById('sprint-end-date');
-        if (endEl && !endEl.value && startEl && startEl.value) {
-            endEl.value = addDays(startEl.value, sprintLengthDays - 1);
-        }
-
-        // Create Sprint — capacity
-        var capEl = document.querySelector('input[name="team_capacity"]');
-        if (capEl && !capEl.value && data.suggested_capacity) {
-            capEl.value       = data.suggested_capacity;
-            capEl.placeholder = data.suggested_capacity + ' pts';
-        }
-
-        // Auto-Generate — start date
-        var genStart = document.querySelector('form[action*="auto-generate"] input[name="start_date"]');
-        if (genStart && !genStart.value) {
-            genStart.value = start;
-            if (data.suggested_start) {
-                genStart.title = 'Day after last Jira sprint (' + data.suggested_start + ')';
-            }
-        }
-
-        // Auto-Generate — sprint length select
-        var genLength = document.querySelector('form[action*="auto-generate"] select[name="sprint_length"]');
-        if (genLength) {
-            genLength.value = sprintLengthDays;
-        }
-
-        // Auto-Generate — capacity
-        var genCap = document.querySelector('form[action*="auto-generate"] input[name="capacity"]');
-        if (genCap && !genCap.value && data.suggested_capacity) {
-            genCap.value       = data.suggested_capacity;
-            genCap.placeholder = 'e.g. ' + data.suggested_capacity + ' (Jira avg)';
-        }
-    }
-
-    // Fetch Jira defaults in background; fall back to local-only defaults
-    window.loadJiraDefaults = function loadJiraDefaults(boardId) {
-        var url = '/app/sprints/jira-defaults?project_id=' + PROJECT_ID + '&board_id=' + (boardId || 0);
-        fetch(url, { credentials: 'same-origin' })
-            .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-            .then(applyDefaults)
-            .catch(function() {
-                // Jira unreachable — apply tomorrow + local sprint count only
-                applyDefaults({ sprint_length_days: 14, suggested_start: null,
-                                 next_sprint_number: null, suggested_capacity: null });
-            });
-    }
-
-    window.autoSetSprintEndDate = function() {
-        var startEl = document.getElementById('sprint-start-date');
-        var endEl   = document.getElementById('sprint-end-date');
-        if (startEl && startEl.value) {
-            endEl.value = addDays(startEl.value, sprintLengthDays - 1);
-        }
-    };
-
-    // On page load: fetch defaults for the initially selected team's board
-    document.addEventListener('DOMContentLoaded', function() {
-        var sel = document.getElementById('active-team-selector');
-        if (sel) {
-            var opt     = sel.options[sel.selectedIndex];
-            var boardId = opt ? (parseInt(opt.dataset.jiraBoardId, 10) || 0) : 0;
-            loadJiraDefaults(boardId);
-        } else {
-            // No team selector — fetch without board to get local defaults
-            loadJiraDefaults(0);
-        }
-    });
-})();
-</script>
 
 <!-- ===========================
      Auto-Generate Sprints
@@ -308,7 +202,8 @@
                       data-overlay="Allocating stories to sprints by priority, packing each sprint as close to capacity as possible.">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                    <button type="submit" class="btn btn-ai btn-sm" onclick="return confirm('Auto-fill sprints with backlog stories by priority?')">Auto-Fill Sprints</button>
+                    <button type="submit" class="btn btn-ai btn-sm"
+                            data-confirm="Auto-fill sprints with backlog stories by priority?">Auto-Fill Sprints</button>
                 </form>
             <?php endif; ?>
         </div>
@@ -326,30 +221,3 @@
 <?php endif; /* end teams check */ ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
-
-<script>
-function filterSprintsByTeam(teamId) {
-    // Update hidden team_id in sprint creation form
-    var hidden = document.getElementById('sprint-team-id');
-    if (hidden) hidden.value = teamId;
-
-    // Show/hide sprint cards by team
-    document.querySelectorAll('.sprint-card').forEach(function(card) {
-        var cardTeamId = card.dataset.teamId || '';
-        // Show all if no team filter, or show matching + unassigned
-        if (!teamId || cardTeamId === teamId || cardTeamId === '' || cardTeamId === '0') {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-
-    // Re-fetch Jira defaults for the newly selected board
-    var sel = document.getElementById('active-team-selector');
-    var opt = sel ? sel.querySelector('option[value="' + teamId + '"]') : null;
-    var boardId = opt ? (parseInt(opt.dataset.jiraBoardId, 10) || 0) : 0;
-    if (typeof loadJiraDefaults === 'function') {
-        loadJiraDefaults(boardId);
-    }
-}
-</script>

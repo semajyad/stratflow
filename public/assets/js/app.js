@@ -472,6 +472,18 @@ document.addEventListener('submit', function(e) {
     }
 });
 
+document.addEventListener('change', function(e) {
+    var sprintTeamSelector = e.target.closest('.js-sprint-team-selector');
+    if (sprintTeamSelector) {
+        filterSprintsByTeam(sprintTeamSelector.value || '');
+        return;
+    }
+
+    if (e.target.id === 'sprint-start-date') {
+        autoSetSprintEndDate();
+    }
+});
+
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter' || !e.target.matches('#git-links-ref-input')) {
         return;
@@ -1725,6 +1737,140 @@ function toggleDocumentList(toggle) {
     }
 }
 
+var sprintLengthDays = 14;
+
+function getSprintsPage() {
+    return document.getElementById('sprints-page');
+}
+
+function getTomorrowIsoDate() {
+    var d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+}
+
+function addDaysToIsoDate(isoDate, days) {
+    var d = new Date(isoDate);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+}
+
+function applySprintDefaults(data) {
+    sprintLengthDays = data.sprint_length_days || 14;
+
+    var start = data.suggested_start || getTomorrowIsoDate();
+    var nameEl = document.getElementById('sprint-name-input');
+    if (nameEl && !nameEl.value && data.next_sprint_number) {
+        nameEl.value = 'Sprint ' + data.next_sprint_number;
+        nameEl.placeholder = 'Sprint ' + data.next_sprint_number;
+    }
+
+    var startEl = document.getElementById('sprint-start-date');
+    if (startEl && !startEl.value) {
+        startEl.value = start;
+    }
+
+    var endEl = document.getElementById('sprint-end-date');
+    if (endEl && !endEl.value && startEl && startEl.value) {
+        endEl.value = addDaysToIsoDate(startEl.value, sprintLengthDays - 1);
+    }
+
+    var capEl = document.querySelector('input[name="team_capacity"]');
+    if (capEl && !capEl.value && data.suggested_capacity) {
+        capEl.value = data.suggested_capacity;
+        capEl.placeholder = data.suggested_capacity + ' pts';
+    }
+
+    var genStart = document.querySelector('form[action*="auto-generate"] input[name="start_date"]');
+    if (genStart && !genStart.value) {
+        genStart.value = start;
+        if (data.suggested_start) {
+            genStart.title = 'Day after last Jira sprint (' + data.suggested_start + ')';
+        }
+    }
+
+    var genLength = document.querySelector('form[action*="auto-generate"] select[name="sprint_length"]');
+    if (genLength) {
+        genLength.value = String(sprintLengthDays);
+    }
+
+    var genCap = document.querySelector('form[action*="auto-generate"] input[name="capacity"]');
+    if (genCap && !genCap.value && data.suggested_capacity) {
+        genCap.value = data.suggested_capacity;
+        genCap.placeholder = 'e.g. ' + data.suggested_capacity + ' (Jira avg)';
+    }
+}
+
+window.loadJiraDefaults = function loadJiraDefaults(boardId) {
+    var sprintPage = getSprintsPage();
+    if (!sprintPage) {
+        return;
+    }
+    var projectId = parseInt(sprintPage.dataset.projectId || '0', 10);
+    if (!projectId) {
+        return;
+    }
+
+    var url = '/app/sprints/jira-defaults?project_id=' + projectId + '&board_id=' + (boardId || 0);
+    fetch(url, { credentials: 'same-origin' })
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(applySprintDefaults)
+        .catch(function() {
+            applySprintDefaults({
+                sprint_length_days: 14,
+                suggested_start: null,
+                next_sprint_number: null,
+                suggested_capacity: null
+            });
+        });
+};
+
+window.autoSetSprintEndDate = function autoSetSprintEndDate() {
+    var startEl = document.getElementById('sprint-start-date');
+    var endEl = document.getElementById('sprint-end-date');
+    if (startEl && endEl && startEl.value) {
+        endEl.value = addDaysToIsoDate(startEl.value, sprintLengthDays - 1);
+    }
+};
+
+window.filterSprintsByTeam = function filterSprintsByTeam(teamId) {
+    var hidden = document.getElementById('sprint-team-id');
+    if (hidden) {
+        hidden.value = teamId;
+    }
+
+    document.querySelectorAll('.sprint-card').forEach(function(card) {
+        var cardTeamId = card.dataset.teamId || '';
+        if (!teamId || cardTeamId === teamId || cardTeamId === '' || cardTeamId === '0') {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    var sel = document.getElementById('active-team-selector');
+    var opt = sel ? sel.querySelector('option[value="' + teamId + '"]') : null;
+    var boardId = opt ? (parseInt(opt.dataset.jiraBoardId || '0', 10) || 0) : 0;
+    window.loadJiraDefaults(boardId);
+};
+
+function initializeSprintsPage() {
+    var sprintPage = getSprintsPage();
+    if (!sprintPage || sprintPage.dataset.initialized === '1') {
+        return;
+    }
+    sprintPage.dataset.initialized = '1';
+
+    var selector = document.getElementById('active-team-selector');
+    if (selector) {
+        var opt = selector.options[selector.selectedIndex];
+        var boardId = opt ? (parseInt(opt.dataset.jiraBoardId || '0', 10) || 0) : 0;
+        window.loadJiraDefaults(boardId);
+    } else {
+        window.loadJiraDefaults(0);
+    }
+}
+
 function toggleTargetVisibility(targetId) {
     var target = targetId ? document.getElementById(targetId) : null;
     if (target) {
@@ -2259,6 +2405,8 @@ function preloadMemberPicker(prefix, memberships) {
 // ===========================
 
 document.addEventListener('DOMContentLoaded', function() {
+    initializeSprintsPage();
+
     var backlog = document.getElementById('backlog-stories');
     if (backlog && typeof Sortable !== 'undefined') {
         Sortable.create(backlog, {
