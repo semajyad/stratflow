@@ -3417,7 +3417,6 @@ function showJiraSyncPreview(form) {
         modal = document.createElement('div');
         modal.id = 'jira-sync-preview-modal';
         modal.className = 'modal-overlay';
-        modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
                 closeJiraSyncPreviewModal();
@@ -3426,15 +3425,15 @@ function showJiraSyncPreview(form) {
         document.body.appendChild(modal);
     }
 
-    modal.innerHTML = '<div class="card" style="max-width:560px; width:90%; margin:0;">' +
+    modal.innerHTML = '<div class="card jira-sync-preview-card">' +
         '<div class="card-header flex justify-between items-center">' +
-            '<h2 class="card-title" style="margin:0;">Preview Jira Sync</h2>' +
-            '<button type="button" class="js-jira-preview-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>' +
+            '<h2 class="card-title jira-sync-preview-title">Preview Jira Sync</h2>' +
+            '<button type="button" class="js-jira-preview-close jira-sync-preview-close" aria-label="Close preview">&times;</button>' +
         '</div>' +
         '<div class="card-body" id="jira-preview-body">' +
-            '<div style="text-align:center; padding:1.5rem;">' +
-                '<div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>' +
-                '<p class="text-muted" style="margin:0; font-size:0.875rem;">Checking what will be synced to ' + jiraKey + '...</p>' +
+            '<div class="jira-sync-preview-loading">' +
+                '<div class="loading-spinner jira-sync-preview-loading-spinner"></div>' +
+                '<p class="text-muted jira-sync-preview-loading-text">Checking what will be synced to ' + jiraKey + '...</p>' +
             '</div>' +
         '</div>' +
         '</div>';
@@ -3455,8 +3454,8 @@ function showJiraSyncPreview(form) {
         if (!body) return;
 
         if (data.error) {
-            body.innerHTML = '<p style="color:var(--danger); margin:0;">Error: ' + escapeHtml(data.error) + '</p>' +
-                '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
+            body.innerHTML = '<p class="jira-sync-preview-error">Error: ' + escapeHtml(data.error) + '</p>' +
+                '<div class="flex justify-end gap-2 jira-sync-preview-actions">' +
                     '<button type="button" class="btn btn-secondary js-jira-preview-close">Close</button>' +
                 '</div>';
             return;
@@ -3465,32 +3464,32 @@ function showJiraSyncPreview(form) {
         var pushCount = (data.push || []).length;
         var pullCount = (data.pull || []).length;
 
-        var html = '<p class="text-muted" style="font-size:0.875rem; margin:0 0 1rem;">Review what will happen when you sync to <strong>' + escapeHtml(jiraKey) + '</strong>:</p>';
+        var html = '<p class="text-muted jira-sync-preview-intro">Review what will happen when you sync to <strong>' + escapeHtml(jiraKey) + '</strong>:</p>';
 
-        html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">';
-        html += '  <div style="padding:1rem; background:#eff6ff; border-radius:8px; text-align:center;">';
-        html += '    <div style="font-size:1.75rem; font-weight:700; color:var(--primary);">' + pushCount + '</div>';
-        html += '    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">To Push</div>';
+        html += '<div class="jira-sync-preview-summary-grid">';
+        html += '  <div class="jira-sync-preview-summary-card jira-sync-preview-summary-card--push">';
+        html += '    <div class="jira-sync-preview-summary-count jira-sync-preview-summary-count--push">' + pushCount + '</div>';
+        html += '    <div class="jira-sync-preview-summary-label">To Push</div>';
         html += '  </div>';
-        html += '  <div style="padding:1rem; background:#f0fdf4; border-radius:8px; text-align:center;">';
-        html += '    <div style="font-size:1.75rem; font-weight:700; color:#059669;">' + pullCount + '</div>';
-        html += '    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">To Import</div>';
+        html += '  <div class="jira-sync-preview-summary-card jira-sync-preview-summary-card--pull">';
+        html += '    <div class="jira-sync-preview-summary-count jira-sync-preview-summary-count--pull">' + pullCount + '</div>';
+        html += '    <div class="jira-sync-preview-summary-label">To Import</div>';
         html += '  </div>';
         html += '</div>';
 
         if (pushCount > 0) {
-            html += '<details style="margin-bottom:0.75rem;"><summary style="cursor:pointer; font-size:0.85rem; font-weight:600;">Items to push (' + pushCount + ')</summary>';
-            html += '<ul style="margin:0.5rem 0 0; padding-left:1.5rem; font-size:0.85rem; max-height:200px; overflow-y:auto;">';
+            html += '<details class="jira-sync-preview-section"><summary class="jira-sync-preview-section-summary">Items to push (' + pushCount + ')</summary>';
+            html += '<ul class="jira-sync-preview-list">';
             (data.push || []).forEach(function(item) {
-                var action = item.action === 'create' ? '<span style="color:var(--primary);">NEW</span>' : '<span style="color:#059669;">UPDATE</span>';
+                var action = item.action === 'create' ? '<span class="jira-sync-preview-action jira-sync-preview-action--new">NEW</span>' : '<span class="jira-sync-preview-action jira-sync-preview-action--update">UPDATE</span>';
                 html += '<li>' + action + ' ' + escapeHtml(item.type) + ': ' + escapeHtml(item.title || '') + '</li>';
             });
             html += '</ul></details>';
         }
 
         if (pullCount > 0) {
-            html += '<details style="margin-bottom:0.75rem;"><summary style="cursor:pointer; font-size:0.85rem; font-weight:600;">Items to import from Jira (' + pullCount + ')</summary>';
-            html += '<ul style="margin:0.5rem 0 0; padding-left:1.5rem; font-size:0.85rem; max-height:200px; overflow-y:auto;">';
+            html += '<details class="jira-sync-preview-section"><summary class="jira-sync-preview-section-summary">Items to import from Jira (' + pullCount + ')</summary>';
+            html += '<ul class="jira-sync-preview-list">';
             (data.pull || []).forEach(function(item) {
                 html += '<li>' + escapeHtml(item.type) + ': ' + escapeHtml(item.title || '') + ' <span class="text-muted">(' + escapeHtml(item.key || '') + ')</span></li>';
             });
@@ -3498,10 +3497,10 @@ function showJiraSyncPreview(form) {
         }
 
         if (pushCount === 0 && pullCount === 0) {
-            html += '<p style="text-align:center; padding:1rem; color:var(--text-muted); margin:0;">Everything is already in sync. No changes to push or pull.</p>';
+            html += '<p class="jira-sync-preview-empty">Everything is already in sync. No changes to push or pull.</p>';
         }
 
-        html += '<div class="flex justify-end gap-2" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">';
+        html += '<div class="flex justify-end gap-2 jira-sync-preview-actions jira-sync-preview-actions--footer">';
         html += '  <button type="button" class="btn btn-secondary js-jira-preview-close">Cancel</button>';
         if (pushCount > 0 || pullCount > 0) {
             html += '  <button type="button" class="btn btn-primary js-jira-preview-submit" data-project-id="' + escapeHtml(String(projectId)) + '">Confirm Sync</button>';
@@ -3513,8 +3512,8 @@ function showJiraSyncPreview(form) {
     .catch(function(err) {
         var body = document.getElementById('jira-preview-body');
         if (body) {
-            body.innerHTML = '<p style="color:var(--danger);">Failed to load preview: ' + escapeHtml(err.message) + '</p>' +
-                '<div class="flex justify-end gap-2" style="margin-top:1rem;">' +
+            body.innerHTML = '<p class="jira-sync-preview-error">Failed to load preview: ' + escapeHtml(err.message) + '</p>' +
+                '<div class="flex justify-end gap-2 jira-sync-preview-actions">' +
                     '<button type="button" class="btn btn-secondary js-jira-preview-close">Close</button>' +
                     '<button type="button" class="btn btn-primary js-jira-preview-submit" data-project-id="' + escapeHtml(String(projectId)) + '">Sync Anyway</button>' +
                 '</div>';

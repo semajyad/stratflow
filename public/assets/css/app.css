@@ -3810,6 +3810,135 @@ select.kr-field--compact {
     border-color: var(--primary, #3b82f6);
 }
 
+.jira-sync-preview-card {
+    margin: 0;
+    max-width: 560px;
+    width: 90%;
+}
+
+.jira-sync-preview-title {
+    margin: 0;
+}
+
+.jira-sync-preview-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.5rem;
+}
+
+.jira-sync-preview-loading {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.jira-sync-preview-loading-spinner {
+    margin: 0 auto 0.75rem;
+}
+
+.jira-sync-preview-loading-text {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.jira-sync-preview-error {
+    color: var(--danger);
+    margin: 0;
+}
+
+.jira-sync-preview-intro {
+    font-size: 0.875rem;
+    margin: 0 0 1rem;
+}
+
+.jira-sync-preview-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 1rem;
+}
+
+.jira-sync-preview-summary-card {
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.jira-sync-preview-summary-card--push {
+    background: #eff6ff;
+}
+
+.jira-sync-preview-summary-card--pull {
+    background: #f0fdf4;
+}
+
+.jira-sync-preview-summary-count {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.jira-sync-preview-summary-count--push {
+    color: var(--primary);
+}
+
+.jira-sync-preview-summary-count--pull {
+    color: var(--success);
+}
+
+.jira-sync-preview-summary-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.jira-sync-preview-section {
+    margin-bottom: 0.75rem;
+}
+
+.jira-sync-preview-section-summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.jira-sync-preview-list {
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-left: 1.5rem;
+}
+
+.jira-sync-preview-action {
+    font-weight: 600;
+}
+
+.jira-sync-preview-action--new {
+    color: var(--primary);
+}
+
+.jira-sync-preview-action--update {
+    color: var(--success);
+}
+
+.jira-sync-preview-empty {
+    color: var(--text-muted);
+    margin: 0;
+    padding: 1rem;
+    text-align: center;
+}
+
+.jira-sync-preview-actions {
+    margin-top: 1rem;
+}
+
+.jira-sync-preview-actions--footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+}
+
 /* Password toggle */
 .password-wrapper {
     position: relative;
