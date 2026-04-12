@@ -1728,7 +1728,11 @@ function toggleDocumentList(toggle) {
 function toggleTargetVisibility(targetId) {
     var target = targetId ? document.getElementById(targetId) : null;
     if (target) {
+        var shouldShow = target.classList.contains('hidden');
         target.classList.toggle('hidden');
+        if (target.tagName && target.tagName.toLowerCase() === 'tr') {
+            target.style.display = shouldShow ? 'table-row' : 'none';
+        }
     }
 }
 

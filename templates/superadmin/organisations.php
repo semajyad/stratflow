@@ -139,21 +139,21 @@
                             </td>
                             <td style="padding:0.85rem 1rem; font-size:0.8rem; color:var(--text-muted);"><?= htmlspecialchars($createdAt) ?></td>
                             <td style="padding:0.85rem 1.25rem; text-align:right; white-space:nowrap;">
-                                <button type="button" class="btn btn-sm btn-secondary"
-                                        onclick="toggleOrgEdit(<?= $orgId ?>)">Edit</button>
+                                <button type="button" class="btn btn-sm btn-secondary js-toggle-target"
+                                        data-target-id="org-edit-<?= $orgId ?>">Edit</button>
                                 <a href="/superadmin/organisations/<?= $orgId ?>/export"
                                    class="btn btn-sm btn-secondary">Export</a>
-                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;"
-                                      onsubmit="return confirm('Delete <?= htmlspecialchars(addslashes($org['name'])) ?>? This cannot be undone.');">
+                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="action" value="delete">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                            data-confirm="Delete <?= htmlspecialchars($org['name'], ENT_QUOTES) ?>? This cannot be undone.">Delete</button>
                                 </form>
                             </td>
                         </tr>
 
                         <!-- Inline edit row (hidden by default) -->
-                        <tr id="org-edit-<?= $orgId ?>" style="display:none; background:#f8fafc;">
+                        <tr id="org-edit-<?= $orgId ?>" class="hidden" style="background:#f8fafc;">
                             <td colspan="7" style="padding:1.25rem 1.5rem; border-bottom:2px solid var(--primary);">
                                 <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
                                     <!-- Edit form -->
@@ -208,8 +208,8 @@
                                         </div>
                                         <div style="display:flex; gap:0.5rem;">
                                             <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                                            <button type="button" class="btn btn-sm btn-secondary"
-                                                    onclick="toggleOrgEdit(<?= $orgId ?>)">Cancel</button>
+                                            <button type="button" class="btn btn-sm btn-secondary js-toggle-target"
+                                                    data-target-id="org-edit-<?= $orgId ?>">Cancel</button>
                                         </div>
                                     </form>
 
@@ -220,7 +220,7 @@
                                         <?php if ($isActive): ?>
                                             <input type="hidden" name="action" value="suspend">
                                             <button type="submit" class="btn btn-sm btn-warning"
-                                                    onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($org['name'])) ?>?')">
+                                                    data-confirm="Suspend <?= htmlspecialchars($org['name'], ENT_QUOTES) ?>?">
                                                 Suspend
                                             </button>
                                         <?php else: ?>
@@ -263,10 +263,3 @@
         </form>
     </div>
 </section>
-
-<script>
-function toggleOrgEdit(orgId) {
-    var row = document.getElementById('org-edit-' + orgId);
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
-</script>
