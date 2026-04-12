@@ -19,7 +19,7 @@ $sizingLabels = [
 $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
 ?>
 <div class="modal-overlay hidden" id="edit-modal">
-    <div class="modal" style="max-width: 760px;">
+    <div class="modal wi-modal">
         <div class="modal-header">
             <h3>Edit Work Item</h3>
             <button class="modal-close js-close-edit-modal" type="button">&times;</button>
@@ -89,7 +89,7 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
                     <div class="form-group">
                         <label id="modal-sizing-label"><?= htmlspecialchars($sizingLabel) ?></label>
                         <?php if ($sizingMethod === 't_shirt'): ?>
-                            <select name="estimated_sprints" id="modal-estimated-sprints" class="form-control" style="max-width:160px;">
+                            <select name="estimated_sprints" id="modal-estimated-sprints" class="form-control wi-modal-sizing-select">
                                 <option value="1">XS</option>
                                 <option value="2">S</option>
                                 <option value="3">M</option>
@@ -99,7 +99,7 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
                             </select>
                         <?php else: ?>
                             <input type="number" name="estimated_sprints" id="modal-estimated-sprints"
-                                   class="form-control" style="max-width:120px;"
+                                   class="form-control wi-modal-sizing-input"
                                    min="1" max="<?= $sizingMethod === 'months' ? 24 : 52 ?>" placeholder="2">
                         <?php endif; ?>
                         <small class="text-muted" id="modal-sizing-hint">
@@ -121,28 +121,28 @@ $sizingLabel = $sizingLabels[$sizingMethod] ?? 'Estimated Sprints';
                 </div>
 
                 <div class="modal-field-wrap" data-field="acceptance_criteria">
-                    <details id="wi-ac-details" style="border:1px solid #d1fae5; border-radius:6px; margin-bottom:0.75rem;">
-                        <summary style="padding:0.6rem 0.85rem; font-size:0.875rem; font-weight:600; color:#065f46; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; background:#ecfdf5; border-radius:6px; user-select:none;">
-                            <span>Acceptance Criteria <span style="font-weight:400; color:#6b7280;">(AI-generated &middot; editable)</span></span>
-                            <span style="font-size:0.75rem; color:#6b7280; font-weight:400;">&#9660;</span>
+                    <details id="wi-ac-details" class="wi-modal-detail wi-modal-detail--success">
+                        <summary class="wi-modal-summary wi-modal-summary--success">
+                            <span>Acceptance Criteria <span class="wi-modal-summary-note">(AI-generated &middot; editable)</span></span>
+                            <span class="wi-modal-summary-chevron">&#9660;</span>
                         </summary>
-                        <div style="padding:0.75rem 0.85rem 0.85rem;">
+                        <div class="wi-modal-detail-body">
                             <textarea name="acceptance_criteria" id="modal-acceptance-criteria"
-                                      rows="4" style="width:100%; font-size:0.8125rem; font-family:inherit; border:1px solid #d1d5db; border-radius:4px; padding:0.5rem; resize:vertical;"
+                                      rows="4" class="wi-modal-detail-textarea"
                                       placeholder="Given..&#10;When..&#10;Then.."></textarea>
                         </div>
                     </details>
                 </div>
 
                 <div class="modal-field-wrap" data-field="kr_hypothesis">
-                    <details id="wi-kr-details" style="border:1px solid #ede9fe; border-radius:6px; margin-bottom:0.75rem;">
-                        <summary style="padding:0.6rem 0.85rem; font-size:0.875rem; font-weight:600; color:#5b21b6; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; background:#f5f3ff; border-radius:6px; user-select:none;">
-                            <span>KR Hypothesis <span style="font-weight:400; color:#6b7280;">(predicted contribution &middot; editable)</span></span>
-                            <span style="font-size:0.75rem; color:#6b7280; font-weight:400;">&#9660;</span>
+                    <details id="wi-kr-details" class="wi-modal-detail wi-modal-detail--primary">
+                        <summary class="wi-modal-summary wi-modal-summary--primary">
+                            <span>KR Hypothesis <span class="wi-modal-summary-note">(predicted contribution &middot; editable)</span></span>
+                            <span class="wi-modal-summary-chevron">&#9660;</span>
                         </summary>
-                        <div style="padding:0.75rem 0.85rem 0.85rem;">
+                        <div class="wi-modal-detail-body">
                             <input type="text" name="kr_hypothesis" id="modal-kr-hypothesis"
-                                   style="width:100%; font-size:0.8125rem; border:1px solid #d1d5db; border-radius:4px; padding:0.5rem;"
+                                   class="wi-modal-detail-input"
                                    placeholder="e.g. Expected to increase conversion rate from 2.1% &rarr; 3.5%"
                                    maxlength="500">
                         </div>

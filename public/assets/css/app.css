@@ -3754,6 +3754,84 @@ tbody tr:hover {
     font-size: 0.8125rem;
 }
 
+.wi-modal {
+    max-width: 760px;
+}
+
+.wi-modal-sizing-select {
+    max-width: 160px;
+}
+
+.wi-modal-sizing-input {
+    max-width: 120px;
+}
+
+.wi-modal-detail {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+}
+
+.wi-modal-detail--success {
+    border-color: #d1fae5;
+}
+
+.wi-modal-detail--primary {
+    border-color: #ede9fe;
+}
+
+.wi-modal-summary {
+    align-items: center;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    font-size: 0.875rem;
+    font-weight: 600;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0.6rem 0.85rem;
+    user-select: none;
+}
+
+.wi-modal-summary--success {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.wi-modal-summary--primary {
+    background: #f5f3ff;
+    color: #5b21b6;
+}
+
+.wi-modal-summary-note,
+.wi-modal-summary-chevron {
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.wi-modal-summary-note {
+    font-size: 0.875rem;
+}
+
+.wi-modal-detail-body {
+    padding: 0.75rem 0.85rem 0.85rem;
+}
+
+.wi-modal-detail-input,
+.wi-modal-detail-textarea {
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    padding: 0.5rem;
+    width: 100%;
+}
+
+.wi-modal-detail-textarea {
+    font-family: inherit;
+    resize: vertical;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
