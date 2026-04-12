@@ -197,6 +197,20 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    var genericToggle = e.target.closest('.js-toggle-target');
+    if (genericToggle) {
+        e.preventDefault();
+        toggleTargetVisibility(genericToggle.dataset.targetId || '');
+        return;
+    }
+
+    var passwordToggle = e.target.closest('.password-toggle');
+    if (passwordToggle) {
+        e.preventDefault();
+        togglePassword(passwordToggle);
+        return;
+    }
+
     var accordionToggle = e.target.closest('.js-accordion-toggle');
     if (accordionToggle) {
         e.preventDefault();
@@ -1668,6 +1682,13 @@ function toggleDocumentList(toggle) {
     var icon = toggle.querySelector('.toggle-icon');
     if (icon) {
         icon.textContent = docList.classList.contains('hidden') ? '+' : '-';
+    }
+}
+
+function toggleTargetVisibility(targetId) {
+    var target = targetId ? document.getElementById(targetId) : null;
+    if (target) {
+        target.classList.toggle('hidden');
     }
 }
 

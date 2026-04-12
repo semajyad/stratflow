@@ -25,7 +25,7 @@
           data-overlay="Importing teams from Jira project roles and team fields.">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <button type="submit" class="btn btn-secondary btn-sm"
-                onclick="return confirm('Import boards from Jira as teams? Each Jira board will create a team with its board ID linked for sprint sync.')">
+                data-confirm="Import boards from Jira as teams? Each Jira board will create a team with its board ID linked for sprint sync.">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
             Import Boards from Jira
         </button>
@@ -98,9 +98,11 @@
                 </div>
                 <div class="flex gap-2">
                     <button class="btn btn-sm btn-secondary"
-                            onclick="toggleTeamEdit(<?= $teamId ?>)">Edit</button>
+                            type="button"
+                            data-target-id="team-edit-<?= $teamId ?>"
+                            class="js-toggle-target">Edit</button>
                     <form method="POST" action="/app/admin/teams/<?= $teamId ?>/delete" class="inline-form"
-                          onsubmit="return confirm('Delete this team? Members will be unlinked.')">
+                          data-confirm="Delete this team? Members will be unlinked.">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
@@ -130,7 +132,8 @@
                         <div class="form-group" style="align-self: flex-end;">
                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
                             <button type="button" class="btn btn-secondary btn-sm"
-                                    onclick="toggleTeamEdit(<?= $teamId ?>)">Cancel</button>
+                                    data-target-id="team-edit-<?= $teamId ?>"
+                                    class="js-toggle-target">Cancel</button>
                         </div>
                     </div>
                 </form>
@@ -206,10 +209,3 @@
         </section>
     <?php endforeach; ?>
 <?php endif; ?>
-
-<script>
-function toggleTeamEdit(id) {
-    const el = document.getElementById('team-edit-' + id);
-    if (el) el.classList.toggle('hidden');
-}
-</script>
