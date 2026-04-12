@@ -59,6 +59,37 @@ window.toggleRowActions = function(event, btn) {
 
 // Global click-outside / Escape handlers to dismiss open kebab menus.
 document.addEventListener('click', function(e) {
+    var openProjectModal = e.target.closest('.js-open-project-modal');
+    if (openProjectModal) {
+        e.preventDefault();
+        openProjectModalById(
+            openProjectModal.dataset.modalId || '',
+            openProjectModal.dataset.prefix || '',
+            openProjectModal.dataset.focusId || ''
+        );
+        return;
+    }
+
+    var closeProjectModal = e.target.closest('.js-close-project-modal');
+    if (closeProjectModal) {
+        e.preventDefault();
+        closeProjectModalById(closeProjectModal.dataset.modalId || '');
+        return;
+    }
+
+    var editProjectModal = e.target.closest('.js-open-edit-project-modal');
+    if (editProjectModal) {
+        e.preventDefault();
+        openEditProjectModalFromButton(editProjectModal);
+        return;
+    }
+
+    var modalOverlay = e.target.closest('.js-project-modal');
+    if (modalOverlay && e.target === modalOverlay) {
+        closeProjectModalById(modalOverlay.id || '');
+        return;
+    }
+
     var rowActionsToggle = e.target.closest('.js-row-actions-toggle');
     if (rowActionsToggle) {
         window.toggleRowActions(e, rowActionsToggle);
@@ -207,11 +238,25 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    var removeMemberChipButton = e.target.closest('.js-remove-member-chip');
+    if (removeMemberChipButton) {
+        e.preventDefault();
+        removeMemberChip(removeMemberChipButton);
+        return;
+    }
+
     if (!e.target.closest('.row-actions-menu')) {
         document.querySelectorAll('.row-actions-menu--open').forEach(function(m) {
             m.classList.remove('row-actions-menu--open');
             var t = m.querySelector('.row-actions-toggle');
             if (t) t.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    if (!e.target.closest('.member-picker-wrap')) {
+        document.querySelectorAll('.member-search-results').forEach(function(resultsEl) {
+            resultsEl.style.display = 'none';
+            resultsEl.innerHTML = '';
         });
     }
 });
@@ -226,6 +271,18 @@ document.addEventListener('keydown', function(e) {
 });
 
 document.addEventListener('change', function(e) {
+    var projectVisibility = e.target.closest('.js-project-visibility');
+    if (projectVisibility) {
+        toggleProjectMemberPicker(projectVisibility.dataset.prefix || '', projectVisibility.value || '');
+        return;
+    }
+
+    var memberRoleSelect = e.target.closest('.js-member-role-select');
+    if (memberRoleSelect) {
+        updateMemberRole(memberRoleSelect);
+        return;
+    }
+
     var selectAllStories = e.target.closest('.js-select-all-hl');
     if (selectAllStories) {
         var splitForm = selectAllStories.closest('form');
@@ -255,6 +312,34 @@ document.addEventListener('change', function(e) {
 
     var baseUrl = projectSwitcher.dataset.projectBaseUrl || '/app/home';
     window.location = baseUrl + '?project_id=' + encodeURIComponent(projectSwitcher.value);
+});
+
+document.addEventListener('input', function(e) {
+    var projectSearch = e.target.closest('.js-project-search');
+    if (projectSearch) {
+        filterProjectList(projectSearch.value || '');
+        return;
+    }
+
+    var memberSearchInput = e.target.closest('.member-search-input');
+    if (memberSearchInput) {
+        memberPickerSearch(memberSearchInput);
+    }
+});
+
+document.addEventListener('focusin', function(e) {
+    var memberSearchInput = e.target.closest('.member-search-input');
+    if (memberSearchInput) {
+        memberPickerSearch(memberSearchInput);
+    }
+});
+
+document.addEventListener('mousedown', function(e) {
+    var memberResultItem = e.target.closest('.member-result-item');
+    if (memberResultItem) {
+        e.preventDefault();
+        addMemberChip(memberResultItem);
+    }
 });
 
 document.addEventListener('submit', function(e) {
@@ -1390,6 +1475,278 @@ function escapeHtml(text) {
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(text));
     return div.innerHTML;
+}
+
+function getHomeOrgUsers() {
+    var source = document.getElementById('home-org-users-data');
+    if (!source) {
+        return [];
+    }
+    try {
+        return JSON.parse(source.value || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function openProjectModalById(modalId, prefix, focusId) {
+    var modal = document.getElementById(modalId);
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('hidden');
+    if (prefix) {
+        clearMemberPicker(prefix);
+        toggleProjectMemberPicker(prefix, 'everyone');
+    }
+    if (focusId) {
+        window.setTimeout(function() {
+            var focusTarget = document.getElementById(focusId);
+            if (focusTarget) {
+                focusTarget.focus();
+            }
+        }, 50);
+    }
+}
+
+function closeProjectModalById(modalId) {
+    var modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function openEditProjectModalFromButton(button) {
+    var projectId = button.dataset.projectId || '';
+    var projectName = button.dataset.projectName || '';
+    var jiraKey = button.dataset.jiraKey || '';
+    var visibility = button.dataset.visibility || 'everyone';
+    var memberships = [];
+
+    try {
+        memberships = JSON.parse(button.dataset.memberships || '[]');
+    } catch (e) {
+        memberships = [];
+    }
+
+    var form = document.getElementById('edit-project-form');
+    if (form) {
+        form.action = '/app/projects/' + projectId + '/edit';
+    }
+
+    var projectNameInput = document.getElementById('edit-project-name');
+    if (projectNameInput) {
+        projectNameInput.value = projectName;
+    }
+
+    var jiraInput = document.getElementById('edit-jira-key');
+    if (jiraInput) {
+        jiraInput.value = jiraKey;
+    }
+
+    var visibilityInput = document.getElementById('edit-visibility');
+    if (visibilityInput) {
+        visibilityInput.value = visibility;
+    }
+
+    toggleProjectMemberPicker('edit', visibility);
+    preloadMemberPicker('edit', Array.isArray(memberships) ? memberships : []);
+    openProjectModalById('edit-project-modal', '', 'edit-project-name');
+}
+
+function toggleProjectMemberPicker(prefix, value) {
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) {
+        return;
+    }
+    picker.classList.toggle('hidden', value !== 'restricted');
+    if (value !== 'restricted') {
+        clearMemberPicker(prefix);
+    }
+}
+
+function filterProjectList(query) {
+    var normalized = (query || '').trim().toLowerCase();
+    document.querySelectorAll('.project-card').forEach(function(card) {
+        var nameNode = card.querySelector('.project-name');
+        var name = nameNode ? nameNode.textContent.toLowerCase() : '';
+        card.style.display = (normalized === '' || name.indexOf(normalized) !== -1) ? '' : 'none';
+    });
+}
+
+function getSelectedMemberIds(pickerWrap) {
+    return Array.from(pickerWrap.querySelectorAll('.member-chip[data-member-id]')).map(function(el) {
+        return parseInt(el.dataset.memberId || '0', 10);
+    });
+}
+
+function memberPickerSearch(input) {
+    var pickerWrap = input.closest('.member-picker-wrap');
+    if (!pickerWrap) {
+        return;
+    }
+
+    var query = input.value.trim().toLowerCase();
+    var resultsEl = pickerWrap.querySelector('.member-search-results');
+    var selectedIds = getSelectedMemberIds(pickerWrap);
+    var matches = getHomeOrgUsers().filter(function(user) {
+        return selectedIds.indexOf(user.id) === -1 &&
+            (query === '' || user.label.toLowerCase().indexOf(query) !== -1);
+    }).slice(0, 20);
+
+    if (!resultsEl) {
+        return;
+    }
+
+    if (matches.length === 0) {
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+        return;
+    }
+
+    resultsEl.innerHTML = matches.map(function(user) {
+        return '<div class="member-result-item" data-id="' + String(user.id) + '" data-label="' + escapeHtml(user.label) + '"' +
+            ' style="padding:0.45rem 0.75rem; cursor:pointer; font-size:0.875rem; border-bottom:1px solid var(--border);">' +
+            escapeHtml(user.label) + '</div>';
+    }).join('');
+    resultsEl.style.display = '';
+}
+
+function buildMemberChip(label, memberId, membershipRole) {
+    var safeLabel = escapeHtml(label);
+    var role = membershipRole || 'editor';
+    return '<span class="member-chip" data-member-id="' + String(memberId) + '"' +
+        ' style="display:inline-flex;align-items:center;gap:0.45rem;padding:0.25rem 0.5rem;background:var(--primary);color:#fff;border-radius:6px;font-size:0.8rem;">' +
+        '<span>' + safeLabel + '</span>' +
+        '<select class="js-member-role-select" style="font-size:0.75rem;border:none;border-radius:4px;padding:0.15rem 0.35rem;">' +
+        '<option value="viewer"' + (role === 'viewer' ? ' selected' : '') + '>Viewer</option>' +
+        '<option value="editor"' + (role === 'editor' ? ' selected' : '') + '>Editor</option>' +
+        '<option value="project_admin"' + (role === 'project_admin' ? ' selected' : '') + '>Project Admin</option>' +
+        '</select>' +
+        '<button type="button" class="js-remove-member-chip" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" title="Remove">&times;</button>' +
+        '</span>';
+}
+
+function addMemberChip(resultItem) {
+    var pickerWrap = resultItem.closest('.member-picker-wrap');
+    if (!pickerWrap) {
+        return;
+    }
+
+    var memberId = parseInt(resultItem.dataset.id || '0', 10);
+    var label = resultItem.dataset.label || '';
+    var membershipRole = resultItem.dataset.role || 'editor';
+    var chipsEl = pickerWrap.querySelector('.member-chips');
+    if (!chipsEl || !memberId) {
+        return;
+    }
+
+    chipsEl.insertAdjacentHTML('beforeend', buildMemberChip(label, memberId, membershipRole));
+
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'member_roles[' + memberId + ']';
+    hidden.value = membershipRole;
+    hidden.dataset.memberId = String(memberId);
+    pickerWrap.appendChild(hidden);
+
+    var input = pickerWrap.querySelector('.member-search-input');
+    if (input) {
+        input.value = '';
+    }
+    var resultsEl = pickerWrap.querySelector('.member-search-results');
+    if (resultsEl) {
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+}
+
+function removeMemberChip(button) {
+    var chip = button.closest('.member-chip');
+    if (!chip) {
+        return;
+    }
+    var pickerWrap = chip.closest('.member-picker-wrap');
+    var memberId = chip.dataset.memberId || '';
+    if (pickerWrap) {
+        var hidden = pickerWrap.querySelector('input[type="hidden"][data-member-id="' + memberId + '"]');
+        if (hidden) {
+            hidden.remove();
+        }
+    }
+    chip.remove();
+}
+
+function updateMemberRole(select) {
+    var chip = select.closest('.member-chip');
+    var pickerWrap = chip ? chip.closest('.member-picker-wrap') : null;
+    if (!chip || !pickerWrap) {
+        return;
+    }
+    var memberId = chip.dataset.memberId || '';
+    var hidden = pickerWrap.querySelector('input[type="hidden"][data-member-id="' + memberId + '"]');
+    if (hidden) {
+        hidden.value = select.value;
+    }
+}
+
+function clearMemberPicker(prefix) {
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) {
+        return;
+    }
+    var wrap = picker.querySelector('.member-picker-wrap');
+    if (!wrap) {
+        return;
+    }
+    wrap.querySelectorAll('.member-chip').forEach(function(chip) {
+        chip.remove();
+    });
+    wrap.querySelectorAll('input[type="hidden"][data-member-id]').forEach(function(input) {
+        input.remove();
+    });
+    var searchInput = wrap.querySelector('.member-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    var resultsEl = wrap.querySelector('.member-search-results');
+    if (resultsEl) {
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+}
+
+function preloadMemberPicker(prefix, memberships) {
+    clearMemberPicker(prefix);
+    if (!Array.isArray(memberships) || memberships.length === 0) {
+        return;
+    }
+    var picker = document.getElementById(prefix + '-member-picker');
+    if (!picker) {
+        return;
+    }
+    var wrap = picker.querySelector('.member-picker-wrap');
+    var chipsEl = wrap ? wrap.querySelector('.member-chips') : null;
+    if (!wrap || !chipsEl) {
+        return;
+    }
+    memberships.forEach(function(entry) {
+        var memberId = parseInt(entry.user_id || entry.id || '0', 10);
+        var membershipRole = entry.membership_role || 'editor';
+        var user = getHomeOrgUsers().find(function(candidate) {
+            return candidate.id === memberId;
+        });
+        if (!user || !memberId) {
+            return;
+        }
+        chipsEl.insertAdjacentHTML('beforeend', buildMemberChip(user.label, memberId, membershipRole));
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'member_roles[' + memberId + ']';
+        hidden.value = membershipRole;
+        hidden.dataset.memberId = String(memberId);
+        wrap.appendChild(hidden);
+    });
 }
 
 // ===========================

@@ -3,7 +3,7 @@
  * Project Member Picker Partial
  *
  * Type-to-search input with chip-style selected users.
- * JS lives in home.php script block (memberPickerSearch, addMemberChip, removeMemberChip).
+ * JS lives in the shared app.js home/dashboard handlers.
  * Included inside #new-member-picker and #edit-member-picker divs.
  */
 ?>
@@ -18,9 +18,7 @@
         <input type="text" class="form-input member-search-input"
                placeholder="Search users to add..."
                autocomplete="off"
-               style="font-size:0.875rem;"
-               oninput="memberPickerSearch(this)"
-               onfocus="memberPickerSearch(this)">
+               style="font-size:0.875rem;">
         <div class="member-search-results"
              style="display:none; position:absolute; top:calc(100% + 2px); left:0; right:0; z-index:200;
                     background:#fff; border:1px solid var(--border); border-radius:6px;
