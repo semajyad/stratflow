@@ -14,7 +14,7 @@
 <!-- ===========================
      Page Header
      =========================== -->
-<div class="page-header" style="display: flex; align-items: flex-start; justify-content: space-between;">
+<div class="page-header invoice-admin-header">
     <div>
         <h1 class="page-title">Invoices</h1>
         <p class="page-subtitle">
@@ -22,7 +22,7 @@
         </p>
     </div>
     <?php if ($xero_connected): ?>
-        <div style="display: flex; gap: 0.5rem;">
+        <div class="invoice-admin-actions">
             <form method="POST" action="/app/admin/invoices/sync" class="inline-form">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <button type="submit" class="btn btn-sm btn-secondary">Sync from Xero</button>
@@ -53,20 +53,20 @@
     <div class="card-body">
         <form method="POST" action="/app/admin/invoices/create">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 120px 100px; gap: 1rem; margin-bottom: 1rem;">
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Contact / Client Name <span style="color: var(--danger);">*</span></label>
+            <div class="invoice-admin-form-grid">
+                <div class="form-group invoice-admin-form-group">
+                    <label class="form-label">Contact / Client Name <span class="invoice-admin-required">*</span></label>
                     <input type="text" name="contact_name" class="form-input" required placeholder="Acme Corporation">
                 </div>
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group invoice-admin-form-group">
                     <label class="form-label">Description</label>
                     <input type="text" name="description" class="form-input" placeholder="StratFlow Subscription — Annual" value="StratFlow Subscription">
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Amount <span style="color: var(--danger);">*</span></label>
+                <div class="form-group invoice-admin-form-group">
+                    <label class="form-label">Amount <span class="invoice-admin-required">*</span></label>
                     <input type="number" name="amount" class="form-input" step="0.01" min="0.01" required placeholder="0.00">
                 </div>
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group invoice-admin-form-group">
                     <label class="form-label">Currency</label>
                     <select name="currency" class="form-input">
                         <option value="NZD">NZD</option>
@@ -76,14 +76,14 @@
                     </select>
                 </div>
             </div>
-            <div style="display: flex; align-items: flex-end; gap: 1rem;">
-                <div class="form-group" style="margin: 0; flex: 1;">
-                    <label class="form-label">Reference <span class="text-muted" style="font-weight: 400;">(optional)</span></label>
+            <div class="invoice-admin-form-row">
+                <div class="form-group invoice-admin-form-group invoice-admin-form-group--grow">
+                    <label class="form-label">Reference <span class="text-muted invoice-admin-optional">(optional)</span></label>
                     <input type="text" name="reference" class="form-input" placeholder="SUB-001 or contract number">
                 </div>
-                <button type="submit" class="btn btn-primary" style="white-space: nowrap;">Create Invoice</button>
+                <button type="submit" class="btn btn-primary invoice-admin-submit">Create Invoice</button>
             </div>
-            <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.75rem;">
+            <p class="text-muted invoice-admin-help">
                 Connected to <?= htmlspecialchars($xero_tenant_name ?? 'Xero') ?> &mdash; invoices are created as AUTHORISED with standard NZ GST applied.
             </p>
         </form>
@@ -139,7 +139,7 @@
                         <td><?= htmlspecialchars($inv['invoice_number'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($inv['contact_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars(number_format($total, 2) . ' ' . $currency) ?></td>
-                        <td style="<?= $amountDue > 0 && $status === 'AUTHORISED' ? 'color: var(--danger); font-weight: 600;' : '' ?>">
+                        <td class="<?= $amountDue > 0 && $status === 'AUTHORISED' ? 'invoice-admin-due invoice-admin-due--warning' : 'invoice-admin-due' ?>">
                             <?= htmlspecialchars(number_format($amountDue, 2) . ' ' . $currency) ?>
                         </td>
                         <td><span class="badge <?= htmlspecialchars($badgeClass) ?>"><?= htmlspecialchars(ucfirst(strtolower($status))) ?></span></td>
@@ -170,7 +170,7 @@
      Stripe Invoices (fallback)
      =========================== -->
 <section class="card">
-    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div class="card-header invoice-admin-card-header">
         <h2 class="card-title">Billing History</h2>
         <small class="text-muted">
             <a href="/app/admin/billing">Connect Xero</a> for enterprise invoicing
@@ -236,8 +236,8 @@
      Empty State
      =========================== -->
 <section class="card">
-    <div class="card-body" style="text-align: center; padding: 3rem;">
-        <p class="text-muted" style="margin-bottom: 1rem;">No invoices found for your account.</p>
+    <div class="card-body invoice-admin-empty">
+        <p class="text-muted invoice-admin-empty-copy">No invoices found for your account.</p>
         <a href="/app/admin/billing" class="btn btn-primary">Connect Xero for Invoicing</a>
     </div>
 </section>

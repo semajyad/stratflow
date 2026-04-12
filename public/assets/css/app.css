@@ -3557,6 +3557,75 @@ tbody tr:hover {
     color: #999;
 }
 
+.invoice-admin-header {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+}
+
+.invoice-admin-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.invoice-admin-form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr 120px 100px;
+    margin-bottom: 1rem;
+}
+
+.invoice-admin-form-group {
+    margin: 0;
+}
+
+.invoice-admin-form-group--grow {
+    flex: 1;
+}
+
+.invoice-admin-required {
+    color: var(--danger);
+}
+
+.invoice-admin-form-row {
+    align-items: flex-end;
+    display: flex;
+    gap: 1rem;
+}
+
+.invoice-admin-optional {
+    font-weight: 400;
+}
+
+.invoice-admin-submit {
+    white-space: nowrap;
+}
+
+.invoice-admin-help {
+    font-size: 0.8rem;
+    margin-top: 0.75rem;
+}
+
+.invoice-admin-due--warning {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.invoice-admin-card-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.invoice-admin-empty {
+    padding: 3rem;
+    text-align: center;
+}
+
+.invoice-admin-empty-copy {
+    margin-bottom: 1rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
