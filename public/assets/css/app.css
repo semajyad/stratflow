@@ -3626,6 +3626,74 @@ tbody tr:hover {
     margin-bottom: 1rem;
 }
 
+.story-rules-copy {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.story-rules-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 1.5rem;
+}
+
+.story-rules-empty {
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.story-rules-list {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+
+.story-rules-item {
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.story-rules-default {
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    color: #6366f1;
+    font-size: 0.7rem;
+    margin-left: 6px;
+    padding: 1px 7px;
+}
+
+.story-rules-remove {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+}
+
+.story-rules-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.story-rules-input {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    flex: 1;
+    font-size: 0.875rem;
+    padding: 0.4rem 0.6rem;
+}
+
+.story-rules-label {
+    font-size: 0.875rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
