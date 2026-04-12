@@ -6484,3 +6484,205 @@ a.okr-title:hover {
 .integration-card-disabled {
     opacity: 0.6;
 }
+
+/* === Superadmin Organisations ============================================ */
+
+.org-form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.org-form-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.org-edit-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.org-input-name {
+    min-width: 220px;
+}
+
+.org-input-name--edit {
+    min-width: 200px;
+}
+
+.org-input-seats {
+    width: 80px;
+}
+
+.org-input-price {
+    width: 90px;
+}
+
+.org-card-header-meta {
+    font-size: 0.85rem;
+}
+
+.org-card-body--flush {
+    padding: 0;
+}
+
+.org-empty-state {
+    padding: 1.25rem;
+}
+
+.org-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.org-table-head-row {
+    border-bottom: 2px solid var(--border);
+}
+
+.org-table-head {
+    text-align: left;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.org-table-head--name,
+.org-table-cell--name {
+    padding: 0.6rem 1.25rem;
+}
+
+.org-table-head--standard,
+.org-table-cell--standard {
+    padding: 0.6rem 1rem;
+}
+
+.org-table-head--actions,
+.org-table-cell--actions {
+    padding: 0.6rem 1.25rem;
+}
+
+.org-table-head--center,
+.org-table-cell--center {
+    text-align: center;
+}
+
+.org-table-cell {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+}
+
+.org-table-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.org-name-cell {
+    font-weight: 600;
+}
+
+.org-plan-badge {
+    font-size: 0.75rem;
+}
+
+.org-seat-summary {
+    font-size: 0.875rem;
+}
+
+.org-seat-meter {
+    width: 60px;
+    height: 4px;
+    margin: 3px auto 0;
+    display: block;
+    border: 0;
+    appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.org-seat-meter::-webkit-progress-bar {
+    background: var(--border);
+}
+
+.org-seat-meter::-webkit-progress-value {
+    border-radius: 2px;
+}
+
+.org-seat-meter::-moz-progress-bar {
+    border-radius: 2px;
+}
+
+.org-seat-meter--primary { accent-color: var(--primary); }
+.org-seat-meter--warning { accent-color: #f0ad4e; }
+.org-seat-meter--danger { accent-color: var(--danger); }
+
+.org-billing-copy,
+.org-created-copy,
+.org-superadmin-copy {
+    color: var(--text-muted);
+}
+
+.org-billing-copy {
+    font-size: 0.85rem;
+}
+
+.org-created-copy {
+    font-size: 0.8rem;
+}
+
+.org-table-cell--actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.org-inline-form {
+    display: inline;
+}
+
+.org-edit-row {
+    background: #f8fafc;
+}
+
+.org-edit-cell {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid var(--primary);
+}
+
+.org-edit-form {
+    display: contents;
+}
+
+.org-edit-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.org-edit-spacer {
+    margin-left: auto;
+}
+
+.org-superadmin-copy {
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.org-superadmin-form {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.org-superadmin-user {
+    flex: 1;
+    min-width: 280px;
+}

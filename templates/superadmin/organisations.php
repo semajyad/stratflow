@@ -29,31 +29,31 @@
     <div class="card-body">
         <form method="POST" action="/superadmin/organisations/create">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+            <div class="org-form-row">
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Organisation Name</label>
-                    <input type="text" name="org_name" class="form-control" required placeholder="e.g. Acme Corp" style="min-width:220px;">
+                    <label class="form-label org-form-label">Organisation Name</label>
+                    <input type="text" name="org_name" class="form-control org-input-name" required placeholder="e.g. Acme Corp">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Plan Type</label>
+                    <label class="form-label org-form-label">Plan Type</label>
                     <select name="plan_type" class="form-control">
                         <option value="product">Product</option>
                         <option value="consultancy">Consultancy</option>
                     </select>
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Billing</label>
+                    <label class="form-label org-form-label">Billing</label>
                     <select name="billing_method" class="form-control">
                         <option value="invoiced">Invoiced</option>
                         <option value="stripe">Stripe</option>
                     </select>
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Seats</label>
-                    <input type="number" name="seat_limit" value="5" min="1" max="10000" class="form-control" style="width:80px;">
+                    <label class="form-label org-form-label">Seats</label>
+                    <input type="number" name="seat_limit" value="5" min="1" max="10000" class="form-control org-input-seats">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Period</label>
+                    <label class="form-label org-form-label">Period</label>
                     <select name="billing_period_months" class="form-control">
                         <option value="1">Monthly</option>
                         <option value="3">Quarterly</option>
@@ -62,11 +62,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">$/Seat</label>
-                    <input type="number" name="price_per_seat" value="0.00" min="0" step="0.01" class="form-control" style="width:90px;">
+                    <label class="form-label org-form-label">$/Seat</label>
+                    <input type="number" name="price_per_seat" value="0.00" min="0" step="0.01" class="form-control org-input-price">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">Next Invoice</label>
+                    <label class="form-label org-form-label">Next Invoice</label>
                     <input type="date" name="next_invoice_date" class="form-control">
                 </div>
                 <button type="submit" class="btn btn-primary">Create Organisation</button>
@@ -79,24 +79,24 @@
      Organisations Table
      =========================== -->
 <section class="card">
-    <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
+    <div class="card-header integration-card-header">
         <h2 class="card-title">All Organisations</h2>
-        <span class="text-muted" style="font-size:0.85rem;"><?= count($orgs) ?> organisation<?= count($orgs) !== 1 ? 's' : '' ?></span>
+        <span class="text-muted org-card-header-meta"><?= count($orgs) ?> organisation<?= count($orgs) !== 1 ? 's' : '' ?></span>
     </div>
-    <div class="card-body" style="padding:0;">
+    <div class="card-body org-card-body--flush">
         <?php if (empty($orgs)): ?>
-            <p class="text-muted" style="padding:1.25rem;">No organisations found.</p>
+            <p class="text-muted org-empty-state">No organisations found.</p>
         <?php else: ?>
-            <table style="width:100%; border-collapse:collapse;">
+            <table class="org-table">
                 <thead>
-                    <tr style="border-bottom:2px solid var(--border);">
-                        <th style="padding:0.6rem 1.25rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Name</th>
-                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Plan</th>
-                        <th style="padding:0.6rem 1rem; text-align:center; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Users / Seats</th>
-                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Billing</th>
-                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Status</th>
-                        <th style="padding:0.6rem 1rem; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600;">Created</th>
-                        <th style="padding:0.6rem 1.25rem;"></th>
+                    <tr class="org-table-head-row">
+                        <th class="org-table-head org-table-head--name">Name</th>
+                        <th class="org-table-head org-table-head--standard">Plan</th>
+                        <th class="org-table-head org-table-head--standard org-table-head--center">Users / Seats</th>
+                        <th class="org-table-head org-table-head--standard">Billing</th>
+                        <th class="org-table-head org-table-head--standard">Status</th>
+                        <th class="org-table-head org-table-head--standard">Created</th>
+                        <th class="org-table-head org-table-head--actions"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,36 +114,34 @@
                             $createdAt = date('j M Y', strtotime($org['created_at'] ?? 'now'));
                         ?>
                         <!-- Main row -->
-                        <tr style="border-bottom:1px solid var(--border);" id="org-row-<?= $orgId ?>">
-                            <td style="padding:0.85rem 1.25rem; font-weight:600;"><?= htmlspecialchars($org['name']) ?></td>
-                            <td style="padding:0.85rem 1rem;">
-                                <span class="badge badge-primary" style="font-size:0.75rem;"><?= htmlspecialchars(ucfirst($planType)) ?></span>
+                        <tr class="org-table-row" id="org-row-<?= $orgId ?>">
+                            <td class="org-table-cell org-table-cell--name org-name-cell"><?= htmlspecialchars($org['name']) ?></td>
+                            <td class="org-table-cell org-table-cell--standard">
+                                <span class="badge badge-primary org-plan-badge"><?= htmlspecialchars(ucfirst($planType)) ?></span>
                             </td>
-                            <td style="padding:0.85rem 1rem; text-align:center;">
-                                <span style="font-size:0.875rem;"><?= $users ?> / <?= $seats ?></span>
+                            <td class="org-table-cell org-table-cell--standard org-table-cell--center">
+                                <span class="org-seat-summary"><?= $users ?> / <?= $seats ?></span>
                                 <?php
                                     $pct = $seats > 0 ? min(100, ($users / $seats) * 100) : 0;
-                                    $barColor = $pct >= 90 ? 'var(--danger)' : ($pct >= 70 ? '#f0ad4e' : 'var(--primary)');
+                                    $barTone = $pct >= 90 ? 'danger' : ($pct >= 70 ? 'warning' : 'primary');
                                 ?>
-                                <div style="width:60px; height:4px; background:var(--border); border-radius:2px; margin:3px auto 0;">
-                                    <div style="width:<?= $pct ?>%; height:100%; background:<?= $barColor ?>; border-radius:2px;"></div>
-                                </div>
+                                <progress class="org-seat-meter org-seat-meter--<?= htmlspecialchars($barTone) ?>" max="100" value="<?= (int) $pct ?>"><?= (int) $pct ?>%</progress>
                             </td>
-                            <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-muted);"><?= htmlspecialchars($billingLabel) ?></td>
-                            <td style="padding:0.85rem 1rem;">
+                            <td class="org-table-cell org-table-cell--standard org-billing-copy"><?= htmlspecialchars($billingLabel) ?></td>
+                            <td class="org-table-cell org-table-cell--standard">
                                 <?php if ($isActive): ?>
                                     <span class="badge badge-success">Active</span>
                                 <?php else: ?>
                                     <span class="badge badge-warning">Suspended</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="padding:0.85rem 1rem; font-size:0.8rem; color:var(--text-muted);"><?= htmlspecialchars($createdAt) ?></td>
-                            <td style="padding:0.85rem 1.25rem; text-align:right; white-space:nowrap;">
+                            <td class="org-table-cell org-table-cell--standard org-created-copy"><?= htmlspecialchars($createdAt) ?></td>
+                            <td class="org-table-cell org-table-cell--actions">
                                 <button type="button" class="btn btn-sm btn-secondary js-toggle-target"
                                         data-target-id="org-edit-<?= $orgId ?>">Edit</button>
                                 <a href="/superadmin/organisations/<?= $orgId ?>/export"
                                    class="btn btn-sm btn-secondary">Export</a>
-                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" style="display:inline;">
+                                <form method="POST" action="/superadmin/organisations/<?= $orgId ?>" class="org-inline-form">
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="action" value="delete">
                                     <button type="submit" class="btn btn-sm btn-danger"
@@ -153,40 +151,40 @@
                         </tr>
 
                         <!-- Inline edit row (hidden by default) -->
-                        <tr id="org-edit-<?= $orgId ?>" class="hidden" style="background:#f8fafc;">
-                            <td colspan="7" style="padding:1.25rem 1.5rem; border-bottom:2px solid var(--primary);">
-                                <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                        <tr id="org-edit-<?= $orgId ?>" class="hidden org-edit-row">
+                            <td colspan="7" class="org-edit-cell">
+                                <div class="org-form-row">
                                     <!-- Edit form -->
                                     <form method="POST" action="/superadmin/organisations/<?= $orgId ?>"
-                                          style="display:contents;">
+                                          class="org-edit-form">
                                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="action" value="edit">
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Organisation Name</label>
+                                            <label class="org-edit-label">Organisation Name</label>
                                             <input type="text" name="org_name" value="<?= htmlspecialchars($org['name']) ?>"
-                                                   class="form-control form-control-sm" style="min-width:200px;" required>
+                                                   class="form-control form-control-sm org-input-name--edit" required>
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Plan Type</label>
+                                            <label class="org-edit-label">Plan Type</label>
                                             <select name="plan_type" class="form-control form-control-sm">
                                                 <option value="product"     <?= $planType === 'product'     ? 'selected' : '' ?>>Product</option>
                                                 <option value="consultancy" <?= $planType === 'consultancy' ? 'selected' : '' ?>>Consultancy</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Seats</label>
+                                            <label class="org-edit-label">Seats</label>
                                             <input type="number" name="seat_limit" value="<?= $seats ?>" min="1" max="10000"
-                                                   class="form-control form-control-sm" style="width:80px;">
+                                                   class="form-control form-control-sm org-input-seats">
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Billing</label>
+                                            <label class="org-edit-label">Billing</label>
                                             <select name="billing_method" class="form-control form-control-sm">
                                                 <option value="invoiced" <?= $isInvoiced  ? 'selected' : '' ?>>Invoiced</option>
                                                 <option value="stripe"   <?= !$isInvoiced ? 'selected' : '' ?>>Stripe</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Period</label>
+                                            <label class="org-edit-label">Period</label>
                                             <select name="billing_period_months" class="form-control form-control-sm">
                                                 <option value="1"  <?= (int) ($sub['billing_period_months'] ?? 1) === 1  ? 'selected' : '' ?>>Monthly</option>
                                                 <option value="3"  <?= (int) ($sub['billing_period_months'] ?? 1) === 3  ? 'selected' : '' ?>>Quarterly</option>
@@ -195,18 +193,18 @@
                                             </select>
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">$/Seat</label>
+                                            <label class="org-edit-label">$/Seat</label>
                                             <input type="number" name="price_per_seat" step="0.01" min="0"
                                                    value="<?= number_format((int) ($sub['price_per_seat_cents'] ?? 0) / 100, 2) ?>"
-                                                   class="form-control form-control-sm" style="width:90px;" placeholder="0.00">
+                                                   class="form-control form-control-sm org-input-price" placeholder="0.00">
                                         </div>
                                         <div>
-                                            <label style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Next Invoice</label>
+                                            <label class="org-edit-label">Next Invoice</label>
                                             <input type="date" name="next_invoice_date"
                                                    value="<?= htmlspecialchars($sub['next_invoice_date'] ?? '') ?>"
                                                    class="form-control form-control-sm">
                                         </div>
-                                        <div style="display:flex; gap:0.5rem;">
+                                        <div class="org-edit-actions">
                                             <button type="submit" class="btn btn-sm btn-primary">Save</button>
                                             <button type="button" class="btn btn-sm btn-secondary js-toggle-target"
                                                     data-target-id="org-edit-<?= $orgId ?>">Cancel</button>
@@ -215,7 +213,7 @@
 
                                     <!-- Suspend / Enable form — separate, never nested -->
                                     <form method="POST" action="/superadmin/organisations/<?= $orgId ?>"
-                                          style="margin-left:auto;">
+                                          class="org-edit-spacer">
                                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                         <?php if ($isActive): ?>
                                             <input type="hidden" name="action" value="suspend">
@@ -244,10 +242,10 @@
 <section class="card mt-4">
     <div class="card-header"><h2 class="card-title">Assign Superadmin Role</h2></div>
     <div class="card-body">
-        <p class="text-muted" style="font-size:0.875rem; margin-bottom:1rem;">Promote a user to superadmin. Grants full system-wide access.</p>
-        <form method="POST" action="/superadmin/assign-superadmin" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+        <p class="text-muted org-superadmin-copy">Promote a user to superadmin. Grants full system-wide access.</p>
+        <form method="POST" action="/superadmin/assign-superadmin" class="org-superadmin-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-            <div style="flex:1; min-width:280px;">
+            <div class="org-superadmin-user">
                 <select name="user_id" class="form-control" required>
                     <option value="">Select a user...</option>
                     <?php foreach ($all_users as $u): ?>
