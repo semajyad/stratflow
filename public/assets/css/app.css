@@ -1913,6 +1913,10 @@ tbody tr:hover {
     max-height: 160px;
 }
 
+.mermaid-thumb-error {
+    font-size: 0.75rem;
+}
+
 /* Export section */
 .export-section {
     display: flex;

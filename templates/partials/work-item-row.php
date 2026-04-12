@@ -140,9 +140,10 @@
         </div>
         <form method="POST" action="/app/work-items/<?= (int) $item['id'] ?>/improve"
               class="quality-improve-form" data-loading="Improving with AI…"
-              onsubmit="return confirm('Improve this item with AI? The description, acceptance criteria, and KR hypothesis may be rewritten based on the quality score.')">
+              >
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-            <button type="submit" class="btn btn-ai btn-sm">Improve with AI</button>
+            <button type="submit" class="btn btn-ai btn-sm"
+                    data-confirm="Improve this item with AI? The description, acceptance criteria, and KR hypothesis may be rewritten based on the quality score.">Improve with AI</button>
         </form>
     </div>
     <?php endif; ?>

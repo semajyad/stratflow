@@ -35,7 +35,7 @@
 <?php if (!empty($diagram)): ?>
 <div class="diagram-thumbnail">
     <div class="diagram-thumbnail-inner" id="mermaid-thumb-output"></div>
-    <textarea id="mermaid-thumb-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'], ENT_QUOTES, 'UTF-8') ?></textarea>
+    <textarea id="mermaid-thumb-code" class="visually-hidden"><?= htmlspecialchars($diagram['mermaid_code'], ENT_QUOTES, 'UTF-8') ?></textarea>
 </div>
 <?php endif; ?>
 
@@ -62,7 +62,7 @@
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-ai"
                         <?php if (!empty($work_items)): ?>
-                        onclick="return confirm('This will replace all existing work items. Continue?')"
+                        data-confirm="This will replace all existing work items. Continue?"
                         <?php endif; ?>>
                     <?= empty($work_items) ? 'Generate Work Items' : 'Regenerate Work Items' ?>
                 </button>
@@ -74,14 +74,13 @@
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-ai"
-                        onclick="return confirm('Re-estimate sprint sizing for all work items using AI?')">
+                        data-confirm="Re-estimate sprint sizing for all work items using AI?">
                     Regenerate Sizing
                 </button>
             </form>
             <button
                 type="button"
-                class="btn btn-secondary"
-                onclick="openWorkItemModal(null)"
+                class="btn btn-secondary js-open-work-item-modal"
             >Add Work Item</button>
             <?php endif; ?>
         </div>
@@ -126,25 +125,13 @@
      Edit Modal
      =========================== -->
 <?php require __DIR__ . '/partials/work-item-modal.php'; ?>
-<script>
-(function () {
-    var order = <?= json_encode($field_order_wi ?? []) ?>;
-    if (!order || !order.length) return;
-    var body = document.querySelector('#edit-modal .modal-body');
-    if (!body) return;
-    order.forEach(function (key) {
-        var el = body.querySelector('.modal-field-wrap[data-field="' + key + '"]');
-        if (el) body.appendChild(el);
-    });
-}());
-</script>
 
 <!-- ===========================
      KR Editor Stash (hidden)
      Pre-rendered per item; JS moves the matching one into the modal
      when it opens, and returns it here when it closes.
      =========================== -->
-<div id="kr-editor-stash" style="display:none;" aria-hidden="true">
+<div id="kr-editor-stash" class="hidden" aria-hidden="true">
     <?php foreach ($work_items as $item): ?>
         <div class="kr-editor-wrapper" data-item-id="<?= (int) $item['id'] ?>">
             <?php
@@ -172,23 +159,4 @@
 <!-- Mermaid.js CDN for thumbnail -->
 <?php if (!empty($diagram)): ?>
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
-        var codeEl   = document.getElementById('mermaid-thumb-code');
-        var outputEl = document.getElementById('mermaid-thumb-output');
-        if (codeEl && outputEl) {
-            var code = codeEl.value.trim();
-            if (code) {
-                mermaid.render('mermaid-thumb-' + Date.now(), code).then(function(result) {
-                    outputEl.innerHTML = result.svg;
-                }).catch(function() {
-                    outputEl.innerHTML = '<p class="text-muted" style="font-size:0.75rem;">Diagram preview unavailable</p>';
-                });
-            }
-        }
-    }
-});
-</script>
 <?php endif; ?>

@@ -20,8 +20,7 @@ try {
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
     <input type="hidden" name="sync_type" value="<?= htmlspecialchars($sync_type ?? 'all') ?>">
-    <button type="button" class="btn btn-sm btn-secondary" style="gap:0.25rem;"
-            onclick="showJiraSyncPreview(this.closest('form'))">
+    <button type="button" class="btn btn-sm btn-secondary js-show-jira-preview" style="gap:0.25rem;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
         Sync to Jira (<?= htmlspecialchars($jiraKey) ?>)
     </button>

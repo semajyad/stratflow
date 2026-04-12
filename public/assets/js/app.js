@@ -94,6 +94,12 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-open-work-item-modal')) {
+        e.preventDefault();
+        openWorkItemModal(null);
+        return;
+    }
+
     if (e.target.closest('.js-toggle-risk-modal')) {
         e.preventDefault();
         toggleRiskModal();
@@ -158,6 +164,16 @@ document.addEventListener('click', function(e) {
     if (jiraPreviewSubmit) {
         e.preventDefault();
         submitJiraSyncPreview(jiraPreviewSubmit.dataset.projectId || '');
+        return;
+    }
+
+    var jiraPreviewToggle = e.target.closest('.js-show-jira-preview');
+    if (jiraPreviewToggle) {
+        e.preventDefault();
+        var jiraForm = jiraPreviewToggle.closest('form');
+        if (jiraForm) {
+            showJiraSyncPreview(jiraForm);
+        }
         return;
     }
 
@@ -276,7 +292,7 @@ document.addEventListener('keydown', function(e) {
 // Sidebar Toggle
 // ===========================
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.js-story-field-order').forEach(function(body) {
+    document.querySelectorAll('.js-field-order, .js-story-field-order').forEach(function(body) {
         var rawOrder = body.dataset.fieldOrder || '[]';
         var order = [];
         try {
@@ -294,6 +310,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    if (typeof mermaid !== 'undefined') {
+        var codeEl = document.getElementById('mermaid-thumb-code');
+        var outputEl = document.getElementById('mermaid-thumb-output');
+        if (codeEl && outputEl) {
+            mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+            var code = codeEl.value.trim();
+            if (code) {
+                mermaid.render('mermaid-thumb-' + Date.now(), code).then(function(result) {
+                    outputEl.innerHTML = result.svg;
+                }).catch(function() {
+                    outputEl.innerHTML = '<p class="text-muted mermaid-thumb-error">Diagram preview unavailable</p>';
+                });
+            }
+        }
+    }
 
     const toggle  = document.getElementById('sidebar-toggle');
     const sidebar = document.getElementById('sidebar');
