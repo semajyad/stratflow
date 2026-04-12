@@ -3046,6 +3046,157 @@ tbody tr:hover {
     background: var(--primary);
 }
 
+.onboarding-modal {
+    align-items: center;
+    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.7);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 2000;
+}
+
+.onboarding-card {
+    margin: 0;
+    max-width: 620px;
+    width: 90%;
+}
+
+.onboarding-card-body {
+    padding: 2rem;
+}
+
+.onboarding-hero,
+.onboarding-finish {
+    text-align: center;
+}
+
+.onboarding-hero {
+    margin-bottom: 1.5rem;
+}
+
+.onboarding-hero-icon {
+    align-items: center;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    border-radius: 16px;
+    display: inline-flex;
+    height: 72px;
+    justify-content: center;
+    margin-bottom: 1rem;
+    width: 72px;
+}
+
+.onboarding-finish-icon {
+    align-items: center;
+    background: #d1fae5;
+    border-radius: 50%;
+    display: inline-flex;
+    height: 64px;
+    justify-content: center;
+    margin-bottom: 1rem;
+    width: 64px;
+}
+
+.onboarding-title {
+    font-size: 1.35rem;
+    margin: 0 0 1rem;
+}
+
+.onboarding-title--welcome {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.onboarding-copy--intro {
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.onboarding-role-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+}
+
+.onboarding-role-copy {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.onboarding-copy--section {
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.onboarding-list {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.875rem;
+    gap: 0.5rem;
+}
+
+.onboarding-list-item {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.onboarding-step-badge {
+    align-items: center;
+    display: inline-flex;
+    height: 24px;
+    justify-content: center;
+    padding: 0;
+    width: 24px;
+}
+
+.onboarding-copy--jira {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.onboarding-jira-list {
+    font-size: 0.875rem;
+    line-height: 1.8;
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+}
+
+.onboarding-copy--small {
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.onboarding-copy--finish {
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 440px;
+}
+
+.onboarding-copy--tiny {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.onboarding-nav {
+    align-items: center;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+}
+
+.onboarding-step-indicator {
+    display: flex;
+    gap: 0.4rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
