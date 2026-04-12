@@ -6129,3 +6129,115 @@ a.okr-title:hover {
 .exec-action-ask strong {
     color: #1e293b;
 }
+
+.okr-row--interactive {
+    cursor: pointer;
+    list-style: none;
+}
+
+.okr-row-right--spaced {
+    gap: 0.5rem;
+}
+
+.okr-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.okr-progress__track {
+    width: 60px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+}
+
+.okr-progress__value {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.okr-row-meta {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.okr-row-meta--muted {
+    color: #9ca3af;
+}
+
+.okr-stories-summary {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.okr-indent-spacer {
+    display: inline-block;
+    width: 10px;
+}
+
+.exec-card-title-meta {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #64748b;
+}
+
+.exec-risk-ref {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6366f1;
+    flex-shrink: 0;
+    min-width: 3.5rem;
+}
+
+.exec-risk-likelihood {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.exec-risk-priority {
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.exec-risk-description {
+    margin: 0 0 0.4rem;
+    color: #374151;
+}
+
+.exec-risk-mitigation {
+    background: #f0fdf4;
+    border-left: 3px solid #10b981;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.8rem;
+    color: #065f46;
+}
+
+.exec-risk-mitigation-label {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    color: #16a34a;
+}
+
+.exec-risk-mitigation-text {
+    margin-left: 0.3rem;
+}
+
+.exec-risk-indent-spacer {
+    display: inline-block;
+    width: 14px;
+    flex-shrink: 0;
+}

@@ -272,22 +272,22 @@ $changeTypeLabels = [
         $roadmapUrl = '/app/diagram?project_id=' . (int) $okr['project_id'] . '&node=' . urlencode($okr['node_key'] ?? '');
     ?>
     <details class="okr-details">
-        <summary class="okr-row" style="cursor:pointer; list-style:none; display:flex; align-items:center;">
+        <summary class="okr-row okr-row--interactive">
             <div class="okr-row-left">
                 <span class="okr-expand-icon">&#9654;</span>
                 <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
                 <a href="<?= $roadmapUrl ?>" class="okr-title js-stop-propagation" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
             </div>
-            <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
+            <div class="okr-row-right okr-row-right--spaced">
                 <?php if ($sp['total'] > 0): ?>
-                <div style="display:flex; align-items:center; gap:0.35rem;">
-                    <div style="width:60px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden;">
+                <div class="okr-progress">
+                    <div class="okr-progress__track">
                         <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
                     </div>
-                    <span style="font-size:0.7rem; color:<?= $barColour ?>; font-weight:700;"><?= $pct ?>%</span>
+                    <span class="okr-progress__value" style="color:<?= $barColour ?>;"><?= $pct ?>%</span>
                 </div>
                 <?php endif; ?>
-                <span style="font-size:0.75rem; color:#6b7280;"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
+                <span class="okr-row-meta"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
             </div>
         </summary>
         <div class="okr-kr-list">
@@ -351,7 +351,7 @@ $changeTypeLabels = [
                 <?php endforeach; ?>
             <?php endif; ?>
             <?php if ($sp['total'] > 0): ?>
-            <div style="margin-top:0.5rem; padding:0.4rem 0.6rem; background:#f1f5f9; border-radius:4px; font-size:0.75rem; color:#6b7280; display:flex; align-items:center; gap:0.75rem;">
+            <div class="okr-stories-summary">
                 <span><?= $sp['done'] ?>/<?= $sp['total'] ?> stories done</span>
                 <?php $mergedPrs = ($merged_prs_by_project ?? [])[(int) $okr['project_id']] ?? 0;
                 if ($mergedPrs > 0): ?>
@@ -364,20 +364,20 @@ $changeTypeLabels = [
     <?php else: ?>
     <div class="okr-row">
         <div class="okr-row-left">
-            <span style="display:inline-block; width:10px;"></span>
+            <span class="okr-indent-spacer"></span>
             <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
             <a href="<?= $roadmapUrl ?>" class="okr-title" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
         </div>
-        <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
+        <div class="okr-row-right okr-row-right--spaced">
             <?php if ($sp['total'] > 0): ?>
-            <div style="display:flex; align-items:center; gap:0.35rem;">
-                <div style="width:60px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden;">
+            <div class="okr-progress">
+                <div class="okr-progress__track">
                     <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
                 </div>
-                <span style="font-size:0.7rem; color:<?= $barColour ?>; font-weight:700;"><?= $pct ?>%</span>
+                <span class="okr-progress__value" style="color:<?= $barColour ?>;"><?= $pct ?>%</span>
             </div>
             <?php endif; ?>
-            <span style="font-size:0.75rem; color:#9ca3af;">No KRs</span>
+            <span class="okr-row-meta okr-row-meta--muted">No KRs</span>
         </div>
     </div>
     <?php endif; ?>
@@ -395,9 +395,9 @@ $changeTypeLabels = [
 <?php if (!empty($top_risks)): ?>
 <div class="card mt-6" id="risk-register">
     <div class="card-header">
-        <h2 class="card-title">Risk Register <span style="font-size:0.8rem; font-weight:400; color:#64748b;">— top <?= count($top_risks) ?> by priority</span></h2>
+        <h2 class="card-title">Risk Register <span class="exec-card-title-meta">&mdash; top <?= count($top_risks) ?> by priority</span></h2>
     </div>
-    <div style="padding: 0 1.25rem 1.25rem;">
+    <div class="exec-card-body">
         <?php foreach ($top_risks as $r):
             $pri     = (int) $r['priority'];
             $band    = $pri >= 15 ? ['#ef4444','#fee2e2'] : ($pri >= 5 ? ['#f59e0b','#fef3c7'] : ['#10b981','#f0fdf4']);
@@ -410,35 +410,35 @@ $changeTypeLabels = [
         <details class="exec-risk-item">
             <summary class="exec-risk-summary">
                 <span class="exec-risk-expand-icon">&#9654;</span>
-                <span class="exec-risk-ref" style="font-size:0.75rem; font-weight:600; color:#6366f1; flex-shrink:0; min-width:3.5rem;"><?= htmlspecialchars($riskRef) ?></span>
+                <span class="exec-risk-ref"><?= htmlspecialchars($riskRef) ?></span>
                 <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
                 <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
                 <span class="exec-risk-scores">
-                    <span style="color:#64748b; font-size:0.8rem;">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
-                    <span style="background:<?= $band[1] ?>; color:<?= $band[0] ?>; font-weight:700; font-size:0.8rem; padding:2px 8px; border-radius:999px; white-space:nowrap;"><?= $pri ?></span>
+                    <span class="exec-risk-likelihood">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
+                    <span class="exec-risk-priority" style="background:<?= $band[1] ?>; color:<?= $band[0] ?>;"><?= $pri ?></span>
                 </span>
             </summary>
             <div class="exec-risk-detail">
                 <?php if (!empty($r['description'])): ?>
-                    <p style="margin: 0 0 0.4rem; color:#374151;"><?= htmlspecialchars($r['description'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="exec-risk-description"><?= htmlspecialchars($r['description'], ENT_QUOTES, 'UTF-8') ?></p>
                 <?php endif; ?>
                 <?php if (!empty($r['mitigation'])): ?>
-                    <div style="background:#f0fdf4; border-left:3px solid #10b981; padding:0.4rem 0.6rem; border-radius:0 4px 4px 0; font-size:0.8rem; color:#065f46;">
-                        <strong style="text-transform:uppercase; font-size:0.65rem; letter-spacing:.04em; color:#16a34a;">Mitigation:</strong>
-                        <span style="margin-left:0.3rem;"><?= htmlspecialchars($r['mitigation'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <div class="exec-risk-mitigation">
+                        <strong class="exec-risk-mitigation-label">Mitigation:</strong>
+                        <span class="exec-risk-mitigation-text"><?= htmlspecialchars($r['mitigation'], ENT_QUOTES, 'UTF-8') ?></span>
                     </div>
                 <?php endif; ?>
             </div>
         </details>
         <?php else: ?>
         <div class="exec-risk-item exec-risk-item--plain">
-            <span style="display:inline-block; width:14px; flex-shrink:0;"></span>
-            <span class="exec-risk-ref" style="font-size:0.75rem; font-weight:600; color:#6366f1; flex-shrink:0; min-width:3.5rem;"><?= htmlspecialchars($riskRef) ?></span>
+            <span class="exec-risk-indent-spacer"></span>
+            <span class="exec-risk-ref"><?= htmlspecialchars($riskRef) ?></span>
             <span class="exec-risk-title"><?= htmlspecialchars($r['title'], ENT_QUOTES, 'UTF-8') ?></span>
             <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
             <span class="exec-risk-scores">
-                <span style="color:#64748b; font-size:0.8rem;">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
-                <span style="background:<?= $band[1] ?>; color:<?= $band[0] ?>; font-weight:700; font-size:0.8rem; padding:2px 8px; border-radius:999px; white-space:nowrap;"><?= $pri ?></span>
+                <span class="exec-risk-likelihood">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
+                <span class="exec-risk-priority" style="background:<?= $band[1] ?>; color:<?= $band[0] ?>;"><?= $pri ?></span>
             </span>
         </div>
         <?php endif; ?>
