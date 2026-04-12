@@ -6289,3 +6289,198 @@ a.okr-title:hover {
     width: 14px;
     flex-shrink: 0;
 }
+
+/* === Integrations Admin =================================================== */
+
+.integration-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.integration-card-title {
+    margin: 0;
+}
+
+.integration-status-badge {
+    font-size: 0.85rem;
+    padding: 4px 12px;
+}
+
+.integration-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.integration-stat-label {
+    font-size: 0.75rem;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.integration-stat-value {
+    font-size: 1.25rem;
+}
+
+.integration-stat-value--danger {
+    color: var(--danger);
+}
+
+.integration-project-pill {
+    font-size: 0.7rem;
+}
+
+.integration-alert-spaced,
+.integration-copy-spaced {
+    margin-bottom: 1rem;
+}
+
+.integration-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.integration-inline-form {
+    display: inline;
+}
+
+.integration-push-form {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.integration-select-compact {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.5rem;
+    min-width: 150px;
+}
+
+.integration-actions-spacer {
+    margin-left: auto;
+}
+
+.integration-helper-copy {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.integration-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.integration-table-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.integration-table-head {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.integration-table-head--right,
+.integration-table-cell--right {
+    text-align: right;
+}
+
+.integration-table-cell {
+    padding: 0.6rem 0.5rem;
+}
+
+.integration-table-cell--nowrap {
+    white-space: nowrap;
+}
+
+.integration-table-link-gap {
+    margin-right: 0.25rem;
+}
+
+.integration-repo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: default;
+    background: var(--primary-light, #e8f0fe);
+    color: var(--primary, #1a73e8);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    position: relative;
+    user-select: none;
+}
+
+.integration-repo-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 220px;
+    max-width: 340px;
+    background: #1e2330;
+    color: #e2e8f0;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.6;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.integration-repo-tooltip-item {
+    display: block;
+}
+
+.integration-empty-note,
+.integration-inline-note {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.integration-webhook-block,
+.integration-secret-block {
+    margin-bottom: 1rem;
+}
+
+.integration-field-label {
+    font-size: 0.8rem;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.integration-code-block {
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+
+.integration-secret-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.integration-secret-code {
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.integration-card-disabled {
+    opacity: 0.6;
+}

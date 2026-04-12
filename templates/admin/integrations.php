@@ -36,18 +36,18 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
      Jira Cloud Integration
      =========================== -->
 <section class="card mt-4">
-    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div class="card-header integration-card-header">
         <div>
-            <h2 class="card-title" style="margin: 0;">Jira Cloud</h2>
+            <h2 class="card-title integration-card-title">Jira Cloud</h2>
             <small class="text-muted">Sync work items and user stories with Jira Cloud</small>
         </div>
         <div>
             <?php if ($jiraActive): ?>
-                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+                <span class="badge badge-success integration-status-badge">Connected</span>
             <?php elseif ($jira && $jira['status'] === 'error'): ?>
-                <span class="badge badge-danger" style="font-size: 0.85rem; padding: 4px 12px;">Error</span>
+                <span class="badge badge-danger integration-status-badge">Error</span>
             <?php else: ?>
-                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Disconnected</span>
+                <span class="badge badge-secondary integration-status-badge">Disconnected</span>
             <?php endif; ?>
         </div>
     </div>
@@ -55,59 +55,59 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
         <?php if ($jiraActive): ?>
             <!-- Connected state -->
             <?php $sh = $sync_health ?? []; ?>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="integration-stats-grid">
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Site</span>
+                    <span class="text-muted integration-stat-label">Site</span>
                     <strong><?= htmlspecialchars($jira['display_name'] ?? '') ?></strong>
                     <?php if (!empty($jiraConfig['project_key'])): ?>
-                        <br><span class="badge badge-primary" style="font-size: 0.7rem;"><?= htmlspecialchars($jiraConfig['project_key']) ?></span>
+                        <br><span class="badge badge-primary integration-project-pill"><?= htmlspecialchars($jiraConfig['project_key']) ?></span>
                     <?php endif; ?>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Epics</span>
-                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['epics'] ?? 0) ?></strong>
+                    <span class="text-muted integration-stat-label">Epics</span>
+                    <strong class="integration-stat-value"><?= (int) ($sh['epics'] ?? 0) ?></strong>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Stories</span>
-                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['stories'] ?? 0) ?></strong>
+                    <span class="text-muted integration-stat-label">Stories</span>
+                    <strong class="integration-stat-value"><?= (int) ($sh['stories'] ?? 0) ?></strong>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Risks</span>
-                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['risks'] ?? 0) ?></strong>
+                    <span class="text-muted integration-stat-label">Risks</span>
+                    <strong class="integration-stat-value"><?= (int) ($sh['risks'] ?? 0) ?></strong>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Sprints</span>
-                    <strong style="font-size: 1.25rem;"><?= (int) ($sh['sprints'] ?? 0) ?></strong>
+                    <span class="text-muted integration-stat-label">Sprints</span>
+                    <strong class="integration-stat-value"><?= (int) ($sh['sprints'] ?? 0) ?></strong>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Last Sync</span>
+                    <span class="text-muted integration-stat-label">Last Sync</span>
                     <strong><?= $jira['last_sync_at'] ? date('j M H:i', strtotime($jira['last_sync_at'])) : 'Never' ?></strong>
                 </div>
                 <?php if (($sh['recent_errors'] ?? 0) > 0): ?>
                 <div>
-                    <span class="text-muted" style="font-size: 0.75rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Errors (24h)</span>
-                    <strong style="font-size: 1.25rem; color: var(--danger);"><?= (int) $sh['recent_errors'] ?></strong>
+                    <span class="text-muted integration-stat-label">Errors (24h)</span>
+                    <strong class="integration-stat-value integration-stat-value--danger"><?= (int) $sh['recent_errors'] ?></strong>
                 </div>
                 <?php endif; ?>
             </div>
 
             <?php if (!empty($jira['error_message'])): ?>
-                <div class="alert alert-warning" style="margin-bottom: 1rem;">
+                <div class="alert alert-warning integration-alert-spaced">
                     <strong>Last error:</strong> <?= htmlspecialchars($jira['error_message']) ?>
                     (<?= (int) $jira['error_count'] ?> consecutive errors)
                 </div>
             <?php endif; ?>
 
             <!-- Action buttons -->
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div class="integration-actions">
                 <a href="/app/admin/integrations/jira/configure" class="btn btn-sm btn-secondary">Configure</a>
 
                 <form method="POST" action="/app/admin/integrations/jira/push" class="inline-form"
                       data-loading="Pushing to Jira..."
                       data-overlay="Pushing work items and user stories to Jira. This may take a moment."
-                      style="display: flex; align-items: center; gap: 0.375rem;">
+                      class="inline-form integration-push-form">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <select name="project_id" class="form-control" style="font-size:0.8125rem; padding:0.25rem 0.5rem; min-width:150px;" required>
+                    <select name="project_id" class="form-control integration-select-compact" required>
                         <option value="">Project...</option>
                         <?php if (!empty($all_projects)): ?>
                             <?php foreach ($all_projects as $ap): ?>
@@ -136,7 +136,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 
                 <a href="/app/admin/integrations/sync-log" class="btn btn-sm btn-secondary">Sync Log</a>
 
-                <div style="margin-left: auto;">
+                <div class="integration-actions-spacer">
                     <form method="POST" action="/app/admin/integrations/jira/disconnect" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-danger"
@@ -148,7 +148,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
             </div>
         <?php else: ?>
             <!-- Disconnected state -->
-            <p class="text-muted" style="margin-bottom: 1rem;">
+            <p class="text-muted integration-copy-spaced">
                 Connect your Jira Cloud instance to sync high-level work items as Epics
                 and user stories as Stories. Changes can be pushed and pulled bidirectionally.
             </p>
@@ -164,76 +164,67 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
      =========================== -->
 <?php if (($settings['feature_github'] ?? true) || $hasGithub): ?>
 <section class="card mt-4">
-    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div class="card-header integration-card-header">
         <div>
-            <h2 class="card-title" style="margin: 0;">GitHub</h2>
+            <h2 class="card-title integration-card-title">GitHub</h2>
             <small class="text-muted">Auto-link pull requests to user stories via GitHub App — no copy/paste required</small>
         </div>
         <div>
             <?php if ($hasGithub): ?>
-                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">
+                <span class="badge badge-success integration-status-badge">
                     <?= count($githubInstalls) ?> account<?= count($githubInstalls) === 1 ? '' : 's' ?> connected
                 </span>
             <?php else: ?>
-                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Not connected</span>
+                <span class="badge badge-secondary integration-status-badge">Not connected</span>
             <?php endif; ?>
         </div>
     </div>
     <div class="card-body">
         <?php if ($hasGithub): ?>
             <!-- Connected state — list each GitHub account installation -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+            <table class="integration-table">
                 <thead>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <th style="text-align: left; padding: 0.4rem 0.5rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Account</th>
-                        <th style="text-align: left; padding: 0.4rem 0.5rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Repos</th>
-                        <th style="text-align: right; padding: 0.4rem 0.5rem;"></th>
+                    <tr class="integration-table-row">
+                        <th class="integration-table-head">Account</th>
+                        <th class="integration-table-head">Repos</th>
+                        <th class="integration-table-head integration-table-head--right"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($githubInstalls as $install): ?>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 0.6rem 0.5rem;">
+                    <tr class="integration-table-row">
+                        <td class="integration-table-cell">
                             <strong>@<?= htmlspecialchars($install['account_login'] ?? '') ?></strong>
                         </td>
-                        <td style="padding: 0.6rem 0.5rem;">
+                        <td class="integration-table-cell">
                             <?php
                                 $repoCount = (int) $install['repo_count'];
                                 $repoNames = $install['repo_names'] ?? [];
                             ?>
                             <?php if ($repoCount > 0 && !empty($repoNames)): ?>
-                            <span class="repo-count-badge" tabindex="0"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; cursor: default;
-                                         background: var(--primary-light, #e8f0fe); color: var(--primary, #1a73e8);
-                                         border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600;
-                                         position: relative; user-select: none;">
+                            <span class="repo-count-badge integration-repo-badge" tabindex="0">
                                 <?= $repoCount ?> repo<?= $repoCount === 1 ? '' : 's' ?>
-                                <span class="repo-tooltip"
-                                      style="display: none; position: absolute; top: calc(100% + 6px); left: 0;
-                                             min-width: 220px; max-width: 340px; background: #1e2330; color: #e2e8f0;
-                                             border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem;
-                                             font-weight: 400; line-height: 1.6; z-index: 100;
-                                             box-shadow: 0 4px 16px rgba(0,0,0,0.25); white-space: nowrap;">
+                                <span class="repo-tooltip integration-repo-tooltip">
                                     <?php foreach ($repoNames as $rn): ?>
-                                        <span style="display: block;"><?= htmlspecialchars($rn) ?></span>
+                                        <span class="integration-repo-tooltip-item"><?= htmlspecialchars($rn) ?></span>
                                     <?php endforeach; ?>
                                 </span>
                             </span>
                             <?php else: ?>
-                            <span style="color: var(--text-muted); font-size: 0.85rem;">0 repos</span>
+                            <span class="integration-empty-note">0 repos</span>
                             <?php endif; ?>
                         </td>
-                        <td style="padding: 0.6rem 0.5rem; text-align: right; white-space: nowrap;">
+                        <td class="integration-table-cell integration-table-cell--right integration-table-cell--nowrap">
                             <?php if ($install['installation_id']): ?>
                             <a href="https://github.com/settings/installations/<?= (int) $install['installation_id'] ?>"
                                target="_blank" rel="noopener noreferrer"
-                               class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">
+                               class="btn btn-sm btn-secondary integration-table-link-gap">
                                 Manage on GitHub
                             </a>
                             <?php endif; ?>
                             <form method="POST"
                                   action="/app/admin/integrations/github/<?= (int) $install['id'] ?>/disconnect"
-                                  class="inline-form" style="display: inline;">
+                                  class="inline-form integration-inline-form">
                                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                 <button type="submit" class="btn btn-sm btn-danger"
                                         data-confirm="Disconnect @<?= htmlspecialchars($install['account_login'] ?? '', ENT_QUOTES, 'UTF-8') ?>? PR links already created will be preserved.">
@@ -246,7 +237,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                 </tbody>
             </table>
 
-            <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+            <p class="text-muted integration-helper-copy">
                 To add or remove repos use the <em>Manage on GitHub</em> link above — StratFlow syncs automatically.
                 Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in a PR description or commit message to link it.
                 No reference? AI will try to match it automatically.
@@ -258,7 +249,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 
         <?php else: ?>
             <!-- Disconnected state -->
-            <p class="text-muted" style="margin-bottom: 1rem;">
+            <p class="text-muted integration-copy-spaced">
                 Install the StratFlow GitHub App to automatically link pull requests and commits to user stories.
                 GitHub handles the repository picker — no webhook URLs or secrets to copy.
                 Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your PR description or commit message, or let AI match automatically.
@@ -268,7 +259,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                 Install GitHub App
             </a>
             <?php else: ?>
-            <p class="text-muted" style="font-size: 0.85rem;">
+            <p class="text-muted integration-inline-note">
                 <em>GITHUB_APP_SLUG is not configured — ask your system administrator to set it up.</em>
             </p>
             <?php endif; ?>
@@ -283,29 +274,29 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
      =========================== -->
 <?php if (($settings['feature_gitlab'] ?? true) || $gitlabActive): ?>
 <section class="card mt-4">
-    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div class="card-header integration-card-header">
         <div>
-            <h2 class="card-title" style="margin: 0;">GitLab</h2>
+            <h2 class="card-title integration-card-title">GitLab</h2>
             <small class="text-muted">Auto-link merge requests to user stories and work items via webhook</small>
         </div>
         <div>
             <?php if ($gitlabActive): ?>
-                <span class="badge badge-success" style="font-size: 0.85rem; padding: 4px 12px;">Connected</span>
+                <span class="badge badge-success integration-status-badge">Connected</span>
             <?php else: ?>
-                <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Disconnected</span>
+                <span class="badge badge-secondary integration-status-badge">Disconnected</span>
             <?php endif; ?>
         </div>
     </div>
     <div class="card-body">
         <?php if ($gitlabActive): ?>
             <!-- Connected state -->
-            <div style="margin-bottom: 1rem;">
-                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook URL</span>
-                <code style="font-size: 0.85rem; word-break: break-all;"><?= htmlspecialchars(($_SERVER['HTTP_HOST'] ?? '') ? 'https://' . $_SERVER['HTTP_HOST'] . '/webhook/git/gitlab' : '/webhook/git/gitlab') ?></code>
+            <div class="integration-webhook-block">
+                <span class="text-muted integration-field-label">Webhook URL</span>
+                <code class="integration-code-block"><?= htmlspecialchars(($_SERVER['HTTP_HOST'] ?? '') ? 'https://' . $_SERVER['HTTP_HOST'] . '/webhook/git/gitlab' : '/webhook/git/gitlab') ?></code>
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <span class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Webhook Secret Token</span>
+            <div class="integration-secret-block">
+                <span class="text-muted integration-field-label">Webhook Secret Token</span>
                 <?php
                     $glSecret = $gitlabConfig['webhook_secret'] ?? '';
                     $glMasked = $glSecret !== ''
@@ -313,10 +304,10 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                         : '';
                 ?>
                 <?php if ($glSecret !== ''): ?>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="integration-secret-row">
                         <code id="gitlab-secret-display"
                               data-masked="<?= htmlspecialchars($glMasked) ?>"
-                              style="font-size: 0.85rem; letter-spacing: 0.05em;"><?= htmlspecialchars($glMasked) ?></code>
+                              class="integration-secret-code"><?= htmlspecialchars($glMasked) ?></code>
                         <button type="button" class="btn btn-sm btn-secondary js-reveal-git-secret"
                                 data-provider="gitlab"
                                 id="gitlab-secret-reveal-btn">Reveal</button>
@@ -326,7 +317,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                 <?php endif; ?>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div class="integration-actions">
                 <form method="POST" action="/app/admin/integrations/git/gitlab/regenerate-secret" class="inline-form">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <button type="submit" class="btn btn-sm btn-secondary"
@@ -335,7 +326,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                     </button>
                 </form>
 
-                <div style="margin-left: auto;">
+                <div class="integration-actions-spacer">
                     <form method="POST" action="/app/admin/integrations/git/gitlab/disconnect" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-danger"
@@ -347,7 +338,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
             </div>
         <?php else: ?>
             <!-- Disconnected state -->
-            <p class="text-muted" style="margin-bottom: 1rem;">
+            <p class="text-muted integration-copy-spaced">
                 Connect a GitLab webhook to automatically link merge requests to user stories and work items.
                 Include <code>SF-{id}</code> or <code>StratFlow-{id}</code> in your MR description.
             </p>
@@ -364,14 +355,14 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 <!-- ===========================
      Azure DevOps (Coming Soon)
      =========================== -->
-<section class="card mt-4" style="opacity: 0.6;">
-    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+<section class="card mt-4 integration-card-disabled">
+    <div class="card-header integration-card-header">
         <div>
-            <h2 class="card-title" style="margin: 0;">Azure DevOps</h2>
+            <h2 class="card-title integration-card-title">Azure DevOps</h2>
             <small class="text-muted">Sync with Azure DevOps boards and work items</small>
         </div>
         <div>
-            <span class="badge badge-secondary" style="font-size: 0.85rem; padding: 4px 12px;">Coming Soon</span>
+            <span class="badge badge-secondary integration-status-badge">Coming Soon</span>
         </div>
     </div>
     <div class="card-body">
