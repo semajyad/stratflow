@@ -185,6 +185,25 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-admin-test-ai')) {
+        e.preventDefault();
+        runAdminAiConnectionTest();
+        return;
+    }
+
+    if (e.target.closest('.js-superadmin-test-ai')) {
+        e.preventDefault();
+        runSuperadminAiConnectionTest();
+        return;
+    }
+
+    var accordionToggle = e.target.closest('.js-accordion-toggle');
+    if (accordionToggle) {
+        e.preventDefault();
+        toggleAccordionItem(accordionToggle);
+        return;
+    }
+
     if (e.target.closest('.js-focus-paste-text')) {
         e.preventDefault();
         focusUploadPasteText();
@@ -296,6 +315,24 @@ document.addEventListener('change', function(e) {
         return;
     }
 
+    var adminAiProvider = e.target.closest('.js-admin-ai-provider');
+    if (adminAiProvider) {
+        updateAdminAiModelPlaceholder(adminAiProvider.value || '');
+        return;
+    }
+
+    var superadminAiProvider = e.target.closest('.js-superadmin-ai-provider');
+    if (superadminAiProvider) {
+        toggleSuperadminApiKey(superadminAiProvider.value || '');
+        return;
+    }
+
+    var qualityEnabledToggle = e.target.closest('.js-quality-enabled-toggle');
+    if (qualityEnabledToggle) {
+        toggleVisibilityTarget(qualityEnabledToggle.dataset.targetId || '', qualityEnabledToggle.checked);
+        return;
+    }
+
     var selectAllStories = e.target.closest('.js-select-all-hl');
     if (selectAllStories) {
         var splitForm = selectAllStories.closest('form');
@@ -337,6 +374,11 @@ document.addEventListener('input', function(e) {
     var memberSearchInput = e.target.closest('.member-search-input');
     if (memberSearchInput) {
         memberPickerSearch(memberSearchInput);
+    }
+
+    var qualityThresholdRange = e.target.closest('.js-quality-threshold-range');
+    if (qualityThresholdRange) {
+        syncRangeOutput(qualityThresholdRange);
     }
 });
 
@@ -384,6 +426,26 @@ document.addEventListener('keydown', function(e) {
 
     e.preventDefault();
     addGitLink();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFieldSortList('sort-list-wi', 'field-order-wi');
+    initializeFieldSortList('sort-list-st', 'field-order-st');
+
+    var adminAiProvider = document.querySelector('.js-admin-ai-provider');
+    if (adminAiProvider) {
+        updateAdminAiModelPlaceholder(adminAiProvider.value || '');
+    }
+
+    var superadminAiProvider = document.querySelector('.js-superadmin-ai-provider');
+    if (superadminAiProvider) {
+        toggleSuperadminApiKey(superadminAiProvider.value || '');
+    }
+
+    document.querySelectorAll('.js-quality-threshold-range').forEach(syncRangeOutput);
+    document.querySelectorAll('.js-quality-enabled-toggle').forEach(function(toggle) {
+        toggleVisibilityTarget(toggle.dataset.targetId || '', toggle.checked);
+    });
 });
 
 // ===========================
@@ -1607,6 +1669,220 @@ function toggleDocumentList(toggle) {
     if (icon) {
         icon.textContent = docList.classList.contains('hidden') ? '+' : '-';
     }
+}
+
+function toggleAccordionItem(button) {
+    var item = button.closest('.accordion-item');
+    if (item) {
+        item.classList.toggle('accordion-item--open');
+    }
+}
+
+function toggleVisibilityTarget(targetId, shouldShow) {
+    var target = targetId ? document.getElementById(targetId) : null;
+    if (target) {
+        target.style.display = shouldShow ? '' : 'none';
+    }
+}
+
+function syncRangeOutput(input) {
+    var outputId = input.dataset.outputId || '';
+    var output = outputId ? document.getElementById(outputId) : null;
+    if (output) {
+        output.textContent = String(input.value || '') + '%';
+    }
+}
+
+function initializeFieldSortList(listId, inputId) {
+    var list = document.getElementById(listId);
+    var input = document.getElementById(inputId);
+    if (!list || !input || list.dataset.sortReady === '1') {
+        return;
+    }
+
+    var dragging = null;
+    list.dataset.sortReady = '1';
+
+    list.addEventListener('dragstart', function(e) {
+        dragging = e.target.closest('.field-sort-item');
+        if (!dragging) {
+            return;
+        }
+        dragging.classList.add('dragging');
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
+    });
+
+    list.addEventListener('dragend', function() {
+        if (dragging) {
+            dragging.classList.remove('dragging');
+        }
+        list.querySelectorAll('.field-sort-item').forEach(function(el) {
+            el.classList.remove('drag-over');
+        });
+        dragging = null;
+        syncFieldSortOrder(list, input);
+    });
+
+    list.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        var target = e.target.closest('.field-sort-item');
+        if (!dragging || !target || target === dragging) {
+            return;
+        }
+        var rect = target.getBoundingClientRect();
+        var after = e.clientY > rect.top + (rect.height / 2);
+        list.querySelectorAll('.field-sort-item').forEach(function(el) {
+            el.classList.remove('drag-over');
+        });
+        target.classList.add('drag-over');
+        list.insertBefore(dragging, after ? target.nextSibling : target);
+    });
+}
+
+function syncFieldSortOrder(list, input) {
+    var keys = [];
+    list.querySelectorAll('.field-sort-item').forEach(function(el, index) {
+        keys.push(el.dataset.key || '');
+        var numberEl = el.querySelector('.field-sort-num');
+        if (numberEl) {
+            numberEl.textContent = String(index + 1);
+        }
+    });
+    input.value = keys.join(',');
+}
+
+function updateAdminAiModelPlaceholder(provider) {
+    var placeholders = {
+        '': 'e.g. gemini-2.5-flash',
+        google: 'e.g. gemini-2.5-flash',
+        openai: 'e.g. gpt-4o',
+        anthropic: 'e.g. claude-sonnet-4-6'
+    };
+    var hints = {
+        '': 'Leave blank to use the platform default.',
+        google: 'e.g. gemini-2.5-flash, gemini-2.5-pro',
+        openai: 'e.g. gpt-4o, gpt-4o-mini',
+        anthropic: 'e.g. claude-opus-4-6, claude-sonnet-4-6'
+    };
+    var input = document.getElementById('ai-model-input');
+    var hint = document.getElementById('ai-model-hint');
+    if (input) {
+        input.placeholder = placeholders[provider] || 'Enter model name';
+    }
+    if (hint) {
+        hint.textContent = hints[provider] || '';
+    }
+}
+
+function runAdminAiConnectionTest() {
+    var button = document.querySelector('.js-admin-test-ai');
+    var result = document.getElementById('ai-test-result');
+    var provider = document.getElementById('ai-provider-select');
+    var model = document.getElementById('ai-model-input');
+    var apiKey = document.getElementById('ai-api-key-input');
+    var csrf = document.querySelector('input[name="_csrf_token"]');
+    if (!button || !result || !provider || !model || !apiKey) {
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Testing...';
+    result.style.color = '';
+    result.textContent = '';
+
+    var form = new FormData();
+    form.append('_csrf_token', csrf ? csrf.value : '');
+    form.append('ai_provider', provider.value || '');
+    form.append('ai_model', model.value || '');
+    form.append('ai_api_key', apiKey.value || '');
+
+    fetch('/app/admin/test-ai', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        button.disabled = false;
+        button.textContent = 'Test Connection';
+        if (data.status === 'ok') {
+            result.style.color = '#16a34a';
+            result.textContent = 'Connection successful';
+            return;
+        }
+        result.style.color = '#dc2626';
+        result.textContent = data.message || 'Connection failed';
+    })
+    .catch(function() {
+        button.disabled = false;
+        button.textContent = 'Test Connection';
+        result.style.color = '#dc2626';
+        result.textContent = 'Request failed';
+    });
+}
+
+function toggleSuperadminApiKey(provider) {
+    ['google', 'openai', 'anthropic'].forEach(function(slug) {
+        var el = document.getElementById('api-key-' + slug);
+        if (el) {
+            el.style.display = slug === provider ? '' : 'none';
+        }
+    });
+}
+
+function runSuperadminAiConnectionTest() {
+    var button = document.querySelector('.js-superadmin-test-ai');
+    var result = document.getElementById('test-ai-result');
+    var provider = document.getElementById('ai-provider-select');
+    var model = document.querySelector('input[name="ai_model"]');
+    var csrf = document.querySelector('input[name="_csrf_token"]');
+    if (!button || !result || !provider || !model) {
+        return;
+    }
+
+    var modelValue = (model.value || '').trim();
+    if (!modelValue) {
+        result.textContent = 'Enter a model identifier first.';
+        result.style.color = 'var(--danger)';
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Testing...';
+    result.textContent = 'Connecting...';
+    result.style.color = 'var(--text-muted)';
+
+    var form = new FormData();
+    form.append('_csrf_token', csrf ? csrf.value : '');
+    form.append('provider', provider.value || '');
+    form.append('model', modelValue);
+
+    fetch('/superadmin/defaults/test-ai', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form,
+        credentials: 'same-origin'
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        button.disabled = false;
+        button.textContent = 'Test Connection';
+        if (data.success) {
+            result.style.color = '#059669';
+            result.textContent = 'Connected' + (data.latency_ms ? ' (' + data.latency_ms + 'ms)' : '');
+            return;
+        }
+        result.style.color = 'var(--danger)';
+        result.textContent = 'Failed: ' + (data.error || 'Unknown error');
+    })
+    .catch(function(error) {
+        button.disabled = false;
+        button.textContent = 'Test Connection';
+        result.style.color = 'var(--danger)';
+        result.textContent = 'Network error: ' + error.message;
+    });
 }
 
 function getSelectedMemberIds(pickerWrap) {

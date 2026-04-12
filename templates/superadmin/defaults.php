@@ -31,7 +31,7 @@ $s = $settings;
              AI Provider & Model
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">AI Provider &amp; Model</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Default AI used for story generation, scoring, and analysis
@@ -44,8 +44,7 @@ $s = $settings;
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start;">
                     <div class="form-group">
                         <label class="form-label">Provider</label>
-                        <select name="ai_provider" class="form-input" id="ai-provider-select"
-                                onchange="showApiKey(this.value)">
+                        <select name="ai_provider" class="form-input js-superadmin-ai-provider" id="ai-provider-select">
                             <option value="google"    <?= ($s['ai_provider'] ?? '') === 'google'    ? 'selected' : '' ?>>Google Gemini</option>
                             <option value="openai"    <?= ($s['ai_provider'] ?? '') === 'openai'    ? 'selected' : '' ?>>OpenAI</option>
                             <option value="anthropic" <?= ($s['ai_provider'] ?? '') === 'anthropic' ? 'selected' : '' ?>>Anthropic</option>
@@ -79,7 +78,7 @@ $s = $settings;
                     <?php endforeach; ?>
                 </div>
                 <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border); display:flex; align-items:center; gap:1rem;">
-                    <button type="button" class="btn btn-secondary" id="test-ai-btn" onclick="testAiConnection()">
+                    <button type="button" class="btn btn-secondary js-superadmin-test-ai" id="test-ai-btn">
                         Test Connection
                     </button>
                     <span id="test-ai-result" style="font-size:0.875rem;"></span>
@@ -91,7 +90,7 @@ $s = $settings;
              New Organisation Defaults
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">New Organisation Defaults</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Applied when creating an organisation without explicit values
@@ -139,7 +138,7 @@ $s = $settings;
              Billing Rates
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Billing Rates</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Standard pricing per seat for each billing period
@@ -202,7 +201,7 @@ $s = $settings;
              Feature Flags
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Feature Flags</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Enable or disable features globally for all organisations
@@ -245,7 +244,7 @@ $s = $settings;
              Story Quality
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Story Quality</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Default quality gate settings applied to new organisations
@@ -263,7 +262,8 @@ $s = $settings;
                                    min="0" max="100" step="5"
                                    value="<?= (int) ($s['quality_threshold'] ?? 70) ?>"
                                    style="flex:1;"
-                                   oninput="document.getElementById('qt-val').textContent = this.value + '%'">
+                                   class="js-quality-threshold-range"
+                                   data-output-id="qt-val">
                             <span id="qt-val" style="font-weight:700; font-size:1rem; min-width:3rem;">
                                 <?= (int) ($s['quality_threshold'] ?? 70) ?>%
                             </span>
@@ -285,7 +285,7 @@ $s = $settings;
              Email & Notifications
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Email &amp; Notifications</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Default sender identity used in system emails
@@ -321,7 +321,7 @@ $s = $settings;
     </div>
 </form>
 
-<script>
+<?php /*
 function showApiKey(provider) {
     ['google','openai','anthropic'].forEach(function(p) {
         var el = document.getElementById('api-key-' + p);
@@ -378,4 +378,4 @@ function testAiConnection() {
         result.innerHTML = '<span style="color:var(--danger);">&#10007; Network error: ' + e.message + '</span>';
     });
 }
-</script>
+*/ ?>

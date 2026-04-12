@@ -29,7 +29,7 @@
              Workflow Personas
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Workflow Personas</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     AI agents for each pipeline stage
@@ -74,7 +74,7 @@
              AI Model
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">AI Model</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Provider, model, and API key override
@@ -91,7 +91,7 @@
                 <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
                     <div class="form-group" style="flex:1; min-width:180px;">
                         <label class="form-label">Provider</label>
-                        <select name="ai_provider" id="ai-provider-select" class="form-input" onchange="updateAiModelPlaceholder()">
+                        <select name="ai_provider" id="ai-provider-select" class="form-input js-admin-ai-provider">
                             <option value="" <?= empty($settings['ai']['provider']) ? 'selected' : '' ?>>Platform default (Google Gemini)</option>
                             <option value="google"    <?= ($settings['ai']['provider'] ?? '') === 'google'    ? 'selected' : '' ?>>Google Gemini</option>
                             <option value="openai"    <?= ($settings['ai']['provider'] ?? '') === 'openai'    ? 'selected' : '' ?>>OpenAI</option>
@@ -121,7 +121,7 @@
                     </div>
                 </div>
                 <div style="margin-top:1rem; display:flex; align-items:center; gap:1rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="testAiConnection()">Test Connection</button>
+                    <button type="button" class="btn btn-secondary btn-sm js-admin-test-ai">Test Connection</button>
                     <span id="ai-test-result" style="font-size:0.875rem;"></span>
                 </div>
             </div>
@@ -131,7 +131,7 @@
              Defaults
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Defaults</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     HL item size and story point limits
@@ -191,7 +191,7 @@
              Field Ordering
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Field Ordering</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Drag to reorder fields in work item and story modals
@@ -335,7 +335,7 @@
              =========================== -->
         <?php if (!empty($system_settings['feature_story_quality'])): ?>
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Story Quality</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     AI quality scoring threshold and enforcement
@@ -355,7 +355,8 @@
                             <input type="checkbox" name="quality_enabled" value="1"
                                    id="quality-enabled-check"
                                    <?= !empty($settings['quality']['enabled']) ? 'checked' : '' ?>
-                                   onchange="document.getElementById('quality-options').style.display = this.checked ? '' : 'none'">
+                                   class="js-quality-enabled-toggle"
+                                   data-target-id="quality-options">
                             <label for="quality-enabled-check" style="font-weight:600; cursor:pointer; margin:0;">
                                 Enable story quality checks for this organisation
                             </label>
@@ -369,7 +370,8 @@
                                        min="0" max="100" step="5"
                                        value="<?= (int) ($settings['quality']['threshold'] ?? 70) ?>"
                                        style="flex:1;"
-                                       oninput="document.getElementById('org-qt-val').textContent = this.value + '%'">
+                                       class="js-quality-threshold-range"
+                                       data-output-id="org-qt-val">
                                 <span id="org-qt-val" style="font-weight:700; font-size:1rem; min-width:3rem;">
                                     <?= (int) ($settings['quality']['threshold'] ?? 70) ?>%
                                 </span>
@@ -393,7 +395,7 @@
              Tripwires
              =========================== -->
         <div class="accordion-item">
-            <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open')">
+            <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Tripwires</span>
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
                     Capacity and dependency alert thresholds
@@ -442,7 +444,8 @@
     </div>
 </form>
 
-<script>
+<?php /*
+
 // =========================================================================
 // Drag-and-drop field ordering
 // =========================================================================
@@ -518,6 +521,8 @@ function updateAiModelPlaceholder() {
     document.getElementById('ai-model-input').placeholder = _aiProviderPlaceholders[prov] || 'Enter model name';
     document.getElementById('ai-model-hint').textContent  = _aiProviderHints[prov] || '';
 }
+*/ ?>
+<?php /*
 function testAiConnection() {
     var btn      = document.querySelector('[onclick="testAiConnection()"]');
     var result   = document.getElementById('ai-test-result');
@@ -561,4 +566,4 @@ function testAiConnection() {
         result.textContent = '✗ Request failed';
     });
 }
-</script>
+*/ ?>
