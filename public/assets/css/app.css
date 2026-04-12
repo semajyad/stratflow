@@ -3655,6 +3655,14 @@ tbody tr:hover {
     color: var(--text);
 }
 
+.password-toggle svg {
+    display: block;
+}
+
+.password-toggle [hidden] {
+    display: none !important;
+}
+
 /* Date input styling */
 input[type="date"] {
     font-family: var(--font-sans);
