@@ -3197,6 +3197,116 @@ tbody tr:hover {
     gap: 0.4rem;
 }
 
+.kr-editor-title {
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem;
+}
+
+.kr-editor-title-note {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.kr-editor-table {
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    width: 100%;
+}
+
+.kr-editor-head-row {
+    border-bottom: 1px solid #e5e7eb;
+    color: #6b7280;
+}
+
+.kr-editor-head {
+    padding: 4px 6px;
+    text-align: left;
+}
+
+.kr-editor-head--title {
+    width: 35%;
+}
+
+.kr-editor-head--number {
+    width: 15%;
+}
+
+.kr-editor-head--unit,
+.kr-editor-head--status {
+    width: 10%;
+}
+
+.kr-editor-head--actions {
+    width: 30px;
+}
+
+.kr-editor-row {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.kr-editor-cell {
+    padding: 4px 6px;
+}
+
+.kr-editor-cell--actions {
+    text-align: center;
+}
+
+.kr-editor-input,
+.kr-editor-select {
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 3px 6px;
+    width: 100%;
+}
+
+.kr-editor-select {
+    padding: 3px 4px;
+}
+
+.kr-editor-delete {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.kr-editor-actions {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.kr-editor-add,
+.kr-editor-save {
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+}
+
+.kr-editor-add {
+    background: none;
+    border: 1px dashed #c7d2fe;
+    color: #6366f1;
+}
+
+.kr-editor-save {
+    background: #6366f1;
+    border: none;
+    color: #fff;
+}
+
+.kr-editor-status {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
