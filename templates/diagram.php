@@ -12,6 +12,10 @@ $hasNodes   = !empty($nodes);
 $hasSummary = !empty($document_summary);
 ?>
 
+<div id="diagram-page"
+     data-project-id="<?= (int) $project['id'] ?>"
+     data-csrf-token="<?= htmlspecialchars($csrf_token) ?>"></div>
+
 <div class="page-header flex justify-between items-center">
     <h1 class="page-title">
         <?= htmlspecialchars($project['name']) ?> &mdash; Strategy Roadmap
@@ -24,19 +28,14 @@ $hasSummary = !empty($document_summary);
     </h1>
     <div class="flex items-center gap-2">
         <?php if ($hasDiagram): ?>
-            <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-sm" onclick="generateDiagramAjax()">Regenerate</button>
+            <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-sm js-generate-diagram">Regenerate</button>
         <?php endif; ?>
     </div>
 </div>
 
-
-<!-- Status messages (AJAX + flash) -->
 <div id="generate-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
 
 <?php if (!$hasDiagram): ?>
-<!-- ===========================
-     Empty State: No Diagram Yet
-     =========================== -->
 <section class="card" style="max-width: 640px; margin: 3rem auto;">
     <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom: 1.5rem; opacity: 0.7;">
@@ -50,7 +49,7 @@ $hasSummary = !empty($document_summary);
         <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 460px; margin-left: auto; margin-right: auto;">
             AI will analyse your document and create a visual roadmap showing strategic initiatives, dependencies, and phases. This takes about 10-20 seconds.
         </p>
-        <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg" onclick="generateDiagramAjax()" style="padding: 0.75rem 2rem; font-size: 1rem;">
+        <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg js-generate-diagram" style="padding: 0.75rem 2rem; font-size: 1rem;">
             Generate Roadmap
         </button>
         <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
@@ -58,25 +57,14 @@ $hasSummary = !empty($document_summary);
 </section>
 
 <?php else: ?>
-<!-- ===========================
-     Diagram View (Exists)
-     =========================== -->
-
-<!-- Visual Roadmap — Full Width -->
 <section class="card mb-6" id="diagram-view">
     <div class="card-body" style="min-height: 300px; overflow: auto;">
         <div id="mermaid-output"></div>
     </div>
 </section>
 
-<!-- Hidden textarea for mermaid rendering -->
-<?php if ($hasDiagram): ?>
 <textarea id="mermaid-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
-<?php endif; ?>
 
-<!-- ===========================
-     OKRs Section
-     =========================== -->
 <?php if ($hasNodes): ?>
 <section class="card mb-6">
     <div class="card-header flex justify-between items-center">
@@ -99,18 +87,17 @@ $hasSummary = !empty($document_summary);
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                     <input type="hidden" name="sync_type" value="work_items">
-                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Sync OKRs to Atlassian Goals?')">Sync to Goals</button>
+                    <button type="submit" class="btn btn-secondary btn-sm" data-confirm="Sync OKRs to Atlassian Goals?">Sync to Goals</button>
                 </form>
             <?php } } } catch (\Throwable $e) {} ?>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('add-okr-modal').classList.remove('hidden')">
+            <button type="button" class="btn btn-secondary btn-sm js-open-okr-modal">
                 + Add OKR
             </button>
             <form method="POST" action="/app/diagram/generate-okrs" class="inline-form"
                   data-loading="Generating OKRs..." data-overlay="AI is generating SMART objectives and key results. This may take 15-30 seconds.">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                <button type="submit" class="btn btn-ai btn-sm"
-                        onclick="return confirm('Generate SMART OKRs for all nodes? This will replace existing OKRs.')">
+                <button type="submit" class="btn btn-ai btn-sm" data-confirm="Generate SMART OKRs for all nodes? This will replace existing OKRs.">
                     Generate OKRs (AI)
                 </button>
             </form>
@@ -123,14 +110,13 @@ $hasSummary = !empty($document_summary);
             <div class="accordion-list" id="okr-accordion-list">
             <?php foreach ($nodes as $idx => $node):
                 $hasOkr = !empty($node['okr_title']);
-                // Expand first node by default, collapse others
                 $isOpen = ($idx === 0);
             ?>
-                <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?>"
+                <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?> <?= $isOpen ? 'accordion-item--open' : '' ?>"
                      id="okr-node-<?= htmlspecialchars($node['node_key']) ?>"
                      data-node-key="<?= htmlspecialchars($node['node_key']) ?>">
                     <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
-                    <button type="button" class="accordion-header" onclick="this.parentElement.classList.toggle('accordion-item--open');">
+                    <button type="button" class="accordion-header js-diagram-accordion-toggle">
                         <span class="badge badge-primary" style="flex-shrink:0;"><?= htmlspecialchars($node['node_key']) ?></span>
                         <span class="accordion-title"><?= htmlspecialchars($node['label']) ?></span>
                         <?php if ($hasOkr): ?>
@@ -159,25 +145,17 @@ $hasSummary = !empty($document_summary);
                             ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
                         </div>
                         <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
-                            <form method="POST" action="/app/diagram/delete-okr" class="inline-form"
-                                  onsubmit="return confirm('Delete this OKR? This cannot be undone.')">
+                            <form method="POST" action="/app/diagram/delete-okr" class="inline-form">
                                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                                 <input type="hidden" name="node_id" value="<?= (int) $node['id'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm">Delete OKR</button>
+                                <button type="submit" class="btn btn-danger btn-sm" data-confirm="Delete this OKR? This cannot be undone.">Delete OKR</button>
                             </form>
                         </div>
                     </div>
                 </div>
             <?php endforeach; ?>
             </div>
-            <script>
-                // Open first accordion item by default
-                (function() {
-                    var first = document.querySelector('#okr-accordion-list .accordion-item');
-                    if (first) first.classList.add('accordion-item--open');
-                })();
-            </script>
             <div style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn btn-primary">Save All OKRs</button>
             </div>
@@ -186,16 +164,13 @@ $hasSummary = !empty($document_summary);
 </section>
 <?php endif; ?>
 
-<?php endif; /* end hasDiagram */ ?>
+<?php endif; ?>
 
-<!-- ===========================
-     Add OKR Modal
-     =========================== -->
 <div id="add-okr-modal" class="modal-overlay hidden">
     <div class="modal">
         <div class="modal-header">
             <h3>Add OKR Manually</h3>
-            <button class="modal-close" onclick="document.getElementById('add-okr-modal').classList.add('hidden')">&times;</button>
+            <button type="button" class="modal-close js-close-okr-modal">&times;</button>
         </div>
         <form method="POST" action="/app/diagram/add-okr">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -224,8 +199,7 @@ $hasSummary = !empty($document_summary);
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm"
-                        onclick="document.getElementById('add-okr-modal').classList.add('hidden')">Cancel</button>
+                <button type="button" class="btn btn-secondary btn-sm js-close-okr-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary btn-sm">Add OKR</button>
             </div>
         </form>
@@ -234,10 +208,8 @@ $hasSummary = !empty($document_summary);
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
-<!-- ===========================
-     Node OKR Side Panel
-     =========================== -->
 <?php if ($hasDiagram && $hasNodes): ?>
+<textarea id="diagram-node-data" class="hidden"><?= htmlspecialchars(json_encode(array_values($nodes), JSON_HEX_TAG), ENT_NOQUOTES, 'UTF-8') ?></textarea>
 <div id="node-okr-panel" style="
     position: fixed; top: 0; right: -380px; width: 360px; height: 100vh;
     background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.12);
@@ -249,7 +221,7 @@ $hasSummary = !empty($document_summary);
             <div style="font-size:0.75rem; font-weight:600; color:var(--primary, #4f46e5); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">OKRs for:</div>
             <h3 id="node-okr-title" style="margin:0; font-size:1.0625rem; font-weight:700; color:var(--text, #111827); line-height:1.3;"></h3>
         </div>
-        <button onclick="closeNodeOkrPanel()" style="background:none; border:none; cursor:pointer; font-size:1.375rem; color:var(--text-secondary, #6b7280); line-height:1; padding:0; flex-shrink:0;">&times;</button>
+        <button type="button" class="js-close-node-okr-panel" style="background:none; border:none; cursor:pointer; font-size:1.375rem; color:var(--text-secondary, #6b7280); line-height:1; padding:0; flex-shrink:0;">&times;</button>
     </div>
     <div style="padding: 1.25rem; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
         <input type="hidden" id="node-okr-node-id">
@@ -266,166 +238,9 @@ $hasSummary = !empty($document_summary);
     </div>
     <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border, #e5e7eb);">
         <span id="node-okr-save-status" style="font-size:0.8125rem; display:block; margin-bottom:0.5rem; min-height:1.2em;"></span>
-        <button type="button" id="node-okr-save-btn" onclick="saveNodeOkr()"
-                class="btn btn-primary" style="width:100%;">Save OKRs to Node</button>
+        <button type="button" id="node-okr-save-btn" class="btn btn-primary js-save-node-okr" style="width:100%;">Save OKRs to Node</button>
     </div>
 </div>
-
-<script>
-var _nodeOkrData = <?= json_encode(array_values($nodes), JSON_HEX_TAG) ?>;
-var _csrfToken   = <?= json_encode($csrf_token) ?>;
-
-function openNodeOkrPanel(nodeKey) {
-    var node = _nodeOkrData.find(function(n) { return n.node_key === nodeKey; });
-    if (!node) return;
-    document.getElementById('node-okr-node-id').value    = node.id;
-    document.getElementById('node-okr-title').textContent = node.label;
-    document.getElementById('node-okr-objective').value  = node.okr_title || '';
-    document.getElementById('node-okr-keyresults').value = node.okr_description || '';
-    document.getElementById('node-okr-save-status').textContent = '';
-    document.getElementById('node-okr-save-btn').disabled = false;
-    document.getElementById('node-okr-save-btn').textContent = 'Save OKRs to Node';
-    document.getElementById('node-okr-panel').style.right = '0';
-}
-
-function closeNodeOkrPanel() {
-    document.getElementById('node-okr-panel').style.right = '-380px';
-}
-
-function saveNodeOkr() {
-    var nodeId  = document.getElementById('node-okr-node-id').value;
-    var title   = document.getElementById('node-okr-objective').value;
-    var desc    = document.getElementById('node-okr-keyresults').value;
-    var btn     = document.getElementById('node-okr-save-btn');
-    var status  = document.getElementById('node-okr-save-status');
-
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    status.textContent = '';
-
-    var form = new FormData();
-    form.append('_csrf_token',     _csrfToken);
-    form.append('node_id',         nodeId);
-    form.append('okr_title',       title);
-    form.append('okr_description', desc);
-
-    fetch('/app/diagram/save-okr', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: form
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        btn.disabled = false;
-        btn.textContent = 'Save OKRs to Node';
-        if (data.status === 'ok') {
-            var node = _nodeOkrData.find(function(n) { return n.id == nodeId; });
-            if (node) { node.okr_title = title; node.okr_description = desc; }
-            // Keep accordion in sync if visible
-            if (node) {
-                var accordion = document.querySelector('[data-node-key="' + node.node_key + '"]');
-                if (accordion) {
-                    var objInput = accordion.querySelector('input[name*="okr_title"]');
-                    var krInput  = accordion.querySelector('textarea[name*="okr_description"]');
-                    if (objInput) objInput.value = title;
-                    if (krInput)  krInput.value  = desc;
-                    accordion.classList.toggle('accordion-item--complete', !!title);
-                }
-            }
-            status.style.color = '#16a34a';
-            status.textContent = 'Saved successfully';
-            setTimeout(closeNodeOkrPanel, 800);
-        } else {
-            status.style.color = '#dc2626';
-            status.textContent = 'Save failed — please try again';
-        }
-    })
-    .catch(function() {
-        btn.disabled = false;
-        btn.textContent = 'Save OKRs to Node';
-        status.style.color = '#dc2626';
-        status.textContent = 'Connection error';
-    });
-}
-
-// Auto-open OKR panel when arriving from executive dashboard (?node=A)
-(function () {
-    var params = new URLSearchParams(window.location.search);
-    var nodeKey = params.get('node');
-    if (nodeKey) {
-        // Wait for Mermaid to render before opening the panel
-        var attempts = 0;
-        var interval = setInterval(function () {
-            attempts++;
-            if (typeof openNodeOkrPanel === 'function') {
-                clearInterval(interval);
-                openNodeOkrPanel(nodeKey);
-            } else if (attempts > 40) {
-                clearInterval(interval);
-            }
-        }, 150);
-    }
-}());
-</script>
 <?php endif; ?>
 
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-
-<script>
-function generateDiagramAjax() {
-    var btn = document.getElementById('generate-diagram-btn');
-    // Use whichever status element exists
-    var status = document.getElementById('generate-status');
-    var statusEmpty = document.getElementById('generate-status-empty');
-    var activeStatus = (status && status.offsetParent !== null) ? status : (statusEmpty || status);
-
-    btn.disabled = true;
-    var origText = btn.textContent;
-    btn.textContent = 'Generating...';
-
-    if (activeStatus) {
-        activeStatus.style.display = 'block';
-        activeStatus.style.background = '#e8f0fe';
-        activeStatus.style.color = '#1a56db';
-        activeStatus.innerHTML = 'AI is analysing your strategy and building a visual roadmap. This usually takes 10-20 seconds...';
-    }
-
-    var formData = new FormData();
-    formData.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
-    formData.append('project_id', '<?= (int) $project['id'] ?>');
-
-    fetch('/app/diagram/generate', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: formData
-    })
-    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-    .then(function(res) {
-        if (res.ok && res.data.success) {
-            if (activeStatus) {
-                activeStatus.style.background = '#d4edda';
-                activeStatus.style.color = '#155724';
-                activeStatus.innerHTML = 'Roadmap generated with ' + res.data.node_count + ' initiatives. Loading...';
-            }
-            setTimeout(function() { window.location.reload(); }, 1000);
-        } else {
-            if (activeStatus) {
-                activeStatus.style.background = '#f8d7da';
-                activeStatus.style.color = '#721c24';
-                activeStatus.innerHTML = (res.data.error || 'Generation failed') + ' <button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-left:0.5rem;">Try Again</button>';
-            }
-            btn.disabled = false;
-            btn.textContent = 'Try Again';
-        }
-    })
-    .catch(function(err) {
-        if (activeStatus) {
-            activeStatus.style.background = '#f8d7da';
-            activeStatus.style.color = '#721c24';
-            activeStatus.innerHTML = 'Connection error. <button onclick="generateDiagramAjax()" class="btn btn-sm btn-primary" style="margin-left:0.5rem;">Try Again</button>';
-        }
-        btn.disabled = false;
-        btn.textContent = origText;
-    });
-}
-</script>

@@ -254,6 +254,42 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-generate-diagram')) {
+        e.preventDefault();
+        generateDiagramAjax();
+        return;
+    }
+
+    if (e.target.closest('.js-open-okr-modal')) {
+        e.preventDefault();
+        openDiagramOkrModal();
+        return;
+    }
+
+    if (e.target.closest('.js-close-okr-modal')) {
+        e.preventDefault();
+        closeDiagramOkrModal();
+        return;
+    }
+
+    if (e.target.closest('.js-close-node-okr-panel')) {
+        e.preventDefault();
+        closeNodeOkrPanel();
+        return;
+    }
+
+    if (e.target.closest('.js-save-node-okr')) {
+        e.preventDefault();
+        saveNodeOkr();
+        return;
+    }
+
+    if (e.target.closest('.js-diagram-accordion-toggle')) {
+        e.preventDefault();
+        toggleDiagramAccordionItem(e.target.closest('.js-diagram-accordion-toggle'));
+        return;
+    }
+
     if (e.target.closest('.js-jira-preview-close')) {
         e.preventDefault();
         closeJiraSyncPreviewModal();
@@ -494,6 +530,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    initializeDiagramPage();
     initializeFieldSortList('sort-list-wi', 'field-order-wi');
     initializeFieldSortList('sort-list-st', 'field-order-st');
 
@@ -2786,6 +2823,231 @@ function showProcessingOverlay(message) {
 function hideProcessingOverlay() {
     var overlay = document.getElementById('processing-overlay');
     if (overlay) { overlay.remove(); }
+}
+
+function getDiagramPage() {
+    return document.getElementById('diagram-page');
+}
+
+function getDiagramNodeData() {
+    var source = document.getElementById('diagram-node-data');
+    if (!source) {
+        return [];
+    }
+    try {
+        return JSON.parse(source.value || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function updateDiagramNodeData(nodes) {
+    var source = document.getElementById('diagram-node-data');
+    if (source) {
+        source.value = JSON.stringify(nodes);
+    }
+}
+
+function openDiagramOkrModal() {
+    var modal = document.getElementById('add-okr-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeDiagramOkrModal() {
+    var modal = document.getElementById('add-okr-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function toggleDiagramAccordionItem(button) {
+    var item = button ? button.closest('.accordion-item') : null;
+    if (item) {
+        item.classList.toggle('accordion-item--open');
+    }
+}
+
+function openNodeOkrPanel(nodeKey) {
+    var nodes = getDiagramNodeData();
+    var node = nodes.find(function(n) { return n.node_key === nodeKey; });
+    if (!node) {
+        return;
+    }
+    document.getElementById('node-okr-node-id').value = node.id;
+    document.getElementById('node-okr-title').textContent = node.label;
+    document.getElementById('node-okr-objective').value = node.okr_title || '';
+    document.getElementById('node-okr-keyresults').value = node.okr_description || '';
+    document.getElementById('node-okr-save-status').textContent = '';
+    document.getElementById('node-okr-save-btn').disabled = false;
+    document.getElementById('node-okr-save-btn').textContent = 'Save OKRs to Node';
+    document.getElementById('node-okr-panel').style.right = '0';
+}
+
+function closeNodeOkrPanel() {
+    var panel = document.getElementById('node-okr-panel');
+    if (panel) {
+        panel.style.right = '-380px';
+    }
+}
+
+function saveNodeOkr() {
+    var diagramPage = getDiagramPage();
+    if (!diagramPage) {
+        return;
+    }
+
+    var nodeId = document.getElementById('node-okr-node-id').value;
+    var title = document.getElementById('node-okr-objective').value;
+    var desc = document.getElementById('node-okr-keyresults').value;
+    var btn = document.getElementById('node-okr-save-btn');
+    var status = document.getElementById('node-okr-save-status');
+    var csrfToken = diagramPage.dataset.csrfToken || '';
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    status.textContent = '';
+
+    var form = new FormData();
+    form.append('_csrf_token', csrfToken);
+    form.append('node_id', nodeId);
+    form.append('okr_title', title);
+    form.append('okr_description', desc);
+
+    fetch('/app/diagram/save-okr', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Save OKRs to Node';
+        if (data.status === 'ok') {
+            var nodes = getDiagramNodeData();
+            var node = nodes.find(function(entry) { return String(entry.id) === String(nodeId); });
+            if (node) {
+                node.okr_title = title;
+                node.okr_description = desc;
+                updateDiagramNodeData(nodes);
+            }
+            if (node) {
+                var accordion = document.querySelector('[data-node-key="' + node.node_key + '"]');
+                if (accordion) {
+                    var objInput = accordion.querySelector('input[name*="okr_title"]');
+                    var krInput = accordion.querySelector('textarea[name*="okr_description"]');
+                    if (objInput) { objInput.value = title; }
+                    if (krInput) { krInput.value = desc; }
+                    accordion.classList.toggle('accordion-item--complete', !!title);
+                }
+            }
+            status.style.color = '#16a34a';
+            status.textContent = 'Saved successfully';
+            window.setTimeout(closeNodeOkrPanel, 800);
+        } else {
+            status.style.color = '#dc2626';
+            status.textContent = 'Save failed - please try again';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Save OKRs to Node';
+        status.style.color = '#dc2626';
+        status.textContent = 'Connection error';
+    });
+}
+
+function generateDiagramAjax() {
+    var diagramPage = getDiagramPage();
+    var btn = document.getElementById('generate-diagram-btn');
+    if (!diagramPage || !btn) {
+        return;
+    }
+
+    var status = document.getElementById('generate-status');
+    var statusEmpty = document.getElementById('generate-status-empty');
+    var activeStatus = (status && status.offsetParent !== null) ? status : (statusEmpty || status);
+    var origText = btn.textContent;
+    var csrfToken = diagramPage.dataset.csrfToken || '';
+    var projectId = diagramPage.dataset.projectId || '';
+
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    if (activeStatus) {
+        activeStatus.style.display = 'block';
+        activeStatus.style.background = '#e8f0fe';
+        activeStatus.style.color = '#1a56db';
+        activeStatus.textContent = 'AI is analysing your strategy and building a visual roadmap. This usually takes 10-20 seconds...';
+    }
+
+    var formData = new FormData();
+    formData.append('_csrf_token', csrfToken);
+    formData.append('project_id', projectId);
+
+    fetch('/app/diagram/generate', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(function(r) {
+        return r.json().then(function(d) {
+            return { ok: r.ok, data: d };
+        });
+    })
+    .then(function(res) {
+        if (res.ok && res.data.success) {
+            if (activeStatus) {
+                activeStatus.style.background = '#d4edda';
+                activeStatus.style.color = '#155724';
+                activeStatus.textContent = 'Roadmap generated with ' + res.data.node_count + ' initiatives. Loading...';
+            }
+            window.setTimeout(function() { window.location.reload(); }, 1000);
+            return;
+        }
+
+        if (activeStatus) {
+            activeStatus.style.background = '#f8d7da';
+            activeStatus.style.color = '#721c24';
+            activeStatus.textContent = res.data.error || 'Generation failed';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+    })
+    .catch(function() {
+        if (activeStatus) {
+            activeStatus.style.background = '#f8d7da';
+            activeStatus.style.color = '#721c24';
+            activeStatus.textContent = 'Connection error';
+        }
+        btn.disabled = false;
+        btn.textContent = origText;
+    });
+}
+
+function initializeDiagramPage() {
+    var diagramPage = getDiagramPage();
+    if (!diagramPage || diagramPage.dataset.initialized === '1') {
+        return;
+    }
+    diagramPage.dataset.initialized = '1';
+
+    var nodeKey = new URLSearchParams(window.location.search).get('node');
+    if (!nodeKey) {
+        return;
+    }
+
+    var attempts = 0;
+    var interval = window.setInterval(function() {
+        attempts += 1;
+        openNodeOkrPanel(nodeKey);
+        if (document.getElementById('node-okr-panel') && document.getElementById('node-okr-panel').style.right === '0px') {
+            window.clearInterval(interval);
+        } else if (attempts > 40) {
+            window.clearInterval(interval);
+        }
+    }, 150);
 }
 
 /**
