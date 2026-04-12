@@ -41,6 +41,11 @@ These are additional tools for specific use cases when the primary run_pipeline 
 4. `run_pipeline` may be invoked again as a fresh call if you need additional context during implementation.
 5. Do NOT chain multiple vexp/run_pipeline calls to simulate capsule+impact+memory+observation sequencing — one `run_pipeline` invocation should replace that whole chain and maintain its own isolated state.
 
+### StratFlow Security Memory
+- Start with `MEMORY.md`.
+- If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, or external providers, read `docs/SECURE_CODING.md`.
+- Keep this guidance compact. Put durable security rules in `docs/SECURE_CODING.md`, not in large repeated prompt blocks.
+
 ### Subagent / Explore / Plan mode
 - Subagents CAN and MUST call `run_pipeline` — always include the task description
 - The PreToolUse hook blocks Grep/Glob when vexp daemon is running

@@ -5,6 +5,7 @@
 Start with `MEMORY.md`.
 Only open the specific docs linked from there that match the task.
 Do not read the whole repo documentation set by default.
+If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, or external providers, also read `docs/SECURE_CODING.md`.
 
 ## Context Discipline
 
@@ -22,6 +23,9 @@ Do not read the whole repo documentation set by default.
 - Escape all user-visible template output with `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
 - Keep CSRF protection on every state-changing browser route except verified webhooks.
 - Never log secrets, password-reset URLs, raw tokens, or provider credentials.
+- Hash recovery tokens at rest and encrypt stored provider/customer secrets.
+- Deny inactive users on every auth path and fail closed on unclear authorization checks.
+- Prefer delegated JS in shared bundles; do not introduce inline handlers or new CSP regressions.
 - Preserve the existing vanilla PHP MVC structure and current UI patterns unless the task explicitly changes them.
 
 ## Commands

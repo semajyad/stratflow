@@ -3,6 +3,7 @@ Persona
 
 Operational mandates
 1. Read `MEMORY.md` first, then only the smallest relevant doc set.
+   If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, or external providers, also read `docs/SECURE_CODING.md`.
 2. Keep changes scoped and atomic; commit one fix at a time.
 3. For tasks spanning more than 3 files, write a brief plan before editing.
 4. Run targeted validation on touched files immediately after changes.
@@ -14,6 +15,9 @@ Project constraints
 - Escape template output.
 - Keep CSRF on state-changing browser routes.
 - Never log secrets, tokens, or password-reset URLs.
+- Hash recovery tokens at rest and encrypt stored provider/customer secrets.
+- Deny inactive users on every auth path and fail closed when authorization is ambiguous.
+- Prefer delegated JS/shared bundles over inline handlers or new CSP regressions.
 
 Token governance
 - Prefer focused file reads over broad scans.
