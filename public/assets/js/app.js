@@ -393,6 +393,12 @@ document.addEventListener('input', function(e) {
     var qualityThresholdRange = e.target.closest('.js-quality-threshold-range');
     if (qualityThresholdRange) {
         syncRangeOutput(qualityThresholdRange);
+        return;
+    }
+
+    var invoiceSeatsInput = e.target.closest('.js-invoice-seats-input');
+    if (invoiceSeatsInput) {
+        updateInvoiceSeatPreview(invoiceSeatsInput);
     }
 });
 
@@ -456,6 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleSuperadminApiKey(superadminAiProvider.value || '');
     }
 
+    document.querySelectorAll('.js-invoice-seats-input').forEach(updateInvoiceSeatPreview);
     document.querySelectorAll('.js-quality-threshold-range').forEach(syncRangeOutput);
     document.querySelectorAll('.js-quality-enabled-toggle').forEach(function(toggle) {
         toggleVisibilityTarget(toggle.dataset.targetId || '', toggle.checked);
@@ -1704,6 +1711,19 @@ function toggleVisibilityTarget(targetId, shouldShow) {
     if (target) {
         target.style.display = shouldShow ? '' : 'none';
     }
+}
+
+function updateInvoiceSeatPreview(input) {
+    var preview = document.getElementById('invoice-preview-text');
+    if (!preview || !input) {
+        return;
+    }
+    var seatCount = parseInt(input.value || '1', 10);
+    var normalizedSeatCount = Number.isNaN(seatCount) || seatCount < 1 ? 1 : seatCount;
+    var pricePerSeat = parseInt(input.dataset.pricePerSeat || '0', 10);
+    var periodLabel = input.dataset.periodLabel || 'monthly';
+    var totalCost = (pricePerSeat * normalizedSeatCount / 100).toFixed(2);
+    preview.textContent = '+$' + totalCost + '/' + periodLabel + ' (' + normalizedSeatCount + ' seat' + (normalizedSeatCount !== 1 ? 's' : '') + ')';
 }
 
 function syncRangeOutput(input) {

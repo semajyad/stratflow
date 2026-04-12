@@ -283,7 +283,9 @@ $billingContact  = $billing_contact ?? [];
                         <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem;">Seats to Add</label>
                         <input type="number" name="seats_to_add" id="invoice-seats-input"
                                min="1" max="1000" value="1" class="form-control" style="width:110px;"
-                               oninput="updateInvoiceSeatPreview()">
+                               class="js-invoice-seats-input"
+                               data-period-label="<?= htmlspecialchars(strtolower($periodLabel), ENT_QUOTES, 'UTF-8') ?>"
+                               data-price-per-seat="<?= (int) $pricePerSeat ?>">
                     </div>
                     <?php if ($pricePerSeat > 0): ?>
                     <div id="invoice-seat-preview" style="font-size:0.875rem; color:#2563eb; padding-bottom:0.5rem;">
@@ -291,25 +293,11 @@ $billingContact  = $billing_contact ?? [];
                     </div>
                     <?php endif; ?>
                     <button type="submit" class="btn btn-primary"
-                            onclick="return confirm('Add seats to your subscription? This will be billed on your next invoice.')">
+                            data-confirm="Add seats to your subscription? This will be billed on your next invoice.">
                         Add Seats
                     </button>
                 </div>
             </form>
-            <?php if ($pricePerSeat > 0): ?>
-            <script>
-            (function() {
-                var pricePerSeat    = <?= $pricePerSeat ?>;
-                var periodLabel     = <?= json_encode(strtolower($periodLabel)) ?>;
-                window.updateInvoiceSeatPreview = function() {
-                    var n    = parseInt(document.getElementById('invoice-seats-input').value, 10) || 1;
-                    var cost = (pricePerSeat * n / 100).toFixed(2);
-                    document.getElementById('invoice-preview-text').textContent =
-                        '+$' + cost + '/' + periodLabel + ' (' + n + ' seat' + (n !== 1 ? 's' : '') + ')';
-                };
-            })();
-            </script>
-            <?php endif; ?>
 
         <?php else: ?>
             <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1.25rem;">
@@ -471,7 +459,7 @@ $billingContact  = $billing_contact ?? [];
                 <form method="POST" action="/app/admin/xero/disconnect" class="inline-form">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <button type="submit" class="btn btn-sm btn-danger"
-                            onclick="return confirm('Disconnect Xero? Cached invoices will be removed.')">
+                            data-confirm="Disconnect Xero? Cached invoices will be removed.">
                         Disconnect
                     </button>
                 </form>
