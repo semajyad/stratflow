@@ -3627,6 +3627,16 @@ tbody tr:hover {
     padding-right: 2.75rem;
 }
 
+.password-wrapper input[type="password"]::-ms-reveal,
+.password-wrapper input[type="password"]::-ms-clear {
+    display: none;
+}
+
+.password-wrapper input[type="password"]::-webkit-credentials-auto-fill-button,
+.password-wrapper input[type="password"]::-webkit-textfield-decoration-container {
+    display: none;
+}
+
 .password-toggle {
     position: absolute;
     right: 0.5rem;
