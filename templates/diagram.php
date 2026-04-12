@@ -36,20 +36,20 @@ $hasSummary = !empty($document_summary);
                 <div id="generate-status" class="generate-status-banner hidden"></div>
 
 <?php if (!$hasDiagram): ?>
-<section class="card" style="max-width: 640px; margin: 3rem auto;">
-    <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom: 1.5rem; opacity: 0.7;">
+<section class="card diagram-empty-card">
+    <div class="card-body diagram-empty-card__body">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" class="diagram-empty-card__icon">
             <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="8" y="14" width="8" height="7" rx="1"/><line x1="6.5" y1="10" x2="6.5" y2="14"/>
             <line x1="17.5" y1="10" x2="17.5" y2="14"/><line x1="6.5" y1="14" x2="12" y2="14"/>
             <line x1="17.5" y1="14" x2="12" y2="14"/>
         </svg>
 
-        <h2 style="margin: 0 0 0.75rem; font-size: 1.25rem;">Your strategy summary is ready</h2>
-        <p class="text-muted" style="margin-bottom: 1.5rem; max-width: 460px; margin-left: auto; margin-right: auto;">
+        <h2 class="diagram-empty-card__title">Your strategy summary is ready</h2>
+        <p class="text-muted diagram-empty-card__copy">
             AI will analyse your document and create a visual roadmap showing strategic initiatives, dependencies, and phases. This takes about 10-20 seconds.
         </p>
-        <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg js-generate-diagram" style="padding: 0.75rem 2rem; font-size: 1rem;">
+        <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg js-generate-diagram diagram-empty-card__button">
             Generate Roadmap
         </button>
                 <div id="generate-status-empty" class="generate-status-banner generate-status-banner--compact hidden"></div>
@@ -58,19 +58,19 @@ $hasSummary = !empty($document_summary);
 
 <?php else: ?>
 <section class="card mb-6" id="diagram-view">
-    <div class="card-body" style="min-height: 300px; overflow: auto;">
+    <div class="card-body diagram-view__body">
         <div id="mermaid-output"></div>
     </div>
 </section>
 
-<textarea id="mermaid-code" style="display:none;"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
+<textarea id="mermaid-code" class="hidden"><?= htmlspecialchars($diagram['mermaid_code'] ?? '') ?></textarea>
 
 <?php if ($hasNodes): ?>
 <section class="card mb-6">
     <div class="card-header flex justify-between items-center">
         <div>
-            <h3 style="margin:0;">Objectives & Key Results</h3>
-            <span class="text-muted" style="font-size: 0.8125rem;"><?= count($nodes) ?> strategic initiatives</span>
+            <h3 class="diagram-section-title">Objectives & Key Results</h3>
+            <span class="text-muted diagram-section-subtitle"><?= count($nodes) ?> strategic initiatives</span>
         </div>
         <div class="flex items-center gap-2">
             <?php
@@ -103,7 +103,7 @@ $hasSummary = !empty($document_summary);
             </form>
         </div>
     </div>
-    <div class="card-body" style="padding: 0;">
+    <div class="card-body diagram-okr-card__body">
         <form method="POST" action="/app/diagram/save-all-okrs" data-loading="Saving OKRs...">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
@@ -117,34 +117,34 @@ $hasSummary = !empty($document_summary);
                      data-node-key="<?= htmlspecialchars($node['node_key']) ?>">
                     <input type="hidden" name="nodes[<?= (int) $node['id'] ?>][id]" value="<?= (int) $node['id'] ?>">
                     <button type="button" class="accordion-header js-diagram-accordion-toggle">
-                        <span class="badge badge-primary" style="flex-shrink:0;"><?= htmlspecialchars($node['node_key']) ?></span>
+                        <span class="badge badge-primary diagram-node-key-badge"><?= htmlspecialchars($node['node_key']) ?></span>
                         <span class="accordion-title"><?= htmlspecialchars($node['label']) ?></span>
                         <?php if ($hasOkr): ?>
-                            <span class="badge badge-success" style="font-size:0.7rem; flex-shrink:0;">OKR set</span>
+                            <span class="badge badge-success diagram-node-status-badge">OKR set</span>
                         <?php else: ?>
-                            <span class="badge badge-secondary" style="font-size:0.7rem; flex-shrink:0;">No OKR</span>
+                            <span class="badge badge-secondary diagram-node-status-badge">No OKR</span>
                         <?php endif; ?>
-                        <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0; margin-left:auto;">
+                        <svg class="accordion-chevron diagram-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <polyline points="6 9 12 15 18 9"/>
                         </svg>
                     </button>
                     <div class="accordion-body">
-                        <div class="form-group" style="margin-bottom:0.75rem;">
-                            <label class="form-label" style="font-size:0.75rem;">Objective</label>
+                        <div class="form-group diagram-form-group">
+                            <label class="form-label diagram-form-label">Objective</label>
                             <input type="text"
                                    name="nodes[<?= (int) $node['id'] ?>][okr_title]"
                                    value="<?= htmlspecialchars($node['okr_title'] ?? '') ?>"
-                                   class="form-control" style="font-size:0.875rem;"
+                                   class="form-control diagram-form-control"
                                    placeholder="e.g. Launch AU market presence with 3 pilots by Q3">
                         </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label" style="font-size:0.75rem;">Key Results</label>
+                        <div class="form-group diagram-form-group diagram-form-group--flush">
+                            <label class="form-label diagram-form-label">Key Results</label>
                             <textarea name="nodes[<?= (int) $node['id'] ?>][okr_description]"
-                                      class="form-control" style="font-size:0.85rem;" rows="3"
+                                      class="form-control diagram-form-control diagram-form-control--textarea" rows="3"
                                       placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2&#10;KR3: $500k in committed pipeline by end of Q2"
                             ><?= htmlspecialchars($node['okr_description'] ?? '') ?></textarea>
                         </div>
-                        <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
+                        <div class="diagram-okr-actions">
                             <form method="POST" action="/app/diagram/delete-okr" class="inline-form">
                                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
@@ -156,7 +156,7 @@ $hasSummary = !empty($document_summary);
                 </div>
             <?php endforeach; ?>
             </div>
-            <div style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end;">
+            <div class="diagram-okr-footer">
                 <button type="submit" class="btn btn-primary">Save All OKRs</button>
             </div>
         </form>
@@ -175,9 +175,9 @@ $hasSummary = !empty($document_summary);
         <form method="POST" action="/app/diagram/add-okr">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label">Strategic Initiative <span style="color:#ef4444;">*</span></label>
+            <div class="modal-body diagram-modal-body">
+                <div class="form-group diagram-modal-form-group">
+                    <label class="form-label">Strategic Initiative <span class="diagram-required">*</span></label>
                     <select name="node_id" class="form-control" required>
                         <option value="">-- Select a strategic initiative --</option>
                         <?php foreach ($nodes as $n): ?>
@@ -187,12 +187,12 @@ $hasSummary = !empty($document_summary);
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group" style="margin:0;">
+                <div class="form-group diagram-modal-form-group">
                     <label class="form-label">Objective</label>
                     <input type="text" name="okr_title" class="form-control" maxlength="500"
                            placeholder="e.g. Establish presence in AU market by Q3 2026">
                 </div>
-                <div class="form-group" style="margin:0;">
+                <div class="form-group diagram-modal-form-group">
                     <label class="form-label">Key Results</label>
                     <textarea name="okr_description" class="form-control" rows="4"
                               placeholder="KR1: Sign 3 pilot agreements by Q2&#10;KR2: Generate $500k pipeline by Q3&#10;KR3: ..."></textarea>
@@ -210,35 +210,30 @@ $hasSummary = !empty($document_summary);
 
 <?php if ($hasDiagram && $hasNodes): ?>
 <textarea id="diagram-node-data" class="hidden"><?= htmlspecialchars(json_encode(array_values($nodes), JSON_HEX_TAG), ENT_NOQUOTES, 'UTF-8') ?></textarea>
-<div id="node-okr-panel" style="
-    position: fixed; top: 0; right: -380px; width: 360px; height: 100vh;
-    background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-    z-index: 1000; transition: right 0.25s ease; display: flex; flex-direction: column;
-    border-left: 1px solid var(--border, #e5e7eb);
-">
-    <div style="padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--border, #e5e7eb); display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem;">
+<div id="node-okr-panel" class="diagram-node-panel">
+    <div class="diagram-node-panel__header">
         <div>
-            <div style="font-size:0.75rem; font-weight:600; color:var(--primary, #4f46e5); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">OKRs for:</div>
-            <h3 id="node-okr-title" style="margin:0; font-size:1.0625rem; font-weight:700; color:var(--text, #111827); line-height:1.3;"></h3>
+            <div class="diagram-node-panel__eyebrow">OKRs for:</div>
+            <h3 id="node-okr-title" class="diagram-node-panel__title"></h3>
         </div>
-        <button type="button" class="js-close-node-okr-panel" style="background:none; border:none; cursor:pointer; font-size:1.375rem; color:var(--text-secondary, #6b7280); line-height:1; padding:0; flex-shrink:0;">&times;</button>
+        <button type="button" class="js-close-node-okr-panel diagram-node-panel__close">&times;</button>
     </div>
-    <div style="padding: 1.25rem; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
+    <div class="diagram-node-panel__body">
         <input type="hidden" id="node-okr-node-id">
-        <div class="form-group" style="margin:0;">
-            <label for="node-okr-objective" style="font-weight:600;">Objective:</label>
+        <div class="form-group diagram-modal-form-group">
+            <label for="node-okr-objective" class="diagram-node-panel__label">Objective:</label>
             <input type="text" id="node-okr-objective" class="form-control"
                    placeholder="e.g. Launch AU market presence with 3 pilots by Q3">
         </div>
-        <div class="form-group" style="margin:0; flex:1; display:flex; flex-direction:column;">
-            <label for="node-okr-keyresults" style="font-weight:600;">Key Results:</label>
-            <textarea id="node-okr-keyresults" class="form-control" style="flex:1; min-height:200px; resize:vertical;"
+        <div class="form-group diagram-modal-form-group diagram-node-panel__field">
+            <label for="node-okr-keyresults" class="diagram-node-panel__label">Key Results:</label>
+            <textarea id="node-okr-keyresults" class="form-control diagram-node-panel__textarea"
                       placeholder="KR1: Signed LOIs with 3 Tier-1 banks by end of Q1&#10;KR2: Pilot projects kicked off for 2 banks by mid-Q2"></textarea>
         </div>
     </div>
-    <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border, #e5e7eb);">
-        <span id="node-okr-save-status" style="font-size:0.8125rem; display:block; margin-bottom:0.5rem; min-height:1.2em;"></span>
-        <button type="button" id="node-okr-save-btn" class="btn btn-primary js-save-node-okr" style="width:100%;">Save OKRs to Node</button>
+    <div class="diagram-node-panel__footer">
+        <span id="node-okr-save-status" class="diagram-node-panel__status"></span>
+        <button type="button" id="node-okr-save-btn" class="btn btn-primary js-save-node-okr diagram-node-panel__save">Save OKRs to Node</button>
     </div>
 </div>
 <?php endif; ?>
