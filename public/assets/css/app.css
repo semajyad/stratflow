@@ -3277,6 +3277,97 @@ tbody tr:hover {
     font-size: 0.78rem;
 }
 
+.settings-provider-grid {
+    align-items: start;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 1fr 1fr;
+}
+
+.settings-hidden-panel {
+    display: none;
+}
+
+.settings-readonly-input {
+    background: var(--bg-muted, #f8fafc);
+    cursor: default;
+    font-family: monospace;
+}
+
+.settings-divider-row {
+    align-items: center;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+}
+
+.settings-grid-4 {
+    align-items: start;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.settings-inline-currency-row {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
+}
+
+.settings-input-width-md {
+    width: 110px;
+}
+
+.settings-rates-grid {
+    align-items: center;
+    display: grid;
+    gap: 0 1.5rem;
+    grid-template-columns: 180px 1fr;
+    max-width: 600px;
+}
+
+.settings-rates-label {
+    border-bottom: 1px solid var(--border);
+    margin: 0;
+    padding: 0.625rem 0;
+}
+
+.settings-rates-cell {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0;
+}
+
+.settings-rates-row {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.settings-rates-subtext {
+    color: var(--text-muted);
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.settings-rates-per-month {
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+.settings-callout {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin-top: 1rem;
+    max-width: 600px;
+    padding: 0.75rem 1rem;
+}
+
 .sounding-board-trigger {
     white-space: nowrap;
 }

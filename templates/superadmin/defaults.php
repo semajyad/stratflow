@@ -25,7 +25,7 @@ $s = $settings;
 <form method="POST" action="/superadmin/defaults">
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
-    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+    <div class="settings-stack">
 
         <!-- ===========================
              AI Provider & Model
@@ -33,7 +33,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">AI Provider &amp; Model</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Default AI used for story generation, scoring, and analysis
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -41,7 +41,7 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start;">
+                <div class="settings-provider-grid">
                     <div class="form-group">
                         <label class="form-label">Provider</label>
                         <select name="ai_provider" class="form-input js-superadmin-ai-provider" id="ai-provider-select">
@@ -66,18 +66,18 @@ $s = $settings;
                     foreach ($providerKeyLabels as $providerSlug => $meta):
                         $maskedKey = $api_keys[$providerSlug] ?? '';
                     ?>
-                    <div class="form-group" style="<?= ($s['ai_provider'] ?? 'google') !== $providerSlug ? 'display:none;' : '' ?>"
+                    <div class="form-group<?= ($s['ai_provider'] ?? 'google') !== $providerSlug ? ' settings-hidden-panel hidden' : '' ?>"
                          id="api-key-<?= $providerSlug ?>">
                         <label class="form-label"><?= htmlspecialchars($meta['label']) ?></label>
-                        <input type="text" class="form-input"
+                        <input type="text" class="form-input settings-readonly-input"
                                value="<?= htmlspecialchars($maskedKey) ?>"
                                placeholder="Not set — add <?= htmlspecialchars($meta['env']) ?> to environment"
-                               readonly style="font-family:monospace; background:var(--bg-muted, #f8fafc); cursor:default;">
+                               readonly>
                         <small class="text-muted">Read from <code><?= htmlspecialchars($meta['env']) ?></code> environment variable.</small>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border); display:flex; align-items:center; gap:1rem;">
+                <div class="settings-divider-row">
                     <button type="button" class="btn btn-secondary js-superadmin-test-ai" id="test-ai-btn">
                         Test Connection
                     </button>
@@ -92,7 +92,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">New Organisation Defaults</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Applied when creating an organisation without explicit values
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -100,19 +100,19 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; align-items:start;">
+                <div class="settings-grid-4">
                     <div class="form-group">
                         <label class="form-label">Default Seat Limit</label>
-                        <input type="number" name="default_seat_limit" class="form-input"
-                               value="<?= (int) ($s['default_seat_limit'] ?? 5) ?>" min="1" max="10000" style="width:100px;">
+                        <input type="number" name="default_seat_limit" class="form-input settings-input-width-xs"
+                               value="<?= (int) ($s['default_seat_limit'] ?? 5) ?>" min="1" max="10000">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Default Cost / Seat</label>
-                        <div style="display:flex; align-items:center; gap:0.4rem;">
-                            <span style="font-size:0.85rem; color:var(--text-muted);"><?= htmlspecialchars($s['billing_currency'] ?? 'NZD') ?></span>
+                        <div class="settings-inline-currency-row">
+                            <span class="settings-inline-muted"><?= htmlspecialchars($s['billing_currency'] ?? 'NZD') ?></span>
                             <input type="number" name="default_price_per_seat" step="0.01" min="0"
                                    value="<?= ($s['default_price_per_seat_cents'] ?? 0) > 0 ? number_format(($s['default_price_per_seat_cents'] ?? 0) / 100, 2) : '' ?>"
-                                   class="form-input" style="width:110px;" placeholder="0.00">
+                                   class="form-input settings-input-width-md" placeholder="0.00">
                         </div>
                         <small class="text-muted">Per seat / month.</small>
                     </div>
@@ -140,7 +140,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Billing Rates</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Standard pricing per seat for each billing period
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -148,15 +148,15 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                <p class="text-muted settings-intro">
                     Set the standard price per seat for each billing cycle. These are used as defaults when assigning billing to a new organisation.
                     Discounts for longer periods are applied automatically (e.g. 10% off quarterly).
                 </p>
-                <div style="display:grid; grid-template-columns:180px 1fr; gap:0 1.5rem; align-items:center; max-width:600px;">
+                <div class="settings-rates-grid">
                     <!-- Currency -->
-                    <label class="form-label" style="margin:0; padding:0.625rem 0; border-bottom:1px solid var(--border);">Currency</label>
-                    <div style="padding:0.5rem 0; border-bottom:1px solid var(--border);">
-                        <select name="billing_currency" class="form-input" style="width:120px;">
+                    <label class="form-label settings-rates-label">Currency</label>
+                    <div class="settings-rates-cell">
+                        <select name="billing_currency" class="form-input settings-input-width-sm">
                             <?php foreach (['NZD','AUD','USD','GBP','EUR'] as $cur): ?>
                                 <option value="<?= $cur ?>" <?= ($s['billing_currency'] ?? 'NZD') === $cur ? 'selected' : '' ?>><?= $cur ?></option>
                             <?php endforeach; ?>
@@ -174,23 +174,23 @@ $s = $settings;
                         $cents = (int) ($s[$settingsKey] ?? 0);
                         $dollars = $cents > 0 ? number_format($cents / 100, 2) : '';
                     ?>
-                    <label class="form-label" style="margin:0; padding:0.625rem 0; border-bottom:1px solid var(--border);">
+                    <label class="form-label settings-rates-label">
                         <?= $label ?>
-                        <span style="display:block; font-size:0.72rem; color:var(--text-muted); font-weight:400;">per seat / <?= $months === 1 ? 'month' : ($months . ' months') ?></span>
+                        <span class="settings-rates-subtext">per seat / <?= $months === 1 ? 'month' : ($months . ' months') ?></span>
                     </label>
-                    <div style="padding:0.5rem 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.5rem;">
-                        <span style="font-size:0.9rem; color:var(--text-muted);"><?= htmlspecialchars($s['billing_currency'] ?? 'NZD') ?></span>
+                    <div class="settings-rates-cell settings-rates-row">
+                        <span class="settings-inline-muted"><?= htmlspecialchars($s['billing_currency'] ?? 'NZD') ?></span>
                         <input type="number" name="<?= $fieldName ?>" step="0.01" min="0"
                                value="<?= $dollars ?>"
-                               class="form-input" style="width:120px;" placeholder="0.00">
+                               class="form-input settings-input-width-sm" placeholder="0.00">
                         <?php if ($months > 1 && $cents > 0): ?>
-                            <span style="font-size:0.78rem; color:#6b7280;">= $<?= number_format($cents / 100 / $months, 2) ?>/seat/mo</span>
+                            <span class="settings-rates-per-month">= $<?= number_format($cents / 100 / $months, 2) ?>/seat/mo</span>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>
                 </div>
 
-                <div style="margin-top:1rem; padding:0.75rem 1rem; background:#f8fafc; border:1px solid var(--border); border-radius:6px; font-size:0.82rem; color:var(--text-muted); max-width:600px;">
+                <div class="settings-callout">
                     These rates are defaults only — you can override the price per seat on individual organisations from the
                     <a href="/superadmin/organisations">Manage Organisations</a> page.
                 </div>
@@ -203,7 +203,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Feature Flags</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Enable or disable features globally for all organisations
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -222,17 +222,17 @@ $s = $settings;
                     'feature_story_quality'  => ['Story Quality', 'AI-powered story quality scoring and enforcement'],
                 ];
                 ?>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div class="settings-checkbox-card-grid">
                     <?php foreach ($flags as $key => [$label, $desc]):
                         $checked = !empty($s[$key]);
                     ?>
-                    <label style="display:flex; align-items:flex-start; gap:0.75rem; cursor:pointer; padding:0.75rem; background:#f9fafb; border:1px solid var(--border); border-radius:6px;">
+                    <label class="settings-checkbox-card">
                         <input type="hidden" name="<?= $key ?>" value="0">
                         <input type="checkbox" name="<?= $key ?>" value="1" <?= $checked ? 'checked' : '' ?>
-                               style="margin-top:3px; width:16px; height:16px; flex-shrink:0;">
+                               class="settings-checkbox-card__input">
                         <div>
-                            <div style="font-weight:600; font-size:0.875rem;"><?= htmlspecialchars($label) ?></div>
-                            <div style="font-size:0.78rem; color:var(--text-muted);"><?= htmlspecialchars($desc) ?></div>
+                            <div class="settings-checkbox-card__title"><?= htmlspecialchars($label) ?></div>
+                            <div class="settings-checkbox-card__desc"><?= htmlspecialchars($desc) ?></div>
                         </div>
                     </label>
                     <?php endforeach; ?>
@@ -246,7 +246,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Story Quality</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Default quality gate settings applied to new organisations
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -254,17 +254,16 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start;">
+                <div class="settings-grid-2">
                     <div class="form-group">
                         <label class="form-label">Quality Threshold (%)</label>
-                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div class="settings-slider-row">
                             <input type="range" name="quality_threshold"
                                    min="0" max="100" step="5"
                                    value="<?= (int) ($s['quality_threshold'] ?? 70) ?>"
-                                   style="flex:1;"
-                                   class="js-quality-threshold-range"
+                                   class="js-quality-threshold-range settings-slider"
                                    data-output-id="qt-val">
-                            <span id="qt-val" style="font-weight:700; font-size:1rem; min-width:3rem;">
+                            <span id="qt-val" class="settings-slider-output">
                                 <?= (int) ($s['quality_threshold'] ?? 70) ?>%
                             </span>
                         </div>
@@ -287,7 +286,7 @@ $s = $settings;
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Email &amp; Notifications</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Default sender identity used in system emails
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -295,7 +294,7 @@ $s = $settings;
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start;">
+                <div class="settings-grid-2">
                     <div class="form-group">
                         <label class="form-label">Support Email</label>
                         <input type="email" name="support_email" class="form-input"
@@ -316,66 +315,7 @@ $s = $settings;
 
     </div><!-- /accordion stack -->
 
-    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end;">
-        <button type="submit" class="btn btn-primary" style="min-width:140px;">Save Defaults</button>
+    <div class="settings-save-row flex justify-end">
+        <button type="submit" class="btn btn-primary btn-min-width-140">Save Defaults</button>
     </div>
 </form>
-
-<?php /*
-function showApiKey(provider) {
-    ['google','openai','anthropic'].forEach(function(p) {
-        var el = document.getElementById('api-key-' + p);
-        if (el) el.style.display = p === provider ? '' : 'none';
-    });
-}
-
-function testAiConnection() {
-    var btn      = document.getElementById('test-ai-btn');
-    var result   = document.getElementById('test-ai-result');
-    var provider = document.getElementById('ai-provider-select').value;
-    var model    = document.querySelector('input[name="ai_model"]').value.trim();
-
-    if (!model) {
-        result.innerHTML = '<span style="color:var(--danger);">Enter a model identifier first.</span>';
-        return;
-    }
-
-    btn.disabled    = true;
-    btn.textContent = 'Testing...';
-    result.innerHTML = '<span style="color:var(--text-muted);">Connecting&hellip;</span>';
-
-    var form = new FormData();
-    form.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
-    form.append('provider', provider);
-    form.append('model', model);
-
-    fetch('/superadmin/defaults/test-ai', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: form,
-        credentials: 'same-origin'
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        btn.disabled    = false;
-        btn.textContent = 'Test Connection';
-        if (d.success) {
-            result.innerHTML =
-                '<span style="color:#059669;">&#10003; Connected</span>' +
-                ' <span style="color:var(--text-muted); font-size:0.8rem;">' + d.latency_ms + 'ms &mdash; &ldquo;' +
-                d.snippet.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '&rdquo;</span>';
-        } else {
-            result.innerHTML =
-                '<span style="color:var(--danger);">&#10007; Failed: ' +
-                (d.error || 'Unknown error').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
-                '</span>' +
-                (d.latency_ms ? ' <span style="color:var(--text-muted); font-size:0.8rem;">(' + d.latency_ms + 'ms)</span>' : '');
-        }
-    })
-    .catch(function(e) {
-        btn.disabled    = false;
-        btn.textContent = 'Test Connection';
-        result.innerHTML = '<span style="color:var(--danger);">&#10007; Network error: ' + e.message + '</span>';
-    });
-}
-*/ ?>
