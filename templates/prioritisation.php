@@ -42,12 +42,12 @@ $formula = $isRice
      Framework Selector
      =========================== -->
 <div class="card mb-6">
-    <div class="card-body flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
+    <div class="card-body flex items-center justify-between prio-page-toolbar">
         <form method="POST" action="/app/prioritisation/framework" class="flex items-center gap-2 js-framework-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <label for="framework-select" style="margin-bottom: 0; white-space: nowrap;">Framework:</label>
-            <select name="framework" id="framework-select" class="score-select js-framework-select" style="width: auto; min-width: 120px;">
+            <label for="framework-select" class="prio-page-framework-label">Framework:</label>
+            <select name="framework" id="framework-select" class="score-select js-framework-select prio-page-framework-select">
                 <option value="rice" <?= $isRice ? 'selected' : '' ?>>RICE</option>
                 <option value="wsjf" <?= !$isRice ? 'selected' : '' ?>>WSJF</option>
             </select>
@@ -75,7 +75,7 @@ $formula = $isRice
         <div class="modal-body">
             <h4>RICE</h4>
             <p><strong>Score = (Reach x Impact x Confidence) / Effort</strong></p>
-            <ul style="list-style: disc; padding-left: 1.25rem; margin-bottom: 1.25rem;">
+            <ul class="prio-page-framework-list prio-page-framework-list--spaced">
                 <li><strong>Reach</strong> &mdash; How many users/stakeholders will this impact? (1=few, 10=everyone)</li>
                 <li><strong>Impact</strong> &mdash; How significant is the impact per user? (1=minimal, 10=transformative)</li>
                 <li><strong>Confidence</strong> &mdash; How confident are you in the estimates? (1=guess, 10=certain)</li>
@@ -83,7 +83,7 @@ $formula = $isRice
             </ul>
             <h4>WSJF</h4>
             <p><strong>Score = (Business Value + Time Criticality + Risk Reduction) / Job Size</strong></p>
-            <ul style="list-style: disc; padding-left: 1.25rem;">
+            <ul class="prio-page-framework-list">
                 <li><strong>Business Value</strong> &mdash; How much value does this deliver? (1=minimal, 10=critical)</li>
                 <li><strong>Time Criticality</strong> &mdash; How urgent is this? (1=can wait, 10=immediate)</li>
                 <li><strong>Risk Reduction</strong> &mdash; How much risk/opportunity does this address? (1=none, 10=major)</li>
@@ -103,18 +103,18 @@ $formula = $isRice
 <div class="card mb-6">
     <div class="card-header">
         <h3>Score Work Items (<?= count($work_items) ?>)</h3>
-        <span class="text-muted" style="font-size: 0.8125rem;"><?= $formula ?></span>
+        <span class="text-muted prio-page-formula"><?= $formula ?></span>
     </div>
-    <div class="card-body" style="padding: 0; overflow-x: hidden; max-height: calc(100vh - 260px);">
-        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" style="width: 100%;">
+    <div class="card-body prio-page-table-wrap">
+        <table id="prioritisation-table" data-framework="<?= htmlspecialchars($framework) ?>" class="prio-page-table">
             <thead>
                 <tr>
-                    <th style="width: 32px;">#</th>
+                    <th class="prio-page-col-rank">#</th>
                     <th>Title</th>
                     <?php foreach ($labels as $label): ?>
-                        <th style="width: 68px; text-align: center;"><?= $label ?></th>
+                        <th class="prio-page-col-score"><?= $label ?></th>
                     <?php endforeach; ?>
-                    <th style="width: 58px; text-align: center; position: sticky; right: 0; background: var(--bg, #fff); z-index: 1;">Score</th>
+                    <th class="prio-page-col-final">Score</th>
                 </tr>
             </thead>
             <tbody>
@@ -174,7 +174,7 @@ $formula = $isRice
 <!-- ===========================
      Actions
      =========================== -->
-<div class="flex items-center justify-between mb-6" style="flex-wrap: wrap; gap: 1rem;">
+<div class="flex items-center justify-between mb-6 prio-page-actions">
     <form method="POST" action="/app/prioritisation/rerank"
           data-loading="Re-ranking by score...">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -189,8 +189,8 @@ $formula = $isRice
 
 <?php else: ?>
 <div class="card">
-    <div class="card-body text-center" style="padding: 3rem;">
-        <p class="text-muted" style="font-size: 1.125rem;">
+    <div class="card-body text-center prio-page-empty">
+        <p class="text-muted prio-page-empty-copy">
             No work items to prioritise. <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>">Generate work items</a> first.
         </p>
     </div>

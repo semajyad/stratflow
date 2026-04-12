@@ -3832,6 +3832,71 @@ tbody tr:hover {
     resize: vertical;
 }
 
+.prio-page-toolbar,
+.prio-page-actions {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.prio-page-framework-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.prio-page-framework-select {
+    min-width: 120px;
+    width: auto;
+}
+
+.prio-page-framework-list {
+    list-style: disc;
+    padding-left: 1.25rem;
+}
+
+.prio-page-framework-list--spaced {
+    margin-bottom: 1.25rem;
+}
+
+.prio-page-formula {
+    font-size: 0.8125rem;
+}
+
+.prio-page-table-wrap {
+    max-height: calc(100vh - 260px);
+    overflow-x: hidden;
+    padding: 0;
+}
+
+.prio-page-table {
+    width: 100%;
+}
+
+.prio-page-col-rank {
+    width: 32px;
+}
+
+.prio-page-col-score {
+    text-align: center;
+    width: 68px;
+}
+
+.prio-page-col-final {
+    background: var(--bg, #fff);
+    position: sticky;
+    right: 0;
+    text-align: center;
+    width: 58px;
+    z-index: 1;
+}
+
+.prio-page-empty {
+    padding: 3rem;
+}
+
+.prio-page-empty-copy {
+    font-size: 1.125rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
