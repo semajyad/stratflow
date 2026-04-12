@@ -15,6 +15,27 @@ $statusColours = [
     'not_started' => '#9ca3af',
     'achieved'    => '#6366f1',
 ];
+
+$progressTone = static function (int $pct): string {
+    if ($pct >= 80) {
+        return 'success';
+    }
+    if ($pct >= 40) {
+        return 'warning';
+    }
+    return 'primary';
+};
+
+$statusTone = static function (string $status): string {
+    return match ($status) {
+        'on_track' => 'success',
+        'at_risk' => 'warning',
+        'off_track' => 'danger',
+        'not_started' => 'muted',
+        'achieved' => 'primary',
+        default => 'muted',
+    };
+};
 ?>
 
 <?php if (!empty($flash_message)): ?>
@@ -25,35 +46,34 @@ $statusColours = [
 <?php endif; ?>
 
 <!-- Page Header -->
-<div class="page-header flex justify-between items-center" style="flex-wrap: wrap; gap: 1rem;">
+<div class="page-header executive-project-header">
     <div>
         <h1 class="page-title"><?= htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8') ?> &mdash; OKR Progress</h1>
-        <p class="page-subtitle" style="color: #64748b; font-size: 0.875rem;">
+        <p class="page-subtitle executive-project-subtitle">
             <?= (int) $health_counts['total_okrs'] ?> objective<?= $health_counts['total_okrs'] !== 1 ? 's' : '' ?>
             &middot;
             <?= (int) $health_counts['total_krs'] ?> key result<?= $health_counts['total_krs'] !== 1 ? 's' : '' ?>
         </p>
     </div>
-    <div style="display:flex; align-items:center; gap: 0.75rem;">
-        <select class="js-executive-project-select" data-base-url="/app/projects/"
-                style="border:1px solid #d1d5db; border-radius:6px; padding: 6px 10px; font-size: 0.875rem;">
+    <div class="executive-project-toolbar">
+        <select class="js-executive-project-select executive-project-select" data-base-url="/app/projects/">
             <?php foreach ($projects as $p): ?>
                 <option value="<?= (int) $p['id'] ?>" <?= (int) $p['id'] === (int) $project['id'] ? 'selected' : '' ?>>
                     <?= htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8') ?>
                 </option>
             <?php endforeach; ?>
         </select>
-        <span style="font-size: 12px; color: #94a3b8;">
+        <span class="executive-project-updated">
             Updated <?= htmlspecialchars($project['updated_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>
         </span>
     </div>
 </div>
 
 <?php if (empty($okr_items)): ?>
-    <div class="card mt-6" style="text-align:center; padding:2rem; color:#6b7280;">
+    <div class="card mt-6 executive-project-empty">
         <p>No OKRs defined for this project yet.</p>
-        <p style="font-size:0.875rem; margin-top:0.5rem;">Add OKR titles to roadmap nodes on the
-            <a href="/app/diagram" style="color:#6366f1;">Strategy Roadmap</a> page.
+        <p class="executive-project-empty-copy">Add OKR titles to roadmap nodes on the
+            <a href="/app/diagram" class="executive-project-link">Strategy Roadmap</a> page.
         </p>
     </div>
 <?php endif; ?>
@@ -66,26 +86,26 @@ $statusColours = [
     $storyTotal   = (int) ($okr['story_total'] ?? 0);
     $structuredKrs = $okr['structured_krs'] ?? [];
     $krHypData    = $okr['kr_hypothesis'] ?? [];
-    $barColour    = $storyPct >= 80 ? '#10b981' : ($storyPct >= 40 ? '#f59e0b' : '#6366f1');
+    $storyTone    = $progressTone($storyPct);
     $hasProgress  = $storyTotal > 0 || !empty($structuredKrs);
-    $borderColour = $storyPct >= 80 ? '#10b981' : ($storyPct > 0 ? '#f59e0b' : '#6366f1');
+    $borderTone   = $storyPct >= 80 ? 'success' : ($storyPct > 0 ? 'warning' : 'primary');
 ?>
-<div class="card mb-4" style="border-top: 3px solid <?= htmlspecialchars($borderColour, ENT_QUOTES, 'UTF-8') ?>;">
-    <div class="card-body" style="padding: 1rem 1.25rem;">
+<div class="card mb-4 executive-project-card executive-project-card--<?= $borderTone ?>">
+    <div class="card-body executive-project-card-body">
 
         <!-- OKR header row -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; flex-wrap:wrap;">
-            <div style="flex:1; min-width:0;">
-                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
-                    <span style="display:inline-block; background:#6366f1; color:#fff; border-radius:999px; padding:2px 10px; font-size:0.65rem; text-transform:uppercase; font-weight:700; white-space:nowrap;">
+        <div class="executive-project-card-head">
+            <div class="executive-project-card-main">
+                <div class="executive-project-title-row">
+                    <span class="executive-project-objective-pill">
                         Objective
                     </span>
-                    <strong style="font-size: 0.95rem; color:#1e293b;">
+                    <strong class="executive-project-title">
                         <?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?>
                     </strong>
                 </div>
                 <?php if (!empty($okr['description_lines'])): ?>
-                    <p style="font-size:0.8rem; color:#64748b; margin:0.25rem 0 0; line-height:1.4;">
+                    <p class="executive-project-description">
                         <?= htmlspecialchars(implode(' ', $okr['description_lines']), ENT_QUOTES, 'UTF-8') ?>
                     </p>
                 <?php endif; ?>
@@ -93,24 +113,22 @@ $statusColours = [
 
             <!-- Overall progress indicator -->
             <?php if ($storyTotal > 0): ?>
-            <div style="text-align:right; flex-shrink:0; min-width:90px;">
-                <div style="font-size:0.65rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:4px;">Progress</div>
-                <div style="font-size:1.5rem; font-weight:800; color:<?= $barColour ?>; line-height:1;"><?= $storyPct ?>%</div>
-                <div style="font-size:0.7rem; color:#94a3b8;"><?= $storyDone ?>/<?= $storyTotal ?> stories</div>
-                <div style="width:90px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden; margin-top:4px;">
-                    <div style="width:<?= $storyPct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
-                </div>
+            <div class="executive-project-progress">
+                <div class="executive-project-progress-label">Progress</div>
+                <div class="executive-project-progress-value executive-project-progress-value--<?= $storyTone ?>"><?= $storyPct ?>%</div>
+                <div class="executive-project-progress-meta"><?= $storyDone ?>/<?= $storyTotal ?> stories</div>
+                <progress class="okr-progress__meter okr-progress__meter--<?= $storyTone ?> executive-project-progress-meter" max="100" value="<?= $storyPct ?>"></progress>
             </div>
             <?php endif; ?>
         </div>
 
         <?php if (!empty($structuredKrs)): ?>
         <!-- Structured key_results with numeric progress bars -->
-        <div style="margin-top: 1rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
-            <div style="font-size:0.68rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
+        <div class="executive-project-section">
+            <div class="executive-project-section-label">Key Results</div>
             <?php foreach ($structuredKrs as $kr):
                 $krStatus  = $kr['kr_status'] ?? 'not_started';
-                $krColour  = $statusColours[$krStatus] ?? '#9ca3af';
+                $krTone    = $statusTone($krStatus);
                 $baseline  = (float) ($kr['baseline_value'] ?? 0);
                 $target    = (float) ($kr['target_value']   ?? 0);
                 $current   = (float) ($kr['current_value']  ?? 0);
@@ -120,18 +138,16 @@ $statusColours = [
                     $krPct = max(0, min(100, (int) round(($current - $baseline) / ($target - $baseline) * 100)));
                 }
             ?>
-            <div style="margin-bottom:0.625rem; padding:0.5rem 0.75rem; background:#f8fafc; border-radius:6px; border-left:3px solid <?= $krColour ?>;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.375rem; flex-wrap:wrap; gap:0.3rem;">
-                    <span style="font-size:0.82rem; font-weight:500; color:#1e293b;"><?= htmlspecialchars($kr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <span style="display:inline-block; background:<?= $krColour ?>; color:#fff; border-radius:999px; padding:1px 8px; font-size:0.65rem; text-transform:uppercase; font-weight:700; white-space:nowrap;">
+            <div class="executive-project-kr-card executive-project-kr-card--<?= $krTone ?>">
+                <div class="executive-project-kr-head">
+                    <span class="executive-project-kr-title"><?= htmlspecialchars($kr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="okr-status-pill executive-project-status-pill executive-project-status-pill--<?= $krTone ?>">
                         <?= htmlspecialchars(str_replace('_', ' ', $krStatus), ENT_QUOTES, 'UTF-8') ?>
                     </span>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <div style="flex:1; background:#e5e7eb; border-radius:999px; height:8px; overflow:hidden;">
-                        <div style="width:<?= $krPct ?>%; background:<?= $krColour ?>; height:100%; border-radius:999px; transition:width 0.3s;"></div>
-                    </div>
-                    <span style="font-size:0.72rem; color:#6b7280; white-space:nowrap;">
+                <div class="okr-kr-progress-row">
+                    <progress class="okr-progress__meter okr-progress__meter--<?= $krTone ?> executive-project-kr-meter" max="100" value="<?= $krPct ?>"></progress>
+                    <span class="executive-project-kr-meta">
                         <?php if ($target > 0): ?>
                             <?= number_format($current, 0, '.', '') . $unit ?> / <?= number_format($target, 0, '.', '') . $unit ?>
                         <?php else: ?>
@@ -140,7 +156,7 @@ $statusColours = [
                     </span>
                 </div>
                 <?php if (!empty($kr['ai_momentum'])): ?>
-                <p style="margin:0.375rem 0 0; font-size:0.75rem; color:#6b7280; font-style:italic; line-height:1.4;">
+                <p class="executive-project-momentum">
                     &ldquo;<?= htmlspecialchars($kr['ai_momentum'], ENT_QUOTES, 'UTF-8') ?>&rdquo;
                 </p>
                 <?php endif; ?>
@@ -150,8 +166,8 @@ $statusColours = [
 
         <?php elseif (!empty($krLines)): ?>
         <!-- Free-text KR lines with story-hypothesis progress -->
-        <div style="margin-top: 0.875rem; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
-            <div style="font-size:0.68rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em; color:#94a3b8; margin-bottom:0.5rem;">Key Results</div>
+        <div class="executive-project-section executive-project-section--compact">
+            <div class="executive-project-section-label">Key Results</div>
             <?php foreach ($krLines as $j => $krLine):
                 $displayLine = preg_replace('/^\s*KR\d*\s*[:.\-]\s*/i', '', $krLine);
                 // Try to find matching kr_hypothesis stories
@@ -169,23 +185,19 @@ $statusColours = [
                 $krPct = $matchedHyp && $matchedHyp['total'] > 0
                     ? (int) round($matchedHyp['done'] / $matchedHyp['total'] * 100)
                     : null;
-                $krBarColour = $krPct !== null
-                    ? ($krPct >= 80 ? '#10b981' : ($krPct >= 40 ? '#f59e0b' : '#6366f1'))
-                    : '#a5b4fc';
+                $krTone = $krPct !== null ? $progressTone($krPct) : 'primary';
             ?>
-            <div style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.45rem 0.65rem; margin-bottom:0.35rem; background:#f8fafc; border-radius:5px; border-left:3px solid <?= $krBarColour ?>;">
-                <span style="font-size:0.75rem; font-weight:700; color:#6366f1; white-space:nowrap; min-width:1.6rem; padding-top:1px;"><?= (int) ($j + 1) ?>.</span>
-                <div style="flex:1; min-width:0;">
-                    <div style="font-size:0.8rem; color:#374151; line-height:1.4; margin-bottom:<?= $matchedHyp ? '0.3rem' : '0' ?>;">
+            <div class="executive-project-line-kr executive-project-line-kr--<?= $krTone ?>">
+                <span class="executive-project-line-index"><?= (int) ($j + 1) ?>.</span>
+                <div class="executive-project-line-copy">
+                    <div class="executive-project-line-text<?= $matchedHyp ? ' executive-project-line-text--with-progress' : '' ?>">
                         <?= htmlspecialchars($displayLine, ENT_QUOTES, 'UTF-8') ?>
                     </div>
                     <?php if ($matchedHyp): ?>
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <div style="flex:1; background:#e5e7eb; border-radius:999px; height:5px; overflow:hidden; max-width:120px;">
-                            <div style="width:<?= $krPct ?>%; background:<?= $krBarColour ?>; height:100%; border-radius:999px;"></div>
-                        </div>
-                        <span style="font-size:0.7rem; color:<?= $krBarColour ?>; font-weight:700;"><?= $krPct ?>%</span>
-                        <span style="font-size:0.7rem; color:#9ca3af;"><?= $matchedHyp['done'] ?>/<?= $matchedHyp['total'] ?> stories</span>
+                    <div class="executive-project-line-progress">
+                        <progress class="okr-progress__meter okr-progress__meter--<?= $krTone ?> executive-project-line-meter" max="100" value="<?= $krPct ?>"></progress>
+                        <span class="okr-progress__value okr-progress__value--<?= $krTone ?>"><?= $krPct ?>%</span>
+                        <span class="executive-project-line-meta"><?= $matchedHyp['done'] ?>/<?= $matchedHyp['total'] ?> stories</span>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -197,8 +209,3 @@ $statusColours = [
     </div><!-- /.card-body -->
 </div><!-- /.card -->
 <?php endforeach; ?>
-
-<style>
-.mt-6 { margin-top: 1.5rem; }
-.mb-4 { margin-bottom: 1rem; }
-</style>

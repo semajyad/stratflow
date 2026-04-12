@@ -6625,6 +6625,330 @@ a.okr-title:hover {
 .org-seat-meter--warning { accent-color: #f0ad4e; }
 .org-seat-meter--danger { accent-color: var(--danger); }
 
+.executive-project-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.executive-project-subtitle {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.executive-project-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.executive-project-select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    padding: 6px 10px;
+}
+
+.executive-project-updated {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.executive-project-empty {
+    color: #6b7280;
+    padding: 2rem;
+    text-align: center;
+}
+
+.executive-project-empty-copy {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.executive-project-link {
+    color: #6366f1;
+}
+
+.executive-project-card {
+    border-top: 3px solid #6366f1;
+}
+
+.executive-project-card--success {
+    border-top-color: #10b981;
+}
+
+.executive-project-card--warning {
+    border-top-color: #f59e0b;
+}
+
+.executive-project-card--primary {
+    border-top-color: #6366f1;
+}
+
+.executive-project-card-body {
+    padding: 1rem 1.25rem;
+}
+
+.executive-project-card-head {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.executive-project-card-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.executive-project-title-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.executive-project-objective-pill {
+    background: #6366f1;
+    border-radius: 999px;
+    color: #fff;
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.executive-project-title {
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.executive-project-description {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin: 0.25rem 0 0;
+}
+
+.executive-project-progress {
+    flex-shrink: 0;
+    min-width: 90px;
+    text-align: right;
+}
+
+.executive-project-progress-label {
+    color: #94a3b8;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.executive-project-progress-value {
+    color: #6366f1;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.executive-project-progress-value--success {
+    color: #10b981;
+}
+
+.executive-project-progress-value--warning {
+    color: #f59e0b;
+}
+
+.executive-project-progress-value--primary {
+    color: #6366f1;
+}
+
+.executive-project-progress-meta {
+    color: #94a3b8;
+    font-size: 0.7rem;
+}
+
+.executive-project-progress-meter {
+    margin-top: 4px;
+    width: 90px;
+}
+
+.executive-project-section {
+    border-top: 1px solid #f1f5f9;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+}
+
+.executive-project-section--compact {
+    margin-top: 0.875rem;
+}
+
+.executive-project-section-label {
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.executive-project-kr-card {
+    background: #f8fafc;
+    border-left: 3px solid #9ca3af;
+    border-radius: 6px;
+    margin-bottom: 0.625rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.executive-project-kr-card--success {
+    border-left-color: #10b981;
+}
+
+.executive-project-kr-card--warning {
+    border-left-color: #f59e0b;
+}
+
+.executive-project-kr-card--danger {
+    border-left-color: #ef4444;
+}
+
+.executive-project-kr-card--muted {
+    border-left-color: #9ca3af;
+}
+
+.executive-project-kr-card--primary {
+    border-left-color: #6366f1;
+}
+
+.executive-project-kr-head {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    justify-content: space-between;
+    margin-bottom: 0.375rem;
+}
+
+.executive-project-kr-title {
+    color: #1e293b;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.executive-project-status-pill {
+    color: #fff;
+}
+
+.executive-project-status-pill--success {
+    background: #10b981;
+}
+
+.executive-project-status-pill--warning {
+    background: #f59e0b;
+}
+
+.executive-project-status-pill--danger {
+    background: #ef4444;
+}
+
+.executive-project-status-pill--muted {
+    background: #9ca3af;
+}
+
+.executive-project-status-pill--primary {
+    background: #6366f1;
+}
+
+.executive-project-kr-meter {
+    flex: 1;
+    height: 8px;
+}
+
+.executive-project-kr-meta {
+    color: #6b7280;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.executive-project-momentum {
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0.375rem 0 0;
+}
+
+.executive-project-line-kr {
+    align-items: flex-start;
+    background: #f8fafc;
+    border-left: 3px solid #6366f1;
+    border-radius: 5px;
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    padding: 0.45rem 0.65rem;
+}
+
+.executive-project-line-kr--success {
+    border-left-color: #10b981;
+}
+
+.executive-project-line-kr--warning {
+    border-left-color: #f59e0b;
+}
+
+.executive-project-line-kr--primary {
+    border-left-color: #6366f1;
+}
+
+.executive-project-line-index {
+    color: #6366f1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 1.6rem;
+    padding-top: 1px;
+    white-space: nowrap;
+}
+
+.executive-project-line-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.executive-project-line-text {
+    color: #374151;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.executive-project-line-text--with-progress {
+    margin-bottom: 0.3rem;
+}
+
+.executive-project-line-progress {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
+}
+
+.executive-project-line-meter {
+    flex: 1;
+    height: 5px;
+    max-width: 120px;
+}
+
+.executive-project-line-meta {
+    color: #9ca3af;
+    font-size: 0.7rem;
+}
+
 .org-billing-copy,
 .org-created-copy,
 .org-superadmin-copy {
