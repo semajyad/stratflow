@@ -52,7 +52,7 @@ function formatFileSize(int $bytes): string {
             <p class="drop-zone-hint">PDF, DOCX, PPTX, XLSX, TXT, CSV, RTF, MP4, MOV, AVI, WEBM, MKV, MP3, M4A, WAV, OGG, AAC &mdash; Max 50 MB for documents &middot; 200 MB for video/audio</p>
             <input type="file" name="document" id="file-input" accept=".pdf,.doc,.docx,.txt,.csv,.md,.rtf,.pptx,.xlsx,.mp4,.mov,.avi,.webm,.mkv,.mp3,.m4a,.wav,.ogg,.aac" class="file-input-hidden">
         </div>
-        <div class="selected-file" id="selected-file" style="display:none;">
+        <div class="selected-file hidden" id="selected-file">
             <span id="selected-file-name"></span>
             <button type="button" class="btn btn-sm btn-secondary" id="clear-file">Remove</button>
         </div>
@@ -64,7 +64,7 @@ function formatFileSize(int $bytes): string {
                       placeholder="Paste meeting notes, strategy briefs, or any strategic content here..."></textarea>
         </div>
 
-        <div style="padding: 0 1.5rem 1.5rem; display: flex; justify-content: flex-end;">
+        <div class="upload-form-actions">
             <button type="submit" class="btn btn-primary">Upload &amp; Extract</button>
         </div>
     </form>
@@ -74,34 +74,34 @@ function formatFileSize(int $bytes): string {
      2. Extraction Failure (contextual — shown below upload)
      =========================== -->
 <?php if ($latestDoc && empty($latestDoc['extracted_text']) && !$hasSummary): ?>
-<section class="card mb-6" style="border-left: 4px solid var(--danger, #dc2626);">
-    <div class="card-body" style="padding:1.25rem 1.5rem;">
-        <div style="display:flex; align-items:start; gap:1rem;">
-            <div style="flex-shrink:0; width:40px; height:40px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center;">
+<section class="card mb-6 upload-callout upload-callout--danger">
+    <div class="card-body upload-callout-body">
+        <div class="upload-callout-row">
+            <div class="upload-callout-icon upload-callout-icon--danger">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
             </div>
-            <div style="flex:1;">
-                <h3 style="margin:0 0 0.35rem; color:#991b1b;">Could not extract text from this document</h3>
-                <p class="text-muted" style="margin:0 0 1rem; font-size:0.875rem;">
+            <div class="upload-callout-copy">
+                <h3 class="upload-callout-title upload-callout-title--danger">Could not extract text from this document</h3>
+                <p class="text-muted upload-callout-text">
                     We couldn't read <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>. This usually happens with scanned PDFs, image-heavy documents, or encrypted files.
                 </p>
-                <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.875rem;">
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">1.</span>
+                <div class="upload-callout-steps">
+                    <div class="upload-callout-step">
+                        <span class="upload-callout-step-number">1.</span>
                         <span>Upload a different format — <strong>DOCX works best</strong></span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">2.</span>
+                    <div class="upload-callout-step">
+                        <span class="upload-callout-step-number">2.</span>
                         <span>Paste the text directly into the form above</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="color:var(--primary); font-weight:600;">3.</span>
+                    <div class="upload-callout-step">
+                        <span class="upload-callout-step-number">3.</span>
                         <span>Try a different version of the PDF (re-saved or re-exported)</span>
                     </div>
                 </div>
-                <div style="margin-top:1rem;">
+                <div class="upload-callout-actions">
                     <button type="button" class="btn btn-primary btn-sm js-focus-paste-text">
                         Paste Text Instead
                     </button>
@@ -116,11 +116,11 @@ function formatFileSize(int $bytes): string {
      3. Generate AI Summary (below upload — shown when text extracted, no summary yet)
      =========================== -->
 <?php if ($hasText && !$hasSummary): ?>
-<section class="card mb-6" style="border-left: 4px solid var(--primary);">
-    <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem;">
+<section class="card mb-6 upload-callout upload-callout--primary">
+    <div class="card-body upload-callout-body upload-callout-body--between">
         <div>
-            <h3 style="margin:0 0 0.25rem;">Document uploaded successfully</h3>
-            <p class="text-muted" style="margin:0; font-size:0.875rem;">
+            <h3 class="upload-callout-title">Document uploaded successfully</h3>
+            <p class="text-muted upload-callout-text upload-callout-text--compact">
                 Text extracted from <strong><?= htmlspecialchars($latestDoc['original_name']) ?></strong>.
                 Generate an AI summary to proceed to the strategy roadmap.
             </p>
@@ -141,12 +141,12 @@ function formatFileSize(int $bytes): string {
      4. Summary Ready (below generate prompt)
      =========================== -->
 <?php if ($hasSummary): ?>
-<section class="card mb-6" style="border-left: 4px solid var(--success, #28a745);">
+<section class="card mb-6 upload-callout upload-callout--success">
     <div class="card-body">
-        <div style="display:flex; align-items:start; gap:1rem;">
-            <div style="flex:1;">
-                <h3 style="margin:0 0 0.5rem; color:var(--success, #28a745);">Summary Ready</h3>
-                <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin:0;">
+        <div class="upload-callout-row">
+            <div class="upload-callout-copy">
+                <h3 class="upload-callout-title upload-callout-title--success">Summary Ready</h3>
+                <p class="upload-summary-text">
                     <?= htmlspecialchars(mb_substr($latestDoc['ai_summary'], 0, 400)) ?>
                     <?= mb_strlen($latestDoc['ai_summary']) > 400 ? '...' : '' ?>
                 </p>
@@ -161,38 +161,38 @@ function formatFileSize(int $bytes): string {
      =========================== -->
 <?php if ($hasDocuments): ?>
 <section class="card">
-    <div class="card-header flex justify-between items-center js-toggle-doc-list" style="cursor:pointer;"
+    <div class="card-header flex justify-between items-center js-toggle-doc-list upload-doc-toggle"
          data-target-id="doc-list">
-        <h2 class="card-title" style="margin:0;">
+        <h2 class="card-title upload-doc-title">
             Documents (<?= count($documents) ?>)
-            <span class="toggle-icon" style="font-weight:400; margin-left:0.5rem;">+</span>
+            <span class="toggle-icon upload-doc-toggle-icon">+</span>
         </h2>
     </div>
     <div id="doc-list" class="hidden">
         <?php foreach ($documents as $doc): ?>
-            <div style="border-bottom:1px solid var(--border);">
+            <div class="upload-doc-item">
                 <?php if (!empty($doc['ai_summary'])): ?>
-                    <details style="margin:0;">
-                        <summary style="padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; list-style:none; user-select:none;">
+                    <details class="upload-doc-details">
+                        <summary class="upload-doc-summary">
                             <div>
-                                <strong style="font-size:0.9rem;"><?= htmlspecialchars($doc['original_name']) ?></strong>
-                                <span class="text-muted" style="font-size:0.8rem; margin-left:0.5rem;">
+                                <strong class="upload-doc-name"><?= htmlspecialchars($doc['original_name']) ?></strong>
+                                <span class="text-muted upload-doc-meta">
                                     <?= formatFileSize((int) $doc['file_size']) ?> &middot; <?= date('j M Y', strtotime($doc['created_at'])) ?>
                                 </span>
                             </div>
-                            <span class="badge badge-success" style="font-size:0.7rem; flex-shrink:0;">
+                            <span class="badge badge-success upload-doc-badge">
                                 AI Summary &#9660;
                             </span>
                         </summary>
-                        <div style="padding:0.75rem 1.5rem 1rem; background:#f8fafc; border-top:1px solid var(--border); font-size:0.875rem; line-height:1.6; white-space:pre-wrap; color:var(--text-secondary);">
+                        <div class="upload-doc-summary-copy">
                             <?= htmlspecialchars($doc['ai_summary']) ?>
                         </div>
                     </details>
                 <?php else: ?>
-                    <div style="padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div class="upload-doc-row">
                         <div>
-                            <strong style="font-size:0.9rem;"><?= htmlspecialchars($doc['original_name']) ?></strong>
-                            <span class="text-muted" style="font-size:0.8rem; margin-left:0.5rem;">
+                            <strong class="upload-doc-name"><?= htmlspecialchars($doc['original_name']) ?></strong>
+                            <span class="text-muted upload-doc-meta">
                                 <?= formatFileSize((int) $doc['file_size']) ?> &middot; <?= date('j M Y', strtotime($doc['created_at'])) ?>
                             </span>
                         </div>
@@ -203,10 +203,10 @@ function formatFileSize(int $bytes): string {
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="document_id" value="<?= (int) $doc['id'] ?>">
                                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-ai" style="font-size:0.75rem;">Summarise</button>
+                                    <button type="submit" class="btn btn-sm btn-ai upload-doc-action">Summarise</button>
                                 </form>
                             <?php else: ?>
-                                <span class="badge badge-secondary" style="font-size:0.7rem;">No text extracted</span>
+                                <span class="badge badge-secondary upload-doc-badge">No text extracted</span>
                             <?php endif; ?>
                         </div>
                     </div>
