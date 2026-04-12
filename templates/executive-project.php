@@ -35,7 +35,7 @@ $statusColours = [
         </p>
     </div>
     <div style="display:flex; align-items:center; gap: 0.75rem;">
-        <select onchange="window.location='/app/projects/' + this.value + '/executive'"
+        <select class="js-executive-project-select" data-base-url="/app/projects/"
                 style="border:1px solid #d1d5db; border-radius:6px; padding: 6px 10px; font-size: 0.875rem;">
             <?php foreach ($projects as $p): ?>
                 <option value="<?= (int) $p['id'] ?>" <?= (int) $p['id'] === (int) $project['id'] ? 'selected' : '' ?>>

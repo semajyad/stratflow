@@ -51,10 +51,9 @@ $conditions = array_values(array_filter($rules, fn($r) => $r['rule_type'] === 'm
                         <?php endif; ?>
                     </span>
                     <?php if (!(int) $rule['is_default']): ?>
-                    <form method="POST" action="/app/admin/story-quality-rules/<?= (int) $rule['id'] ?>/delete"
-                          onsubmit="return confirm('Remove this splitting pattern?')">
+                    <form method="POST" action="/app/admin/story-quality-rules/<?= (int) $rule['id'] ?>/delete">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                        <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:0;">&#10005; remove</button>
+                        <button type="submit" data-confirm="Remove this splitting pattern?" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:0;">&#10005; remove</button>
                     </form>
                     <?php endif; ?>
                 </li>
@@ -87,10 +86,9 @@ $conditions = array_values(array_filter($rules, fn($r) => $r['rule_type'] === 'm
                 <?php foreach ($conditions as $rule): ?>
                 <li style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border);">
                     <span style="font-size:0.875rem;"><?= htmlspecialchars($rule['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <form method="POST" action="/app/admin/story-quality-rules/<?= (int) $rule['id'] ?>/delete"
-                          onsubmit="return confirm('Remove this condition?')">
+                    <form method="POST" action="/app/admin/story-quality-rules/<?= (int) $rule['id'] ?>/delete">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                        <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:0;">&#10005; remove</button>
+                        <button type="submit" data-confirm="Remove this condition?" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:0;">&#10005; remove</button>
                     </form>
                 </li>
                 <?php endforeach; ?>

@@ -277,7 +277,7 @@ $changeTypeLabels = [
             <div class="okr-row-left">
                 <span class="okr-expand-icon">&#9654;</span>
                 <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
-                <a href="<?= $roadmapUrl ?>" class="okr-title" title="Open on roadmap" onclick="event.stopPropagation();"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
+                <a href="<?= $roadmapUrl ?>" class="okr-title js-stop-propagation" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
             </div>
             <div class="okr-row-right" style="display:flex; align-items:center; gap:0.5rem;">
                 <?php if ($sp['total'] > 0): ?>

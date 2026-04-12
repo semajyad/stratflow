@@ -57,11 +57,12 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.4rem;">
                         <?php foreach ($repos as $repo): ?>
                         <?php $checked = isset($linked_id_set[(int) $repo['id']]); ?>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;
+                        <label class="js-github-repo-label" style="display: flex; align-items: center; gap: 0.5rem;
                                       padding: 0.4rem 0.6rem; border-radius: 4px; cursor: pointer;
                                       background: <?= $checked ? 'var(--primary-light, #eff6ff)' : 'transparent' ?>;
                                       border: 1px solid <?= $checked ? 'var(--primary, #3b82f6)' : 'var(--border)' ?>;">
                             <input type="checkbox"
+                                   class="js-github-repo-checkbox"
                                    name="integration_repo_ids[]"
                                    value="<?= (int) $repo['id'] ?>"
                                    <?= $checked ? 'checked' : '' ?>
@@ -86,20 +87,3 @@
         <?php endif; ?>
     </div>
 </section>
-
-<script>
-// Highlight label when checkbox state changes
-document.querySelectorAll('input[name="integration_repo_ids[]"]').forEach(function(cb) {
-    cb.addEventListener('change', function() {
-        var label = this.closest('label');
-        if (!label) return;
-        if (this.checked) {
-            label.style.background = 'var(--primary-light, #eff6ff)';
-            label.style.borderColor = 'var(--primary, #3b82f6)';
-        } else {
-            label.style.background = 'transparent';
-            label.style.borderColor = 'var(--border)';
-        }
-    });
-});
-</script>

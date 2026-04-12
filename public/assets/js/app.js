@@ -296,6 +296,11 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-stop-propagation')) {
+        e.stopPropagation();
+        return;
+    }
+
     var copyTextButton = e.target.closest('.js-copy-text');
     if (copyTextButton) {
         e.preventDefault();
@@ -530,6 +535,18 @@ document.addEventListener('change', function(e) {
 
     if (e.target.id === 'sprint-start-date') {
         autoSetSprintEndDate();
+        return;
+    }
+
+    var executiveProjectSelector = e.target.closest('.js-executive-project-select');
+    if (executiveProjectSelector) {
+        navigateToExecutiveProject(executiveProjectSelector);
+        return;
+    }
+
+    var githubRepoCheckbox = e.target.closest('.js-github-repo-checkbox');
+    if (githubRepoCheckbox) {
+        syncGithubRepoLabel(githubRepoCheckbox);
     }
 });
 
@@ -2917,6 +2934,29 @@ function copyTextFromTarget(button) {
             button.textContent = defaultLabel;
         }, 2000);
     });
+}
+
+function navigateToExecutiveProject(selectEl) {
+    var baseUrl = selectEl.dataset.baseUrl || '/app/projects/';
+    var value = selectEl.value || '';
+    if (!value) {
+        return;
+    }
+    window.location = baseUrl + value + '/executive';
+}
+
+function syncGithubRepoLabel(checkbox) {
+    var label = checkbox.closest('.js-github-repo-label');
+    if (!label) {
+        return;
+    }
+    if (checkbox.checked) {
+        label.style.background = 'var(--primary-light, #eff6ff)';
+        label.style.borderColor = 'var(--primary, #3b82f6)';
+    } else {
+        label.style.background = 'transparent';
+        label.style.borderColor = 'var(--border)';
+    }
 }
 
 function toggleDiagramAccordionItem(button) {

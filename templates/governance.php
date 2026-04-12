@@ -31,7 +31,7 @@
         <form method="POST" action="/app/governance/baseline" class="inline-form" data-loading="Creating baseline snapshot…">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Create a new baseline snapshot of the current project state?')">Create Baseline</button>
+            <button type="submit" class="btn btn-secondary btn-sm" data-confirm="Create a new baseline snapshot of the current project state?">Create Baseline</button>
         </form>
     </div>
 </div>
