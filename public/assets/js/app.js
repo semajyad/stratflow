@@ -2897,7 +2897,7 @@ function toggleMcpGuide() {
     }
     body.classList.toggle('hidden');
     if (chevron) {
-        chevron.style.transform = body.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        chevron.classList.toggle('mcp-chevron--expanded', !body.classList.contains('hidden'));
     }
 }
 
@@ -2958,9 +2958,10 @@ function toggleDiagramAccordionItem(button) {
 }
 
 function openNodeOkrPanel(nodeKey) {
+    var panel = document.getElementById('node-okr-panel');
     var nodes = getDiagramNodeData();
     var node = nodes.find(function(n) { return n.node_key === nodeKey; });
-    if (!node) {
+    if (!node || !panel) {
         return;
     }
     document.getElementById('node-okr-node-id').value = node.id;
@@ -2970,13 +2971,13 @@ function openNodeOkrPanel(nodeKey) {
     document.getElementById('node-okr-save-status').textContent = '';
     document.getElementById('node-okr-save-btn').disabled = false;
     document.getElementById('node-okr-save-btn').textContent = 'Save OKRs to Node';
-    document.getElementById('node-okr-panel').style.right = '0';
+    panel.classList.add('diagram-node-panel--open');
 }
 
 function closeNodeOkrPanel() {
     var panel = document.getElementById('node-okr-panel');
     if (panel) {
-        panel.style.right = '-380px';
+        panel.classList.remove('diagram-node-panel--open');
     }
 }
 
@@ -3121,7 +3122,7 @@ function initializeDiagramPage() {
     var interval = window.setInterval(function() {
         attempts += 1;
         openNodeOkrPanel(nodeKey);
-        if (document.getElementById('node-okr-panel') && document.getElementById('node-okr-panel').style.right === '0px') {
+        if (document.getElementById('node-okr-panel') && document.getElementById('node-okr-panel').classList.contains('diagram-node-panel--open')) {
             window.clearInterval(interval);
         } else if (attempts > 40) {
             window.clearInterval(interval);
@@ -3384,12 +3385,12 @@ function togglePassword(btn) {
     var eyeOff = btn.querySelector('.eye-off-icon');
     if (input.type === 'password') {
         input.type = 'text';
-        eyeOn.style.display = 'none';
-        eyeOff.style.display = 'block';
+        if (eyeOn) { eyeOn.hidden = true; }
+        if (eyeOff) { eyeOff.hidden = false; }
     } else {
         input.type = 'password';
-        eyeOn.style.display = 'block';
-        eyeOff.style.display = 'none';
+        if (eyeOn) { eyeOn.hidden = false; }
+        if (eyeOff) { eyeOff.hidden = true; }
     }
 }
 
@@ -3399,7 +3400,7 @@ function syncPasswordToggle(wrapper) {
     if (!input || !button) return;
 
     var hasValue = input.value.length > 0;
-    button.style.display = hasValue ? 'flex' : 'none';
+    button.classList.toggle('hidden', !hasValue);
 }
 
 // ===========================

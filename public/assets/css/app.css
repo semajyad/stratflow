@@ -3810,6 +3810,10 @@ select.kr-field--compact {
     border-color: var(--primary, #3b82f6);
 }
 
+.mcp-chevron--expanded {
+    transform: rotate(180deg);
+}
+
 .jira-sync-preview-card {
     margin: 0;
     max-width: 560px;
@@ -4059,6 +4063,10 @@ select.kr-field--compact {
     transition: right 0.25s ease;
     width: 360px;
     z-index: 1000;
+}
+
+.diagram-node-panel--open {
+    right: 0;
 }
 
 .diagram-node-panel__header {
