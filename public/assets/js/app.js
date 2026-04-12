@@ -1484,20 +1484,20 @@ function attachKrDelete(btn) {
 }
 
 function buildKrRow(id) {
-    return '<tr class="kr-row" data-kr-id="' + id + '" style="border-bottom:1px solid #f3f4f6;">' +
-        '<td style="padding:4px 6px;"><input type="text" class="kr-field" data-field="title" value="New Key Result" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
-        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="baseline_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
-        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="current_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
-        '<td style="padding:4px 6px;"><input type="number" step="any" class="kr-field" data-field="target_value" value="" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
-        '<td style="padding:4px 6px;"><input type="text" class="kr-field" data-field="unit" value="" placeholder="%" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;"/></td>' +
-        '<td style="padding:4px 6px;"><select class="kr-field" data-field="status" style="width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 4px;">' +
+    return '<tr class="kr-row kr-row--dynamic" data-kr-id="' + id + '">' +
+        '<td class="kr-row__cell"><input type="text" class="kr-field kr-field--compact" data-field="title" value="New Key Result"/></td>' +
+        '<td class="kr-row__cell"><input type="number" step="any" class="kr-field kr-field--compact" data-field="baseline_value" value=""/></td>' +
+        '<td class="kr-row__cell"><input type="number" step="any" class="kr-field kr-field--compact" data-field="current_value" value=""/></td>' +
+        '<td class="kr-row__cell"><input type="number" step="any" class="kr-field kr-field--compact" data-field="target_value" value=""/></td>' +
+        '<td class="kr-row__cell"><input type="text" class="kr-field kr-field--compact" data-field="unit" value="" placeholder="%"/></td>' +
+        '<td class="kr-row__cell"><select class="kr-field kr-field--compact" data-field="status">' +
         '<option value="not_started" selected>Not Started</option>' +
         '<option value="on_track">On Track</option>' +
         '<option value="at_risk">At Risk</option>' +
         '<option value="off_track">Off Track</option>' +
         '<option value="achieved">Achieved</option>' +
         '</select></td>' +
-        '<td style="padding:4px 6px;text-align:center;"><button type="button" class="kr-delete-btn" data-kr-id="' + id + '" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;" title="Delete">&times;</button></td>' +
+        '<td class="kr-row__cell kr-row__cell--action"><button type="button" class="kr-delete-btn" data-kr-id="' + id + '" title="Delete">&times;</button></td>' +
         '</tr>';
 }
 
@@ -2235,20 +2235,18 @@ function addJiraCustomMappingRow() {
     var jiraFields = parseJsonDataset(table.dataset.jiraFields, []);
     var row = document.createElement('tr');
     row.className = 'custom-mapping-row';
-    row.style.borderBottom = '1px solid var(--border-color, #dee2e6)';
     row.innerHTML =
-        '<td style="padding:0.5rem;">' + buildJiraStratflowFieldSelect(index, stratflowFields) + '</td>' +
-        '<td style="padding:0.5rem;">' + buildJiraFieldInput(index, jiraFields) + '</td>' +
-        '<td style="padding:0.5rem;">' + buildJiraDirectionSelect(index) + '</td>' +
-        '<td style="padding:0.5rem;text-align:center;">' +
-            '<button type="button" class="btn-remove-mapping js-remove-jira-mapping" ' +
-            'style="background:none;border:none;color:#dc3545;cursor:pointer;font-size:1.1rem;" title="Remove mapping">&times;</button>' +
+        '<td class="custom-mapping-row__cell">' + buildJiraStratflowFieldSelect(index, stratflowFields) + '</td>' +
+        '<td class="custom-mapping-row__cell">' + buildJiraFieldInput(index, jiraFields) + '</td>' +
+        '<td class="custom-mapping-row__cell">' + buildJiraDirectionSelect(index) + '</td>' +
+        '<td class="custom-mapping-row__cell custom-mapping-row__cell--action">' +
+            '<button type="button" class="btn-remove-mapping js-remove-jira-mapping custom-mapping-remove" title="Remove mapping">&times;</button>' +
         '</td>';
     tbody.appendChild(row);
 }
 
 function buildJiraStratflowFieldSelect(index, stratflowFields) {
-    var html = '<select name="custom_mappings[' + index + '][stratflow_field]" class="form-input" style="font-size:0.85rem;">';
+    var html = '<select name="custom_mappings[' + index + '][stratflow_field]" class="form-input custom-mapping-input">';
     html += '<option value="">Select...</option>';
     Object.keys(stratflowFields || {}).forEach(function(key) {
         html += '<option value="' + escapeHtml(key) + '">' + escapeHtml(stratflowFields[key]) + '</option>';
@@ -2259,7 +2257,7 @@ function buildJiraStratflowFieldSelect(index, stratflowFields) {
 
 function buildJiraFieldInput(index, jiraFields) {
     if (Array.isArray(jiraFields) && jiraFields.length > 0) {
-        var html = '<select name="custom_mappings[' + index + '][jira_field]" class="form-input" style="font-size:0.85rem;">';
+        var html = '<select name="custom_mappings[' + index + '][jira_field]" class="form-input custom-mapping-input">';
         html += '<option value="">Select...</option>';
         jiraFields.forEach(function(field) {
             html += '<option value="' + escapeHtml(field.id || '') + '">' +
@@ -2270,11 +2268,11 @@ function buildJiraFieldInput(index, jiraFields) {
         return html;
     }
 
-    return '<input type="text" name="custom_mappings[' + index + '][jira_field]" class="form-input" placeholder="customfield_XXXXX" style="font-size:0.85rem;">';
+    return '<input type="text" name="custom_mappings[' + index + '][jira_field]" class="form-input custom-mapping-input" placeholder="customfield_XXXXX">';
 }
 
 function buildJiraDirectionSelect(index) {
-    return '<select name="custom_mappings[' + index + '][direction]" class="form-input" style="font-size:0.85rem;">' +
+    return '<select name="custom_mappings[' + index + '][direction]" class="form-input custom-mapping-input">' +
         '<option value="push">Push</option>' +
         '<option value="pull">Pull</option>' +
         '<option value="both">Both</option>' +
@@ -2324,8 +2322,7 @@ function memberPickerSearch(input) {
 
     resultsEl.innerHTML = matches.map(function(user) {
         return '<div class="member-result-item" data-id="' + String(user.id) + '" data-label="' + escapeHtml(user.label) + '"' +
-            ' style="padding:0.45rem 0.75rem; cursor:pointer; font-size:0.875rem; border-bottom:1px solid var(--border);">' +
-            escapeHtml(user.label) + '</div>';
+            '>' + escapeHtml(user.label) + '</div>';
     }).join('');
     resultsEl.style.display = '';
 }
@@ -2334,14 +2331,14 @@ function buildMemberChip(label, memberId, membershipRole) {
     var safeLabel = escapeHtml(label);
     var role = membershipRole || 'editor';
     return '<span class="member-chip" data-member-id="' + String(memberId) + '"' +
-        ' style="display:inline-flex;align-items:center;gap:0.45rem;padding:0.25rem 0.5rem;background:var(--primary);color:#fff;border-radius:6px;font-size:0.8rem;">' +
+        '>' +
         '<span>' + safeLabel + '</span>' +
-        '<select class="js-member-role-select" style="font-size:0.75rem;border:none;border-radius:4px;padding:0.15rem 0.35rem;">' +
+        '<select class="js-member-role-select member-chip__role">' +
         '<option value="viewer"' + (role === 'viewer' ? ' selected' : '') + '>Viewer</option>' +
         '<option value="editor"' + (role === 'editor' ? ' selected' : '') + '>Editor</option>' +
         '<option value="project_admin"' + (role === 'project_admin' ? ' selected' : '') + '>Project Admin</option>' +
         '</select>' +
-        '<button type="button" class="js-remove-member-chip" style="background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:0 0 0 0.2rem;font-size:1.1rem;line-height:1;" title="Remove">&times;</button>' +
+        '<button type="button" class="js-remove-member-chip member-chip__remove" title="Remove">&times;</button>' +
         '</span>';
 }
 
@@ -2842,7 +2839,7 @@ function showProcessingOverlay(message) {
         '<div class="processing-card">' +
             '<div class="loading-spinner"></div>' +
             '<p>' + message + '</p>' +
-            '<p style="color: #94a3b8; font-size: 0.8125rem; margin-top: 0.5rem;">Please don\'t close this page</p>' +
+            '<p class="processing-card__note">Please don\'t close this page</p>' +
         '</div>';
     document.body.appendChild(overlay);
 }
@@ -2950,13 +2947,7 @@ function syncGithubRepoLabel(checkbox) {
     if (!label) {
         return;
     }
-    if (checkbox.checked) {
-        label.style.background = 'var(--primary-light, #eff6ff)';
-        label.style.borderColor = 'var(--primary, #3b82f6)';
-    } else {
-        label.style.background = 'transparent';
-        label.style.borderColor = 'var(--border)';
-    }
+    label.classList.toggle('github-repo-label--selected', checkbox.checked);
 }
 
 function toggleDiagramAccordionItem(button) {
@@ -3073,10 +3064,7 @@ function generateDiagramAjax() {
     btn.textContent = 'Generating...';
 
     if (activeStatus) {
-        activeStatus.style.display = 'block';
-        activeStatus.style.background = '#e8f0fe';
-        activeStatus.style.color = '#1a56db';
-        activeStatus.textContent = 'AI is analysing your strategy and building a visual roadmap. This usually takes 10-20 seconds...';
+        setStatusBannerState(activeStatus, 'info', 'AI is analysing your strategy and building a visual roadmap. This usually takes 10-20 seconds...');
     }
 
     var formData = new FormData();
@@ -3096,27 +3084,21 @@ function generateDiagramAjax() {
     .then(function(res) {
         if (res.ok && res.data.success) {
             if (activeStatus) {
-                activeStatus.style.background = '#d4edda';
-                activeStatus.style.color = '#155724';
-                activeStatus.textContent = 'Roadmap generated with ' + res.data.node_count + ' initiatives. Loading...';
+                setStatusBannerState(activeStatus, 'success', 'Roadmap generated with ' + res.data.node_count + ' initiatives. Loading...');
             }
             window.setTimeout(function() { window.location.reload(); }, 1000);
             return;
         }
 
         if (activeStatus) {
-            activeStatus.style.background = '#f8d7da';
-            activeStatus.style.color = '#721c24';
-            activeStatus.textContent = res.data.error || 'Generation failed';
+            setStatusBannerState(activeStatus, 'error', res.data.error || 'Generation failed');
         }
         btn.disabled = false;
         btn.textContent = 'Try Again';
     })
     .catch(function() {
         if (activeStatus) {
-            activeStatus.style.background = '#f8d7da';
-            activeStatus.style.color = '#721c24';
-            activeStatus.textContent = 'Connection error';
+            setStatusBannerState(activeStatus, 'error', 'Connection error');
         }
         btn.disabled = false;
         btn.textContent = origText;
@@ -3145,6 +3127,15 @@ function initializeDiagramPage() {
             window.clearInterval(interval);
         }
     }, 150);
+}
+
+function setStatusBannerState(element, tone, message) {
+    if (!element) {
+        return;
+    }
+    element.classList.remove('hidden', 'generate-status-banner--info', 'generate-status-banner--success', 'generate-status-banner--error');
+    element.classList.add('generate-status-banner--' + tone);
+    element.textContent = message;
 }
 
 /**
@@ -3228,7 +3219,7 @@ function renderGitLinks(links) {
     if (!list) { return; }
 
     if (!links || links.length === 0) {
-        list.innerHTML = '<p style="font-size:0.8125rem; color:var(--text-muted,#6b7280); margin:0;">No git links yet.</p>';
+        list.innerHTML = '<p class="git-link-empty">No git links yet.</p>';
         return;
     }
 
@@ -3243,18 +3234,15 @@ function renderGitLinks(links) {
         var label = escapeHtml(link.ref_label || link.ref_url);
         var urlEscaped = escapeHtml(link.ref_url);
         var linkHtml = link.ref_url.startsWith('http')
-            ? '<a href="' + urlEscaped + '" target="_blank" rel="noopener" style="font-size:0.8125rem;">' + label + '</a>'
-            : '<span style="font-size:0.8125rem;">' + label + '</span>';
+            ? '<a href="' + urlEscaped + '" target="_blank" rel="noopener" class="git-link-ref">' + label + '</a>'
+            : '<span class="git-link-ref">' + label + '</span>';
 
-        return '<div class="git-link-row" data-link-id="' + escapeHtml(String(link.id)) + '" ' +
-            'style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.375rem;">' +
-            '<span class="badge ' + statusClass + '" style="font-size:0.7rem;min-width:52px;text-align:center;">' +
+        return '<div class="git-link-row" data-link-id="' + escapeHtml(String(link.id)) + '">' +
+            '<span class="badge git-link-status ' + statusClass + '">' +
                 escapeHtml(link.status) +
             '</span>' +
             linkHtml +
-            '<button type="button" class="js-git-links-delete" data-link-id="' + escapeHtml(String(link.id)) + '" ' +
-            'style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--danger,#dc3545);font-size:1rem;line-height:1;padding:0 4px;" ' +
-            'title="Remove link">&times;</button>' +
+            '<button type="button" class="js-git-links-delete git-link-remove" data-link-id="' + escapeHtml(String(link.id)) + '" title="Remove link">&times;</button>' +
             '</div>';
     }).join('');
 }

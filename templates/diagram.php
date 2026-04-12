@@ -33,7 +33,7 @@ $hasSummary = !empty($document_summary);
     </div>
 </div>
 
-<div id="generate-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:6px; font-size:0.9rem;"></div>
+                <div id="generate-status" class="generate-status-banner hidden"></div>
 
 <?php if (!$hasDiagram): ?>
 <section class="card" style="max-width: 640px; margin: 3rem auto;">
@@ -52,7 +52,7 @@ $hasSummary = !empty($document_summary);
         <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-lg js-generate-diagram" style="padding: 0.75rem 2rem; font-size: 1rem;">
             Generate Roadmap
         </button>
-        <div id="generate-status-empty" style="display:none; margin-top:1.25rem; padding:0.75rem; border-radius:6px; font-size:0.875rem;"></div>
+                <div id="generate-status-empty" class="generate-status-banner generate-status-banner--compact hidden"></div>
     </div>
 </section>
 
