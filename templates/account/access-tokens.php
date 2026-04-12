@@ -45,8 +45,9 @@
                 style="font-family:monospace;font-size:0.85rem;flex:1;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-2,#f8fafc);">
             <button
                 type="button"
-                class="btn btn-secondary btn-sm"
-                onclick="copyToken()"
+                class="btn btn-secondary btn-sm js-copy-text"
+                data-copy-target-id="new-token-value"
+                data-copy-default-label="Copy"
                 id="copy-btn">
                 Copy
             </button>
@@ -56,19 +57,6 @@
         </p>
     </div>
 </section>
-<script>
-function copyToken() {
-    var input = document.getElementById('new-token-value');
-    navigator.clipboard.writeText(input.value).then(function() {
-        var btn = document.getElementById('copy-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-    }).catch(function() {
-        input.select();
-        document.execCommand('copy');
-    });
-}
-</script>
 <?php endif; ?>
 
 <!-- Team membership — used by list_team_stories MCP tool -->
@@ -104,7 +92,7 @@ function copyToken() {
 <!-- Claude Code MCP setup guide — always visible, collapsible -->
 <section class="card mb-4">
     <button type="button"
-            onclick="var b=document.getElementById('mcp-guide');var c=document.getElementById('mcp-chevron');b.classList.toggle('hidden');c.style.transform=b.classList.contains('hidden')?'':'rotate(180deg)';"
+            class="js-toggle-mcp-guide"
             style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:none;border:none;cursor:pointer;text-align:left;">
         <div style="display:flex;align-items:center;gap:0.625rem;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary,#2563eb)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
@@ -132,9 +120,9 @@ function copyToken() {
     }
   }
 }</pre>
-                    <button type="button" onclick="copySnippet()" id="copy-snippet-btn"
+                    <button type="button" class="btn btn-secondary btn-sm js-copy-text" data-copy-target-id="mcp-snippet" data-copy-default-label="Copy" id="copy-snippet-btn"
                             style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.75rem;padding:0.2rem 0.6rem;"
-                            class="btn btn-secondary btn-sm">Copy</button>
+                            >Copy</button>
                 </div>
             </div>
 
@@ -164,16 +152,6 @@ function copyToken() {
         </div>
     </div>
 </section>
-<script>
-function copySnippet() {
-    var pre = document.getElementById('mcp-snippet');
-    navigator.clipboard.writeText(pre.textContent).then(function() {
-        var btn = document.getElementById('copy-snippet-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-    });
-}
-</script>
 
 <!-- Create new token form -->
 <section class="card mb-4">
@@ -236,10 +214,9 @@ function copySnippet() {
                                 <?= htmlspecialchars($token['created_at'], ENT_QUOTES, 'UTF-8') ?>
                             </td>
                             <td style="padding:0.5rem 0.75rem;text-align:right;">
-                                <form method="POST" action="/app/account/tokens/<?= (int) $token['id'] ?>/revoke"
-                                      onsubmit="return confirm('Revoke this token? Any tools using it will stop working immediately.');">
+                                <form method="POST" action="/app/account/tokens/<?= (int) $token['id'] ?>/revoke">
                                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+                                    <button type="submit" class="btn btn-danger btn-sm" data-confirm="Revoke this token? Any tools using it will stop working immediately.">Revoke</button>
                                 </form>
                             </td>
                         </tr>

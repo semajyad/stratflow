@@ -272,6 +272,12 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-toggle-mcp-guide')) {
+        e.preventDefault();
+        toggleMcpGuide();
+        return;
+    }
+
     if (e.target.closest('.js-close-node-okr-panel')) {
         e.preventDefault();
         closeNodeOkrPanel();
@@ -287,6 +293,13 @@ document.addEventListener('click', function(e) {
     if (e.target.closest('.js-diagram-accordion-toggle')) {
         e.preventDefault();
         toggleDiagramAccordionItem(e.target.closest('.js-diagram-accordion-toggle'));
+        return;
+    }
+
+    var copyTextButton = e.target.closest('.js-copy-text');
+    if (copyTextButton) {
+        e.preventDefault();
+        copyTextFromTarget(copyTextButton);
         return;
     }
 
@@ -2860,6 +2873,50 @@ function closeDiagramOkrModal() {
     if (modal) {
         modal.classList.add('hidden');
     }
+}
+
+function toggleMcpGuide() {
+    var body = document.getElementById('mcp-guide');
+    var chevron = document.getElementById('mcp-chevron');
+    if (!body) {
+        return;
+    }
+    body.classList.toggle('hidden');
+    if (chevron) {
+        chevron.style.transform = body.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    }
+}
+
+function copyTextFromTarget(button) {
+    var targetId = button.dataset.copyTargetId || '';
+    var target = targetId ? document.getElementById(targetId) : null;
+    if (!target) {
+        return;
+    }
+
+    var text = '';
+    if (target.value !== undefined) {
+        text = target.value;
+    } else {
+        text = target.textContent || '';
+    }
+
+    var defaultLabel = button.dataset.copyDefaultLabel || 'Copy';
+    navigator.clipboard.writeText(text).then(function() {
+        button.textContent = 'Copied!';
+        window.setTimeout(function() {
+            button.textContent = defaultLabel;
+        }, 2000);
+    }).catch(function() {
+        if (target.select) {
+            target.select();
+        }
+        document.execCommand('copy');
+        button.textContent = 'Copied!';
+        window.setTimeout(function() {
+            button.textContent = defaultLabel;
+        }, 2000);
+    });
 }
 
 function toggleDiagramAccordionItem(button) {
