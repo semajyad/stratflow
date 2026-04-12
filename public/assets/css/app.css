@@ -2029,6 +2029,30 @@ tbody tr:hover {
     box-shadow: inset 3px 0 0 var(--primary);
 }
 
+.heatmap-cell--interactive {
+    cursor: pointer;
+}
+
+.heatmap-cell--selected {
+    outline: 3px solid var(--primary);
+    outline-offset: -3px;
+    z-index: 2;
+    position: relative;
+}
+
+.heatmap-filter-banner {
+    padding: 0.75rem 1rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+}
+
 .risk-info {
     flex: 1;
     min-width: 0;

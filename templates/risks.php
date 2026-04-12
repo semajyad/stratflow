@@ -33,11 +33,12 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
               data-overlay="AI is identifying project risks from your work items. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-ai btn-sm" onclick="return confirm('This will use AI to analyse your work items and generate 3-5 project risks. Continue?')">
+            <button type="submit" class="btn btn-ai btn-sm"
+                    data-confirm="This will use AI to analyse your work items and generate 3-5 project risks. Continue?">
                 Generate Risks (AI)
             </button>
         </form>
-        <button type="button" class="btn btn-primary btn-sm" onclick="toggleRiskModal()">
+        <button type="button" class="btn btn-primary btn-sm js-toggle-risk-modal">
             Add Risk
         </button>
     </div>
@@ -51,7 +52,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     <div class="modal">
         <div class="modal-header">
             <h3 id="risk-modal-title">Add Risk</h3>
-            <button class="modal-close" onclick="toggleRiskModal()">&times;</button>
+            <button type="button" class="modal-close js-toggle-risk-modal">&times;</button>
         </div>
         <form id="risk-form" method="POST" action="/app/risks">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -120,7 +121,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                 <?php endif; ?>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleRiskModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary btn-sm js-toggle-risk-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary btn-sm">Save Risk</button>
             </div>
         </form>
@@ -151,10 +152,9 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                             elseif ($score <= 15)   { $level = 'high'; }
                             else                    { $level = 'critical'; }
                             ?>
-                            <div class="heatmap-cell <?= $level ?> <?= $count > 0 ? 'has-risks' : '' ?>"
+                            <div class="heatmap-cell <?= $level ?> <?= $count > 0 ? 'has-risks heatmap-cell--interactive js-heatmap-filter' : '' ?>"
                                  data-likelihood="<?= $l ?>" data-impact="<?= $i ?>"
-                                 title="Likelihood <?= $l ?> &times; Impact <?= $i ?> = <?= $score ?> &middot; <?= $count ?> risk<?= $count !== 1 ? 's' : '' ?> (click to filter)"
-                                 <?php if ($count > 0): ?>onclick="filterHeatmapRisks(<?= $l ?>, <?= $i ?>)" style="cursor:pointer;"<?php endif; ?>>
+                                 title="Likelihood <?= $l ?> &times; Impact <?= $i ?> = <?= $score ?> &middot; <?= $count ?> risk<?= $count !== 1 ? 's' : '' ?><?= $count > 0 ? ' (click to filter)' : '' ?>">
                                 <?= $count > 0 ? $count : '' ?>
                             </div>
                         <?php endfor; ?>
@@ -205,80 +205,3 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 <?php endif; ?>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
-
-<script>
-var heatmapFilter = { likelihood: null, impact: null };
-
-function filterHeatmapRisks(likelihood, impact) {
-    // Toggle off if clicking the same cell
-    if (heatmapFilter.likelihood === likelihood && heatmapFilter.impact === impact) {
-        clearHeatmapFilter();
-        return;
-    }
-    heatmapFilter.likelihood = likelihood;
-    heatmapFilter.impact = impact;
-
-    // Highlight the selected cell
-    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
-        cell.classList.remove('heatmap-cell--selected');
-    });
-    var selected = document.querySelector('.heatmap-cell[data-likelihood="' + likelihood + '"][data-impact="' + impact + '"]');
-    if (selected) selected.classList.add('heatmap-cell--selected');
-
-    // Filter and highlight matching risk rows
-    document.querySelectorAll('.risk-row').forEach(function(row) {
-        var l = parseInt(row.dataset.likelihood || 0, 10);
-        var i = parseInt(row.dataset.impact || 0, 10);
-        var match = (l === likelihood && i === impact);
-        row.style.display = match ? '' : 'none';
-        if (match) {
-            row.classList.add('risk-highlighted');
-        } else {
-            row.classList.remove('risk-highlighted');
-        }
-    });
-
-    // Show filter banner
-    var banner = document.getElementById('heatmap-filter-banner');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'heatmap-filter-banner';
-        banner.style.cssText = 'padding:0.75rem 1rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;';
-        var riskList = document.querySelector('.risk-list') || document.querySelector('.risks-list');
-        if (riskList) riskList.parentNode.insertBefore(banner, riskList);
-    }
-    var count = document.querySelectorAll('.risk-row').length;
-    var visible = 0;
-    document.querySelectorAll('.risk-row').forEach(function(r) { if (r.style.display !== 'none') visible++; });
-    banner.innerHTML = '<span>Showing <strong>' + visible + '</strong> risk' + (visible !== 1 ? 's' : '') + ' at Likelihood ' + likelihood + ' &times; Impact ' + impact + '</span>' +
-        '<button type="button" class="btn btn-sm btn-secondary" onclick="clearHeatmapFilter()">Clear filter</button>';
-
-    // Scroll to risk list
-    var firstVisible = document.querySelector('.risk-row[style=""], .risk-row:not([style*="display: none"])');
-    if (firstVisible) firstVisible.scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-function clearHeatmapFilter() {
-    heatmapFilter = { likelihood: null, impact: null };
-    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
-        cell.classList.remove('heatmap-cell--selected');
-    });
-    document.querySelectorAll('.risk-row').forEach(function(row) {
-        row.style.display = '';
-        row.classList.remove('risk-highlighted');
-    });
-    var banner = document.getElementById('heatmap-filter-banner');
-    if (banner) banner.remove();
-    var riskList = document.querySelector('.risk-list');
-    if (riskList) riskList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-</script>
-
-<style>
-.heatmap-cell--selected {
-    outline: 3px solid var(--primary);
-    outline-offset: -3px;
-    z-index: 2;
-    position: relative;
-}
-</style>

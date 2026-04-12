@@ -94,6 +94,12 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-toggle-risk-modal')) {
+        e.preventDefault();
+        toggleRiskModal();
+        return;
+    }
+
     if (e.target.closest('.js-close-sounding-board')) {
         e.preventDefault();
         closeSoundingBoard();
@@ -161,6 +167,23 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    var heatmapFilter = e.target.closest('.js-heatmap-filter');
+    if (heatmapFilter) {
+        e.preventDefault();
+        var likelihood = parseInt(heatmapFilter.dataset.likelihood || '', 10);
+        var impact = parseInt(heatmapFilter.dataset.impact || '', 10);
+        if (!Number.isNaN(likelihood) && !Number.isNaN(impact)) {
+            filterHeatmapRisks(likelihood, impact);
+        }
+        return;
+    }
+
+    if (e.target.closest('.js-clear-heatmap-filter')) {
+        e.preventDefault();
+        clearHeatmapFilter();
+        return;
+    }
+
     var gitLinksDelete = e.target.closest('.js-git-links-delete');
     if (gitLinksDelete) {
         e.preventDefault();
@@ -187,6 +210,17 @@ document.addEventListener('keydown', function(e) {
 });
 
 document.addEventListener('change', function(e) {
+    var selectAllStories = e.target.closest('.js-select-all-hl');
+    if (selectAllStories) {
+        var splitForm = selectAllStories.closest('form');
+        if (splitForm) {
+            splitForm.querySelectorAll('input[name="hl_item_ids[]"]').forEach(function(cb) {
+                cb.checked = selectAllStories.checked;
+            });
+        }
+        return;
+    }
+
     var projectSwitcher = e.target.closest('.js-project-switcher');
     if (!projectSwitcher || !projectSwitcher.value) {
         if (!e.target.closest('.js-framework-select')) {
@@ -208,6 +242,16 @@ document.addEventListener('change', function(e) {
 });
 
 document.addEventListener('submit', function(e) {
+    var storySplitForm = e.target.closest('.js-story-split-form');
+    if (storySplitForm) {
+        var checkedItems = storySplitForm.querySelectorAll('input[name="hl_item_ids[]"]:checked');
+        if (checkedItems.length === 0) {
+            e.preventDefault();
+            window.alert('Select at least one work item.');
+            return;
+        }
+    }
+
     var submitter = e.submitter;
     if (!submitter) {
         return;
@@ -232,6 +276,25 @@ document.addEventListener('keydown', function(e) {
 // Sidebar Toggle
 // ===========================
 document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.js-story-field-order').forEach(function(body) {
+        var rawOrder = body.dataset.fieldOrder || '[]';
+        var order = [];
+        try {
+            order = JSON.parse(rawOrder);
+        } catch (e) {
+            order = [];
+        }
+        if (!Array.isArray(order) || order.length === 0) {
+            return;
+        }
+        order.forEach(function(key) {
+            var field = body.querySelector('.modal-field-wrap[data-field="' + key + '"]');
+            if (field) {
+                body.appendChild(field);
+            }
+        });
+    });
+
     const toggle  = document.getElementById('sidebar-toggle');
     const sidebar = document.getElementById('sidebar');
 
@@ -634,8 +697,6 @@ document.addEventListener('DOMContentLoaded', function() {
         riskLikelihood.addEventListener('change', updateRpnPreview);
         riskImpact.addEventListener('change', updateRpnPreview);
     }
-
-    // Heatmap row highlighting is handled inline in risks.php (filterHeatmapRisks / clearHeatmapFilter)
 
     // ===========================
     // User Stories: SortableJS Drag & Drop
@@ -1167,6 +1228,81 @@ function updateRpnPreview() {
     var preview = document.getElementById('rpn-preview');
     if (preview) {
         preview.textContent = l * i;
+    }
+}
+
+var heatmapFilterState = { likelihood: null, impact: null };
+
+function filterHeatmapRisks(likelihood, impact) {
+    if (heatmapFilterState.likelihood === likelihood && heatmapFilterState.impact === impact) {
+        clearHeatmapFilter();
+        return;
+    }
+
+    heatmapFilterState = { likelihood: likelihood, impact: impact };
+
+    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
+        cell.classList.remove('heatmap-cell--selected');
+    });
+
+    var selected = document.querySelector('.heatmap-cell[data-likelihood="' + likelihood + '"][data-impact="' + impact + '"]');
+    if (selected) {
+        selected.classList.add('heatmap-cell--selected');
+    }
+
+    var visible = 0;
+    document.querySelectorAll('.risk-row').forEach(function(row) {
+        var rowLikelihood = parseInt(row.dataset.likelihood || '0', 10);
+        var rowImpact = parseInt(row.dataset.impact || '0', 10);
+        var match = rowLikelihood === likelihood && rowImpact === impact;
+        row.style.display = match ? '' : 'none';
+        row.classList.toggle('risk-highlighted', match);
+        if (match) {
+            visible += 1;
+        }
+    });
+
+    var banner = document.getElementById('heatmap-filter-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'heatmap-filter-banner';
+        banner.className = 'heatmap-filter-banner';
+        var riskList = document.querySelector('.risk-list') || document.querySelector('.risks-list');
+        if (riskList && riskList.parentNode) {
+            riskList.parentNode.insertBefore(banner, riskList);
+        }
+    }
+
+    banner.innerHTML = '<span>Showing <strong>' + visible + '</strong> risk' + (visible !== 1 ? 's' : '') +
+        ' at Likelihood ' + likelihood + ' × Impact ' + impact + '</span>' +
+        '<button type="button" class="btn btn-sm btn-secondary js-clear-heatmap-filter">Clear filter</button>';
+
+    var firstVisible = document.querySelector('.risk-row:not([style*="display: none"])');
+    if (firstVisible) {
+        firstVisible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function clearHeatmapFilter() {
+    heatmapFilterState = { likelihood: null, impact: null };
+
+    document.querySelectorAll('.heatmap-cell').forEach(function(cell) {
+        cell.classList.remove('heatmap-cell--selected');
+    });
+
+    document.querySelectorAll('.risk-row').forEach(function(row) {
+        row.style.display = '';
+        row.classList.remove('risk-highlighted');
+    });
+
+    var banner = document.getElementById('heatmap-filter-banner');
+    if (banner) {
+        banner.remove();
+    }
+
+    var riskList = document.querySelector('.risk-list');
+    if (riskList) {
+        riskList.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 

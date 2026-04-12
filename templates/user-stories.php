@@ -35,14 +35,14 @@ $unlinkedStories = $storiesByItem[0] ?? [];
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <?php if (!empty($stories)): ?>
-        <form method="POST" action="/app/user-stories/delete-all" class="inline-form"
-              onsubmit="return confirm('Delete all <?= count($stories) ?> stories for this project? This cannot be undone.')">
+        <form method="POST" action="/app/user-stories/delete-all" class="inline-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <button type="submit" class="btn btn-sm btn-danger">Delete All</button>
+            <button type="submit" class="btn btn-sm btn-danger"
+                    data-confirm="Delete all <?= count($stories) ?> stories for this project? This cannot be undone.">Delete All</button>
         </form>
         <?php endif; ?>
-        <button type="button" class="btn btn-primary btn-sm" onclick="toggleStoryModal()">Add Story</button>
+        <button type="button" class="btn btn-primary btn-sm js-toggle-story-modal">Add Story</button>
     </div>
 </div>
 
@@ -56,13 +56,14 @@ $unlinkedStories = $storiesByItem[0] ?? [];
     </div>
     <div class="card-body">
         <form method="POST" action="/app/user-stories/generate"
+              class="js-story-split-form"
               data-loading="Decomposing into user stories..."
               data-overlay="Decomposing work items into user stories. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="hl-selector">
                 <label class="checkbox-label" style="font-weight:600; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:0.5rem;">
-                    <input type="checkbox" id="select-all-hl" onchange="document.querySelectorAll('input[name=\'hl_item_ids[]\']').forEach(cb => cb.checked = this.checked)">
+                    <input type="checkbox" id="select-all-hl" class="js-select-all-hl">
                     Select All
                 </label>
                 <?php foreach ($work_items as $wi): ?>
@@ -72,7 +73,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                     </label>
                 <?php endforeach; ?>
             </div>
-            <button type="submit" class="btn btn-ai btn-sm mt-2" onclick="return document.querySelectorAll('input[name=\'hl_item_ids[]\']:checked').length > 0 || (alert('Select at least one work item.'), false)">
+            <button type="submit" class="btn btn-ai btn-sm mt-2">
                 Split to User Stories
             </button>
         </form>
@@ -187,7 +188,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                 <button type="submit" class="btn btn-ai btn-sm"
-                        onclick="return confirm('Re-estimate story point sizes for all user stories using AI?')">
+                        data-confirm="Re-estimate story point sizes for all user stories using AI?">
                     Regenerate Sizing
                 </button>
             </form>
@@ -200,18 +201,6 @@ $unlinkedStories = $storiesByItem[0] ?? [];
      Add/Edit Story Modal
      =========================== -->
 <?php require __DIR__ . '/partials/user-story-modal.php'; ?>
-<script>
-(function () {
-    var order = <?= json_encode($field_order_st ?? []) ?>;
-    if (!order || !order.length) return;
-    var body = document.querySelector('#story-modal .modal-body');
-    if (!body) return;
-    order.forEach(function (key) {
-        var el = body.querySelector('.modal-field-wrap[data-field="' + key + '"]');
-        if (el) body.appendChild(el);
-    });
-}());
-</script>
 
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
