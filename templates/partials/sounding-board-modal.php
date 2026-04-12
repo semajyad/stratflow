@@ -6,7 +6,7 @@
  * evaluations. Included once in the app layout; shown/hidden via JS.
  */
 ?>
-<div class="modal-overlay sounding-board-modal" id="sounding-board-modal" style="display:none;">
+<div class="modal-overlay sounding-board-modal hidden" id="sounding-board-modal">
     <div class="modal-content modal-lg">
         <div class="modal-header">
             <h3>Strategic Sounding Board</h3>
@@ -34,13 +34,13 @@
         </div>
 
         <!-- Loading State -->
-        <div class="sb-loading" id="sb-loading" style="display:none;">
+        <div class="sb-loading hidden" id="sb-loading">
             <p>Running AI evaluation... This may take a moment.</p>
             <div class="spinner"></div>
         </div>
 
         <!-- Results Container -->
-        <div class="sb-results" id="sb-results" style="display:none;">
+        <div class="sb-results hidden" id="sb-results">
             <!-- Populated by JS -->
         </div>
     </div>

@@ -1089,10 +1089,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide the current story from the blocked-by dropdown
             var blockedBySelect = document.getElementById('story-blocked-by');
             Array.from(blockedBySelect.options).forEach(function(opt) {
-                opt.style.display = opt.value === currentStoryId ? 'none' : '';
+                opt.hidden = opt.value === currentStoryId;
             });
 
-            document.getElementById('ai-size-reasoning').style.display = 'none';
+            setHiddenState(document.getElementById('ai-size-reasoning'), true);
             document.getElementById('story-modal').classList.remove('hidden');
 
             // Load git links for this story
@@ -1130,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.reasoning) {
                         var reasoningEl = document.getElementById('ai-size-reasoning');
                         reasoningEl.textContent = 'AI reasoning: ' + data.reasoning;
-                        reasoningEl.style.display = 'block';
+                        setHiddenState(reasoningEl, false);
                     }
                     aiSizeBtn.textContent = 'Suggested!';
                 } else {
@@ -1220,6 +1220,30 @@ function toggleFrameworkInfo() {
     if (modal) {
         modal.classList.toggle('hidden');
     }
+}
+
+function setHiddenState(element, hidden) {
+    if (!element) {
+        return;
+    }
+    element.classList.toggle('hidden', hidden);
+}
+
+function setToneState(element, tone) {
+    if (!element) {
+        return;
+    }
+    element.classList.remove('text-success', 'text-danger', 'text-muted');
+    if (tone) {
+        element.classList.add('text-' + tone);
+    }
+}
+
+function setRiskRowHidden(row, hidden) {
+    if (!row) {
+        return;
+    }
+    row.classList.toggle('hidden', hidden);
 }
 
 /**
@@ -1429,12 +1453,12 @@ function initKrEditor(itemId) {
             .then(function(responses) {
                 var allOk = responses.every(function(response) { return response.ok; });
                 msg.textContent = allOk ? 'Saved.' : 'Error saving.';
-                msg.style.color = allOk ? '#10b981' : '#ef4444';
+                setToneState(msg, allOk ? 'success' : 'danger');
                 setTimeout(function() { msg.textContent = ''; }, 2500);
             })
             .catch(function() {
                 msg.textContent = 'Network error.';
-                msg.style.color = '#ef4444';
+                setToneState(msg, 'danger');
             });
     });
 
@@ -1450,7 +1474,7 @@ function initKrEditor(itemId) {
             .then(function(data) {
                 if (!data.ok) {
                     msg.textContent = 'Error adding KR.';
-                    msg.style.color = '#ef4444';
+                    setToneState(msg, 'danger');
                     return;
                 }
                 tbody.insertAdjacentHTML('beforeend', buildKrRow(data.id));
@@ -1458,7 +1482,7 @@ function initKrEditor(itemId) {
             })
             .catch(function() {
                 msg.textContent = 'Network error.';
-                msg.style.color = '#ef4444';
+                setToneState(msg, 'danger');
             });
     });
 
@@ -1580,7 +1604,7 @@ function filterHeatmapRisks(likelihood, impact) {
         var rowLikelihood = parseInt(row.dataset.likelihood || '0', 10);
         var rowImpact = parseInt(row.dataset.impact || '0', 10);
         var match = rowLikelihood === likelihood && rowImpact === impact;
-        row.style.display = match ? '' : 'none';
+        setRiskRowHidden(row, !match);
         row.classList.toggle('risk-highlighted', match);
         if (match) {
             visible += 1;
@@ -1602,7 +1626,7 @@ function filterHeatmapRisks(likelihood, impact) {
         ' at Likelihood ' + likelihood + ' × Impact ' + impact + '</span>' +
         '<button type="button" class="btn btn-sm btn-secondary js-clear-heatmap-filter">Clear filter</button>';
 
-    var firstVisible = document.querySelector('.risk-row:not([style*="display: none"])');
+    var firstVisible = document.querySelector('.risk-row:not(.hidden)');
     if (firstVisible) {
         firstVisible.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -1616,7 +1640,7 @@ function clearHeatmapFilter() {
     });
 
     document.querySelectorAll('.risk-row').forEach(function(row) {
-        row.style.display = '';
+        setRiskRowHidden(row, false);
         row.classList.remove('risk-highlighted');
     });
 
@@ -1657,13 +1681,13 @@ function toggleStoryModal() {
         document.getElementById('story-acceptance-criteria').value = '';
         document.getElementById('story-kr-hypothesis').value = '';
         document.getElementById('story-submit-btn').textContent = 'Save';
-        document.getElementById('ai-size-reasoning').style.display = 'none';
+        setHiddenState(document.getElementById('ai-size-reasoning'), true);
 
         // Show all options in blocked-by dropdown
         var blockedBySelect = document.getElementById('story-blocked-by');
         if (blockedBySelect) {
             Array.from(blockedBySelect.options).forEach(function(opt) {
-                opt.style.display = '';
+                opt.hidden = false;
             });
         }
 
@@ -2080,7 +2104,7 @@ function runAdminAiConnectionTest() {
 
     button.disabled = true;
     button.textContent = 'Testing...';
-    result.style.color = '';
+    setToneState(result, null);
     result.textContent = '';
 
     var form = new FormData();
@@ -2099,17 +2123,17 @@ function runAdminAiConnectionTest() {
         button.disabled = false;
         button.textContent = 'Test Connection';
         if (data.status === 'ok') {
-            result.style.color = '#16a34a';
+            setToneState(result, 'success');
             result.textContent = 'Connection successful';
             return;
         }
-        result.style.color = '#dc2626';
+        setToneState(result, 'danger');
         result.textContent = data.message || 'Connection failed';
     })
     .catch(function() {
         button.disabled = false;
         button.textContent = 'Test Connection';
-        result.style.color = '#dc2626';
+        setToneState(result, 'danger');
         result.textContent = 'Request failed';
     });
 }
@@ -2118,7 +2142,7 @@ function toggleSuperadminApiKey(provider) {
     ['google', 'openai', 'anthropic'].forEach(function(slug) {
         var el = document.getElementById('api-key-' + slug);
         if (el) {
-            el.style.display = slug === provider ? '' : 'none';
+            setHiddenState(el, slug !== provider);
         }
     });
 }
@@ -2136,14 +2160,14 @@ function runSuperadminAiConnectionTest() {
     var modelValue = (model.value || '').trim();
     if (!modelValue) {
         result.textContent = 'Enter a model identifier first.';
-        result.style.color = 'var(--danger)';
+        setToneState(result, 'danger');
         return;
     }
 
     button.disabled = true;
     button.textContent = 'Testing...';
     result.textContent = 'Connecting...';
-    result.style.color = 'var(--text-muted)';
+    setToneState(result, 'muted');
 
     var form = new FormData();
     form.append('_csrf_token', csrf ? csrf.value : '');
@@ -2161,17 +2185,17 @@ function runSuperadminAiConnectionTest() {
         button.disabled = false;
         button.textContent = 'Test Connection';
         if (data.success) {
-            result.style.color = '#059669';
+            setToneState(result, 'success');
             result.textContent = 'Connected' + (data.latency_ms ? ' (' + data.latency_ms + 'ms)' : '');
             return;
         }
-        result.style.color = 'var(--danger)';
+        setToneState(result, 'danger');
         result.textContent = 'Failed: ' + (data.error || 'Unknown error');
     })
     .catch(function(error) {
         button.disabled = false;
         button.textContent = 'Test Connection';
-        result.style.color = 'var(--danger)';
+        setToneState(result, 'danger');
         result.textContent = 'Network error: ' + error.message;
     });
 }
@@ -2315,7 +2339,7 @@ function memberPickerSearch(input) {
     }
 
     if (matches.length === 0) {
-        resultsEl.style.display = 'none';
+        setHiddenState(resultsEl, true);
         resultsEl.innerHTML = '';
         return;
     }
@@ -2324,7 +2348,7 @@ function memberPickerSearch(input) {
         return '<div class="member-result-item" data-id="' + String(user.id) + '" data-label="' + escapeHtml(user.label) + '"' +
             '>' + escapeHtml(user.label) + '</div>';
     }).join('');
-    resultsEl.style.display = '';
+    setHiddenState(resultsEl, false);
 }
 
 function buildMemberChip(label, memberId, membershipRole) {
@@ -2371,7 +2395,7 @@ function addMemberChip(resultItem) {
     }
     var resultsEl = pickerWrap.querySelector('.member-search-results');
     if (resultsEl) {
-        resultsEl.style.display = 'none';
+        setHiddenState(resultsEl, true);
         resultsEl.innerHTML = '';
     }
 }
@@ -2426,7 +2450,7 @@ function clearMemberPicker(prefix) {
     }
     var resultsEl = wrap.querySelector('.member-search-results');
     if (resultsEl) {
-        resultsEl.style.display = 'none';
+        setHiddenState(resultsEl, true);
         resultsEl.innerHTML = '';
     }
 }
@@ -2641,17 +2665,17 @@ function toggleSprintEditForm(sprintId) {
  * Open the sounding board modal and reset to configuration view.
  */
 function openSoundingBoard() {
-    document.getElementById('sounding-board-modal').style.display = 'flex';
-    document.getElementById('sb-config').style.display = 'block';
-    document.getElementById('sb-loading').style.display = 'none';
-    document.getElementById('sb-results').style.display = 'none';
+    setHiddenState(document.getElementById('sounding-board-modal'), false);
+    setHiddenState(document.getElementById('sb-config'), false);
+    setHiddenState(document.getElementById('sb-loading'), true);
+    setHiddenState(document.getElementById('sb-results'), true);
 }
 
 /**
  * Close the sounding board modal.
  */
 function closeSoundingBoard() {
-    document.getElementById('sounding-board-modal').style.display = 'none';
+    setHiddenState(document.getElementById('sounding-board-modal'), true);
 }
 
 /**
@@ -2673,8 +2697,8 @@ function runSoundingBoard() {
     var panelType = document.getElementById('sb-panel-type').value;
     var evalLevel = document.getElementById('sb-eval-level').value;
 
-    document.getElementById('sb-config').style.display = 'none';
-    document.getElementById('sb-loading').style.display = 'block';
+    setHiddenState(document.getElementById('sb-config'), true);
+    setHiddenState(document.getElementById('sb-loading'), false);
 
     fetch('/app/sounding-board/evaluate', {
         method: 'POST',
@@ -2693,13 +2717,13 @@ function runSoundingBoard() {
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-        document.getElementById('sb-loading').style.display = 'none';
-        document.getElementById('sb-results').style.display = 'block';
+        setHiddenState(document.getElementById('sb-loading'), true);
+        setHiddenState(document.getElementById('sb-results'), false);
         renderSoundingBoardResults(data);
     })
     .catch(function(err) {
-        document.getElementById('sb-loading').style.display = 'none';
-        document.getElementById('sb-config').style.display = 'block';
+        setHiddenState(document.getElementById('sb-loading'), true);
+        setHiddenState(document.getElementById('sb-config'), false);
         alert('Evaluation failed: ' + err.message);
     });
 }
@@ -2764,7 +2788,7 @@ function respondToPersona(evalId, memberIndex, action) {
                 var statusBadge = card.querySelector('.persona-status');
                 statusBadge.textContent = action + 'ed';
                 statusBadge.className = 'persona-status badge ' + (action === 'accept' ? 'badge-success' : 'badge-muted');
-                card.querySelector('.persona-actions').style.display = 'none';
+                setHiddenState(card.querySelector('.persona-actions'), true);
             }
         }
     });
@@ -2787,10 +2811,9 @@ function nextOnboardingStep() {
         return;
     }
 
-    currentStepEl.style.display = 'none';
+    setHiddenState(currentStepEl, true);
     if (dots[onboardingCurrentStep - 1]) {
         dots[onboardingCurrentStep - 1].classList.remove('onboarding-dot--active');
-        dots[onboardingCurrentStep - 1].style.background = 'var(--border)';
     }
 
     onboardingCurrentStep++;
@@ -2802,11 +2825,11 @@ function nextOnboardingStep() {
 
     var nextStepEl = document.getElementById('onboarding-step-' + onboardingCurrentStep);
     if (nextStepEl) {
-        nextStepEl.style.display = 'block';
+        setHiddenState(nextStepEl, false);
     }
 
     if (dots[onboardingCurrentStep - 1]) {
-        dots[onboardingCurrentStep - 1].style.background = 'var(--primary)';
+        dots[onboardingCurrentStep - 1].classList.add('onboarding-dot--active');
     }
 
     var nextBtn = document.getElementById('onboarding-next');
@@ -3031,18 +3054,18 @@ function saveNodeOkr() {
                     accordion.classList.toggle('accordion-item--complete', !!title);
                 }
             }
-            status.style.color = '#16a34a';
+            setToneState(status, 'success');
             status.textContent = 'Saved successfully';
             window.setTimeout(closeNodeOkrPanel, 800);
         } else {
-            status.style.color = '#dc2626';
+            setToneState(status, 'danger');
             status.textContent = 'Save failed - please try again';
         }
     })
     .catch(function() {
         btn.disabled = false;
         btn.textContent = 'Save OKRs to Node';
-        status.style.color = '#dc2626';
+        setToneState(status, 'danger');
         status.textContent = 'Connection error';
     });
 }
@@ -3192,7 +3215,7 @@ window.loadGitLinks = function(localType, localId) {
     if (!list) { return; }
 
     if (loading) {
-        loading.style.display = 'inline';
+        setHiddenState(loading, false);
     }
     list.innerHTML = '';
 
@@ -3202,7 +3225,7 @@ window.loadGitLinks = function(localType, localId) {
     .then(function(res) { return res.json(); })
     .then(function(data) {
         if (loading) {
-            loading.style.display = 'none';
+            setHiddenState(loading, true);
         }
         if (data.ok) {
             renderGitLinks(data.links);
@@ -3210,7 +3233,7 @@ window.loadGitLinks = function(localType, localId) {
     })
     .catch(function() {
         if (loading) {
-            loading.style.display = 'none';
+            setHiddenState(loading, true);
         }
     });
 };
@@ -3260,7 +3283,7 @@ function addGitLink() {
     }
 
     if (errorEl) {
-        errorEl.style.display = 'none';
+        setHiddenState(errorEl, true);
     }
     if (addBtn) {
         addBtn.disabled = true;
@@ -3374,7 +3397,7 @@ function showGitLinksError(msg) {
     var errorEl = document.getElementById('git-links-error');
     if (!errorEl) { return; }
     errorEl.textContent = msg;
-    errorEl.style.display = 'block';
+    setHiddenState(errorEl, false);
 }
 
 // Password visibility toggle
@@ -3549,11 +3572,11 @@ document.querySelectorAll('.doc-summary-toggle').forEach(function(btn) {
         if (!panel) return;
         var expanded = btn.getAttribute('aria-expanded') === 'true';
         if (expanded) {
-            panel.style.display = 'none';
+            setHiddenState(panel, true);
             btn.setAttribute('aria-expanded', 'false');
             btn.innerHTML = 'Summarised &#9660;';
         } else {
-            panel.style.display = 'block';
+            setHiddenState(panel, false);
             btn.setAttribute('aria-expanded', 'true');
             btn.innerHTML = 'Summarised &#9650;';
         }

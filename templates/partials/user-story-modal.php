@@ -12,7 +12,7 @@
  */
 ?>
 <div class="modal-overlay hidden" id="story-modal">
-    <div class="modal" style="max-width: 760px;">
+    <div class="modal story-modal">
         <div class="modal-header">
             <h3 id="story-modal-title">Add User Story</h3>
             <button class="modal-close js-toggle-story-modal" type="button">&times;</button>
@@ -97,7 +97,7 @@
                             </button>
                         </div>
                     </div>
-                    <div id="ai-size-reasoning" class="text-muted" style="font-size: 0.8125rem; margin-bottom: 1rem; display: none;"></div>
+                    <div id="ai-size-reasoning" class="text-muted story-ai-size-reasoning hidden"></div>
                 </div>
 
                 <div class="modal-field-wrap" data-field="acceptance_criteria">

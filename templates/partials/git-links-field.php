@@ -18,29 +18,29 @@
 <!-- ===========================
      Git Links Section
      =========================== -->
-<div class="git-links-section" id="git-links-section" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-        <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--text-muted, #6b7280);">
+<div class="git-links-section" id="git-links-section">
+    <div class="git-links-section__header">
+        <h4 class="git-links-section__title">
             Git Links
         </h4>
-        <span id="git-links-loading" style="font-size: 0.8rem; color: var(--text-muted, #6b7280); display: none;">Loading...</span>
+        <span id="git-links-loading" class="git-links-section__loading hidden">Loading...</span>
     </div>
 
     <!-- Existing links list -->
-    <div id="git-links-list" style="margin-bottom: 0.75rem;"></div>
+    <div id="git-links-list" class="git-links-section__list"></div>
 
     <!-- Add new link form -->
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
+    <div class="git-links-section__form">
         <input type="text"
                id="git-links-ref-input"
-               class="form-control"
+               class="form-control git-links-section__input"
                placeholder="Paste PR URL, commit SHA, or branch name"
-               style="flex: 1; font-size: 0.8125rem;">
+               >
         <button type="button"
                 id="git-links-add-btn"
                 class="btn btn-sm btn-secondary js-git-links-add">
             Link
         </button>
     </div>
-    <div id="git-links-error" style="color: var(--danger, #dc3545); font-size: 0.8rem; margin-top: 0.25rem; display: none;"></div>
+    <div id="git-links-error" class="git-links-section__error hidden"></div>
 </div>

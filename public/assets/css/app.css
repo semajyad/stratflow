@@ -2979,6 +2979,77 @@ tbody tr:hover {
     border-top: 1px solid var(--border);
 }
 
+.story-modal {
+    max-width: 760px;
+}
+
+.story-ai-size-reasoning {
+    font-size: 0.8125rem;
+    margin-bottom: 1rem;
+}
+
+.git-links-section {
+    border-top: 1px solid var(--border);
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+}
+
+.git-links-section__header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.git-links-section__title {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.git-links-section__loading {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.8rem;
+}
+
+.git-links-section__list {
+    margin-bottom: 0.75rem;
+}
+
+.git-links-section__form {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.git-links-section__input {
+    flex: 1;
+    font-size: 0.8125rem;
+}
+
+.git-links-section__error {
+    color: var(--danger, #dc3545);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.onboarding-dot {
+    background: var(--border);
+    border-radius: 50%;
+    display: inline-block;
+    height: 8px;
+    width: 8px;
+}
+
+.onboarding-dot--active {
+    background: var(--primary);
+}
+
+.superadmin-test-ai-result {
+    font-size: 0.875rem;
+}
+
 .sounding-board-trigger {
     white-space: nowrap;
 }

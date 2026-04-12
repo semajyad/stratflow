@@ -45,7 +45,7 @@ $roleHint = match($userRole) {
                 </div>
             </div>
 
-            <div id="onboarding-step-2" class="onboarding-step" style="display:none;">
+            <div id="onboarding-step-2" class="onboarding-step hidden">
                 <h2 style="margin:0 0 1rem; font-size:1.35rem;">The 8-step workflow</h2>
                 <p class="text-muted" style="font-size:0.9rem; margin-bottom:1.25rem;">
                     Each step builds on the previous one. You can always jump between steps using the sidebar or stepper.
@@ -62,7 +62,7 @@ $roleHint = match($userRole) {
                 </div>
             </div>
 
-            <div id="onboarding-step-3" class="onboarding-step" style="display:none;">
+            <div id="onboarding-step-3" class="onboarding-step hidden">
                 <h2 style="margin:0 0 1rem; font-size:1.35rem;">Bidirectional Jira sync</h2>
                 <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">
                     StratFlow connects to Jira Cloud so your strategy flows straight into your team's execution pipeline:
@@ -80,7 +80,7 @@ $roleHint = match($userRole) {
                 </p>
             </div>
 
-            <div id="onboarding-step-4" class="onboarding-step" style="display:none;">
+            <div id="onboarding-step-4" class="onboarding-step hidden">
                 <div style="text-align:center;">
                     <div style="width:64px; height:64px; background:#d1fae5; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem;">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
@@ -100,10 +100,10 @@ $roleHint = match($userRole) {
             <!-- Navigation -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:1.25rem; border-top:1px solid var(--border);">
                 <div id="onboarding-step-indicator" style="display:flex; gap:0.4rem;">
-                    <span class="onboarding-dot onboarding-dot--active" style="width:8px; height:8px; border-radius:50%; background:var(--primary);"></span>
-                    <span class="onboarding-dot" style="width:8px; height:8px; border-radius:50%; background:var(--border);"></span>
-                    <span class="onboarding-dot" style="width:8px; height:8px; border-radius:50%; background:var(--border);"></span>
-                    <span class="onboarding-dot" style="width:8px; height:8px; border-radius:50%; background:var(--border);"></span>
+                    <span class="onboarding-dot onboarding-dot--active"></span>
+                    <span class="onboarding-dot"></span>
+                    <span class="onboarding-dot"></span>
+                    <span class="onboarding-dot"></span>
                 </div>
                 <div class="flex gap-2">
                     <button type="button" id="onboarding-skip" class="btn btn-secondary btn-sm js-onboarding-skip">Skip</button>

@@ -81,7 +81,7 @@ $s = $settings;
                     <button type="button" class="btn btn-secondary js-superadmin-test-ai" id="test-ai-btn">
                         Test Connection
                     </button>
-                    <span id="test-ai-result" style="font-size:0.875rem;"></span>
+                    <span id="test-ai-result" class="superadmin-test-ai-result"></span>
                 </div>
             </div>
         </div>
