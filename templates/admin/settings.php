@@ -23,7 +23,7 @@
 <form method="POST" action="/app/admin/settings">
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
-    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+    <div class="settings-stack">
 
         <!-- ===========================
              Workflow Personas
@@ -31,7 +31,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Workflow Personas</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     AI agents for each pipeline stage
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -39,7 +39,7 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                <p class="text-muted settings-intro">
                     Each persona defines the AI prompt used at a specific pipeline stage.
                     Edit to customise how your organisation's AI agents behave.
                 </p>
@@ -55,7 +55,7 @@
                 ];
                 ?>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+                <div class="settings-grid-2">
                     <?php foreach ($personaLabels as $key => $label): ?>
                         <div class="form-group">
                             <label class="form-label"><?= htmlspecialchars($label) ?></label>
@@ -76,7 +76,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">AI Model</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Provider, model, and API key override
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -84,12 +84,12 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                <p class="text-muted settings-intro">
                     Override the AI provider, model, and API key for your organisation.
                     Leave blank to use the StratFlow default (Google Gemini — gemini-2.5-flash).
                 </p>
-                <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
-                    <div class="form-group" style="flex:1; min-width:180px;">
+                <div class="settings-flex-wrap">
+                    <div class="form-group settings-field-flex">
                         <label class="form-label">Provider</label>
                         <select name="ai_provider" id="ai-provider-select" class="form-input js-admin-ai-provider">
                             <option value="" <?= empty($settings['ai']['provider']) ? 'selected' : '' ?>>Platform default (Google Gemini)</option>
@@ -98,7 +98,7 @@
                             <option value="anthropic" <?= ($settings['ai']['provider'] ?? '') === 'anthropic' ? 'selected' : '' ?>>Anthropic</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex:1; min-width:180px;">
+                    <div class="form-group settings-field-flex">
                         <label class="form-label">Model</label>
                         <input type="text"
                                name="ai_model"
@@ -108,8 +108,8 @@
                                placeholder="e.g. gemini-2.5-flash">
                         <small class="text-muted" id="ai-model-hint">Leave blank to use the platform default.</small>
                     </div>
-                    <div class="form-group" style="flex:1; min-width:180px;">
-                        <label class="form-label">API Key <span class="text-muted" style="font-weight:400;">(optional)</span></label>
+                    <div class="form-group settings-field-flex">
+                        <label class="form-label">API Key <span class="text-muted settings-inline-muted-strong">(optional)</span></label>
                         <input type="password"
                                name="ai_api_key"
                                id="ai-api-key-input"
@@ -120,9 +120,9 @@
                         <small class="text-muted">Leave blank to use the StratFlow shared key.</small>
                     </div>
                 </div>
-                <div style="margin-top:1rem; display:flex; align-items:center; gap:1rem;">
+                <div class="settings-flex-row">
                     <button type="button" class="btn btn-secondary btn-sm js-admin-test-ai">Test Connection</button>
-                    <span id="ai-test-result" style="font-size:0.875rem;"></span>
+                    <span id="ai-test-result" class="superadmin-test-ai-result"></span>
                 </div>
             </div>
         </div>
@@ -133,7 +133,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Defaults</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     HL item size and story point limits
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -141,10 +141,10 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
+                <div class="settings-flex-wrap">
                     <div class="form-group">
                         <label class="form-label">Sprint Length (weeks)</label>
-                        <input type="number" name="sprint_length_weeks" class="form-input" style="max-width:100px;"
+                        <input type="number" name="sprint_length_weeks" class="form-input settings-input-width-xs"
                                value="<?= (int) ($settings['sprint_length_weeks'] ?? 2) ?>" min="1" max="12">
                         <small class="text-muted">Used for sprint planning and capacity calculations.</small>
                     </div>
@@ -193,7 +193,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Field Ordering</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Drag to reorder fields in work item and story modals
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -239,59 +239,14 @@
                 foreach ($stLabels as $k => $v) { if (!isset($orderedSt[$k])) $orderedSt[$k] = $v; }
                 ?>
 
-                <style>
-                .field-sort-list {
-                    list-style: none;
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.375rem;
-                }
-                .field-sort-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 0.5rem 0.75rem;
-                    background: var(--bg, #fff);
-                    border: 1px solid var(--border);
-                    border-radius: 6px;
-                    cursor: grab;
-                    user-select: none;
-                    font-size: 0.875rem;
-                    transition: box-shadow 100ms ease, background 100ms ease;
-                }
-                .field-sort-item:active { cursor: grabbing; }
-                .field-sort-item.drag-over {
-                    border-color: var(--primary);
-                    background: rgba(79,70,229,0.04);
-                }
-                .field-sort-item.dragging {
-                    opacity: 0.4;
-                }
-                .field-sort-handle {
-                    color: var(--text-muted);
-                    font-size: 1rem;
-                    line-height: 1;
-                    flex-shrink: 0;
-                }
-                .field-sort-num {
-                    width: 1.25rem;
-                    font-size: 0.75rem;
-                    color: var(--text-muted);
-                    text-align: right;
-                    flex-shrink: 0;
-                }
-                </style>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                <div class="settings-grid-2-wide">
                     <!-- Work Item Fields -->
                     <div>
-                        <div style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:0.625rem;">
+                        <div class="settings-field-sort-heading">
                             High Level Work Items
                         </div>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem;">
-                            <span style="font-size:0.75rem; color:#94a3b8;">Priority always appears first and is not reorderable.</span>
+                        <p class="settings-inline-help">
+                            <span class="settings-inline-help-note">Priority always appears first and is not reorderable.</span>
                         </p>
                         <input type="hidden" name="field_order_work_item" id="field-order-wi"
                                value="<?= htmlspecialchars(implode(',', array_keys($orderedWi))) ?>">
@@ -309,10 +264,10 @@
 
                     <!-- Story Fields -->
                     <div>
-                        <div style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:0.625rem;">
+                        <div class="settings-field-sort-heading">
                             User Story
                         </div>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem;">&nbsp;</p>
+                        <p class="settings-inline-help">&nbsp;</p>
                         <input type="hidden" name="field_order_story" id="field-order-st"
                                value="<?= htmlspecialchars(implode(',', array_keys($orderedSt))) ?>">
                         <ul class="field-sort-list" id="sort-list-st">
@@ -337,7 +292,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Story Quality</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     AI quality scoring threshold and enforcement
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -345,40 +300,39 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                <p class="text-muted settings-intro">
                     When enabled, user stories are scored by AI after generation. Stories below the threshold are flagged or blocked depending on enforcement mode.
                 </p>
-                <div style="display:flex; flex-direction:column; gap:1rem;">
+                <div class="settings-stack">
                     <div class="form-group">
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <div class="settings-quality-toggle">
                             <input type="hidden" name="quality_enabled" value="0">
                             <input type="checkbox" name="quality_enabled" value="1"
                                    id="quality-enabled-check"
                                    <?= !empty($settings['quality']['enabled']) ? 'checked' : '' ?>
                                    class="js-quality-enabled-toggle"
                                    data-target-id="quality-options">
-                            <label for="quality-enabled-check" style="font-weight:600; cursor:pointer; margin:0;">
+                            <label for="quality-enabled-check" class="settings-quality-toggle-label">
                                 Enable story quality checks for this organisation
                             </label>
                         </div>
                     </div>
-                    <div id="quality-options" style="<?= empty($settings['quality']['enabled']) ? 'display:none' : 'display:flex' ?>; gap:1.5rem; flex-wrap:wrap;">
-                        <div class="form-group" style="flex:1; min-width:200px;">
+                    <div id="quality-options" class="settings-quality-options<?= empty($settings['quality']['enabled']) ? ' hidden' : '' ?>">
+                        <div class="form-group settings-field-flex-lg">
                             <label class="form-label">Quality Threshold (%)</label>
-                            <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div class="settings-slider-row">
                                 <input type="range" name="quality_threshold"
                                        min="0" max="100" step="5"
                                        value="<?= (int) ($settings['quality']['threshold'] ?? 70) ?>"
-                                       style="flex:1;"
-                                       class="js-quality-threshold-range"
+                                       class="js-quality-threshold-range settings-slider"
                                        data-output-id="org-qt-val">
-                                <span id="org-qt-val" style="font-weight:700; font-size:1rem; min-width:3rem;">
+                                <span id="org-qt-val" class="settings-slider-output">
                                     <?= (int) ($settings['quality']['threshold'] ?? 70) ?>%
                                 </span>
                             </div>
                             <small class="text-muted">Stories below this score are flagged. Platform default: <?= (int) ($system_settings['quality_threshold'] ?? 70) ?>%.</small>
                         </div>
-                        <div class="form-group" style="flex:1; min-width:200px;">
+                        <div class="form-group settings-field-flex-lg">
                             <label class="form-label">Enforcement Mode</label>
                             <select name="quality_enforcement" class="form-input">
                                 <option value="warn"  <?= ($settings['quality']['enforcement'] ?? 'warn') === 'warn'  ? 'selected' : '' ?>>Warn only — show badge, allow save</option>
@@ -397,7 +351,7 @@
         <div class="accordion-item">
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Tripwires</span>
-                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-right:0.5rem;">
+                <span class="settings-accordion-meta">
                     Capacity and dependency alert thresholds
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -405,14 +359,14 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <p class="text-muted" style="font-size:0.875rem; margin-bottom:1.25rem;">
+                <p class="text-muted settings-intro">
                     Tripwires alert you when sprints or dependencies exceed configurable thresholds.
                 </p>
-                <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
+                <div class="settings-flex-wrap">
                     <div class="form-group">
                         <label class="form-label">Capacity Tripwire (%)</label>
                         <input type="number" name="capacity_tripwire_percent"
-                               class="form-input" style="max-width:120px;"
+                               class="form-input settings-input-width-sm"
                                value="<?= (int) ($settings['capacity_tripwire_percent'] ?? 20) ?>"
                                min="0" max="100">
                         <small class="text-muted">Warn when sprint capacity exceeds this threshold above 100%</small>
@@ -420,12 +374,12 @@
 
                     <div class="form-group">
                         <label class="form-label">Dependency Tripwire</label>
-                        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.375rem;">
+                        <div class="settings-checkbox-row">
                             <input type="hidden" name="dependency_tripwire_enabled" value="0">
                             <input type="checkbox" name="dependency_tripwire_enabled" value="1"
                                    id="dep-tripwire"
                                    <?= !empty($settings['dependency_tripwire_enabled']) ? 'checked' : '' ?>>
-                            <label for="dep-tripwire" style="font-weight:normal; cursor:pointer;">
+                            <label for="dep-tripwire" class="settings-checkbox-label">
                                 Enable dependency conflict warnings
                             </label>
                         </div>
@@ -439,7 +393,7 @@
     <!-- ===========================
          Save Button
          =========================== -->
-    <div style="margin-top:1.5rem; margin-bottom:1.5rem;">
+    <div class="settings-save-row">
         <button type="submit" class="btn btn-primary">Save Settings</button>
     </div>
 </form>
