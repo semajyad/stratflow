@@ -21,7 +21,7 @@ $canCreateProjects = \StratFlow\Security\PermissionService::can(
 <div class="page-header flex justify-between items-center">
     <div>
         <h1 class="page-title">Welcome, <?= htmlspecialchars($user['name'] ?? $user['full_name'] ?? 'User') ?></h1>
-        <p class="page-subtitle" style="margin:0.25rem 0 0;">
+        <p class="page-subtitle home-subtitle">
             StratFlow turns your strategy documents into a prioritised, AI-ready engineering roadmap.
         </p>
     </div>
@@ -49,12 +49,12 @@ if ($lastProjectId && !empty($projects)) {
 }
 ?>
 <?php if ($lastProject): ?>
-<section class="card mb-4" style="border-left: 4px solid var(--primary);">
-    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem;">
+<section class="card mb-4 home-resume-card">
+    <div class="card-body home-resume-body">
         <div>
-            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Continue Working On</span>
-            <h3 style="margin: 0.25rem 0 0; font-size: 1.125rem;"><?= htmlspecialchars($lastProject['name']) ?></h3>
-            <small class="text-muted" style="display:block; margin-top:0.15rem;">
+            <span class="home-resume-label">Continue Working On</span>
+            <h3 class="home-resume-title"><?= htmlspecialchars($lastProject['name']) ?></h3>
+            <small class="text-muted home-resume-meta">
                 <?= (int) ($lastProject['steps_complete'] ?? 0) ?> of <?= (int) ($lastProject['steps_total'] ?? 8) ?> steps complete &middot; Next: <?= htmlspecialchars($lastProject['next_step_label'] ?? 'Upload') ?>
             </small>
         </div>
@@ -68,25 +68,24 @@ if ($lastProjectId && !empty($projects)) {
      =========================== -->
 <section class="card">
     <div class="card-header flex justify-between items-center">
-        <h2 class="card-title" style="margin:0;">Your Projects <span class="text-muted" style="font-weight:400; font-size:0.85rem;">(<?= count($projects) ?>)</span></h2>
+        <h2 class="card-title home-projects-title">Your Projects <span class="text-muted home-projects-count">(<?= count($projects) ?>)</span></h2>
         <?php if (count($projects) > 3): ?>
             <input type="search" id="project-search" placeholder="Search projects..."
-                   style="max-width:260px; padding:0.4rem 0.75rem; border:1px solid var(--border); border-radius:6px; font-size:0.875rem;"
-                   class="js-project-search">
+                   class="js-project-search home-project-search">
         <?php endif; ?>
     </div>
 
     <?php if (empty($projects)): ?>
-        <div class="empty-state" style="padding: 2rem; text-align: center;">
-            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Create your first project to get started</p>
-            <p class="text-muted" style="font-size: 0.875rem;">Each project takes a strategy document through the full workflow: upload, roadmap, work items, stories, sprints, and governance.</p>
+        <div class="empty-state home-empty-state">
+            <p class="home-empty-title">Create your first project to get started</p>
+            <p class="text-muted home-empty-copy">Each project takes a strategy document through the full workflow: upload, roadmap, work items, stories, sprints, and governance.</p>
         </div>
     <?php else: ?>
         <div class="project-list">
             <?php foreach ($projects as $project): ?>
                 <div class="project-card">
                     <div class="project-info">
-                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <div class="home-project-header">
                             <span class="project-name"><?= htmlspecialchars($project['name']) ?></span>
                             <span class="status-badge status-<?= htmlspecialchars($project['status']) ?>">
                                 <?= ucfirst(htmlspecialchars($project['status'])) ?>
@@ -99,20 +98,20 @@ if ($lastProjectId && !empty($projects)) {
                             $stepKeys   = ['upload','diagram','work-items','prioritisation','risks','user-stories','sprints','governance'];
                             $stepLabels = ['Upload','Roadmap','Work Items','Prioritise','Risks','Stories','Sprints','Governance'];
                         ?>
-                            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.5rem;">
+                            <div class="home-project-progress">
                                 <?php foreach ($stepKeys as $i => $k):
                                     $done = !empty($project['completion'][$k]);
                                 ?>
                                     <span title="<?= $stepLabels[$i] ?><?= $done ? ' - complete' : '' ?>"
-                                          style="display:inline-block; width:18px; height:4px; border-radius:2px; background:<?= $done ? '#059669' : '#e2e8f0' ?>;"></span>
+                                          class="home-step-bar<?= $done ? ' home-step-bar--done' : '' ?>"></span>
                                 <?php endforeach; ?>
-                                <span class="text-muted" style="font-size:0.7rem; margin-left:0.3rem;">
+                                <span class="text-muted home-step-meta">
                                     <?= (int) $project['steps_complete'] ?>/<?= (int) $project['steps_total'] ?> &middot; Next: <?= htmlspecialchars($project['next_step_label'] ?? '') ?>
                                 </span>
                             </div>
                         <?php endif; ?>
                     </div>
-                    <div class="project-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="project-actions home-project-actions">
                         <?php
                         $jiraKey = $project['jira_project_key'] ?? '';
                         $jiraLabel = 'Jira: None';
@@ -128,7 +127,7 @@ if ($lastProjectId && !empty($projects)) {
                             }
                         }
                         ?>
-                        <span class="badge" style="font-size:0.7rem; background:var(--secondary); color:#fff; white-space:nowrap;" title="Jira project">
+                        <span class="badge home-jira-badge" title="Jira project">
                             <?= htmlspecialchars($jiraLabel) ?>
                         </span>
                         <a href="<?= htmlspecialchars($project['next_step_url'] ?? '/app/upload?project_id=' . (int) $project['id']) ?>"
@@ -138,8 +137,7 @@ if ($lastProjectId && !empty($projects)) {
                         </a>
                         <?php if (\StratFlow\Security\ProjectPolicy::canManageProject(\StratFlow\Core\Database::getInstance(), $user, $project)): ?>
                         <button type="button"
-                                class="btn btn-sm btn-secondary js-open-edit-project-modal"
-                                style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                                class="btn btn-sm btn-secondary js-open-edit-project-modal home-project-action-btn"
                                 data-project-id="<?= (int) $project['id'] ?>"
                                 data-project-name="<?= htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8') ?>"
                                 data-jira-key="<?= htmlspecialchars($jiraKey, ENT_QUOTES, 'UTF-8') ?>"
@@ -149,7 +147,7 @@ if ($lastProjectId && !empty($projects)) {
                         </button>
                         <form method="POST" action="/app/projects/<?= (int) $project['id'] ?>/delete" class="inline-form">
                             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                            <button type="submit" class="btn btn-sm btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                            <button type="submit" class="btn btn-sm btn-danger home-project-action-btn"
                                     data-confirm="Delete project &quot;<?= htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8') ?>&quot;? This cannot be undone.">Delete</button>
                         </form>
                         <?php endif; ?>
@@ -170,12 +168,11 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
 <textarea id="home-org-users-data" class="hidden"><?= htmlspecialchars($orgUsersJson ?? '[]', ENT_QUOTES, 'UTF-8') ?></textarea>
 
 <!-- New Project Modal -->
-<div id="new-project-modal" class="modal-overlay hidden js-project-modal" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;">
-    <div class="card" style="max-width:520px; width:90%; margin:0;">
+<div id="new-project-modal" class="modal-overlay hidden js-project-modal home-project-modal">
+    <div class="card home-project-modal-card">
         <div class="card-header flex justify-between items-center">
-            <h2 class="card-title" style="margin:0;">Create New Project</h2>
-            <button type="button" class="js-close-project-modal" data-modal-id="new-project-modal"
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            <h2 class="card-title home-modal-title">Create New Project</h2>
+            <button type="button" class="js-close-project-modal home-modal-close" data-modal-id="new-project-modal">&times;</button>
         </div>
         <form method="POST" action="/app/projects" class="card-body">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -194,7 +191,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
             <div id="new-member-picker" class="hidden">
                 <?php include __DIR__ . '/partials/project-member-picker.php'; ?>
             </div>
-            <div class="flex justify-end gap-2" style="margin-top:1rem;">
+            <div class="flex justify-end gap-2 home-modal-actions">
                 <button type="button" class="btn btn-secondary js-close-project-modal" data-modal-id="new-project-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">Create Project</button>
             </div>
@@ -203,12 +200,11 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
 </div>
 
 <!-- Edit Project Modal -->
-<div id="edit-project-modal" class="modal-overlay hidden js-project-modal" style="position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;">
-    <div class="card" style="max-width:520px; width:90%; margin:0;">
+<div id="edit-project-modal" class="modal-overlay hidden js-project-modal home-project-modal">
+    <div class="card home-project-modal-card">
         <div class="card-header flex justify-between items-center">
-            <h2 class="card-title" style="margin:0;">Edit Project</h2>
-            <button type="button" class="js-close-project-modal" data-modal-id="edit-project-modal"
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            <h2 class="card-title home-modal-title">Edit Project</h2>
+            <button type="button" class="js-close-project-modal home-modal-close" data-modal-id="edit-project-modal">&times;</button>
         </div>
         <form method="POST" id="edit-project-form" action="" class="card-body">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -244,7 +240,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
             <div id="edit-member-picker" class="hidden">
                 <?php include __DIR__ . '/partials/project-member-picker.php'; ?>
             </div>
-            <div class="flex justify-end gap-2" style="margin-top:1rem;">
+            <div class="flex justify-end gap-2 home-modal-actions">
                 <button type="button" class="btn btn-secondary js-close-project-modal" data-modal-id="edit-project-modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>

@@ -3307,6 +3307,150 @@ tbody tr:hover {
     font-size: 0.75rem;
 }
 
+.home-subtitle {
+    margin: 0.25rem 0 0;
+}
+
+.home-resume-card {
+    border-left: 4px solid var(--primary);
+}
+
+.home-resume-body {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+}
+
+.home-resume-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.home-resume-title {
+    font-size: 1.125rem;
+    margin: 0.25rem 0 0;
+}
+
+.home-resume-meta {
+    display: block;
+    margin-top: 0.15rem;
+}
+
+.home-projects-title {
+    margin: 0;
+}
+
+.home-projects-count {
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.home-project-search {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    max-width: 260px;
+    padding: 0.4rem 0.75rem;
+}
+
+.home-empty-state {
+    padding: 2rem;
+    text-align: center;
+}
+
+.home-empty-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.home-empty-copy {
+    font-size: 0.875rem;
+}
+
+.home-project-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.home-project-progress {
+    align-items: center;
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+
+.home-step-bar {
+    background: #e2e8f0;
+    border-radius: 2px;
+    display: inline-block;
+    height: 4px;
+    width: 18px;
+}
+
+.home-step-bar--done {
+    background: #059669;
+}
+
+.home-step-meta {
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+}
+
+.home-project-actions {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.home-jira-badge {
+    background: var(--secondary);
+    color: #fff;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.home-project-action-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.home-project-modal {
+    align-items: center;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 1000;
+}
+
+.home-project-modal-card {
+    margin: 0;
+    max-width: 520px;
+    width: 90%;
+}
+
+.home-modal-title {
+    margin: 0;
+}
+
+.home-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.5rem;
+}
+
+.home-modal-actions {
+    margin-top: 1rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
