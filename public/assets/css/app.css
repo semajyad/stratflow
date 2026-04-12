@@ -3368,6 +3368,365 @@ tbody tr:hover {
     padding: 0.75rem 1rem;
 }
 
+.billing-overview {
+    align-items: stretch;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 2rem;
+}
+
+.billing-overview .card + .card,
+.billing-detail .card + .card {
+    margin-top: 0;
+}
+
+.billing-stat {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 1.25rem 1.25rem 1rem;
+    text-align: center;
+}
+
+.billing-stat-label {
+    color: #94a3b8;
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.billing-stat-value {
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+
+.billing-stat-sub {
+    color: #64748b;
+    font-size: 0.78rem;
+    min-height: 1.2em;
+    text-align: center;
+    width: 100%;
+}
+
+.billing-stat-subnote-danger {
+    color: var(--danger);
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+.billing-seat-meter {
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.billing-seat-meter__progress {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+    display: block;
+    height: 5px;
+    width: 100%;
+}
+
+.billing-seat-meter__progress::-webkit-progress-bar {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+.billing-seat-meter__progress::-webkit-progress-value {
+    border-radius: 4px;
+}
+
+.billing-seat-meter__progress::-moz-progress-bar {
+    border-radius: 4px;
+}
+
+.billing-seat-meter__progress--primary {
+    accent-color: var(--primary);
+}
+
+.billing-seat-meter__progress--warning {
+    accent-color: #f0ad4e;
+}
+
+.billing-seat-meter__progress--danger {
+    accent-color: var(--danger);
+}
+
+.billing-stat-value-subtle {
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.billing-detail {
+    align-items: start;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 2rem;
+}
+
+.billing-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.billing-table__row {
+    border-bottom: 1px solid var(--border);
+}
+
+.billing-table__row--header {
+    border-bottom: 2px solid var(--border);
+}
+
+.billing-table__cell {
+    padding: 0.75rem 1.25rem;
+}
+
+.billing-table__cell--compact {
+    padding: 0.6rem 1.25rem;
+}
+
+.billing-table__cell--y-only {
+    padding: 0.6rem 0;
+}
+
+.billing-table__cell--muted {
+    color: var(--text-muted);
+}
+
+.billing-table__cell--strong {
+    font-weight: 600;
+}
+
+.billing-table__cell--center {
+    text-align: center;
+}
+
+.billing-table__cell--right {
+    text-align: right;
+}
+
+.billing-table__cell--top {
+    vertical-align: top;
+}
+
+.billing-table__heading {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.billing-table__heading--blank {
+    width: 1%;
+}
+
+.billing-table__org-col {
+    width: 40%;
+}
+
+.billing-manage-copy {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.billing-manage-copy--tight {
+    margin-bottom: 0.75rem;
+}
+
+.billing-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.billing-action-link {
+    text-align: center;
+    width: 100%;
+}
+
+.billing-next-invoice {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.billing-next-invoice__label {
+    color: #1d4ed8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.billing-next-invoice__date {
+    color: #1e40af;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.billing-next-invoice__meta {
+    color: #2563eb;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.billing-help-copy {
+    font-size: 0.85rem;
+}
+
+.billing-help-copy--small {
+    font-size: 0.8rem;
+}
+
+.billing-purchase-copy {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+}
+
+.billing-inline-row {
+    align-items: flex-end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.billing-field-label {
+    color: var(--text-muted);
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.billing-seat-input {
+    width: 110px;
+}
+
+.billing-seat-preview {
+    color: #2563eb;
+    font-size: 0.875rem;
+    padding-bottom: 0.5rem;
+}
+
+.billing-alert-danger {
+    color: var(--danger);
+    font-size: 0.875rem;
+}
+
+.billing-card-body--flush {
+    padding: 0;
+}
+
+.billing-line-item-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.billing-line-item-subtitle {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.billing-total-row {
+    background: #f9fafb;
+}
+
+.billing-total-label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.billing-total-value {
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.billing-contact-copy {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.billing-contact-input--name {
+    min-width: 220px;
+}
+
+.billing-contact-input--email {
+    min-width: 260px;
+}
+
+.billing-header-actions {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.billing-card-header--split {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.billing-card-title-reset {
+    margin: 0;
+}
+
+.billing-xero-badge {
+    font-size: 0.82rem;
+    padding: 4px 10px;
+}
+
+.billing-empty-state {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 1.25rem;
+}
+
+.billing-status-note-danger {
+    color: var(--danger);
+    font-size: 0.75rem;
+    margin-left: 0.4rem;
+}
+
+.billing-status-note-success {
+    color: #22c55e;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.billing-pdf-link {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-right: 0.75rem;
+}
+
+.billing-actions-cell {
+    text-align: right;
+    white-space: nowrap;
+}
+
 .sounding-board-trigger {
     white-space: nowrap;
 }
