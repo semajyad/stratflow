@@ -1,68 +1,48 @@
-# CLAUDE.md — StratFlow
+# CLAUDE.md - StratFlow
 
-## Compact Instructions
+## Startup
 
-When running `/compact`, preserve: schema migration decisions, controller/model patterns established,
-Stripe webhook handler logic, security findings, Gemini prompt constants, and multi-tenant `org_id`
-patterns. Drop: PHP lint output, directory listings, successful test transcripts.
+Start with `MEMORY.md`.
+Only open the specific docs linked from there that match the task.
+Do not read the whole repo documentation set by default.
 
-## Session Startup
+## Context Discipline
 
-Read these at conversation start:
-- `docs/01_PROJECT_STATUS.md` — current state and what's in progress
-- `docs/02_IMPLEMENTATION_PLAN.md` — what's done and what's next
-- `docs/learnings.md` — patterns and mistakes to avoid
+- Prefer the smallest relevant context slice.
+- Read one targeted doc before several broad docs.
+- For codebase work, use indexed/project search tools before manual repo-wide scans.
+- If a task spans more than 3 files, plan first and keep the plan short.
+- If the same fix attempt fails 3 times, stop and rescope instead of thrashing.
+- Before finishing, prefer the simpler solution if it reduces code and context size safely.
 
-Briefly summarise before proceeding.
+## Project Rules
 
-## Directory Structure
-
-```
-stratflow/
-  src/Controllers/    — MVC controllers (one per resource)
-  src/Models/         — PDO models (multi-tenant, all queries filter org_id)
-  src/Views/          — PHP templates (htmlspecialchars all user output)
-  src/Config/         — routes.php, middleware stack definition
-  src/Middleware/     — auth, csrf, admin, superadmin guards
-  public/             — web root (index.php entry point only)
-  migrations/         — SQL migration files (numbered, sequential)
-  tests/              — PHPUnit test suite
-  docker/             — Nginx, PHP-FPM, MySQL service configs
-```
+- Keep all tenant-scoped queries filtered by `org_id`.
+- Use prepared statements only; never concatenate SQL.
+- Escape all user-visible template output with `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
+- Keep CSRF protection on every state-changing browser route except verified webhooks.
+- Never log secrets, password-reset URLs, raw tokens, or provider credentials.
+- Preserve the existing vanilla PHP MVC structure and current UI patterns unless the task explicitly changes them.
 
 ## Commands
 
 ```bash
-docker compose up -d                               # Start full stack
-docker compose exec php vendor/bin/phpunit        # Run tests
-docker compose exec php composer install          # Install deps
-docker compose logs -f php                        # PHP errors live
-stripe listen --forward-to localhost/webhook      # Forward Stripe webhooks locally
+docker compose up -d
+docker compose exec php vendor/bin/phpunit
+docker compose exec php php -l path/to/file.php
+docker compose logs -f php
 ```
 
-## Code Style
+## Routing Docs
 
-See `.claude/skills/php-conventions/SKILL.md` for full rules. Critical points:
+- Architecture: `docs/ARCHITECTURE.md`
+- Database: `docs/DATABASE.md`
+- Testing: `docs/TESTING.md`
+- Deployment: `docs/DEPLOYMENT.md`
+- Roles and access flags: `docs/USER_ROLES_GUIDE.md`
+- AI prompt constants: `docs/GEMINI_PROMPTS.md`
 
-- PHP 8.4 strict types (`declare(strict_types=1)` in every file); PSR-12 formatting
-- PDO prepared statements only — never string-concatenated SQL
-- Every query filters by `org_id`: `WHERE org_id = ?` bound to `$_SESSION['user']['org_id']`
-- Template output: `htmlspecialchars($v, ENT_QUOTES, 'UTF-8')` on every user value
-- CSRF middleware on all state-changing POST routes (exception: `WebhookController`)
-- Stripe keys: `sk_test_*` only in dev/test — `sk_live_*` never hardcoded
+## Local Overrides
 
-## Infrastructure
-
-| Service | Address |
-|---|---|
-| MySQL 8.4 | `mysql:3306` (Docker internal), `localhost:3306` (host) |
-| Nginx | `localhost:80` |
-| PHP-FPM | `php:9000` (Docker internal) |
-
-## Security Gate
-
-Before every `git commit`, the pre-commit hook requires a fresh `.claude/.security-audit-ok`
-marker file (≤5 min old). Create it by running the `security-auditor` subagent:
-> Invoke the security-auditor agent, then: `touch .claude/.security-audit-ok`
-
-See `.claude/agents/security-auditor.md` for what it checks.
+Use `CLAUDE.local.md` for machine-specific or temporary personal instructions.
+Keep repo-wide guidance here lean so it stays cheap to load.
