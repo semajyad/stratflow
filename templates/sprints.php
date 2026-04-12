@@ -36,11 +36,11 @@
      Team / Board Selector (Required)
      =========================== -->
 <?php if (empty($teams ?? [])): ?>
-<div class="card mb-6" style="border-left: 4px solid var(--danger);">
-    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem;">
+<div class="card mb-6 sprint-callout--danger">
+    <div class="card-body sprint-callout-body">
         <div>
             <strong>No teams configured</strong>
-            <p class="text-muted" style="margin: 0.25rem 0 0; font-size: 0.875rem;">
+            <p class="text-muted sprint-callout-copy">
                 Sprint allocation requires a team (Jira board). Create a team or import boards from Jira first.
             </p>
         </div>
@@ -51,10 +51,10 @@
 
 <div id="sprints-page" data-project-id="<?= (int) $project['id'] ?>"></div>
 
-<div class="card mb-6" style="border-left: 4px solid var(--primary);">
-    <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;">
-        <label class="form-label" style="margin: 0; white-space: nowrap; font-weight: 600;">Team (Board):</label>
-        <select id="active-team-selector" class="form-control js-sprint-team-selector" style="max-width: 300px;">
+<div class="card mb-6 sprint-callout--primary">
+    <div class="card-body sprint-callout-body sprint-callout-body--compact">
+        <label class="form-label sprint-team-label">Team (Board):</label>
+        <select id="active-team-selector" class="form-control js-sprint-team-selector sprint-team-select">
             <?php foreach ($teams as $t): ?>
                 <option value="<?= (int) $t['id'] ?>"
                         data-capacity="<?= (int) ($t['capacity'] ?? 0) ?>"
@@ -82,22 +82,22 @@
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <input type="hidden" name="team_id" id="sprint-team-id" value="<?= (int) ($teams[0]['id'] ?? 0) ?>">
-            <div class="sprint-creation-form" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end;">
+            <div class="sprint-creation-form">
                 <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Sprint Name</label>
+                    <label class="form-label sprint-form-label">Sprint Name</label>
                     <input type="text" name="name" id="sprint-name-input" placeholder="e.g. Sprint 1" class="form-control" required>
                 </div>
                 <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Start</label>
+                    <label class="form-label sprint-form-label">Start</label>
                     <input type="date" name="start_date" id="sprint-start-date" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">End</label>
+                    <label class="form-label sprint-form-label">End</label>
                     <input type="date" name="end_date" id="sprint-end-date" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.2rem;">Capacity (pts)</label>
-                    <input type="number" name="team_capacity" placeholder="pts" class="form-control" min="1" style="width: 100px;">
+                    <label class="form-label sprint-form-label">Capacity (pts)</label>
+                    <input type="number" name="team_capacity" placeholder="pts" class="form-control sprint-capacity-input" min="1">
                 </div>
                 <button type="submit" class="btn btn-primary">Create Sprint</button>
             </div>
@@ -114,7 +114,7 @@
         <h3>Auto-Generate Sprints</h3>
     </div>
     <div class="card-body">
-        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+        <p class="sprint-helper-copy">
             Create multiple sprints at once with a default capacity. You can then adjust individual sprint capacities before using Auto-Fill to allocate stories.
         </p>
         <form method="POST" action="/app/sprints/auto-generate"
@@ -129,7 +129,7 @@
                 <div class="sprint-gen-field">
                     <label>First sprint starts
                         <?php if (!empty($jira_connected)): ?>
-                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — day after last Jira sprint</span>
+                            <span class="sprint-inline-meta"> — day after last Jira sprint</span>
                         <?php endif; ?>
                     </label>
                     <input type="date" name="start_date" class="form-control" required>
@@ -137,7 +137,7 @@
                 <div class="sprint-gen-field">
                     <label>Sprint length
                         <?php if (!empty($jira_connected)): ?>
-                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — from Jira history</span>
+                            <span class="sprint-inline-meta"> — from Jira history</span>
                         <?php endif; ?>
                     </label>
                     <select name="sprint_length" class="form-control" required>
@@ -150,12 +150,12 @@
                 <div class="sprint-gen-field">
                     <label>Default capacity (pts)
                         <?php if (!empty($jira_connected)): ?>
-                            <span style="font-weight:400; font-size:0.75rem; color:var(--text-muted);"> — Jira avg velocity</span>
+                            <span class="sprint-inline-meta"> — Jira avg velocity</span>
                         <?php endif; ?>
                     </label>
                     <input type="number" name="capacity" class="form-control" min="1" required placeholder="e.g. 50">
                 </div>
-                <div class="sprint-gen-field" style="align-self: end;">
+                <div class="sprint-gen-field sprint-gen-field--button">
                     <button type="submit" class="btn btn-ai">Generate Sprints</button>
                 </div>
             </div>
@@ -178,7 +178,7 @@
         </div>
         <div class="backlog-stories" id="backlog-stories">
             <?php if (empty($unallocated)): ?>
-                <p class="text-muted text-center" style="padding: 1rem; font-size: 0.875rem;">All stories allocated</p>
+                <p class="text-muted text-center sprint-empty-state">All stories allocated</p>
             <?php endif; ?>
             <?php foreach ($unallocated as $story): ?>
                 <div class="sprint-story-item" data-story-id="<?= (int) $story['id'] ?>">
@@ -209,7 +209,7 @@
         </div>
 
         <?php if (empty($sprints)): ?>
-            <p class="text-muted text-center" style="padding: 2rem; font-size: 0.875rem;">No sprints yet. Create one above.</p>
+            <p class="text-muted text-center sprint-empty-state sprint-empty-state--large">No sprints yet. Create one above.</p>
         <?php endif; ?>
 
         <?php foreach ($sprints as $sprint): ?>

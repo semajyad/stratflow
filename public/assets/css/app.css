@@ -6796,3 +6796,82 @@ a.okr-title:hover {
 .jira-config-code {
     font-size: 0.85rem;
 }
+
+/* === Sprints ============================================================= */
+
+.sprint-callout--danger {
+    border-left: 4px solid var(--danger);
+}
+
+.sprint-callout--primary {
+    border-left: 4px solid var(--primary);
+}
+
+.sprint-callout-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+}
+
+.sprint-callout-body--compact {
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+}
+
+.sprint-callout-copy {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+}
+
+.sprint-team-label {
+    margin: 0;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.sprint-team-select {
+    max-width: 300px;
+}
+
+.sprint-creation-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.sprint-form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.2rem;
+}
+
+.sprint-capacity-input {
+    width: 100px;
+}
+
+.sprint-helper-copy {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.sprint-inline-meta {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.sprint-gen-field--button {
+    align-self: end;
+}
+
+.sprint-empty-state {
+    padding: 1rem;
+    font-size: 0.875rem;
+}
+
+.sprint-empty-state--large {
+    padding: 2rem;
+}
