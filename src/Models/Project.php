@@ -68,37 +68,29 @@ class Project
     /**
      * Return projects accessible to a specific user within an organisation.
      *
-     * Org admins, superadmins, and project admins always see all projects.
-     * For regular users: 'everyone' projects are always visible; 'restricted'
-     * projects are only visible if the user is in project_members.
+     * Uses the central PermissionService principal so project visibility stays
+     * aligned with account_type/capability resolution rather than reconstructing
+     * access from legacy role fields.
      *
-     * @param Database $db            Database instance
-     * @param int      $orgId         Organisation ID
-     * @param int      $userId        Authenticated user ID
-     * @param string   $role          User role (e.g. 'org_admin', 'superadmin', 'user')
-     * @param bool     $isProjectAdmin Whether the user has the project_admin flag
-     * @return array                  Array of project rows
+     * @param Database $db   Database instance
+     * @param array    $user Authenticated principal/session user
+     * @return array         Array of project rows
      */
-    public static function findAccessibleByOrgId(
-        Database $db,
-        int $orgId,
-        int $userId,
-        string $role,
-        bool $isProjectAdmin = false
-    ): array {
-        $principal = [
-            'id' => $userId,
-            'org_id' => $orgId,
-            'role' => $role,
-            'is_project_admin' => $isProjectAdmin,
-        ];
+    public static function findAccessibleByOrgId(Database $db, array $user): array
+    {
+        $orgId = (int) ($user['org_id'] ?? 0);
+        $userId = (int) ($user['id'] ?? 0);
 
-        if (PermissionService::can($principal, PermissionService::PROJECT_VIEW_ALL, $db)) {
+        if ($orgId <= 0 || $userId <= 0) {
+            return [];
+        }
+
+        if (PermissionService::can($user, PermissionService::PROJECT_VIEW_ALL, $db)) {
             return self::findByOrgId($db, $orgId);
         }
 
         $membershipTable = $db->tableExists('project_memberships') ? 'project_memberships' : 'project_members';
-        $canViewOrgWide = PermissionService::can($principal, PermissionService::WORKFLOW_VIEW, $db);
+        $canViewOrgWide = PermissionService::can($user, PermissionService::WORKFLOW_VIEW, $db);
         $visibilityPredicate = $canViewOrgWide
             ? "p.visibility = 'everyone' OR EXISTS (
                    SELECT 1 FROM {$membershipTable} pm

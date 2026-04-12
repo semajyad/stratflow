@@ -46,12 +46,7 @@ class ApiProjectsController
     public function index(): void
     {
         $user   = $this->auth->user();
-        $orgId  = (int) $user['org_id'];
-        $userId = (int) $user['id'];
-        $role   = (string) ($user['role'] ?? 'user');
-        $isProjectAdmin = (bool) ($user['is_project_admin'] ?? false);
-
-        $projects = Project::findAccessibleByOrgId($this->db, $orgId, $userId, $role, $isProjectAdmin);
+        $projects = Project::findAccessibleByOrgId($this->db, $user);
 
         $data = array_map(fn($p) => [
             'id'         => (int) $p['id'],

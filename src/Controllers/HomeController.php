@@ -49,11 +49,7 @@ class HomeController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
 
-        $userId        = (int) $user['id'];
-        $role          = (string) ($user['role'] ?? 'user');
-        $isProjectAdmin = (bool) ($user['is_project_admin'] ?? false);
-
-        $projects = Project::findAccessibleByOrgId($this->db, $orgId, $userId, $role, $isProjectAdmin);
+        $projects = Project::findAccessibleByOrgId($this->db, $user);
 
         // Compute smart "next step" destination and progress for each project
         foreach ($projects as &$p) {
