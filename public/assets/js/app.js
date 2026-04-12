@@ -185,6 +185,19 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-focus-paste-text')) {
+        e.preventDefault();
+        focusUploadPasteText();
+        return;
+    }
+
+    var docListToggle = e.target.closest('.js-toggle-doc-list');
+    if (docListToggle) {
+        e.preventDefault();
+        toggleDocumentList(docListToggle);
+        return;
+    }
+
     if (e.target.closest('.js-jira-preview-close')) {
         e.preventDefault();
         closeJiraSyncPreviewModal();
@@ -1572,6 +1585,28 @@ function filterProjectList(query) {
         var name = nameNode ? nameNode.textContent.toLowerCase() : '';
         card.style.display = (normalized === '' || name.indexOf(normalized) !== -1) ? '' : 'none';
     });
+}
+
+function focusUploadPasteText() {
+    var pasteInput = document.getElementById('paste-text');
+    if (!pasteInput) {
+        return;
+    }
+    pasteInput.focus();
+    pasteInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function toggleDocumentList(toggle) {
+    var targetId = toggle.dataset.targetId || '';
+    var docList = targetId ? document.getElementById(targetId) : null;
+    if (!docList) {
+        return;
+    }
+    docList.classList.toggle('hidden');
+    var icon = toggle.querySelector('.toggle-icon');
+    if (icon) {
+        icon.textContent = docList.classList.contains('hidden') ? '+' : '-';
+    }
 }
 
 function getSelectedMemberIds(pickerWrap) {

@@ -102,7 +102,7 @@ function formatFileSize(int $bytes): string {
                     </div>
                 </div>
                 <div style="margin-top:1rem;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('paste-text').focus(); document.getElementById('paste-text').scrollIntoView({behavior:'smooth',block:'center'});">
+                    <button type="button" class="btn btn-primary btn-sm js-focus-paste-text">
                         Paste Text Instead
                     </button>
                 </div>
@@ -161,8 +161,8 @@ function formatFileSize(int $bytes): string {
      =========================== -->
 <?php if ($hasDocuments): ?>
 <section class="card">
-    <div class="card-header flex justify-between items-center" style="cursor:pointer;"
-         onclick="document.getElementById('doc-list').classList.toggle('hidden'); this.querySelector('.toggle-icon').textContent = document.getElementById('doc-list').classList.contains('hidden') ? '+' : '-';">
+    <div class="card-header flex justify-between items-center js-toggle-doc-list" style="cursor:pointer;"
+         data-target-id="doc-list">
         <h2 class="card-title" style="margin:0;">
             Documents (<?= count($documents) ?>)
             <span class="toggle-icon" style="font-weight:400; margin-left:0.5rem;">+</span>
