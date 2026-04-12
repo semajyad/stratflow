@@ -197,6 +197,13 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    var revealGitSecretButton = e.target.closest('.js-reveal-git-secret');
+    if (revealGitSecretButton) {
+        e.preventDefault();
+        toggleGitSecretReveal(revealGitSecretButton.dataset.provider || '');
+        return;
+    }
+
     var genericToggle = e.target.closest('.js-toggle-target');
     if (genericToggle) {
         e.preventDefault();
@@ -418,6 +425,16 @@ document.addEventListener('mousedown', function(e) {
 });
 
 document.addEventListener('submit', function(e) {
+    var jiraPushForm = e.target.closest('form[action="/app/admin/integrations/jira/push"]');
+    if (jiraPushForm) {
+        var projectSelect = jiraPushForm.querySelector('select[name="project_id"]');
+        if (!projectSelect || !projectSelect.value) {
+            e.preventDefault();
+            window.alert('Select a project first');
+            return;
+        }
+    }
+
     var storySplitForm = e.target.closest('.js-story-split-form');
     if (storySplitForm) {
         var checkedItems = storySplitForm.querySelectorAll('input[name="hl_item_ids[]"]:checked');
@@ -1923,6 +1940,53 @@ function runSuperadminAiConnectionTest() {
         button.textContent = 'Test Connection';
         result.style.color = 'var(--danger)';
         result.textContent = 'Network error: ' + error.message;
+    });
+}
+
+function toggleGitSecretReveal(provider) {
+    var display = document.getElementById(provider + '-secret-display');
+    var button = document.getElementById(provider + '-secret-reveal-btn');
+    if (!provider || !display || !button) {
+        return;
+    }
+
+    if (button.textContent === 'Hide') {
+        display.textContent = display.getAttribute('data-masked') || '';
+        button.textContent = 'Reveal';
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Loading...';
+
+    var form = new FormData();
+    form.append('_csrf_token', getCsrfTokenValue());
+
+    fetch('/app/admin/integrations/git/' + encodeURIComponent(provider) + '/reveal-secret', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form,
+        credentials: 'same-origin'
+    })
+    .then(function(response) {
+        return response.json().then(function(data) {
+            return { ok: response.ok, data: data };
+        });
+    })
+    .then(function(result) {
+        button.disabled = false;
+        if (result.ok && result.data && result.data.secret) {
+            display.textContent = result.data.secret;
+            button.textContent = 'Hide';
+            return;
+        }
+        button.textContent = 'Reveal';
+        window.alert((result.data && result.data.error) || 'Could not reveal secret.');
+    })
+    .catch(function() {
+        button.disabled = false;
+        button.textContent = 'Reveal';
+        window.alert('Network error revealing secret.');
     });
 }
 

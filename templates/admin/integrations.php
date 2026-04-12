@@ -118,7 +118,8 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                         <?php endif; ?>
                     </select>
                     <button type="submit" class="btn btn-sm btn-primary"
-                            onclick="return this.form.project_id.value ? confirm('Push work items and stories to Jira?') : (alert('Select a project first'), false)">
+                            class="js-jira-push-submit"
+                            data-confirm="Push work items and stories to Jira?">
                         Push
                     </button>
                 </form>
@@ -128,7 +129,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
                     <button type="submit" class="btn btn-sm btn-secondary"
-                            onclick="return confirm('Pull changes from Jira?')">
+                            data-confirm="Pull changes from Jira?">
                         Pull Changes
                     </button>
                 </form>
@@ -139,7 +140,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                     <form method="POST" action="/app/admin/integrations/jira/disconnect" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Disconnect Jira Cloud? Sync mappings will be preserved.')">
+                                data-confirm="Disconnect Jira Cloud? Sync mappings will be preserved.">
                             Disconnect
                         </button>
                     </form>
@@ -235,8 +236,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                                   class="inline-form" style="display: inline;">
                                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                 <button type="submit" class="btn btn-sm btn-danger"
-                                        data-account="<?= htmlspecialchars($install['account_login'] ?? '') ?>"
-                                        onclick="return confirm('Disconnect @' + this.dataset.account + '? PR links already created will be preserved.')">
+                                        data-confirm="Disconnect @<?= htmlspecialchars($install['account_login'] ?? '', ENT_QUOTES, 'UTF-8') ?>? PR links already created will be preserved.">
                                     Disconnect
                                 </button>
                             </form>
@@ -317,8 +317,8 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                         <code id="gitlab-secret-display"
                               data-masked="<?= htmlspecialchars($glMasked) ?>"
                               style="font-size: 0.85rem; letter-spacing: 0.05em;"><?= htmlspecialchars($glMasked) ?></code>
-                        <button type="button" class="btn btn-sm btn-secondary"
-                                onclick="toggleGitSecret('gitlab')"
+                        <button type="button" class="btn btn-sm btn-secondary js-reveal-git-secret"
+                                data-provider="gitlab"
                                 id="gitlab-secret-reveal-btn">Reveal</button>
                     </div>
                 <?php else: ?>
@@ -330,7 +330,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                 <form method="POST" action="/app/admin/integrations/git/gitlab/regenerate-secret" class="inline-form">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <button type="submit" class="btn btn-sm btn-secondary"
-                            onclick="return confirm('Regenerate GitLab webhook secret? You must update your repository webhook settings with the new secret token.')">
+                            data-confirm="Regenerate GitLab webhook secret? You must update your repository webhook settings with the new secret token.">
                         Regenerate Secret
                     </button>
                 </form>
@@ -339,7 +339,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                     <form method="POST" action="/app/admin/integrations/git/gitlab/disconnect" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Disconnect GitLab webhook?')">
+                                data-confirm="Disconnect GitLab webhook?">
                             Disconnect
                         </button>
                     </form>
@@ -360,70 +360,6 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 </section>
 
 <?php endif; ?>
-
-<script>
-// Repo count badge hover tooltip
-document.querySelectorAll('.repo-count-badge').forEach(function(badge) {
-    var tip = badge.querySelector('.repo-tooltip');
-    if (!tip) { return; }
-    badge.addEventListener('mouseenter', function() { tip.style.display = 'block'; });
-    badge.addEventListener('mouseleave', function() { tip.style.display = 'none'; });
-    badge.addEventListener('focus',      function() { tip.style.display = 'block'; });
-    badge.addEventListener('blur',       function() { tip.style.display = 'none'; });
-});
-
-/**
- * Toggle reveal/mask of a Git webhook secret.
- *
- * The plaintext secret is NOT embedded in the HTML source. On reveal, it
- * is fetched from a CSRF-protected admin endpoint and written to the DOM
- * only after the user explicitly clicks Reveal. On hide, we restore the
- * masked value from the element's data-masked attribute and drop the
- * plaintext from the DOM.
- *
- * @param {string} provider 'github' or 'gitlab'
- */
-function toggleGitSecret(provider) {
-    var display = document.getElementById(provider + '-secret-display');
-    var btn     = document.getElementById(provider + '-secret-reveal-btn');
-    if (!display || !btn) { return; }
-
-    if (btn.textContent === 'Hide') {
-        display.textContent = display.getAttribute('data-masked') || '';
-        btn.textContent     = 'Reveal';
-        return;
-    }
-
-    btn.disabled    = true;
-    btn.textContent = 'Loading...';
-
-    var form = new FormData();
-    form.append('_csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
-
-    fetch('/app/admin/integrations/git/' + encodeURIComponent(provider) + '/reveal-secret', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: form,
-        credentials: 'same-origin'
-    })
-    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-    .then(function(res) {
-        btn.disabled = false;
-        if (res.ok && res.data && res.data.secret) {
-            display.textContent = res.data.secret;
-            btn.textContent     = 'Hide';
-        } else {
-            btn.textContent = 'Reveal';
-            alert((res.data && res.data.error) || 'Could not reveal secret.');
-        }
-    })
-    .catch(function() {
-        btn.disabled    = false;
-        btn.textContent = 'Reveal';
-        alert('Network error revealing secret.');
-    });
-}
-</script>
 
 <!-- ===========================
      Azure DevOps (Coming Soon)
