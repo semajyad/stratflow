@@ -54,7 +54,7 @@
                 <label class="form-label">Capacity (points/sprint)</label>
                 <input type="number" name="capacity" class="form-input" value="0" min="0">
             </div>
-            <div class="form-group" style="align-self: flex-end;">
+            <div class="form-group team-admin-form-group-end">
                 <button type="submit" class="btn btn-primary">Create Team</button>
             </div>
         </div>
@@ -79,28 +79,27 @@
             <!-- Team header -->
             <div class="card-header flex justify-between items-center">
                 <div>
-                    <h3 class="card-title" style="margin: 0;">
+                    <h3 class="card-title team-admin-title">
                         <?= htmlspecialchars($team['name']) ?>
-                        <span class="badge badge-secondary" style="font-weight: normal; margin-left: 0.5rem;">
+                        <span class="badge badge-secondary team-admin-badge team-admin-badge--first">
                             <?= (int) $team['member_count'] ?> member<?= (int) $team['member_count'] !== 1 ? 's' : '' ?>
                         </span>
                         <?php if (!empty($team['jira_board_id'])): ?>
-                            <span class="badge badge-info" style="font-weight: normal; margin-left: 0.25rem;">
+                            <span class="badge badge-info team-admin-badge">
                                 Jira Board #<?= (int) $team['jira_board_id'] ?>
                             </span>
                         <?php endif; ?>
                     </h3>
                     <?php if (!empty($team['description'])): ?>
-                        <p class="text-muted mt-1" style="margin-bottom: 0; font-size: 0.875rem;">
+                        <p class="text-muted mt-1 team-admin-description">
                             <?= htmlspecialchars($team['description']) ?>
                         </p>
                     <?php endif; ?>
                 </div>
                 <div class="flex gap-2">
-                    <button class="btn btn-sm btn-secondary"
+                    <button class="btn btn-sm btn-secondary js-toggle-target"
                             type="button"
-                            data-target-id="team-edit-<?= $teamId ?>"
-                            class="js-toggle-target">Edit</button>
+                            data-target-id="team-edit-<?= $teamId ?>">Edit</button>
                     <form method="POST" action="/app/admin/teams/<?= $teamId ?>/delete" class="inline-form"
                           data-confirm="Delete this team? Members will be unlinked.">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -110,7 +109,7 @@
             </div>
 
             <!-- Inline edit form (hidden) -->
-            <div id="team-edit-<?= $teamId ?>" class="hidden" style="padding: 1rem; background: #fefce8; border-bottom: 1px solid var(--border);">
+            <div id="team-edit-<?= $teamId ?>" class="hidden team-admin-edit">
                 <form method="POST" action="/app/admin/teams/<?= $teamId ?>">
                     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                     <div class="form-row gap-4">
@@ -129,11 +128,10 @@
                             <input type="number" name="capacity" class="form-input"
                                    value="<?= (int) $team['capacity'] ?>" min="0">
                         </div>
-                        <div class="form-group" style="align-self: flex-end;">
+                        <div class="form-group team-admin-form-group-end">
                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                            <button type="button" class="btn btn-secondary btn-sm"
-                                    data-target-id="team-edit-<?= $teamId ?>"
-                                    class="js-toggle-target">Cancel</button>
+                            <button type="button" class="btn btn-secondary btn-sm js-toggle-target"
+                                    data-target-id="team-edit-<?= $teamId ?>">Cancel</button>
                         </div>
                     </div>
                 </form>
@@ -141,19 +139,19 @@
 
             <!-- Team body: members + add member -->
             <div class="card-body">
-                <div class="flex gap-4" style="flex-wrap: wrap;">
+                <div class="flex gap-4 team-admin-body">
                     <!-- Current members -->
-                    <div style="flex: 2; min-width: 250px;">
-                        <h4 style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Members</h4>
+                    <div class="team-admin-members">
+                        <h4 class="team-admin-section-title">Members</h4>
                         <?php if (empty($members)): ?>
-                            <p class="text-muted" style="font-size: 0.875rem;">No members assigned.</p>
+                            <p class="text-muted team-admin-empty-copy">No members assigned.</p>
                         <?php else: ?>
                             <div class="team-member-list">
                                 <?php foreach ($members as $member): ?>
                                     <div class="team-member-row">
                                         <span>
                                             <?= htmlspecialchars($member['full_name']) ?>
-                                            <span class="text-muted" style="font-size: 0.8rem;">
+                                            <span class="text-muted team-admin-member-email">
                                                 (<?= htmlspecialchars($member['email']) ?>)
                                             </span>
                                         </span>
@@ -171,15 +169,15 @@
                     </div>
 
                     <!-- Add member -->
-                    <div style="flex: 1; min-width: 200px;">
-                        <h4 style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Add Member</h4>
+                    <div class="team-admin-add-member">
+                        <h4 class="team-admin-section-title">Add Member</h4>
                         <?php
                             $available = array_filter($org_users, function ($u) use ($memberIds) {
                                 return $u['is_active'] && !in_array((int) $u['id'], $memberIds, true);
                             });
                         ?>
                         <?php if (empty($available)): ?>
-                            <p class="text-muted" style="font-size: 0.875rem;">All users assigned.</p>
+                            <p class="text-muted team-admin-empty-copy">All users assigned.</p>
                         <?php else: ?>
                             <form method="POST" action="/app/admin/teams/add-member">
                                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -201,7 +199,7 @@
                 </div>
 
                 <?php if ((int) $team['capacity'] > 0): ?>
-                    <div class="mt-3 text-muted" style="font-size: 0.8125rem;">
+                    <div class="mt-3 text-muted team-admin-capacity">
                         Capacity: <strong><?= (int) $team['capacity'] ?></strong> points per sprint
                     </div>
                 <?php endif; ?>

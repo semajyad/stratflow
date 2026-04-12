@@ -3694,6 +3694,66 @@ tbody tr:hover {
     font-size: 0.875rem;
 }
 
+.team-admin-form-group-end {
+    align-self: flex-end;
+}
+
+.team-admin-title {
+    margin: 0;
+}
+
+.team-admin-badge {
+    font-weight: normal;
+    margin-left: 0.25rem;
+}
+
+.team-admin-badge--first {
+    margin-left: 0.5rem;
+}
+
+.team-admin-description {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+.team-admin-edit {
+    background: #fefce8;
+    border-bottom: 1px solid var(--border);
+    padding: 1rem;
+}
+
+.team-admin-body {
+    flex-wrap: wrap;
+}
+
+.team-admin-members {
+    flex: 2;
+    min-width: 250px;
+}
+
+.team-admin-add-member {
+    flex: 1;
+    min-width: 200px;
+}
+
+.team-admin-section-title {
+    color: var(--text-light);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.team-admin-empty-copy {
+    font-size: 0.875rem;
+}
+
+.team-admin-member-email {
+    font-size: 0.8rem;
+}
+
+.team-admin-capacity {
+    font-size: 0.8125rem;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }
