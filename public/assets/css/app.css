@@ -6686,3 +6686,113 @@ a.okr-title:hover {
     flex: 1;
     min-width: 280px;
 }
+
+/* === Jira Configure ======================================================= */
+
+.jira-config-alert {
+    margin-bottom: 1rem;
+}
+
+.jira-config-copy {
+    font-size: 0.875rem;
+}
+
+.jira-config-select {
+    max-width: 400px;
+}
+
+.jira-config-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.jira-config-grid-2--compact {
+    max-width: 600px;
+}
+
+.jira-config-grid-2--wide {
+    max-width: 700px;
+}
+
+.jira-config-heading {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.jira-config-heading--spaced {
+    margin: 1.5rem 0 0.5rem;
+}
+
+.jira-config-helper {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.jira-config-table {
+    width: 100%;
+    max-width: 800px;
+    border-collapse: collapse;
+}
+
+.jira-config-table-head-row {
+    text-align: left;
+    border-bottom: 2px solid var(--border-color, #dee2e6);
+}
+
+.jira-config-table-head {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.jira-config-table-head--action {
+    width: 50px;
+}
+
+.jira-config-table-row {
+    border-bottom: 1px solid var(--border-color, #dee2e6);
+}
+
+.jira-config-table-cell {
+    padding: 0.5rem;
+}
+
+.jira-config-input-compact {
+    font-size: 0.85rem;
+}
+
+.jira-config-remove {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.jira-config-add-btn {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.jira-config-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    max-width: 500px;
+}
+
+.jira-config-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.jira-config-detail-label {
+    font-size: 0.8rem;
+    display: block;
+}
+
+.jira-config-code {
+    font-size: 0.85rem;
+}

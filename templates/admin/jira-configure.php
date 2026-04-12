@@ -35,7 +35,7 @@ $jiraFieldList = !empty($jira_fields)
 </div>
 
 <?php if ($error): ?>
-    <div class="alert alert-danger" style="margin-bottom: 1rem;"><?= htmlspecialchars($error) ?></div>
+    <div class="alert alert-danger jira-config-alert"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
 
 <form method="POST" action="/app/admin/integrations/jira/configure">
@@ -45,13 +45,13 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card">
         <div class="card-header"><h2 class="card-title">Jira Project</h2></div>
         <div class="card-body">
-            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+            <p class="text-muted mb-4 jira-config-copy">
                 Select the Jira project where StratFlow items will be synced.
             </p>
             <div class="form-group mb-4">
                 <label class="form-label">Project</label>
                 <?php if (!empty($jira_projects)): ?>
-                    <select name="jira_project_key" class="form-input" style="max-width: 400px;">
+                    <select name="jira_project_key" class="form-input jira-config-select">
                         <option value="">Select a project...</option>
                         <?php foreach ($jira_projects as $jp): ?>
                             <option value="<?= htmlspecialchars($jp['key'] ?? '') ?>"
@@ -73,12 +73,12 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Scrum Board</h2></div>
         <div class="card-body">
-            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+            <p class="text-muted mb-4 jira-config-copy">
                 Select the board used for sprint management. Sprints will be created on this board.
             </p>
             <div class="form-group">
                 <label class="form-label">Board</label>
-                <select name="board_id" class="form-input" style="max-width: 400px;">
+                <select name="board_id" class="form-input jira-config-select">
                     <option value="0">Auto-detect</option>
                     <?php foreach ($jira_boards as $board): ?>
                         <option value="<?= (int) $board['id'] ?>"
@@ -97,10 +97,10 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Issue Type Mapping</h2></div>
         <div class="card-body">
-            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+            <p class="text-muted mb-4 jira-config-copy">
                 Map StratFlow item types to Jira issue types. The defaults work for most Scrum projects.
             </p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 600px;">
+            <div class="jira-config-grid-2 jira-config-grid-2--compact">
                 <div class="form-group">
                     <label class="form-label">Work Items create as</label>
                     <?php if (!empty($jira_issue_types)): ?>
@@ -160,13 +160,13 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Custom Field Mapping</h2></div>
         <div class="card-body">
-            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+            <p class="text-muted mb-4 jira-config-copy">
                 Map StratFlow data to Jira custom fields. These vary by Jira instance — select the correct fields for your setup.
             </p>
 
             <!-- Standard Mappings -->
-            <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Standard Mappings</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 700px;">
+            <h3 class="jira-config-heading">Standard Mappings</h3>
+            <div class="jira-config-grid-2 jira-config-grid-2--wide">
                 <div class="form-group">
                     <label class="form-label">Epic Name Field</label>
                     <?php if (!empty($jira_fields)): ?>
@@ -222,27 +222,27 @@ $jiraFieldList = !empty($jira_fields)
 
             <!-- Additional Field Mappings -->
             <?php $customMappings = $fm['custom_mappings'] ?? []; ?>
-            <h3 style="font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Additional Field Mappings</h3>
-            <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.75rem;">
+            <h3 class="jira-config-heading jira-config-heading--spaced">Additional Field Mappings</h3>
+            <p class="text-muted jira-config-helper">
                 Map additional StratFlow fields to Jira custom fields with a sync direction.
             </p>
             <table id="custom-mappings-table"
                    data-stratflow-fields='<?= htmlspecialchars(json_encode($stratflowFields, JSON_HEX_TAG | JSON_HEX_APOS), ENT_QUOTES, "UTF-8") ?>'
                    data-jira-fields='<?= htmlspecialchars(json_encode($jiraFieldList, JSON_HEX_TAG | JSON_HEX_APOS), ENT_QUOTES, "UTF-8") ?>'
-                   style="width: 100%; max-width: 800px; border-collapse: collapse;">
+                   class="jira-config-table">
                 <thead>
-                    <tr style="text-align: left; border-bottom: 2px solid var(--border-color, #dee2e6);">
-                        <th style="padding: 0.5rem; font-size: 0.85rem;">StratFlow Field</th>
-                        <th style="padding: 0.5rem; font-size: 0.85rem;">Jira Field</th>
-                        <th style="padding: 0.5rem; font-size: 0.85rem;">Sync Direction</th>
-                        <th style="padding: 0.5rem; width: 50px;"></th>
+                    <tr class="jira-config-table-head-row">
+                        <th class="jira-config-table-head">StratFlow Field</th>
+                        <th class="jira-config-table-head">Jira Field</th>
+                        <th class="jira-config-table-head">Sync Direction</th>
+                        <th class="jira-config-table-head jira-config-table-head--action"></th>
                     </tr>
                 </thead>
                 <tbody id="custom-mappings-body">
                     <?php foreach ($customMappings as $idx => $cm): ?>
-                    <tr class="custom-mapping-row" style="border-bottom: 1px solid var(--border-color, #dee2e6);">
-                        <td style="padding: 0.5rem;">
-                            <select name="custom_mappings[<?= $idx ?>][stratflow_field]" class="form-input" style="font-size: 0.85rem;">
+                    <tr class="custom-mapping-row jira-config-table-row">
+                        <td class="jira-config-table-cell">
+                            <select name="custom_mappings[<?= $idx ?>][stratflow_field]" class="form-input jira-config-input-compact">
                                 <option value="">Select...</option>
                                 <?php foreach ($stratflowFields as $sfKey => $sfLabel): ?>
                                     <option value="<?= htmlspecialchars($sfKey) ?>"
@@ -252,9 +252,9 @@ $jiraFieldList = !empty($jira_fields)
                                 <?php endforeach; ?>
                             </select>
                         </td>
-                        <td style="padding: 0.5rem;">
+                        <td class="jira-config-table-cell">
                             <?php if (!empty($jira_fields)): ?>
-                                <select name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input" style="font-size: 0.85rem;">
+                                <select name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input jira-config-input-compact">
                                     <option value="">Select...</option>
                                     <?php foreach ($jira_fields as $f): ?>
                                         <option value="<?= htmlspecialchars($f['id']) ?>"
@@ -264,28 +264,27 @@ $jiraFieldList = !empty($jira_fields)
                                     <?php endforeach; ?>
                                 </select>
                             <?php else: ?>
-                                <input type="text" name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input"
+                                <input type="text" name="custom_mappings[<?= $idx ?>][jira_field]" class="form-input jira-config-input-compact"
                                        value="<?= htmlspecialchars($cm['jira_field'] ?? '') ?>" placeholder="customfield_XXXXX"
-                                       style="font-size: 0.85rem;">
+                                       >
                             <?php endif; ?>
                         </td>
-                        <td style="padding: 0.5rem;">
-                            <select name="custom_mappings[<?= $idx ?>][direction]" class="form-input" style="font-size: 0.85rem;">
+                        <td class="jira-config-table-cell">
+                            <select name="custom_mappings[<?= $idx ?>][direction]" class="form-input jira-config-input-compact">
                                 <option value="push" <?= ($cm['direction'] ?? '') === 'push' ? 'selected' : '' ?>>Push</option>
                                 <option value="pull" <?= ($cm['direction'] ?? '') === 'pull' ? 'selected' : '' ?>>Pull</option>
                                 <option value="both" <?= ($cm['direction'] ?? '') === 'both' ? 'selected' : '' ?>>Both</option>
                             </select>
                         </td>
-                        <td style="padding: 0.5rem; text-align: center;">
-                            <button type="button" class="btn-remove-mapping js-remove-jira-mapping"
-                                    style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1rem;"
+                        <td class="jira-config-table-cell text-center">
+                            <button type="button" class="btn-remove-mapping js-remove-jira-mapping jira-config-remove"
                                     title="Remove mapping">&times;</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
-            <button type="button" id="add-mapping-btn" class="btn btn-sm js-add-jira-mapping" style="margin-top: 0.75rem; font-size: 0.85rem;">+ Add Mapping</button>
+            <button type="button" id="add-mapping-btn" class="btn btn-sm js-add-jira-mapping jira-config-add-btn">+ Add Mapping</button>
         </div>
     </section>
 
@@ -294,10 +293,10 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Priority Mapping</h2></div>
         <div class="card-body">
-            <p class="text-muted mb-4" style="font-size: 0.875rem;">
+            <p class="text-muted mb-4 jira-config-copy">
                 Map StratFlow priority numbers (1-10) to Jira priority levels. Items with priority &le; the threshold get that level.
             </p>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; max-width: 500px;">
+            <div class="jira-config-grid-4">
                 <div class="form-group">
                     <label class="form-label">Highest (&le;)</label>
                     <input type="number" name="priority_highest" class="form-input" value="<?= (int) ($pr['highest'] ?? 2) ?>" min="1" max="10">
@@ -323,23 +322,23 @@ $jiraFieldList = !empty($jira_fields)
     <section class="card mt-4">
         <div class="card-header"><h2 class="card-title">Connection Details</h2></div>
         <div class="card-body">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="jira-config-detail-grid">
                 <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Site Name</span>
+                    <span class="text-muted jira-config-detail-label">Site Name</span>
                     <strong><?= htmlspecialchars($integration['display_name'] ?? '') ?></strong>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Site URL</span>
+                    <span class="text-muted jira-config-detail-label">Site URL</span>
                     <a href="<?= htmlspecialchars($integration['site_url'] ?? '') ?>" target="_blank" rel="noopener">
                         <?= htmlspecialchars($integration['site_url'] ?? '') ?>
                     </a>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Cloud ID</span>
-                    <code style="font-size: 0.85rem;"><?= htmlspecialchars($integration['cloud_id'] ?? '') ?></code>
+                    <span class="text-muted jira-config-detail-label">Cloud ID</span>
+                    <code class="jira-config-code"><?= htmlspecialchars($integration['cloud_id'] ?? '') ?></code>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.8rem; display: block;">Token Expires</span>
+                    <span class="text-muted jira-config-detail-label">Token Expires</span>
                     <span><?= htmlspecialchars($integration['token_expires_at'] ?? 'Unknown') ?></span>
                 </div>
             </div>
