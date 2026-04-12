@@ -197,6 +197,22 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-add-jira-mapping')) {
+        e.preventDefault();
+        addJiraCustomMappingRow();
+        return;
+    }
+
+    var removeJiraMappingButton = e.target.closest('.js-remove-jira-mapping');
+    if (removeJiraMappingButton) {
+        e.preventDefault();
+        var mappingRow = removeJiraMappingButton.closest('.custom-mapping-row');
+        if (mappingRow) {
+            mappingRow.remove();
+        }
+        return;
+    }
+
     var revealGitSecretButton = e.target.closest('.js-reveal-git-secret');
     if (revealGitSecretButton) {
         e.preventDefault();
@@ -1988,6 +2004,75 @@ function toggleGitSecretReveal(provider) {
         button.textContent = 'Reveal';
         window.alert('Network error revealing secret.');
     });
+}
+
+function addJiraCustomMappingRow() {
+    var table = document.getElementById('custom-mappings-table');
+    var tbody = document.getElementById('custom-mappings-body');
+    if (!table || !tbody) {
+        return;
+    }
+
+    var index = tbody.querySelectorAll('.custom-mapping-row').length;
+    var stratflowFields = parseJsonDataset(table.dataset.stratflowFields, {});
+    var jiraFields = parseJsonDataset(table.dataset.jiraFields, []);
+    var row = document.createElement('tr');
+    row.className = 'custom-mapping-row';
+    row.style.borderBottom = '1px solid var(--border-color, #dee2e6)';
+    row.innerHTML =
+        '<td style="padding:0.5rem;">' + buildJiraStratflowFieldSelect(index, stratflowFields) + '</td>' +
+        '<td style="padding:0.5rem;">' + buildJiraFieldInput(index, jiraFields) + '</td>' +
+        '<td style="padding:0.5rem;">' + buildJiraDirectionSelect(index) + '</td>' +
+        '<td style="padding:0.5rem;text-align:center;">' +
+            '<button type="button" class="btn-remove-mapping js-remove-jira-mapping" ' +
+            'style="background:none;border:none;color:#dc3545;cursor:pointer;font-size:1.1rem;" title="Remove mapping">&times;</button>' +
+        '</td>';
+    tbody.appendChild(row);
+}
+
+function buildJiraStratflowFieldSelect(index, stratflowFields) {
+    var html = '<select name="custom_mappings[' + index + '][stratflow_field]" class="form-input" style="font-size:0.85rem;">';
+    html += '<option value="">Select...</option>';
+    Object.keys(stratflowFields || {}).forEach(function(key) {
+        html += '<option value="' + escapeHtml(key) + '">' + escapeHtml(stratflowFields[key]) + '</option>';
+    });
+    html += '</select>';
+    return html;
+}
+
+function buildJiraFieldInput(index, jiraFields) {
+    if (Array.isArray(jiraFields) && jiraFields.length > 0) {
+        var html = '<select name="custom_mappings[' + index + '][jira_field]" class="form-input" style="font-size:0.85rem;">';
+        html += '<option value="">Select...</option>';
+        jiraFields.forEach(function(field) {
+            html += '<option value="' + escapeHtml(field.id || '') + '">' +
+                escapeHtml((field.name || '') + ' (' + (field.id || '') + ')') +
+                '</option>';
+        });
+        html += '</select>';
+        return html;
+    }
+
+    return '<input type="text" name="custom_mappings[' + index + '][jira_field]" class="form-input" placeholder="customfield_XXXXX" style="font-size:0.85rem;">';
+}
+
+function buildJiraDirectionSelect(index) {
+    return '<select name="custom_mappings[' + index + '][direction]" class="form-input" style="font-size:0.85rem;">' +
+        '<option value="push">Push</option>' +
+        '<option value="pull">Pull</option>' +
+        '<option value="both">Both</option>' +
+        '</select>';
+}
+
+function parseJsonDataset(value, fallback) {
+    if (!value) {
+        return fallback;
+    }
+    try {
+        return JSON.parse(value);
+    } catch (e) {
+        return fallback;
+    }
 }
 
 function getSelectedMemberIds(pickerWrap) {
