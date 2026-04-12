@@ -264,7 +264,7 @@ $changeTypeLabels = [
         $hasKrs   = $krCount > 0;
         $sp       = ($story_progress ?? [])[(int) $okr['project_id']] ?? ['total' => 0, 'done' => 0, 'pct' => 0];
         $pct      = (int) $sp['pct'];
-        $barColour = $pct >= 80 ? '#10b981' : ($pct >= 40 ? '#f59e0b' : '#6366f1');
+        $barTone  = $pct >= 80 ? 'success' : ($pct >= 40 ? 'warning' : 'primary');
     ?>
     <?php if ($hasKrs): ?>
     <?php
@@ -275,16 +275,14 @@ $changeTypeLabels = [
         <summary class="okr-row okr-row--interactive">
             <div class="okr-row-left">
                 <span class="okr-expand-icon">&#9654;</span>
-                <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
+                <span class="okr-status-pill">OKR Set</span>
                 <a href="<?= $roadmapUrl ?>" class="okr-title js-stop-propagation" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
             </div>
             <div class="okr-row-right okr-row-right--spaced">
                 <?php if ($sp['total'] > 0): ?>
                 <div class="okr-progress">
-                    <div class="okr-progress__track">
-                        <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
-                    </div>
-                    <span class="okr-progress__value" style="color:<?= $barColour ?>;"><?= $pct ?>%</span>
+                    <progress class="okr-progress__meter okr-progress__meter--<?= htmlspecialchars($barTone, ENT_QUOTES, 'UTF-8') ?>" max="100" value="<?= $pct ?>"><?= $pct ?>%</progress>
+                    <span class="okr-progress__value okr-progress__value--<?= htmlspecialchars($barTone, ENT_QUOTES, 'UTF-8') ?>"><?= $pct ?>%</span>
                 </div>
                 <?php endif; ?>
                 <span class="okr-row-meta"><?= $krCount ?> KR<?= $krCount !== 1 ? 's' : '' ?></span>
@@ -293,13 +291,6 @@ $changeTypeLabels = [
         <div class="okr-kr-list">
             <?php
             $structuredKrs = $okr['structured_krs'] ?? [];
-            $krStatusColours = [
-                'on_track'    => ['#10b981', '#d1fae5'],
-                'at_risk'     => ['#f59e0b', '#fef3c7'],
-                'off_track'   => ['#ef4444', '#fee2e2'],
-                'not_started' => ['#9ca3af', '#f3f4f6'],
-                'achieved'    => ['#6366f1', '#e0e7ff'],
-            ];
             $krStatusLabels = [
                 'on_track'    => 'On Track',
                 'at_risk'     => 'At Risk',
@@ -317,19 +308,23 @@ $changeTypeLabels = [
                     $range    = $target - $baseline;
                     $krPct    = $range > 0 ? max(0, min(100, (int) round(($current - $baseline) / $range * 100))) : 0;
                     $krStatus = $skr['kr_status'] ?? 'not_started';
-                    [$krColor, $krBg] = $krStatusColours[$krStatus] ?? ['#9ca3af', '#f3f4f6'];
+                    $krTone   = match ($krStatus) {
+                        'on_track' => 'success',
+                        'at_risk' => 'warning',
+                        'off_track' => 'danger',
+                        'achieved' => 'primary',
+                        default => 'muted',
+                    };
                     $unit     = htmlspecialchars($skr['unit'] ?? '', ENT_QUOTES, 'UTF-8');
                 ?>
                 <div class="okr-kr-item okr-kr-item--structured">
                     <div class="okr-kr-item-header">
                         <span class="okr-kr-text"><span class="okr-kr-num"><?= htmlspecialchars($skrLabel, ENT_QUOTES, 'UTF-8') ?></span> <?= htmlspecialchars($skr['kr_title'], ENT_QUOTES, 'UTF-8') ?></span>
-                        <span class="okr-kr-status-badge" style="background:<?= $krBg ?>; color:<?= $krColor ?>;"><?= $krStatusLabels[$krStatus] ?? ucwords(str_replace('_', ' ', $krStatus)) ?></span>
+                        <span class="okr-kr-status-badge okr-kr-status-badge--<?= htmlspecialchars($krTone, ENT_QUOTES, 'UTF-8') ?>"><?= $krStatusLabels[$krStatus] ?? ucwords(str_replace('_', ' ', $krStatus)) ?></span>
                     </div>
                     <div class="okr-kr-progress-row">
-                        <div class="okr-kr-bar-track">
-                            <div class="okr-kr-bar-fill" style="width:<?= $krPct ?>%; background:<?= $krColor ?>;"></div>
-                        </div>
-                        <span class="okr-kr-progress-text" style="color:<?= $krColor ?>;"><?= $krPct ?>%</span>
+                        <progress class="okr-progress__meter okr-progress__meter--<?= htmlspecialchars($krTone, ENT_QUOTES, 'UTF-8') ?>" max="100" value="<?= $krPct ?>"><?= $krPct ?>%</progress>
+                        <span class="okr-kr-progress-text okr-kr-progress-text--<?= htmlspecialchars($krTone, ENT_QUOTES, 'UTF-8') ?>"><?= $krPct ?>%</span>
                         <?php if ($target > 0): ?>
                         <span class="okr-kr-values"><?= number_format($current, 0) ?><?= $unit ? ' '.$unit : '' ?> / <?= number_format($target, 0) ?><?= $unit ? ' '.$unit : '' ?></span>
                         <?php endif; ?>
@@ -365,16 +360,14 @@ $changeTypeLabels = [
     <div class="okr-row">
         <div class="okr-row-left">
             <span class="okr-indent-spacer"></span>
-            <span class="okr-status-pill" style="background:#6366f1;">OKR Set</span>
+            <span class="okr-status-pill">OKR Set</span>
             <a href="<?= $roadmapUrl ?>" class="okr-title" title="Open on roadmap"><?= htmlspecialchars($okr['okr_title'], ENT_QUOTES, 'UTF-8') ?></a>
         </div>
         <div class="okr-row-right okr-row-right--spaced">
             <?php if ($sp['total'] > 0): ?>
             <div class="okr-progress">
-                <div class="okr-progress__track">
-                    <div style="width:<?= $pct ?>%; background:<?= $barColour ?>; height:100%; border-radius:999px;"></div>
-                </div>
-                <span class="okr-progress__value" style="color:<?= $barColour ?>;"><?= $pct ?>%</span>
+                <progress class="okr-progress__meter okr-progress__meter--<?= htmlspecialchars($barTone, ENT_QUOTES, 'UTF-8') ?>" max="100" value="<?= $pct ?>"><?= $pct ?>%</progress>
+                <span class="okr-progress__value okr-progress__value--<?= htmlspecialchars($barTone, ENT_QUOTES, 'UTF-8') ?>"><?= $pct ?>%</span>
             </div>
             <?php endif; ?>
             <span class="okr-row-meta okr-row-meta--muted">No KRs</span>
@@ -415,7 +408,7 @@ $changeTypeLabels = [
                 <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
                 <span class="exec-risk-scores">
                     <span class="exec-risk-likelihood">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
-                    <span class="exec-risk-priority" style="background:<?= $band[1] ?>; color:<?= $band[0] ?>;"><?= $pri ?></span>
+                    <span class="exec-risk-priority exec-risk-priority--<?= htmlspecialchars($pri >= 15 ? 'danger' : ($pri >= 5 ? 'warning' : 'success'), ENT_QUOTES, 'UTF-8') ?>"><?= $pri ?></span>
                 </span>
             </summary>
             <div class="exec-risk-detail">
@@ -438,7 +431,7 @@ $changeTypeLabels = [
             <span class="exec-risk-project"><?= htmlspecialchars($r['project_name'], ENT_QUOTES, 'UTF-8') ?></span>
             <span class="exec-risk-scores">
                 <span class="exec-risk-likelihood">L:<?= (int) $r['likelihood'] ?> &middot; I:<?= (int) $r['impact'] ?></span>
-                <span class="exec-risk-priority" style="background:<?= $band[1] ?>; color:<?= $band[0] ?>;"><?= $pri ?></span>
+                <span class="exec-risk-priority exec-risk-priority--<?= htmlspecialchars($pri >= 15 ? 'danger' : ($pri >= 5 ? 'warning' : 'success'), ENT_QUOTES, 'UTF-8') ?>"><?= $pri ?></span>
             </span>
         </div>
         <?php endif; ?>

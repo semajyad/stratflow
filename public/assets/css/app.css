@@ -5950,6 +5950,12 @@ a.okr-title:hover {
     flex-shrink: 0;
 }
 
+.okr-kr-status-badge--success { background: #d1fae5; color: #10b981; }
+.okr-kr-status-badge--warning { background: #fef3c7; color: #f59e0b; }
+.okr-kr-status-badge--danger { background: #fee2e2; color: #ef4444; }
+.okr-kr-status-badge--muted { background: #f3f4f6; color: #9ca3af; }
+.okr-kr-status-badge--primary { background: #e0e7ff; color: #6366f1; }
+
 .okr-kr-progress-row {
     display: flex;
     align-items: center;
@@ -5977,6 +5983,12 @@ a.okr-title:hover {
     min-width: 2.5rem;
     text-align: right;
 }
+
+.okr-kr-progress-text--success { color: #10b981; }
+.okr-kr-progress-text--warning { color: #f59e0b; }
+.okr-kr-progress-text--danger { color: #ef4444; }
+.okr-kr-progress-text--muted { color: #9ca3af; }
+.okr-kr-progress-text--primary { color: #6366f1; }
 
 .okr-kr-values {
     font-size: 0.68rem;
@@ -6153,10 +6165,42 @@ a.okr-title:hover {
     overflow: hidden;
 }
 
+.okr-progress__meter {
+    width: 60px;
+    height: 6px;
+    display: block;
+    border: 0;
+    appearance: none;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.okr-progress__meter::-webkit-progress-bar {
+    background: #e5e7eb;
+    border-radius: 999px;
+}
+
+.okr-progress__meter::-webkit-progress-value {
+    border-radius: 999px;
+}
+
+.okr-progress__meter::-moz-progress-bar {
+    border-radius: 999px;
+}
+
+.okr-progress__meter--success { accent-color: #10b981; }
+.okr-progress__meter--warning { accent-color: #f59e0b; }
+.okr-progress__meter--primary { accent-color: #6366f1; }
+
 .okr-progress__value {
     font-size: 0.7rem;
     font-weight: 700;
 }
+
+.okr-progress__value--success { color: #10b981; }
+.okr-progress__value--warning { color: #f59e0b; }
+.okr-progress__value--primary { color: #6366f1; }
 
 .okr-row-meta {
     font-size: 0.75rem;
@@ -6210,6 +6254,10 @@ a.okr-title:hover {
     border-radius: 999px;
     white-space: nowrap;
 }
+
+.exec-risk-priority--danger { background: #fee2e2; color: #ef4444; }
+.exec-risk-priority--warning { background: #fef3c7; color: #f59e0b; }
+.exec-risk-priority--success { background: #f0fdf4; color: #10b981; }
 
 .exec-risk-description {
     margin: 0 0 0.4rem;
