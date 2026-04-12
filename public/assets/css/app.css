@@ -5902,6 +5902,12 @@ details[open] > summary .trace-chevron {
     color: var(--text, #1e293b);
 }
 
+.trace-work-item--empty,
+.trace-story--empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
 /* User story row — double indented */
 .trace-story {
     display: flex;
@@ -5929,6 +5935,81 @@ details[open] > summary .trace-chevron {
     background: #e2e8f0;
     overflow: hidden;
     flex-shrink: 0;
+}
+
+.trace-progress--meter {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+}
+
+.trace-progress--meter::-webkit-progress-bar {
+    background: #e2e8f0;
+    border-radius: 2px;
+}
+
+.trace-progress--meter::-webkit-progress-value {
+    background: #22c55e;
+    border-radius: 2px;
+}
+
+.trace-progress--meter::-moz-progress-bar {
+    background: #22c55e;
+    border-radius: 2px;
+}
+
+.trace-progress--summary {
+    display: inline-block;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+    width: 80px;
+}
+
+.trace-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.trace-empty-icon {
+    margin-bottom: 1rem;
+}
+
+.trace-empty-copy {
+    margin-bottom: 1rem;
+}
+
+.trace-badge {
+    margin-left: 0.25rem;
+}
+
+.trace-badge--first {
+    margin-left: 0.5rem;
+}
+
+.trace-badge--small {
+    font-size: 0.75rem;
+}
+
+.trace-progress-label {
+    color: #64748b;
+    font-size: 0.75rem;
+    margin-left: 0.35rem;
+}
+
+.trace-meta {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-left: 0.25rem;
+}
+
+.trace-meta--first {
+    margin-left: 0.5rem;
+}
+
+.trace-meta--muted {
+    color: #94a3b8;
+    margin-left: 0.5rem;
 }
 
 /* Git link pill */

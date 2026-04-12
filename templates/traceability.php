@@ -78,9 +78,7 @@ $gitPillsHtml = function (array $links): string {
  */
 $progressBarHtml = function (int $done, int $total): string {
     $pct = $total > 0 ? (int) round($done / $total * 100) : 0;
-    return '<div class="trace-progress" title="' . $pct . '% done">'
-         .   '<div style="width:' . $pct . '%;height:100%;border-radius:2px;background:#22c55e;"></div>'
-         . '</div>';
+    return '<progress class="trace-progress trace-progress--meter" max="100" value="' . $pct . '" title="' . $pct . '% done"></progress>';
 };
 ?>
 
@@ -102,13 +100,13 @@ $progressBarHtml = function (int $done, int $total): string {
      =========================== -->
 <?php if (empty($okrs) && empty($unlinkedStories)): ?>
 <div class="card trace-tree">
-    <div class="card-body" style="text-align:center;padding:3rem 2rem;">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-light,#94a3b8)" stroke-width="1.5" style="margin-bottom:1rem;" aria-hidden="true">
+    <div class="card-body trace-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-light,#94a3b8)" stroke-width="1.5" class="trace-empty-icon" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             <line x1="8" y1="8" x2="16" y2="16"/>
         </svg>
-        <p class="text-muted" style="margin-bottom:1rem;">No OKR nodes found for this project. Add OKRs to your strategy diagram to unlock the traceability view.</p>
+        <p class="text-muted trace-empty-copy">No OKR nodes found for this project. Add OKRs to your strategy diagram to unlock the traceability view.</p>
         <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-sm">Go to Strategy Diagram</a>
     </div>
 </div>
@@ -131,19 +129,17 @@ $progressBarHtml = function (int $done, int $total): string {
     <summary<?= $okrDesc !== '' ? ' title="' . htmlspecialchars($okrDesc) . '"' : '' ?>>
         <span class="trace-chevron" aria-hidden="true">&#9658;</span>
         <strong class="trace-okr-title"><?= htmlspecialchars($okrTitle) ?></strong>
-        <span class="badge badge-secondary" style="margin-left:0.5rem;"><?= $storyTotal ?> stor<?= $storyTotal !== 1 ? 'ies' : 'y' ?></span>
-        <span class="badge badge-success" style="margin-left:0.25rem;"><?= $doneTotal ?> done</span>
+        <span class="badge badge-secondary trace-badge trace-badge--first"><?= $storyTotal ?> stor<?= $storyTotal !== 1 ? 'ies' : 'y' ?></span>
+        <span class="badge badge-success trace-badge"><?= $doneTotal ?> done</span>
         <?php if ($gitTotal > 0): ?>
-            <span class="badge badge-secondary" style="margin-left:0.25rem;"><?= $gitTotal ?> git link<?= $gitTotal !== 1 ? 's' : '' ?></span>
+            <span class="badge badge-secondary trace-badge"><?= $gitTotal ?> git link<?= $gitTotal !== 1 ? 's' : '' ?></span>
         <?php endif; ?>
-        <div class="trace-progress" style="display:inline-block;vertical-align:middle;width:80px;margin-left:0.75rem;" title="<?= $pct ?>% done">
-            <div style="width:<?= $pct ?>%;height:100%;border-radius:2px;background:#22c55e;"></div>
-        </div>
-        <span style="font-size:0.75rem;color:#64748b;margin-left:0.35rem;"><?= $pct ?>%</span>
+        <progress class="trace-progress trace-progress--summary" max="100" value="<?= $pct ?>" title="<?= $pct ?>% done"></progress>
+        <span class="trace-progress-label"><?= $pct ?>%</span>
     </summary>
 
     <?php if (empty($okrEntry['work_items'])): ?>
-        <div class="trace-work-item" style="color:#94a3b8;font-style:italic;">
+        <div class="trace-work-item trace-work-item--empty">
             No work items linked to this OKR yet.
             <a href="/app/work-items?project_id=<?= (int) $project['id'] ?>">Add work items</a>
         </div>
@@ -165,16 +161,16 @@ $progressBarHtml = function (int $done, int $total): string {
             <span class="trace-work-item-title"><?= htmlspecialchars($wiTitle) ?></span>
             <?= $statusBadgeHtml($wiStatus) ?>
             <?php if ($wiJira): ?>
-                <span class="badge badge-info" style="margin-left:0.25rem;"><?= htmlspecialchars($wiJira) ?></span>
+                <span class="badge badge-info trace-badge"><?= htmlspecialchars($wiJira) ?></span>
             <?php endif; ?>
-            <span style="font-size:0.78rem;color:#64748b;margin-left:0.5rem;"><?= $wiTotal ?> stor<?= $wiTotal !== 1 ? 'ies' : 'y' ?>, <?= $wiDone ?> done</span>
+            <span class="trace-meta trace-meta--first"><?= $wiTotal ?> stor<?= $wiTotal !== 1 ? 'ies' : 'y' ?>, <?= $wiDone ?> done</span>
             <?php if ($wiGit > 0): ?>
-                <span style="font-size:0.78rem;color:#64748b;margin-left:0.25rem;">&bull; <?= $wiGit ?> git link<?= $wiGit !== 1 ? 's' : '' ?></span>
+                <span class="trace-meta">&bull; <?= $wiGit ?> git link<?= $wiGit !== 1 ? 's' : '' ?></span>
             <?php endif; ?>
         </summary>
 
         <?php if (empty($wiStories)): ?>
-            <div class="trace-story" style="color:#94a3b8;font-style:italic;">No stories yet.</div>
+            <div class="trace-story trace-story--empty">No stories yet.</div>
         <?php else: ?>
 
         <?php foreach ($wiStories as $sNode):
@@ -187,7 +183,7 @@ $progressBarHtml = function (int $done, int $total): string {
             <span class="trace-story-title"><?= htmlspecialchars($story['title'] ?? '') ?></span>
             <?= $statusBadgeHtml($sStatus) ?>
             <?php if ($storyJira): ?>
-                <span class="badge badge-info" style="margin-left:0.25rem;font-size:0.75rem;"><?= htmlspecialchars($storyJira) ?></span>
+                <span class="badge badge-info trace-badge trace-badge--small"><?= htmlspecialchars($storyJira) ?></span>
             <?php endif; ?>
             <?= $gitPillsHtml($storyLinks) ?>
         </div>
@@ -209,8 +205,8 @@ $progressBarHtml = function (int $done, int $total): string {
     <summary>
         <span class="trace-chevron" aria-hidden="true">&#9658;</span>
         <strong class="trace-okr-title">Unlinked Stories</strong>
-        <span class="badge badge-warning" style="margin-left:0.5rem;"><?= count($unlinkedStories) ?> stor<?= count($unlinkedStories) !== 1 ? 'ies' : 'y' ?></span>
-        <span style="font-size:0.78rem;color:#94a3b8;margin-left:0.5rem;">not assigned to any work item</span>
+        <span class="badge badge-warning trace-badge trace-badge--first"><?= count($unlinkedStories) ?> stor<?= count($unlinkedStories) !== 1 ? 'ies' : 'y' ?></span>
+        <span class="trace-meta trace-meta--muted">not assigned to any work item</span>
     </summary>
     <?php foreach ($unlinkedStories as $sNode):
         $story      = $sNode['story'];
@@ -222,7 +218,7 @@ $progressBarHtml = function (int $done, int $total): string {
         <span class="trace-story-title"><?= htmlspecialchars($story['title'] ?? '') ?></span>
         <?= $statusBadgeHtml($sStatus) ?>
         <?php if ($storyJira): ?>
-            <span class="badge badge-info" style="margin-left:0.25rem;font-size:0.75rem;"><?= htmlspecialchars($storyJira) ?></span>
+            <span class="badge badge-info trace-badge trace-badge--small"><?= htmlspecialchars($storyJira) ?></span>
         <?php endif; ?>
         <?= $gitPillsHtml($storyLinks) ?>
     </div>
