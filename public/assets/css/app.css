@@ -3451,6 +3451,112 @@ tbody tr:hover {
     margin-top: 1rem;
 }
 
+.audit-log-filter {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.audit-log-filter-label {
+    font-weight: 600;
+}
+
+.audit-log-filter-select {
+    max-width: 220px;
+}
+
+.audit-log-filter-select--wide {
+    max-width: 250px;
+}
+
+.audit-log-count {
+    font-size: 0.85rem;
+    margin-left: auto;
+}
+
+.audit-log-table-wrap {
+    overflow-x: auto;
+}
+
+.audit-log-table-wrap--flush {
+    padding: 0;
+}
+
+.audit-log-empty {
+    color: #666;
+    padding: 1rem;
+}
+
+.audit-log-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.audit-log-head {
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.audit-log-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.audit-log-cell {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.audit-log-cell--time {
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.audit-log-cell--user {
+    font-size: 0.85rem;
+}
+
+.audit-log-cell--user-large {
+    font-size: 0.9rem;
+}
+
+.audit-log-cell--mono {
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+.audit-log-cell--mono-large {
+    font-size: 0.85rem;
+}
+
+.audit-log-cell--details {
+    max-width: 350px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.audit-log-cell--details-sm {
+    font-size: 0.85rem;
+    max-width: 300px;
+}
+
+.audit-log-badge {
+    font-size: 0.75rem;
+}
+
+.audit-log-email {
+    color: #888;
+}
+
+.audit-log-fallback {
+    color: #999;
+}
+
 .superadmin-test-ai-result {
     font-size: 0.875rem;
 }

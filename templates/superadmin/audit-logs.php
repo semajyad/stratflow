@@ -23,9 +23,9 @@
      =========================== -->
 <section class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="/superadmin/audit-logs" class="inline-form" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-            <label for="type" style="font-weight:600;">Filter by event:</label>
-            <select name="type" id="type" class="form-control" style="max-width:250px;">
+        <form method="GET" action="/superadmin/audit-logs" class="inline-form audit-log-filter">
+            <label for="type" class="audit-log-filter-label">Filter by event:</label>
+            <select name="type" id="type" class="form-control audit-log-filter-select audit-log-filter-select--wide">
                 <option value="">All events</option>
                 <?php foreach ($event_types as $type): ?>
                     <option value="<?= htmlspecialchars($type) ?>" <?= ($filter_type === $type) ? 'selected' : '' ?>>
@@ -45,18 +45,18 @@
      Audit Log Table
      =========================== -->
 <section class="card">
-    <div class="card-body" style="overflow-x:auto;">
+    <div class="card-body audit-log-table-wrap">
         <?php if (empty($logs)): ?>
-            <p style="color:#666;padding:1rem;">No audit events found.</p>
+            <p class="audit-log-empty">No audit events found.</p>
         <?php else: ?>
-            <table class="data-table" style="width:100%;border-collapse:collapse;">
+            <table class="data-table audit-log-table">
                 <thead>
                     <tr>
-                        <th style="text-align:left;padding:0.5rem;border-bottom:2px solid #dee2e6;">Time</th>
-                        <th style="text-align:left;padding:0.5rem;border-bottom:2px solid #dee2e6;">Event</th>
-                        <th style="text-align:left;padding:0.5rem;border-bottom:2px solid #dee2e6;">User</th>
-                        <th style="text-align:left;padding:0.5rem;border-bottom:2px solid #dee2e6;">IP Address</th>
-                        <th style="text-align:left;padding:0.5rem;border-bottom:2px solid #dee2e6;">Details</th>
+                        <th class="audit-log-head">Time</th>
+                        <th class="audit-log-head">Event</th>
+                        <th class="audit-log-head">User</th>
+                        <th class="audit-log-head">IP Address</th>
+                        <th class="audit-log-head">Details</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -67,27 +67,27 @@
                                 $severity = 'warning';
                             }
                         ?>
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:0.5rem;white-space:nowrap;font-size:0.85rem;">
+                        <tr class="audit-log-row">
+                            <td class="audit-log-cell audit-log-cell--time">
                                 <?= htmlspecialchars($log['created_at']) ?>
                             </td>
-                            <td style="padding:0.5rem;">
-                                <span class="badge badge-<?= $severity ?>" style="display:inline-block;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;background:<?= $severity === 'warning' ? '#fff3cd' : '#d1ecf1' ?>;color:<?= $severity === 'warning' ? '#856404' : '#0c5460' ?>;">
+                            <td class="audit-log-cell">
+                                <span class="badge badge-<?= $severity ?> audit-log-badge">
                                     <?= htmlspecialchars($log['event_type']) ?>
                                 </span>
                             </td>
-                            <td style="padding:0.5rem;font-size:0.9rem;">
+                            <td class="audit-log-cell audit-log-cell--user audit-log-cell--user-large">
                                 <?php if (!empty($log['full_name'])): ?>
                                     <?= htmlspecialchars($log['full_name']) ?>
-                                    <br><small style="color:#888;"><?= htmlspecialchars($log['email'] ?? '') ?></small>
+                                    <br><small class="audit-log-email"><?= htmlspecialchars($log['email'] ?? '') ?></small>
                                 <?php else: ?>
-                                    <span style="color:#999;">-</span>
+                                    <span class="audit-log-fallback">-</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="padding:0.5rem;font-family:monospace;font-size:0.85rem;">
+                            <td class="audit-log-cell audit-log-cell--mono audit-log-cell--mono-large">
                                 <?= htmlspecialchars($log['ip_address']) ?>
                             </td>
-                            <td style="padding:0.5rem;font-size:0.85rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;">
+                            <td class="audit-log-cell audit-log-cell--details audit-log-cell--details-sm">
                                 <?php
                                     $details = json_decode($log['details_json'] ?? '{}', true);
                                     if (!empty($details)) {
@@ -97,7 +97,7 @@
                                         }
                                         echo implode(', ', $parts);
                                     } else {
-                                        echo '<span style="color:#999;">-</span>';
+                                        echo '<span class="audit-log-fallback">-</span>';
                                     }
                                 ?>
                             </td>
