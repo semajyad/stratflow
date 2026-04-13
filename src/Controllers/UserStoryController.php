@@ -105,7 +105,7 @@ class UserStoryController
             'teams'                => $teams,
             'org_users'            => $orgUsers,
             'field_order_st'       => $fieldOrderSt,
-            'show_quality'         => $showQuality,
+            'showQuality'          => $showQuality,
             'active_page'          => 'user-stories',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,
@@ -878,10 +878,20 @@ PROMPT;
                     'quality_breakdown' => json_encode($scored['breakdown'])
                 ]);
 
+                $html = '';
+                ob_start();
+                $breakdownData = $scored['breakdown'];
+                $itemId        = $id;
+                $itemType      = 'story';
+                $csrf_token    = $this->request->post('_csrf_token');
+                require __DIR__ . '/../../templates/partials/quality-breakdown.php';
+                $html = ob_get_clean();
+
                 $this->response->json([
                     'status'    => 'ok',
                     'score'     => $scored['score'],
-                    'breakdown' => $scored['breakdown']
+                    'breakdown' => $scored['breakdown'],
+                    'html'      => $html
                 ]);
                 return;
             }

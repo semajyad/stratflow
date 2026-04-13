@@ -3750,6 +3750,14 @@ document.addEventListener('DOMContentLoaded', () => {
         task.el.style.background = color; // Use .background for consistency with existing code
         task.el.title = 'Quality score: ' + score + '/100';
         task.el.classList.remove('js-quality-score-placeholder');
+
+        // Update breakdown container if provided
+        if (data.html) {
+            var container = document.querySelector('.js-quality-breakdown-container[data-id="' + task.id + '"][data-type="' + task.type + '"]');
+            if (container) {
+                container.innerHTML = data.html;
+            }
+        }
     };
 
     document.addEventListener('DOMContentLoaded', function() {

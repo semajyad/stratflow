@@ -779,10 +779,20 @@ class WorkItemController
                     'quality_breakdown' => json_encode($scored['breakdown'])
                 ]);
 
+                $html = '';
+                ob_start();
+                $breakdownData = $scored['breakdown'];
+                $itemId        = $id;
+                $itemType      = 'work-item';
+                $csrf_token    = $this->request->post('_csrf_token');
+                require __DIR__ . '/../../templates/partials/quality-breakdown.php';
+                $html = ob_get_clean();
+
                 $this->response->json([
                     'status'    => 'ok',
                     'score'     => $scored['score'],
-                    'breakdown' => $scored['breakdown']
+                    'breakdown' => $scored['breakdown'],
+                    'html'      => $html
                 ]);
                 return;
             }
