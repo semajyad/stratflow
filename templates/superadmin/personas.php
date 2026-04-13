@@ -138,7 +138,7 @@ $reviewScopeLabels = [
                             <!-- Critical Review Button -->
                             <div class="persona-panel-actions">
                                  <button type="button" class="btn btn-secondary btn-sm js-open-level-modal">
-                                     &#9881; Manage Level Prompts
+                                     &#9881; Manage Critical Review Levels
                                  </button>
                             </div>
                         </div>
