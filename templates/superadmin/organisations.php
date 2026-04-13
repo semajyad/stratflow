@@ -11,7 +11,9 @@
 
 <div class="page-header">
     <h1 class="page-title">Manage Organisations</h1>
-    <p class="page-subtitle">Create, configure and manage client organisations.</p>
+    <p class="page-subtitle">
+        <a href="/superadmin">&larr; Back to Superadmin Dashboard</a>
+    </p>
 </div>
 
 <?php if (!empty($flash_message)): ?>

@@ -129,12 +129,20 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                     <button class="btn btn-sm btn-secondary js-toggle-target"
                                             type="button"
                                             data-target-id="edit-user-<?= (int) $u['id'] ?>">Edit</button>
-                                    <?php if ((int) $u['id'] !== (int) $user['id'] && $u['is_active']): ?>
-                                        <form method="POST" action="/app/admin/users/<?= (int) $u['id'] ?>/delete" class="inline-form"
-                                              data-confirm="Deactivate this user?">
-                                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">Deactivate</button>
-                                        </form>
+                                    <?php if ((int) $u['id'] !== (int) $user['id']): ?>
+                                        <?php if ($u['is_active']): ?>
+                                            <form method="POST" action="/app/admin/users/<?= (int) $u['id'] ?>/delete" class="inline-form"
+                                                  data-confirm="Deactivate this user?">
+                                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger">Deactivate</button>
+                                            </form>
+                                        <?php else: ?>
+                                            <form method="POST" action="/app/admin/users/<?= (int) $u['id'] ?>/reactivate" class="inline-form"
+                                                  data-confirm="Reactivate this user?">
+                                                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                                <button type="submit" class="btn btn-sm btn-success">Reactivate</button>
+                                            </form>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </td>

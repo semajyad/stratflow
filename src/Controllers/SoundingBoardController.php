@@ -51,7 +51,8 @@ class SoundingBoardController
 
     private const DEFAULT_PANELS = [
         'executive' => [
-            'name'    => 'Executive Panel',
+            'name'         => 'Executive Panel',
+            'review_scope' => 'strategy_okrs',
             'members' => [
                 ['role_title' => 'CEO',          'prompt_description' => 'You focus on overall strategic vision, market positioning, competitive advantage, and long-term value creation. Evaluate whether this aligns with organisational goals and sustainable growth.'],
                 ['role_title' => 'CFO',          'prompt_description' => 'You focus on financial viability, ROI, cost structures, budget implications, and resource allocation efficiency. Evaluate the financial soundness and risk-adjusted returns.'],
@@ -61,7 +62,8 @@ class SoundingBoardController
             ],
         ],
         'product_management' => [
-            'name'    => 'Product Management Panel',
+            'name'         => 'Product Management Panel',
+            'review_scope' => 'hl_items_stories',
             'members' => [
                 ['role_title' => 'Agile Product Manager',   'prompt_description' => 'You focus on backlog prioritisation, stakeholder value, iterative delivery, and outcome-driven planning. Evaluate whether the right things are being built in the right order.'],
                 ['role_title' => 'Product Owner',           'prompt_description' => 'You focus on user needs, acceptance criteria clarity, story completeness, and sprint readiness. Evaluate whether requirements are well-defined and deliverable.'],

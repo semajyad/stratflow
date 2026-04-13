@@ -342,6 +342,30 @@ class AdminController
      *
      * @param string $id User primary key (from route param)
      */
+    public function reactivateUser($id): void
+    {
+        $user   = $this->auth->user();
+        $orgId  = (int) $user['org_id'];
+        $userId = (int) $id;
+
+        $target = User::findById($this->db, $userId);
+        if (!$target || (int) $target['org_id'] !== $orgId) {
+            $_SESSION['flash_error'] = 'User not found.';
+            $this->response->redirect('/app/admin/users');
+            return;
+        }
+
+        User::reactivate($this->db, $userId);
+
+        \StratFlow\Services\AuditLogger::log($this->db, (int) $user['id'], \StratFlow\Services\AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
+            'target_user_id' => $userId,
+            'action'         => 'reactivated',
+        ]);
+
+        $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" has been reactivated.';
+        $this->response->redirect('/app/admin/users');
+    }
+
     public function deleteUser($id): void
     {
         $user   = $this->auth->user();
@@ -928,7 +952,7 @@ class AdminController
                 'enforcement' => 'warn',
             ],
             'ai' => [
-                'model'   => '',   // empty = use platform default (gemini-3-flash-preview)
+                'model'   => '',   // empty = use platform default (gemini-3.0-preview)
                 'api_key' => '',   // empty = use platform default key
             ],
             'field_order_work_item' => ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'],
@@ -1161,7 +1185,7 @@ class AdminController
             $apiKey = $this->config['gemini_api_key'] ?? '';
         }
 
-        $resolvedModel = $model ?: 'gemini-2.5-flash';
+        $resolvedModel = $model ?: 'gemini-3.0-preview';
 
         try {
             $config = $this->config;

@@ -47,7 +47,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
             <?php elseif ($jira && $jira['status'] === 'error'): ?>
                 <span class="badge badge-danger integration-status-badge">Error</span>
             <?php else: ?>
-                <span class="badge badge-secondary integration-status-badge">Disconnected</span>
+                <span class="badge badge-secondary integration-status-badge">Not Connected</span>
             <?php endif; ?>
         </div>
     </div>
@@ -283,7 +283,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
             <?php if ($gitlabActive): ?>
                 <span class="badge badge-success integration-status-badge">Connected</span>
             <?php else: ?>
-                <span class="badge badge-secondary integration-status-badge">Disconnected</span>
+                <span class="badge badge-secondary integration-status-badge">Not Connected</span>
             <?php endif; ?>
         </div>
     </div>

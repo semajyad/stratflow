@@ -218,6 +218,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/invoices/sync',                     'XeroController@syncInvoices',  ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/invoices/{id}/push-to-xero',        'XeroController@pushToXero',    ['auth', 'billing', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}/delete',     'AdminController@deleteUser',       ['auth', 'admin', 'csrf']);
+    $router->add('POST', '/app/admin/users/{id}/reactivate', 'AdminController@reactivateUser',   ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/users/{id}',            'AdminController@updateUser',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}/delete',     'AdminController@deleteTeam',       ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/teams/{id}',            'AdminController@updateTeam',       ['auth', 'admin', 'csrf']);
@@ -235,6 +236,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/defaults/test-ai',          'SuperadminController@testAiConnection', ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/personas',                  'SuperadminController@personas',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/personas',                  'SuperadminController@savePersona',     ['auth', 'superadmin', 'csrf']);
+    $router->add('POST', '/superadmin/personas/evaluate',        'SuperadminController@evaluatePersona', ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/audit-logs/export',          'SuperadminController@exportAuditLogs',  ['auth', 'superadmin']);
     $router->add('GET',  '/superadmin/audit-logs',                'SuperadminController@auditLogs',        ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);

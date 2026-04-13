@@ -42,6 +42,40 @@ class SuperadminController
         $this->config   = $config;
     }
 
+    /** Default workflow persona definitions with pipeline stage and prompt. */
+    private const DEFAULT_WORKFLOW_PERSONAS = [
+        'agile_product_manager' => [
+            'title'    => 'Agile Product Manager',
+            'stage'    => 'Translate Mermaid strategy diagram and OKRs to the prioritised list of high-level work items',
+            'prompt'   => 'You are an Agile Product Manager. Your role is to translate strategic goals and OKRs into a prioritised backlog of high-level work items that deliver measurable business value.',
+        ],
+        'technical_project_manager' => [
+            'title'    => 'Technical Project Manager',
+            'stage'    => 'Generate a description of high-level work items',
+            'prompt'   => 'You are a Technical Project Manager. Your role is to create clear, actionable descriptions for high-level work items that capture scope, dependencies, and technical requirements.',
+        ],
+        'expert_system_architect' => [
+            'title'    => 'Expert System Architect',
+            'stage'    => 'Convert summary (from text) or analyse video (from file) into structured output',
+            'prompt'   => 'You are an Expert System Architect. Your role is to analyse uploaded content and produce structured technical summaries that capture architecture, components, and integration points.',
+        ],
+        'enterprise_risk_manager' => [
+            'title'    => 'Enterprise Risk Manager',
+            'stage'    => 'Generate risks, read the risk, and write the mitigation strategy',
+            'prompt'   => 'You are an Enterprise Risk Manager. Your role is to identify strategic and operational risks, assess their likelihood and impact, and recommend specific mitigation strategies.',
+        ],
+        'experienced_agile_product_owner' => [
+            'title'    => 'Experienced Agile Product Owner',
+            'stage'    => 'Decompose HL Items into user stories',
+            'prompt'   => 'You are an Experienced Agile Product Owner. Your role is to decompose high-level work items into well-defined user stories that follow INVEST criteria with clear acceptance criteria.',
+        ],
+        'enterprise_business_strategist' => [
+            'title'    => 'Enterprise Business Strategist',
+            'stage'    => 'Analyse the provided file to a 3-paragraph summary',
+            'prompt'   => 'You are an Enterprise Business Strategist. Your role is to analyse strategic documents and produce concise executive summaries that highlight key themes, opportunities, and recommended actions.',
+        ],
+    ];
+
     // =========================================================================
     // DASHBOARD
     // =========================================================================
@@ -128,8 +162,7 @@ class SuperadminController
 
         $billingMethod   = $this->request->post('billing_method', 'invoiced') === 'stripe' ? '' : 'manual_' . time();
         $seatLimit       = max(1, (int) $this->request->post('seat_limit', 5));
-        $billingPeriod   = in_array((int) $this->request->post('billing_period_months', 1), [1, 3, 6, 12], true)
-                           ? (int) $this->request->post('billing_period_months', 1) : 1;
+        $billingPeriod   = (int) $this->request->post('billing_period_months', 1) === 12 ? 12 : 1;
         $pricePerSeat    = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
         $nextInvoiceDate = $this->request->post('next_invoice_date', '') ?: null;
 
@@ -264,8 +297,7 @@ class SuperadminController
                                  ? $this->request->post('plan_type') : 'product';
                 $newSeats      = max(1, (int) $this->request->post('seat_limit', 5));
                 $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoice';
-                $billingPeriod = in_array((int) $this->request->post('billing_period_months', 1), [1, 3, 6, 12], true)
-                                 ? (int) $this->request->post('billing_period_months', 1) : 1;
+                $billingPeriod = (int) $this->request->post('billing_period_months', 1) === 12 ? 12 : 1;
                 $pricePerSeat  = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
                 $nextInvoice   = $this->request->post('next_invoice_date', '') ?: null;
 
@@ -430,7 +462,7 @@ class SuperadminController
 
         $data = [
             'ai_provider'            => trim((string) $this->request->post('ai_provider', 'google')),
-            'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-2.5-flash')),
+            'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-3.0-preview')),
             'default_seat_limit'            => max(1, (int) $this->request->post('default_seat_limit', 5)),
             'default_price_per_seat_cents'  => max(0, (int) round((float) $this->request->post('default_price_per_seat', 0) * 100)),
             'default_plan_type'             => $this->request->post('default_plan_type', 'product'),
@@ -446,11 +478,9 @@ class SuperadminController
             'quality_enforcement'    => $this->request->post('quality_enforcement', 'warn'),
             'support_email'          => trim((string) $this->request->post('support_email', '')),
             'mail_from_name'         => trim((string) $this->request->post('mail_from_name', 'StratFlow')),
-            // Billing rates — convert dollar input to cents
+            // Billing rates — convert dollar input to cents (Monthly + Annual only)
             'billing_currency'             => strtoupper(trim((string) $this->request->post('billing_currency', 'NZD'))),
             'billing_rate_monthly_cents'   => max(0, (int) round((float) $this->request->post('billing_rate_monthly', 0) * 100)),
-            'billing_rate_quarterly_cents' => max(0, (int) round((float) $this->request->post('billing_rate_quarterly', 0) * 100)),
-            'billing_rate_6monthly_cents'  => max(0, (int) round((float) $this->request->post('billing_rate_6monthly', 0) * 100)),
             'billing_rate_annual_cents'    => max(0, (int) round((float) $this->request->post('billing_rate_annual', 0) * 100)),
         ];
 
@@ -630,27 +660,41 @@ class SuperadminController
             $panelMembers[(int) $panel['id']] = PersonaMember::findByPanelId($this->db, (int) $panel['id']);
         }
 
+        // Load workflow personas from system settings
+        $settings = SystemSettings::get($this->db);
+        $workflowPersonas = self::DEFAULT_WORKFLOW_PERSONAS;
+        if (!empty($settings['workflow_personas_json'])) {
+            $stored = json_decode($settings['workflow_personas_json'], true);
+            if (is_array($stored) && !empty($stored)) {
+                $workflowPersonas = $stored;
+            }
+        }
+
         $this->response->render('superadmin/personas', [
-            'user'          => $user,
-            'panels'        => $panels,
-            'panel_members' => $panelMembers,
-            'active_page'   => 'superadmin',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'               => $user,
+            'panels'             => $panels,
+            'panel_members'      => $panelMembers,
+            'workflow_personas'  => $workflowPersonas,
+            'active_page'        => 'superadmin',
+            'flash_message'      => $_SESSION['flash_message'] ?? null,
+            'flash_error'        => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
     /**
-     * Save updated prompt descriptions for default persona members.
+     * Save updated prompt descriptions for default persona members
+     * and workflow persona prompts.
      *
-     * Expects POST data keyed as member_{id} with new prompt_description values.
+     * Expects POST data keyed as member_{id} for sounding panel members
+     * and workflow_{key} for workflow persona prompts.
      */
     public function savePersona(): void
     {
         $post = $_POST;
 
+        // Save sounding panel member prompts
         foreach ($post as $key => $value) {
             if (strpos($key, 'member_') === 0) {
                 $memberId = (int) str_replace('member_', '', $key);
@@ -662,8 +706,99 @@ class SuperadminController
             }
         }
 
+        // Save workflow persona prompts to system_settings
+        $workflowPersonas = self::DEFAULT_WORKFLOW_PERSONAS;
+        $settings = SystemSettings::get($this->db);
+        if (!empty($settings['workflow_personas_json'])) {
+            $stored = json_decode($settings['workflow_personas_json'], true);
+            if (is_array($stored) && !empty($stored)) {
+                $workflowPersonas = $stored;
+            }
+        }
+
+        $workflowUpdated = false;
+        foreach ($post as $key => $value) {
+            if (strpos($key, 'workflow_') === 0) {
+                $wfKey = str_replace('workflow_', '', $key);
+                if (isset($workflowPersonas[$wfKey])) {
+                    $workflowPersonas[$wfKey]['prompt'] = trim((string) $value);
+                    $workflowUpdated = true;
+                }
+            }
+        }
+
+        if ($workflowUpdated) {
+            SystemSettings::save($this->db, [
+                'workflow_personas_json' => json_encode($workflowPersonas),
+            ]);
+        }
+
         $_SESSION['flash_message'] = 'Default personas updated successfully.';
         $this->response->redirect('/superadmin/personas');
+    }
+
+    /**
+     * Run a critical review evaluation for a sounding panel (superadmin preview).
+     *
+     * Expects JSON body: panel_id, evaluation_level, content.
+     * Returns JSON with per-persona response results.
+     */
+    public function evaluatePersona(): void
+    {
+        $body = json_decode($this->request->body(), true);
+        if (!$body) {
+            $this->response->json(['status' => 'error', 'message' => 'Invalid JSON body'], 400);
+            return;
+        }
+
+        $panelId         = (int) ($body['panel_id'] ?? 0);
+        $evaluationLevel = $body['evaluation_level'] ?? 'devils_advocate';
+        $content         = $body['content'] ?? '';
+
+        if (empty($content)) {
+            $this->response->json(['status' => 'error', 'message' => 'No content provided'], 400);
+            return;
+        }
+
+        // Validate evaluation level
+        $validLevels = ['devils_advocate', 'red_teaming', 'gordon_ramsay'];
+        if (!in_array($evaluationLevel, $validLevels, true)) {
+            $evaluationLevel = 'devils_advocate';
+        }
+
+        // Load panel members
+        $members = PersonaMember::findByPanelId($this->db, $panelId);
+        if (empty($members)) {
+            $this->response->json(['status' => 'error', 'message' => 'No members found for this panel'], 404);
+            return;
+        }
+
+        $gemini  = new \StratFlow\Services\GeminiService($this->config);
+        $results = [];
+
+        foreach ($members as $member) {
+            $prompt = \StratFlow\Services\Prompts\PersonaPrompt::buildPrompt(
+                $member['role_title'],
+                $member['prompt_description'] ?? '',
+                $evaluationLevel,
+                $content
+            );
+
+            try {
+                $response = $gemini->generate($prompt, '');
+                $results[] = [
+                    'role_title' => $member['role_title'],
+                    'response'   => $response,
+                ];
+            } catch (\Throwable $e) {
+                $results[] = [
+                    'role_title' => $member['role_title'],
+                    'response'   => 'Error: ' . $e->getMessage(),
+                ];
+            }
+        }
+
+        $this->response->json(['status' => 'ok', 'results' => $results]);
     }
 
     // =========================================================================
@@ -837,10 +972,20 @@ class SuperadminController
      */
     private function seedDefaultPersonas(): void
     {
+        // Ensure review_scope column exists (inline migration for Railway)
+        try {
+            $this->db->query(
+                "ALTER TABLE persona_panels ADD COLUMN review_scope VARCHAR(50) DEFAULT NULL AFTER name"
+            );
+        } catch (\Throwable) {
+            // Column already exists — ignore
+        }
+
         // Executive Panel
         $execId = PersonaPanel::create($this->db, [
-            'panel_type' => 'executive',
-            'name'       => 'Executive Panel',
+            'panel_type'   => 'executive',
+            'name'         => 'Executive Panel',
+            'review_scope' => 'strategy_okrs',
         ]);
 
         $execMembers = [
@@ -861,8 +1006,9 @@ class SuperadminController
 
         // Product Management Panel
         $pmId = PersonaPanel::create($this->db, [
-            'panel_type' => 'product_management',
-            'name'       => 'Product Management Panel',
+            'panel_type'   => 'product_management',
+            'name'         => 'Product Management Panel',
+            'review_scope' => 'hl_items_stories',
         ]);
 
         $pmMembers = [
@@ -877,6 +1023,14 @@ class SuperadminController
                 'panel_id'           => $pmId,
                 'role_title'         => $role,
                 'prompt_description' => $prompt,
+            ]);
+        }
+
+        // Seed workflow persona defaults into system_settings
+        $settings = SystemSettings::get($this->db);
+        if (empty($settings['workflow_personas_json'])) {
+            SystemSettings::save($this->db, [
+                'workflow_personas_json' => json_encode(self::DEFAULT_WORKFLOW_PERSONAS),
             ]);
         }
     }

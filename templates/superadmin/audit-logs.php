@@ -15,7 +15,9 @@
      =========================== -->
 <div class="page-header">
     <h1 class="page-title">Audit Logs</h1>
-    <p class="page-subtitle">Security event log for compliance review (HIPAA / SOC 2 / PCI-DSS).</p>
+    <p class="page-subtitle">
+        <a href="/superadmin">&larr; Back to Superadmin Dashboard</a>
+    </p>
 </div>
 
 <!-- ===========================

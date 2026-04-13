@@ -41,15 +41,15 @@ class SystemSettings
         // Billing rates (price per seat in cents per period)
         'billing_currency',
         'billing_rate_monthly_cents',
-        'billing_rate_quarterly_cents',
-        'billing_rate_6monthly_cents',
         'billing_rate_annual_cents',
+        // Workflow persona defaults
+        'workflow_personas_json',
     ];
 
     /** Safe fallback defaults returned when the table row is missing. */
     private const DEFAULTS = [
         'ai_provider'            => 'google',
-        'ai_model'               => 'gemini-2.5-flash',
+        'ai_model'               => 'gemini-3.0-preview',
         'default_seat_limit'     => 5,
         'default_plan_type'      => 'product',
         'default_billing_method' => 'invoiced',
@@ -69,9 +69,9 @@ class SystemSettings
         // Billing rates
         'billing_currency'              => 'NZD',
         'billing_rate_monthly_cents'    => 0,
-        'billing_rate_quarterly_cents'  => 0,
-        'billing_rate_6monthly_cents'   => 0,
         'billing_rate_annual_cents'     => 0,
+        // Workflow persona defaults
+        'workflow_personas_json'        => '',
     ];
 
     /**

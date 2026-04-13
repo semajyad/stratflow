@@ -109,7 +109,7 @@ class PersonaPanel
      */
     /** @var string[] Columns allowed in dynamic update calls */
     private const UPDATABLE_COLUMNS = [
-        'panel_type', 'name',
+        'panel_type', 'name', 'review_scope',
     ];
 
     public static function update(Database $db, int $id, array $data): void

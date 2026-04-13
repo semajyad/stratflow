@@ -214,4 +214,12 @@ class User
             [':id' => $id]
         );
     }
+
+    public static function reactivate(\StratFlow\Core\Database $db, int $id): void
+    {
+        $db->query(
+            "UPDATE users SET is_active = 1 WHERE id = :id",
+            [':id' => $id]
+        );
+    }
 }

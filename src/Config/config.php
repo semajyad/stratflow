@@ -44,7 +44,7 @@ return [
     'db' => $dbConfig,
     'gemini' => [
         'api_key' => $_ENV['GEMINI_API_KEY'] ?? '',
-        'model' => $_ENV['GEMINI_MODEL'] ?? 'gemini-3-flash-preview',
+        'model' => $_ENV['GEMINI_MODEL'] ?? 'gemini-3.0-preview',
     ],
     'openai' => [
         'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',

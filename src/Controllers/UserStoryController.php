@@ -225,6 +225,27 @@ class UserStoryController
                                              ? mb_substr((string) $storyData['kr_hypothesis'], 0, 500)
                                              : null,
                 ]);
+
+        // Initial quality score
+        $qualityBlock = '';
+        try {
+            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable $e) {}
+        try {
+            $lastId = (int)$this->db->lastInsertId();
+            $newStory = \StratFlow\Models\UserStory::findById($this->db, $lastId);
+            if ($newStory) {
+                $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+                $scored = $scorer->scoreStory($newStory, $qualityBlock);
+                if ($scored['score'] !== null) {
+                    \StratFlow\Models\UserStory::update($this->db, $lastId, [
+                        'quality_score'     => $scored['score'],
+                        'quality_breakdown' => json_encode($scored['breakdown'])
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {}
+
                 $totalCreated++;
                 // Quality scoring is deferred — scores are null until first update or "Improve with AI"
             }

@@ -262,6 +262,27 @@ class WorkItemController
                                          : null,
             ]);
 
+        // Initial quality score
+        $qualityBlock = '';
+        try {
+            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable $e) {}
+        try {
+            $lastId = (int)$this->db->lastInsertId();
+            $newItem = \StratFlow\Models\HLWorkItem::findById($this->db, $lastId);
+            if ($newItem) {
+                $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+                $scored = $scorer->scoreWorkItem($newItem, $qualityBlock);
+                if ($scored['score'] !== null) {
+                    \StratFlow\Models\HLWorkItem::update($this->db, $lastId, [
+                        'quality_score'     => $scored['score'],
+                        'quality_breakdown' => json_encode($scored['breakdown'])
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {}
+
+
             $priorityToId[$priorityNumber] = $newId;
         }
 

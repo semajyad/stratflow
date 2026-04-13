@@ -12,7 +12,9 @@ $s = $settings;
 
 <div class="page-header">
     <h1 class="page-title">App Wide Defaults</h1>
-    <p class="page-subtitle">System-wide configuration applied to all new organisations and features.</p>
+    <p class="page-subtitle">
+        <a href="/superadmin">&larr; Back to Superadmin Dashboard</a>
+    </p>
 </div>
 
 <?php if (!empty($flash_message)): ?>
@@ -53,8 +55,8 @@ $s = $settings;
                     <div class="form-group">
                         <label class="form-label">Model Identifier</label>
                         <input type="text" name="ai_model" class="form-input"
-                               value="<?= htmlspecialchars($s['ai_model'] ?? 'gemini-2.5-flash') ?>"
-                               placeholder="e.g. gemini-2.5-flash, gpt-4o, claude-sonnet-4-6">
+                               value="<?= htmlspecialchars($s['ai_model'] ?? 'gemini-3.0-preview') ?>"
+                               placeholder="e.g. gemini-3.0-preview, gpt-4o, claude-sonnet-4-6">
                         <small class="text-muted">Enter the exact model identifier.</small>
                     </div>
                     <?php
@@ -149,8 +151,7 @@ $s = $settings;
             </button>
             <div class="accordion-body">
                 <p class="text-muted settings-intro">
-                    Set the standard price per seat for each billing cycle. These are used as defaults when assigning billing to a new organisation.
-                    Discounts for longer periods are applied automatically (e.g. 10% off quarterly).
+                    Set the standard price per seat for monthly and annual billing cycles. These are used as defaults when assigning billing to a new organisation.
                 </p>
                 <div class="settings-rates-grid">
                     <!-- Currency -->
@@ -166,8 +167,6 @@ $s = $settings;
                     <?php
                     $rateRows = [
                         ['billing_rate_monthly',   'Monthly',    1,  'billing_rate_monthly_cents'],
-                        ['billing_rate_quarterly',  'Quarterly',  3,  'billing_rate_quarterly_cents'],
-                        ['billing_rate_6monthly',   '6-Monthly',  6,  'billing_rate_6monthly_cents'],
                         ['billing_rate_annual',     'Annual',     12, 'billing_rate_annual_cents'],
                     ];
                     foreach ($rateRows as [$fieldName, $label, $months, $settingsKey]):

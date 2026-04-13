@@ -77,21 +77,65 @@ class GeminiService
      */
     public function generateJson(string $prompt, string $input): array
     {
+        // First attempt with original prompt
+        $text = $this->fetchJsonText($prompt, $input);
+        $result = $this->tryParseJson($text);
+        if ($result !== null) {
+            return $result;
+        }
+
+        // Attempt 6: Retry the entire API call with a reinforced prompt.
+        // This handles cases where the original response was truncated or malformed.
+        error_log('[GeminiService] Parse attempts 1-5 failed (error=' . json_last_error() . ': ' . json_last_error_msg() . '). Retrying API call with reinforced prompt.');
+        error_log('[GeminiService] Failed raw (first 500): ' . substr($text, 0, 500));
+
+        $reinforced = $prompt . "\n\nCRITICAL: You MUST return ONLY a valid JSON array or object. "
+            . "No markdown fences, no explanation text before or after. "
+            . "Ensure all strings are properly escaped. Close all brackets and braces.";
+
+        $text2 = $this->fetchJsonText($reinforced, $input);
+        $result2 = $this->tryParseJson($text2);
+        if ($result2 !== null) {
+            error_log('[GeminiService] Retry succeeded — parsed JSON on second attempt.');
+            return $result2;
+        }
+
+        error_log('[GeminiService] All JSON parse attempts failed including retry. Raw (first 500): ' . substr($text2, 0, 500));
+        throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
+    }
+
+    /**
+     * Fetch raw text from the AI for a JSON-mode request.
+     *
+     * @param string $prompt System/instruction prompt
+     * @param string $input  Source content
+     * @return string        Raw response text
+     */
+    private function fetchJsonText(string $prompt, string $input): string
+    {
         try {
             $url  = $this->buildUrl('generateContent');
             $body = $this->buildBody($prompt, $input, responseMimeType: 'application/json');
             $response = $this->makeRequest($url, $body);
-            $text = $response['candidates'][0]['content']['parts'][0]['text']
+            return $response['candidates'][0]['content']['parts'][0]['text']
                 ?? throw new \RuntimeException('Unexpected Gemini response format');
         } catch (\Throwable $e) {
             if ($this->openaiKey !== '') {
                 error_log('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI for JSON');
-                $text = $this->openaiGenerate($prompt . "\n\nRespond with valid JSON only. No markdown fences.", $input);
-            } else {
-                throw $e;
+                return $this->openaiGenerate($prompt . "\n\nRespond with valid JSON only. No markdown fences.", $input);
             }
+            throw $e;
         }
+    }
 
+    /**
+     * Try parsing AI response text as JSON through 5 escalating strategies.
+     *
+     * @param string $text Raw AI response
+     * @return array|null  Decoded array, or null if all strategies failed
+     */
+    private function tryParseJson(string $text): ?array
+    {
         $text = trim($text);
 
         // Strip markdown code fences — handle both leading and trailing,
@@ -133,8 +177,29 @@ class GeminiService
             }
         }
 
-        error_log('[GeminiService] All JSON parse attempts failed. Raw (first 800): ' . substr($text, 0, 800));
-        throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
+        // Attempt 4: Aggressively strip ALL control characters (including newlines) from the
+        // string. This destroys formatting but guarantees no JSON_ERROR_CTRL_CHAR.
+        $aggressive = preg_replace('/[\x00-\x1F\x7F]/', '', $sanitized);
+        $extractedAgress = $this->extractJsonBlock($aggressive);
+        if ($extractedAgress !== null) {
+            $decoded = json_decode($extractedAgress, true, 512, JSON_INVALID_UTF8_IGNORE);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decoded;
+            }
+        }
+
+        // Attempt 5: Attempt to fix unescaped double quotes inside values using a regex heuristic
+        $fixedQuotes = preg_replace('/(?<=w)"(?=w)/', '\\"', $sanitized);
+        $fixedQuotes = preg_replace('/[\x00-\x1F\x7F]/', '', $fixedQuotes);
+        $extractedFixed = $this->extractJsonBlock($fixedQuotes);
+        if ($extractedFixed !== null) {
+            $decoded = json_decode($extractedFixed, true, 512, JSON_INVALID_UTF8_IGNORE);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decoded;
+            }
+        }
+
+        return null;
     }
 
     // ===========================
@@ -272,7 +337,7 @@ class GeminiService
             ],
             'generationConfig' => [
                 'temperature'     => 0.4,
-                'maxOutputTokens' => 4096,
+                'maxOutputTokens' => 8192,
             ],
         ];
 
