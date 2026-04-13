@@ -50,9 +50,13 @@
         <?php endif; ?>
     </div>
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
-    <?php if (($show_quality ?? true) && $story['quality_score'] !== null): ?>
+    <?php if (($showQuality ?? false)): ?>
+    <?php if ($story['quality_score'] !== null): ?>
     <?php $qs = (int) $story['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <?php else: ?>
+    <span class="quality-pill js-quality-score-placeholder" data-id="<?= (int) $story['id'] ?>" data-type="story" title="Calculating quality score...">...</span>
+    <?php endif; ?>
     <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>
     <?php
@@ -100,7 +104,8 @@
         $storyBreakdown = json_decode($story['quality_breakdown'], true);
     }
     ?>
-    <?php if (($show_quality ?? true) && $storyBreakdown !== null): ?>
+    <div class="js-quality-breakdown-container" data-id="<?= (int) $story['id'] ?>" data-type="story">
+    <?php if (($showQuality ?? false) && $storyBreakdown !== null): ?>
     <div class="story-expand-section">
         <span class="story-expand-label">Quality Breakdown</span>
         <div class="quality-breakdown">
@@ -143,5 +148,6 @@
         </form>
     </div>
     <?php endif; ?>
+    </div>
 </div>
 </details>

@@ -6425,6 +6425,18 @@ details[open] > summary .trace-chevron {
     flex-shrink: 0;
 }
 
+.js-quality-score-placeholder {
+    animation: quality-pill-pulse 1.5s infinite ease-in-out;
+    background: #e2e8f0 !important;
+    color: #4b5563 !important;
+}
+
+@keyframes quality-pill-pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
 .quality-breakdown {
     display: flex;
     flex-direction: column;

@@ -44,7 +44,7 @@ class KrController
 
         if ($workItemId === 0) {
             http_response_code(400);
-            echo json_encode(['error' => 'hl_work_item_id required']);
+            echo json_encode(['error' => 'High Level Work Item ID required']);
             return;
         }
 

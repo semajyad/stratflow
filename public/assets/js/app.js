@@ -424,7 +424,7 @@ document.addEventListener('change', function(e) {
         return;
     }
 
-    var selectAllStories = e.target.closest('.js-select-all-hl');
+    var selectAllStories = e.target.closest('.js-select-all-items');
     if (selectAllStories) {
         var splitForm = selectAllStories.closest('form');
         if (splitForm) {
@@ -3662,3 +3662,98 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-style-background]').forEach(el => { el.style.background = el.getAttribute('data-style-background'); });
     document.querySelectorAll('[data-style-color]').forEach(el => { el.style.color = el.getAttribute('data-style-color'); });
 });
+
+// ===========================
+// Quality Score Background Loader
+// ===========================
+(function() {
+    function QualityScoreManager() {
+        this.queue = [];
+        this.activeCount = 0;
+        this.maxConcurrent = 2; // Gemini rate limit consideration
+        this.csrfToken = document.querySelector('input[name="_csrf_token"]')?.value;
+    }
+
+    QualityScoreManager.prototype.init = function() {
+        var self = this;
+        document.querySelectorAll('.js-quality-score-placeholder').forEach(function(el) {
+            self.queue.push({
+                el: el,
+                id: el.dataset.id,
+                type: el.dataset.type // 'story' or 'work-item'
+            });
+        });
+
+        if (this.queue.length > 0) {
+            this.processQueue();
+        }
+    };
+
+    QualityScoreManager.prototype.processQueue = function() {
+        var self = this;
+        // If nothing left or we're at capacity, stop
+        if (this.queue.length === 0 || this.activeCount >= this.maxConcurrent) {
+            return;
+        }
+
+        var task = this.queue.shift();
+        this.activeCount++;
+
+        var url = task.type === 'story'
+            ? '/app/user-stories/' + task.id + '/score'
+            : '/app/work-items/' + task.id + '/score';
+
+        var formData = new FormData();
+        if (this.csrfToken) formData.append('_csrf_token', this.csrfToken);
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(function(data) {
+            if (data.status === 'ok') {
+                self.updateUI(task, data);
+            } else {
+                task.el.textContent = '!';
+                task.el.title = data.message || 'Scoring failed';
+                task.el.style.backgroundColor = '#6b7280';
+            }
+        })
+        .catch(function(err) {
+            task.el.textContent = '!';
+            task.el.style.backgroundColor = '#6b7280';
+            console.error('Quality scoring failed:', err);
+        })
+        .finally(function() {
+            self.activeCount--;
+            // Trigger next batch
+            setTimeout(function() { self.processQueue(); }, 200);
+        });
+
+        // Try to start another if we have capacity
+        if (this.activeCount < this.maxConcurrent) {
+            this.processQueue();
+        }
+    };
+
+    QualityScoreManager.prototype.updateUI = function(task, data) {
+        var score = data.score;
+        var color = score >= 80 ? '#10b981' : (score >= 50 ? '#f59e0b' : '#ef4444');
+
+        // Update pill
+        task.el.textContent = score;
+        task.el.style.background = color; // Use .background for consistency with existing code
+        task.el.title = 'Quality score: ' + score + '/100';
+        task.el.classList.remove('js-quality-score-placeholder');
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var manager = new QualityScoreManager();
+        manager.init();
+    });
+})();

@@ -61,9 +61,9 @@ $unlinkedStories = $storiesByItem[0] ?? [];
               data-overlay="Decomposing work items into user stories. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="hl-selector">
+            <div class="high-level-selector">
                 <label class="checkbox-label gen-style-fcb571">
-                    <input type="checkbox" id="select-all-hl" class="js-select-all-hl">
+                    <input type="checkbox" id="select-all-items" class="js-select-all-items">
                     Select All
                 </label>
                 <?php foreach ($work_items as $wi): ?>

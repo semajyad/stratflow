@@ -119,6 +119,11 @@ class WorkItemController
         $hlSizingMethod     = $orgSettings['hl_item_sizing_method'] ?? 'sprints';
         $sprintLengthWeeks  = (int) ($orgSettings['sprint_length_weeks'] ?? 2);
 
+        // Quality visibility: off when disabled at system level OR at org level
+        $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
+        $showQuality    = !empty($systemSettings['feature_story_quality'])
+                          && ($orgSettings['quality']['enabled'] ?? false);
+
         $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
 
         $this->response->render('work-items', [
@@ -132,6 +137,7 @@ class WorkItemController
             'field_order_wi'       => $fieldOrderWi,
             'hl_sizing_method'     => $hlSizingMethod,
             'sprint_length_weeks'  => $sprintLengthWeeks,
+            'showQuality'          => $showQuality,
             'active_page'          => 'work-items',
             'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
             'flash_message'        => $_SESSION['flash_message'] ?? null,
@@ -261,27 +267,6 @@ class WorkItemController
                                          ? mb_substr((string) $item['kr_hypothesis'], 0, 500)
                                          : null,
             ]);
-
-        // Initial quality score
-        $qualityBlock = '';
-        try {
-            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable $e) {}
-        try {
-            $lastId = (int)$this->db->lastInsertId();
-            $newItem = \StratFlow\Models\HLWorkItem::findById($this->db, $lastId);
-            if ($newItem) {
-                $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
-                $scored = $scorer->scoreWorkItem($newItem, $qualityBlock);
-                if ($scored['score'] !== null) {
-                    \StratFlow\Models\HLWorkItem::update($this->db, $lastId, [
-                        'quality_score'     => $scored['score'],
-                        'quality_breakdown' => json_encode($scored['breakdown'])
-                    ]);
-                }
-            }
-        } catch (\Throwable $e) {}
-
 
             $priorityToId[$priorityNumber] = $newId;
         }
@@ -741,6 +726,72 @@ class WorkItemController
         HLWorkItem::update($this->db, $id, ['description' => $description]);
 
         $this->response->json(['status' => 'ok', 'description' => $description]);
+    }
+
+    /**
+     * AJAX endpoint to calculate and update the quality score for a work item.
+     *
+     * @param int $id HL work item primary key
+     */
+    public function score(int $id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $item = \StratFlow\Models\HLWorkItem::findById($this->db, $id);
+        if ($item === null) {
+            $this->response->json(['status' => 'error', 'message' => 'Work item not found'], 404);
+            return;
+        }
+
+        $project = \StratFlow\Models\ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
+        if ($project === null) {
+            $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
+            return;
+        }
+
+        // Verify that BOTH Super Admin and Admin have enabled quality scores
+        $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
+        $orgRow         = \StratFlow\Models\Organisation::findById($this->db, $orgId);
+        $orgSettings    = $orgRow && !empty($orgRow['settings_json'])
+            ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
+        
+        $showQuality = !empty($systemSettings['feature_story_quality'])
+                       && ($orgSettings['quality']['enabled'] ?? false);
+
+        if (!$showQuality) {
+            $this->response->json(['status' => 'error', 'message' => 'Quality scoring is disabled'], 403);
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        try {
+            $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+            $scored = $scorer->scoreWorkItem($item, $qualityBlock);
+
+            if ($scored['score'] !== null) {
+                \StratFlow\Models\HLWorkItem::update($this->db, $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown'])
+                ]);
+
+                $this->response->json([
+                    'status'    => 'ok',
+                    'score'     => $scored['score'],
+                    'breakdown' => $scored['breakdown']
+                ]);
+                return;
+            }
+        } catch (\Throwable $e) {
+            $this->response->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return;
+        }
+
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed'], 500);
     }
 
     /**

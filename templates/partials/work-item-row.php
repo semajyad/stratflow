@@ -53,9 +53,13 @@
         <p class="work-item-desc-preview"><?= htmlspecialchars(substr($item['description'] ?? '', 0, 120)) ?><?= strlen($item['description'] ?? '') > 120 ? '...' : '' ?></p>
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>
+    <?php if (($showQuality ?? false)): ?>
     <?php if ($item['quality_score'] !== null): ?>
     <?php $qs = (int) $item['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <?php else: ?>
+    <span class="quality-pill js-quality-score-placeholder" data-id="<?= (int) $item['id'] ?>" data-type="work-item" title="Calculating quality score...">...</span>
+    <?php endif; ?>
     <?php endif; ?>
     <span class="work-item-owner"><?= htmlspecialchars($item['owner'] ?? 'Unassigned') ?></span>
     <?php
@@ -103,7 +107,8 @@
         $wiBreakdown = json_decode($item['quality_breakdown'], true);
     }
     ?>
-    <?php if ($wiBreakdown !== null): ?>
+    <div class="js-quality-breakdown-container" data-id="<?= (int) $item['id'] ?>" data-type="work-item">
+    <?php if (($showQuality ?? false) && $wiBreakdown !== null): ?>
     <div class="story-expand-section">
         <span class="story-expand-label">Quality Breakdown</span>
         <div class="quality-breakdown">
@@ -147,5 +152,6 @@
         </form>
     </div>
     <?php endif; ?>
+    </div>
 </div>
 </details>

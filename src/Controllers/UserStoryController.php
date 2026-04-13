@@ -95,7 +95,7 @@ class UserStoryController
         // Quality visibility: off when disabled at system level OR at org level
         $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
         $showQuality    = !empty($systemSettings['feature_story_quality'])
-                          && ($orgSettings['quality']['enabled'] ?? true);
+                          && ($orgSettings['quality']['enabled'] ?? false);
 
         $this->response->render('user-stories', [
             'user'                 => $user,
@@ -226,28 +226,7 @@ class UserStoryController
                                              : null,
                 ]);
 
-        // Initial quality score
-        $qualityBlock = '';
-        try {
-            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable $e) {}
-        try {
-            $lastId = (int)$this->db->lastInsertId();
-            $newStory = \StratFlow\Models\UserStory::findById($this->db, $lastId);
-            if ($newStory) {
-                $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
-                $scored = $scorer->scoreStory($newStory, $qualityBlock);
-                if ($scored['score'] !== null) {
-                    \StratFlow\Models\UserStory::update($this->db, $lastId, [
-                        'quality_score'     => $scored['score'],
-                        'quality_breakdown' => json_encode($scored['breakdown'])
-                    ]);
-                }
-            }
-        } catch (\Throwable $e) {}
-
                 $totalCreated++;
-                // Quality scoring is deferred — scores are null until first update or "Improve with AI"
             }
         }
 
@@ -846,6 +825,72 @@ PROMPT;
         fclose($handle);
 
         $this->response->download($content, $safeName . '_user_stories.csv', 'text/csv');
+    }
+
+    /**
+     * AJAX endpoint to calculate and update the quality score for a story.
+     *
+     * @param int $id User story primary key
+     */
+    public function score(int $id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $story = \StratFlow\Models\UserStory::findById($this->db, $id);
+        if ($story === null) {
+            $this->response->json(['status' => 'error', 'message' => 'Story not found'], 404);
+            return;
+        }
+
+        $project = \StratFlow\Models\ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
+        if ($project === null) {
+            $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
+            return;
+        }
+
+        // Verify that BOTH Super Admin and Admin have enabled quality scores
+        $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
+        $orgRow         = \StratFlow\Models\Organisation::findById($this->db, $orgId);
+        $orgSettings    = $orgRow && !empty($orgRow['settings_json'])
+            ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
+        
+        $showQuality = !empty($systemSettings['feature_story_quality'])
+                       && ($orgSettings['quality']['enabled'] ?? false);
+
+        if (!$showQuality) {
+            $this->response->json(['status' => 'error', 'message' => 'Quality scoring is disabled'], 403);
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        try {
+            $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+            $scored = $scorer->scoreStory($story, $qualityBlock);
+
+            if ($scored['score'] !== null) {
+                \StratFlow\Models\UserStory::update($this->db, $id, [
+                    'quality_score'     => $scored['score'],
+                    'quality_breakdown' => json_encode($scored['breakdown'])
+                ]);
+
+                $this->response->json([
+                    'status'    => 'ok',
+                    'score'     => $scored['score'],
+                    'breakdown' => $scored['breakdown']
+                ]);
+                return;
+            }
+        } catch (\Throwable $e) {
+            $this->response->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return;
+        }
+
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed'], 500);
     }
 
     /**
