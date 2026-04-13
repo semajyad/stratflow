@@ -226,37 +226,6 @@ class UserStoryController
                                              : null,
                 ]);
 
-                // Score immediately so the user sees real scores on page load.
-                // If the score is below 80, run one improvement pass (capped to prevent latency blowout).
-                try {
-                    $freshStory   = UserStory::findById($this->db, $newStoryId);
-                    $geminiSvc    = new GeminiService($this->config);
-                    $scorer       = new StoryQualityScorer($geminiSvc);
-                    $scored       = $scorer->scoreStory($freshStory, $qualityBlock);
-                    if ($scored['score'] !== null) {
-                        if ($scored['score'] < 80) {
-                            // One improvement pass — never recurse
-                            $improver       = new StoryImprovementService($geminiSvc);
-                            $improvedFields = $improver->improveStory($freshStory, $scored['breakdown'], $qualityBlock);
-                            if (!empty($improvedFields)) {
-                                UserStory::update($this->db, $newStoryId, $improvedFields);
-                                $freshStory = array_merge($freshStory, $improvedFields);
-                            }
-                            $scored2 = $scorer->scoreStory($freshStory, $qualityBlock);
-                            if ($scored2['score'] !== null) {
-                                UserStory::markQualityScored($this->db, $newStoryId, $scored2['score'], $scored2['breakdown']);
-                            } else {
-                                UserStory::markQualityScored($this->db, $newStoryId, $scored['score'], $scored['breakdown']);
-                            }
-                        } else {
-                            UserStory::markQualityScored($this->db, $newStoryId, $scored['score'], $scored['breakdown']);
-                        }
-                    }
-                    // On failure, quality_status stays 'pending' — the async worker will retry
-                } catch (\Throwable) {
-                    // Non-fatal: worker will pick it up on its next tick
-                }
-
                 $totalCreated++;
             }
         }

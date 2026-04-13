@@ -271,41 +271,6 @@ class WorkItemController
             $priorityToId[$priorityNumber] = $newId;
         }
 
-        // Score each new item immediately so the user sees real scores on page load.
-        // One improvement pass if score <80 (capped to prevent latency blowout).
-        try {
-            $geminiSvc = new GeminiService($this->config);
-            $scorer    = new StoryQualityScorer($geminiSvc);
-            $improver  = new StoryImprovementService($geminiSvc);
-            foreach ($priorityToId as $newId) {
-                $freshItem = HLWorkItem::findById($this->db, $newId);
-                if ($freshItem === null) {
-                    continue;
-                }
-                $scored = $scorer->scoreWorkItem($freshItem, $qualityBlock);
-                if ($scored['score'] !== null) {
-                    if ($scored['score'] < 80) {
-                        $improvedFields = $improver->improveWorkItem($freshItem, $scored['breakdown'], $qualityBlock);
-                        if (!empty($improvedFields)) {
-                            HLWorkItem::update($this->db, $newId, $improvedFields);
-                            $freshItem = array_merge($freshItem, $improvedFields);
-                        }
-                        $scored2 = $scorer->scoreWorkItem($freshItem, $qualityBlock);
-                        if ($scored2['score'] !== null) {
-                            HLWorkItem::markQualityScored($this->db, $newId, $scored2['score'], $scored2['breakdown']);
-                        } else {
-                            HLWorkItem::markQualityScored($this->db, $newId, $scored['score'], $scored['breakdown']);
-                        }
-                    } else {
-                        HLWorkItem::markQualityScored($this->db, $newId, $scored['score'], $scored['breakdown']);
-                    }
-                }
-                // On failure, quality_status stays 'pending' — the async worker will retry
-            }
-        } catch (\Throwable) {
-            // Non-fatal: worker will pick up any unscored items on its next tick
-        }
-
         // Second pass: create dependency records using the priority → id map
         foreach ($itemsData as $index => $item) {
             $priorityNumber  = (int) ($item['priority_number'] ?? ($index + 1));
