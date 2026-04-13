@@ -7319,16 +7319,32 @@ a.okr-title:hover {
 
 .integration-actions {
     display: flex;
-    gap: 0.5rem;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
 }
 
+.integration-actions-main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    flex-wrap: nowrap;
+}
+
+.integration-sync-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .integration-inline-form {
-    display: inline;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
 }
 
 .integration-push-form {
@@ -7338,15 +7354,16 @@ a.okr-title:hover {
 }
 
 .integration-select-compact {
-    width: 160px;
+    width: 140px;
     height: 32px;
     font-size: 0.85rem;
     padding: 2px 8px;
-  }
+}
 
-  .integration-actions-danger {
+.integration-actions-danger {
     margin-left: auto;
-  }
+    flex-shrink: 0;
+}
 
   .btn-outline-danger {
     color: var(--danger-color);
