@@ -499,37 +499,7 @@ class UserStoryController
             return;
         }
 
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-
-        // Ensure we have a breakdown to work from
-        if ($story['quality_score'] === null || empty($story['quality_breakdown'])) {
-            $scorer = new StoryQualityScorer(new GeminiService($this->config));
-            $scored = $scorer->scoreStory($story, $qualityBlock);
-            if ($scored['score'] !== null) {
-                UserStory::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
-                $story = UserStory::findById($this->db, (int) $id);
-            }
-        }
-
-        $breakdown = !empty($story['quality_breakdown'])
-            ? json_decode((string) $story['quality_breakdown'], true)
-            : null;
-
-        if ($breakdown === null) {
-            $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
-            return;
-        }
-
-        $improver       = new StoryImprovementService(new GeminiService($this->config));
-        $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
-
-        if (!empty($improvedFields)) {
-            UserStory::update($this->db, (int) $id, $improvedFields);
-        }
-
+        // Mark pending and redirect immediately — the async worker handles improvement + re-score
         UserStory::markQualityPending($this->db, (int) $id);
         $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
     }
@@ -549,13 +519,8 @@ class UserStoryController
             return;
         }
 
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-
         $rows = $this->db->query(
-            "SELECT s.* FROM user_stories s
+            "SELECT s.id FROM user_stories s
              JOIN projects p ON p.id = s.project_id
              WHERE s.project_id = :pid
                AND p.org_id = :oid
@@ -567,22 +532,7 @@ class UserStoryController
         )->fetchAll();
 
         $refined = 0;
-        $geminiSvc = new GeminiService($this->config);
-        $improver  = new StoryImprovementService($geminiSvc);
-
         foreach ($rows as $story) {
-            $breakdown = !empty($story['quality_breakdown'])
-                ? json_decode((string) $story['quality_breakdown'], true)
-                : null;
-
-            if ($breakdown === null) {
-                continue;
-            }
-
-            $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
-            if (!empty($improvedFields)) {
-                UserStory::update($this->db, (int) $story['id'], $improvedFields);
-            }
             UserStory::markQualityPending($this->db, (int) $story['id']);
             $refined++;
         }

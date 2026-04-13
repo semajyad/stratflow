@@ -572,37 +572,7 @@ class WorkItemController
             return;
         }
 
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-
-        // Ensure we have a breakdown to work from
-        if ($item['quality_score'] === null || empty($item['quality_breakdown'])) {
-            $scorer = new StoryQualityScorer(new GeminiService($this->config));
-            $scored = $scorer->scoreWorkItem($item, $qualityBlock);
-            if ($scored['score'] !== null) {
-                HLWorkItem::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
-                $item = HLWorkItem::findById($this->db, (int) $id);
-            }
-        }
-
-        $breakdown = !empty($item['quality_breakdown'])
-            ? json_decode((string) $item['quality_breakdown'], true)
-            : null;
-
-        if ($breakdown === null) {
-            $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id']);
-            return;
-        }
-
-        $improver       = new StoryImprovementService(new GeminiService($this->config));
-        $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
-
-        if (!empty($improvedFields)) {
-            HLWorkItem::update($this->db, (int) $id, $improvedFields);
-        }
-
+        // Mark pending and redirect immediately — the async worker handles improvement + re-score
         HLWorkItem::markQualityPending($this->db, (int) $id);
         $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id']);
     }
@@ -622,13 +592,8 @@ class WorkItemController
             return;
         }
 
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-
         $rows = $this->db->query(
-            "SELECT wi.* FROM hl_work_items wi
+            "SELECT wi.id FROM hl_work_items wi
              JOIN projects p ON p.id = wi.project_id
              WHERE wi.project_id = :pid
                AND p.org_id = :oid
@@ -640,22 +605,7 @@ class WorkItemController
         )->fetchAll();
 
         $refined = 0;
-        $geminiSvc = new GeminiService($this->config);
-        $improver  = new StoryImprovementService($geminiSvc);
-
         foreach ($rows as $item) {
-            $breakdown = !empty($item['quality_breakdown'])
-                ? json_decode((string) $item['quality_breakdown'], true)
-                : null;
-
-            if ($breakdown === null) {
-                continue;
-            }
-
-            $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
-            if (!empty($improvedFields)) {
-                HLWorkItem::update($this->db, (int) $item['id'], $improvedFields);
-            }
             HLWorkItem::markQualityPending($this->db, (int) $item['id']);
             $refined++;
         }

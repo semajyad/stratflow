@@ -39,9 +39,10 @@ foreach ($argv as $arg) {
 // ===========================
 
 try {
-    $db     = new \StratFlow\Core\Database($config['db']);
-    $gemini = new \StratFlow\Services\GeminiService($config);
-    $scorer = new \StratFlow\Services\StoryQualityScorer($gemini);
+    $db      = new \StratFlow\Core\Database($config['db']);
+    $gemini  = new \StratFlow\Services\GeminiService($config);
+    $scorer  = new \StratFlow\Services\StoryQualityScorer($gemini);
+    $improver = new \StratFlow\Services\StoryImprovementService($gemini);
 } catch (\Throwable $e) {
     fwrite(STDERR, '[score_quality] Bootstrap failed: ' . $e->getMessage() . PHP_EOL);
     exit(1);
@@ -119,21 +120,27 @@ function fetch_workload(\StratFlow\Core\Database $db, string $table, int $limit)
 
 /**
  * Score one batch for a given table.
+ * If a row scores below 80, run one improvement pass then re-score in the same cycle.
  *
- * @param  \StratFlow\Core\Database     $db
- * @param  \StratFlow\Services\StoryQualityScorer $scorer
- * @param  string                       $table   'user_stories' or 'hl_work_items'
- * @param  string                       $model   'UserStory' or 'HLWorkItem'
- * @param  string                       $method  'scoreStory' or 'scoreWorkItem'
- * @param  int                          $limit
+ * @param  \StratFlow\Core\Database                   $db
+ * @param  \StratFlow\Services\StoryQualityScorer      $scorer
+ * @param  \StratFlow\Services\StoryImprovementService $improver
+ * @param  string                                      $table    'user_stories' or 'hl_work_items'
+ * @param  string                                      $model    'UserStory' or 'HLWorkItem'
+ * @param  string                                      $scoreMethod  'scoreStory' or 'scoreWorkItem'
+ * @param  string                                      $improveMethod 'improveStory' or 'improveWorkItem'
+ * @param  string                                      $updateModel  model class for update calls
+ * @param  int                                         $limit
  * @return array{scored: int, failed: int, errors: list<string>}
  */
 function score_batch(
     \StratFlow\Core\Database $db,
     \StratFlow\Services\StoryQualityScorer $scorer,
+    \StratFlow\Services\StoryImprovementService $improver,
     string $table,
     string $model,
-    string $method,
+    string $scoreMethod,
+    string $improveMethod,
     int $limit
 ): array {
     $rows = fetch_workload($db, $table, $limit);
@@ -152,15 +159,31 @@ function score_batch(
             // Empty block — scorer still runs; dimensions won't be org-customised
         }
 
-        $result = $scorer->{$method}($row, $qualityBlock);
+        $modelClass = 'StratFlow\\Models\\' . $model;
+
+        $result = $scorer->{$scoreMethod}($row, $qualityBlock);
 
         if ($result['score'] !== null) {
-            $modelClass = 'StratFlow\\Models\\' . $model;
+            // If below threshold, improve the failing dimensions then re-score
+            if ($result['score'] < 80) {
+                try {
+                    $improvedFields = $improver->{$improveMethod}($row, $result['breakdown'], $qualityBlock);
+                    if (!empty($improvedFields)) {
+                        $modelClass::update($db, $id, $improvedFields);
+                        $row = array_merge($row, $improvedFields);
+                    }
+                    $result2 = $scorer->{$scoreMethod}($row, $qualityBlock);
+                    if ($result2['score'] !== null) {
+                        $result = $result2;
+                    }
+                } catch (\Throwable) {
+                    // Improvement failed — still persist the original score
+                }
+            }
             $modelClass::markQualityScored($db, $id, $result['score'], $result['breakdown']);
             $stats['scored']++;
         } else {
             $errorKey = $result['error'] ?? 'unknown';
-            $modelClass = 'StratFlow\\Models\\' . $model;
             $modelClass::markQualityFailed($db, $id, $attempts, $errorKey);
             $stats['failed']++;
             $stats['errors'][] = $errorKey;
@@ -174,8 +197,8 @@ function score_batch(
 // MAIN
 // ===========================
 
-$storyStats = score_batch($db, $scorer, 'user_stories', 'UserStory', 'scoreStory', $limit);
-$itemStats  = score_batch($db, $scorer, 'hl_work_items', 'HLWorkItem', 'scoreWorkItem', $limit);
+$storyStats = score_batch($db, $scorer, $improver, 'user_stories', 'UserStory', 'scoreStory', 'improveStory', $limit);
+$itemStats  = score_batch($db, $scorer, $improver, 'hl_work_items', 'HLWorkItem', 'scoreWorkItem', 'improveWorkItem', $limit);
 
 $totalScored = $storyStats['scored'] + $itemStats['scored'];
 $totalFailed = $storyStats['failed'] + $itemStats['failed'];

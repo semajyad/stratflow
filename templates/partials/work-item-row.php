@@ -59,7 +59,7 @@
     <?php $qs = (int) $item['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
     <?php elseif ($qStatus === 'failed'): ?>
-    <span class="quality-pill quality-pill--failed" title="<?= htmlspecialchars('Scoring failed: ' . ($item['quality_error'] ?? 'unknown'), ENT_QUOTES, 'UTF-8') ?>">!</span>
+    <span class="quality-pill quality-pill--pending" title="<?= htmlspecialchars('Scoring failed: ' . ($item['quality_error'] ?? 'retrying…'), ENT_QUOTES, 'UTF-8') ?>"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
     <?php elseif ($qStatus === 'skipped'): ?>
     <?php /* skipped = quality disabled for this org; render nothing */ ?>
     <?php else: ?>
