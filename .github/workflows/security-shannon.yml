@@ -1,0 +1,143 @@
+name: Shannon Overnight Pen Test
+
+# Shannon (@keygraph/shannon) is an AI-powered penetration testing tool.
+# It runs overnight against the live production URL, analyses both the
+# running application and the source code, and writes a report to
+# security-reports/shannon-latest.md.
+#
+# The morning CLAUDE.md rule reads that file and addresses any HIGH/MEDIUM
+# findings before other work begins.
+#
+# Required GitHub Secret: ANTHROPIC_API_KEY
+# Optional GitHub Variable: SHANNON_TARGET_URL (defaults to production Railway URL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL to scan"
+        required: false
+        default: "https://stratflow-app-production.up.railway.app"
+        type: string
+      pipeline_testing:
+        description: "Use --pipeline-testing mode (faster, lower cost)"
+        required: false
+        default: true
+        type: boolean
+  # 14:00 UTC daily = ~2 am NZT (overnight) — results ready for morning review
+  schedule:
+    - cron: "0 14 * * *"
+
+jobs:
+  shannon:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit the report back to the repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch with a token that can push back the report commit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve scan target
+        id: target
+        run: |
+          URL="${{ inputs.target_url || vars.SHANNON_TARGET_URL || 'https://stratflow-app-production.up.railway.app' }}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run Shannon pen test
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          WORKSPACE="shannon-$(date +%Y%m%d-%H%M%S)"
+          PIPELINE_FLAG=""
+          # Use pipeline-testing on schedule; respect input on manual dispatch
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.pipeline_testing }}" = "true" ]; then
+            PIPELINE_FLAG="--pipeline-testing"
+          fi
+
+          echo "Target:    ${{ steps.target.outputs.url }}"
+          echo "Workspace: $WORKSPACE"
+          echo "Flags:     $PIPELINE_FLAG"
+
+          # Run Shannon; capture exit code without failing the job immediately
+          npx -y @keygraph/shannon@latest start \
+            --url "${{ steps.target.outputs.url }}" \
+            --repo "." \
+            --workspace "$WORKSPACE" \
+            --output "./security-reports/shannon-nightly" \
+            $PIPELINE_FLAG || SHANNON_EXIT=$?
+
+          if [ -n "$SHANNON_EXIT" ] && [ "$SHANNON_EXIT" -ne 0 ]; then
+            echo "::warning::Shannon exited with code $SHANNON_EXIT — review the report artifact."
+          fi
+
+      - name: Promote latest report to shannon-latest.md
+        run: |
+          REPORT_DIR="./security-reports/shannon-nightly"
+          LATEST="./security-reports/shannon-latest.md"
+
+          if [ -d "$REPORT_DIR" ]; then
+            # Find the most recently modified .md file produced by this run
+            FOUND=$(find "$REPORT_DIR" -name "*.md" -newer "./security-reports/shannon-latest.md" 2>/dev/null \
+                    | sort -t- -k1 | tail -1)
+            if [ -z "$FOUND" ]; then
+              # Fallback: newest .md regardless of timestamp comparison
+              FOUND=$(find "$REPORT_DIR" -name "*.md" | sort | tail -1)
+            fi
+            if [ -n "$FOUND" ]; then
+              echo "Promoting $FOUND → $LATEST"
+              cp "$FOUND" "$LATEST"
+            else
+              echo "No .md report found in $REPORT_DIR" >> "$LATEST"
+            fi
+          else
+            # Shannon may write directly to the output path if it's a file
+            if [ -f "$REPORT_DIR.md" ]; then
+              cp "$REPORT_DIR.md" "$LATEST"
+            else
+              {
+                echo "# Shannon Report"
+                echo ""
+                echo "No output file found. Check the workflow log for Shannon output."
+                echo ""
+                echo "Run: $(date -u '+%Y-%m-%d %H:%M UTC')"
+              } > "$LATEST"
+            fi
+          fi
+
+          # Prepend run metadata so the morning reader knows how fresh it is
+          TMPFILE=$(mktemp)
+          {
+            echo "<!-- Shannon run: $(date -u '+%Y-%m-%d %H:%M UTC') | target: ${{ steps.target.outputs.url }} -->"
+            echo ""
+            cat "$LATEST"
+          } > "$TMPFILE"
+          mv "$TMPFILE" "$LATEST"
+
+      - name: Upload full report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shannon-report-${{ github.run_id }}
+          path: security-reports/shannon-nightly/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit updated shannon-latest.md
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add security-reports/shannon-latest.md
+          if git diff --cached --quiet; then
+            echo "No changes to shannon-latest.md — skipping commit."
+          else
+            git commit -m "chore: Shannon overnight report $(date -u '+%Y-%m-%d')"
+            git push
+          fi

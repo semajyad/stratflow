@@ -16,29 +16,57 @@ on:
         options:
           - baseline
           - full
+  # Daily at 16:00 UTC = ~4 am NZT (overnight) — catches regressions before the work day
   schedule:
-    - cron: "0 18 * * 0"
+    - cron: "0 16 * * *"
 
 jobs:
   zap-baseline:
-    if: ${{ github.event_name == 'schedule' || inputs.scan_mode == 'baseline' }}
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && inputs.scan_mode == 'baseline' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # needed to commit zap-latest.md
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ZAP baseline scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ inputs.target_url || vars.ZAP_TARGET_URL || 'https://stratflow-app-production.up.railway.app' }}
           docker_name: ghcr.io/zaproxy/zaproxy:stable
+          # -a aggregate alerts  -j json output  -m 10 max requests  -T 15 timeout
           cmd_options: "-a -j -m 10 -T 15"
           allow_issue_writing: false
-          fail_action: true
+          # Scheduled overnight run: report-only (fail_action false) so a new finding
+          # surfaces in the artifact/log but doesn't lock the repo.
+          # Manual dispatches: same — developer reviews the artifact and decides.
+          fail_action: false
           artifact_name: zap-baseline-report
+
+      - name: Promote ZAP report to zap-latest.md
+        if: always()
+        run: |
+          REPORT=$(find . -name "*.md" -path "*/zap*" -newer security-reports/zap-latest.md 2>/dev/null | sort | tail -1)
+          if [ -n "$REPORT" ]; then
+            echo "<!-- ZAP run: $(date -u '+%Y-%m-%d %H:%M UTC') -->" > security-reports/zap-latest.md
+            cat "$REPORT" >> security-reports/zap-latest.md
+          else
+            echo "<!-- ZAP run: $(date -u '+%Y-%m-%d %H:%M UTC') — report file not found at expected path -->" \
+              >> security-reports/zap-latest.md
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add security-reports/zap-latest.md
+          if git diff --cached --quiet; then
+            echo "No changes to zap-latest.md"
+          else
+            git commit -m "chore: ZAP baseline report $(date -u '+%Y-%m-%d')"
+            git push
+          fi
 
   zap-full:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.scan_mode == 'full' }}
@@ -57,5 +85,5 @@ jobs:
           docker_name: ghcr.io/zaproxy/zaproxy:stable
           cmd_options: "-a -j -T 30"
           allow_issue_writing: false
-          fail_action: true
+          fail_action: false
           artifact_name: zap-full-report

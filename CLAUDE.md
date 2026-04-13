@@ -111,6 +111,40 @@ Before committing any change to `src/`, `templates/`, or `public/`:
 4. Does any new template use `filemtime()` or a timestamp as a cache-buster?
 5. Does any new binary file need adding to `.gitattributes`?
 
+## Morning Security Check
+
+**This rule applies to the first code session each calendar day.**
+
+Before starting any feature, bug fix, or refactor work:
+
+1. Read `security-reports/shannon-latest.md`.
+   - Check the `<!-- Shannon run: ... -->` comment at the top to see how fresh it is.
+   - If the report is from overnight (within the last ~18 hours), proceed to step 2.
+   - If it is stale (>24 hours old), note it but continue — Shannon may not have run yet.
+
+2. Triage findings by severity:
+   - **HIGH** — must be fixed before any other work starts. Create a task for each.
+   - **MEDIUM** — must be fixed the same day. Create a task for each.
+   - **LOW / INFORMATIONAL** — log them but may be deferred; do not defer more than 2 consecutive days.
+
+3. Fix all HIGH and MEDIUM issues first, following the same coding rules in this file.
+   Commit fixes before proceeding to other work.
+
+4. Read `security-reports/zap-latest.md`. Address any new findings not already
+   captured in the `## Security Rules` section below.
+
+5. **Promote findings to permanent rules.**
+   After fixing a HIGH or MEDIUM finding from Shannon or ZAP:
+   - Add a new sub-section under `## Security Rules` in this file documenting:
+     - The rule (what must/must not be done)
+     - The tool and finding ID that discovered it (e.g. `Shannon 2026-04-15 HIGH #3`)
+     - Why (the attack vector or root cause)
+   - Format matches the existing ZAP rules above — short heading, one-line rule, one-line why.
+   - This ensures every pen-test finding becomes a permanent guardrail for all future sessions.
+
+**Do not skip this step because "there's more important work."
+Security regressions discovered by pen testing compound if deferred.**
+
 ## Commands
 
 ```bash

@@ -13,6 +13,9 @@ C/
 tests/Playwright/node_modules/
 tests/Playwright/test-results/
 security-reports/
+# Track the latest Shannon and ZAP summary reports so Claude Code can read them
+!security-reports/shannon-latest.md
+!security-reports/zap-latest.md
 
 # Claude Code — ephemeral markers
 .claude/.security-audit-ok
