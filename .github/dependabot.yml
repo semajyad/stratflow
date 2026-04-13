@@ -24,7 +24,5 @@ updates:
       - "php"
     commit-message:
       prefix: "chore(deps)"
-    # Only open PRs for direct dependencies (not transitive)
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
+    # Allow all update types including semver-patch — patch releases frequently
+    # carry CVE fixes and skipping them leaves known vulnerabilities unpatched.

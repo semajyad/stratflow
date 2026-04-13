@@ -60,7 +60,7 @@ class GeminiService
                 ?? throw new \RuntimeException('Unexpected Gemini response format');
         } catch (\Throwable $e) {
             if ($this->openaiKey !== '') {
-                error_log('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI');
+                \StratFlow\Services\Logger::warn('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI');
                 return $this->openaiGenerate($prompt, $input);
             }
             throw $e;
@@ -86,8 +86,8 @@ class GeminiService
 
         // Attempt 6: Retry the entire API call with a reinforced prompt.
         // This handles cases where the original response was truncated or malformed.
-        error_log('[GeminiService] Parse attempts 1-5 failed (error=' . json_last_error() . ': ' . json_last_error_msg() . '). Retrying API call with reinforced prompt.');
-        error_log('[GeminiService] Failed raw (first 500): ' . substr($text, 0, 500));
+        \StratFlow\Services\Logger::warn('[GeminiService] Parse attempts 1-5 failed (error=' . json_last_error() . ': ' . json_last_error_msg() . '). Retrying API call with reinforced prompt.');
+        \StratFlow\Services\Logger::warn('[GeminiService] Failed raw (first 500): ' . substr($text, 0, 500));
 
         $reinforced = $prompt . "\n\nCRITICAL: You MUST return ONLY a valid JSON array or object. "
             . "No markdown fences, no explanation text before or after. "
@@ -96,11 +96,11 @@ class GeminiService
         $text2 = $this->fetchJsonText($reinforced, $input);
         $result2 = $this->tryParseJson($text2);
         if ($result2 !== null) {
-            error_log('[GeminiService] Retry succeeded — parsed JSON on second attempt.');
+            \StratFlow\Services\Logger::warn('[GeminiService] Retry succeeded — parsed JSON on second attempt.');
             return $result2;
         }
 
-        error_log('[GeminiService] All JSON parse attempts failed including retry. Raw (first 500): ' . substr($text2, 0, 500));
+        \StratFlow\Services\Logger::warn('[GeminiService] All JSON parse attempts failed including retry. Raw (first 500): ' . substr($text2, 0, 500));
         throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
     }
 
@@ -121,7 +121,7 @@ class GeminiService
                 ?? throw new \RuntimeException('Unexpected Gemini response format');
         } catch (\Throwable $e) {
             if ($this->openaiKey !== '') {
-                error_log('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI for JSON');
+                \StratFlow\Services\Logger::warn('[StratFlow] Gemini failed (' . $e->getMessage() . '), falling back to OpenAI for JSON');
                 return $this->openaiGenerate($prompt . "\n\nRespond with valid JSON only. No markdown fences.", $input);
             }
             throw $e;

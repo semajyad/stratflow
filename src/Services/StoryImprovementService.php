@@ -86,7 +86,7 @@ class StoryImprovementService
             $result = $this->gemini->generateJson($prompt, $input);
             return $this->validateResponse($result);
         } catch (\Throwable $e) {
-            error_log('[StoryImprovementService] improvement failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[StoryImprovementService] improvement failed: ' . $e->getMessage());
             return [];
         }
     }

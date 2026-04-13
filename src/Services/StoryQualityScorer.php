@@ -73,7 +73,7 @@ class StoryQualityScorer
             return $this->validate($result);
         } catch (\Throwable $e) {
             $errorKey = 'exc:' . (new \ReflectionClass($e))->getShortName();
-            error_log('[StoryQualityScorer] scoring failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[StoryQualityScorer] scoring failed: ' . $e->getMessage());
             return ['score' => null, 'breakdown' => null, 'error' => $errorKey];
         }
     }
@@ -85,7 +85,7 @@ class StoryQualityScorer
     {
         foreach (self::REQUIRED_DIMENSIONS as $key) {
             if (!isset($result[$key])) {
-                error_log('[StoryQualityScorer] missing dimension key: ' . $key);
+                \StratFlow\Services\Logger::warn('[StoryQualityScorer] missing dimension key: ' . $key);
                 return ['score' => null, 'breakdown' => null, 'error' => 'schema:' . $key];
             }
         }

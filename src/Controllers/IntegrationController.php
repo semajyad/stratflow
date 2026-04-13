@@ -423,7 +423,7 @@ class IntegrationController
             }
         } catch (\Throwable $e) {
             // Webhook registration is best-effort; don't block configuration
-            error_log('[JiraIntegration] Webhook registration failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[JiraIntegration] Webhook registration failed: ' . $e->getMessage());
         }
 
         $_SESSION['flash_message'] = 'Jira configuration saved. Project: ' . $projectKey;
@@ -464,7 +464,7 @@ class IntegrationController
                     curl_exec($ch);
                     curl_close($ch);
                 } catch (\Throwable $e) {
-                    error_log('[JiraDisconnect] Token revocation failed: ' . $e->getMessage());
+                    \StratFlow\Services\Logger::warn('[JiraDisconnect] Token revocation failed: ' . $e->getMessage());
                 }
             }
 
@@ -743,7 +743,7 @@ class IntegrationController
 
             $_SESSION['flash_message'] = "Pulled status for " . count($issueKeys) . " items — {$updated} updated.";
         } catch (\Throwable $e) {
-            error_log('[BulkPullStatus] ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[BulkPullStatus] ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Bulk status pull failed: ' . $e->getMessage();
         }
 
@@ -917,7 +917,7 @@ class IntegrationController
             $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
             $providedHash = str_replace('sha256=', '', $signature);
             if (!hash_equals($expected, $providedHash)) {
-                error_log('[JiraWebhook] Invalid HMAC signature — rejecting');
+                \StratFlow\Services\Logger::warn('[JiraWebhook] Invalid HMAC signature — rejecting');
                 http_response_code(401);
                 echo json_encode(['error' => 'Invalid signature']);
                 return;
@@ -926,7 +926,7 @@ class IntegrationController
             // No secret: verify basic Jira payload structure to prevent trivial spoofing
             $testPayload = json_decode($rawBody, true);
             if (!$testPayload || !isset($testPayload['webhookEvent']) || !isset($testPayload['issue'])) {
-                error_log('[JiraWebhook] Malformed payload rejected');
+                \StratFlow\Services\Logger::warn('[JiraWebhook] Malformed payload rejected');
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid payload']);
                 return;
@@ -1031,7 +1031,7 @@ class IntegrationController
                             try {
                                 $syncSvc->pullStatus($issueKey, $syntheticIssue);
                             } catch (\Throwable $statusEx) {
-                                error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
+                                \StratFlow\Services\Logger::warn('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                             }
                         } elseif (
                             in_array($event, ['jira:issue_updated', 'jira:issue_created'], true)
@@ -1041,7 +1041,7 @@ class IntegrationController
                             try {
                                 $syncSvc->pullStatus($issueKey, $payload['issue']);
                             } catch (\Throwable $statusEx) {
-                                error_log('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
+                                \StratFlow\Services\Logger::warn('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                             }
                         }
                     }
@@ -1062,7 +1062,7 @@ class IntegrationController
                 ]);
             }
         } catch (\Throwable $e) {
-            error_log('[JiraWebhook] Error processing webhook: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[JiraWebhook] Error processing webhook: ' . $e->getMessage());
         }
 
         http_response_code(200);
@@ -1144,7 +1144,7 @@ class IntegrationController
                     $goalsResult = $syncService->pushOkrsToGoals($projectId);
                     $goalsCreated = $goalsResult['created'] ?? 0;
                 } catch (\Throwable $e) {
-                    error_log("[JiraSync] Goals push failed (non-critical): " . $e->getMessage());
+                    \StratFlow\Services\Logger::warn("[JiraSync] Goals push failed (non-critical): " . $e->getMessage());
                 }
             }
 
@@ -1289,7 +1289,7 @@ class IntegrationController
             } catch (\Throwable $e) {
                 // Board API may fail on team-managed projects or missing scopes.
                 // Fallback: create one team from the project itself.
-                error_log('[JiraTeamImport] Board API failed, using project fallback: ' . $e->getMessage());
+                \StratFlow\Services\Logger::warn('[JiraTeamImport] Board API failed, using project fallback: ' . $e->getMessage());
                 $boards = [['id' => 1, 'name' => $projectKey . ' Team', 'type' => 'project']];
             }
             $boardCount = count($boards);
@@ -1338,7 +1338,7 @@ class IntegrationController
                 }
             } catch (\Throwable $e) {
                 $errMsg = $e->getMessage();
-                error_log('[JiraTeamImport] Board import failed: ' . $errMsg);
+                \StratFlow\Services\Logger::warn('[JiraTeamImport] Board import failed: ' . $errMsg);
                 if (str_contains($errMsg, '401') || str_contains($errMsg, 'Unauthorized') || str_contains($errMsg, 'scope')) {
                     $_SESSION['flash_error'] = 'Jira board access denied. Please disconnect and reconnect Jira in Integrations to grant updated permissions (board scope required).';
                 } else {

@@ -58,7 +58,7 @@ class RateLimiter
             $row = $stmt->fetch();
             return ((int) ($row['cnt'] ?? 0)) < $maxAttempts;
         } catch (\Throwable $e) {
-            error_log('[RateLimiter] Check failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[RateLimiter] Check failed: ' . $e->getMessage());
             return true; // Fail open rather than locking out users
         }
     }
@@ -82,7 +82,7 @@ class RateLimiter
                 ['key' => $key, 'id' => $identifier]
             );
         } catch (\Throwable $e) {
-            error_log('[RateLimiter] Record failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[RateLimiter] Record failed: ' . $e->getMessage());
         }
     }
 
@@ -102,7 +102,7 @@ class RateLimiter
 
             $db->query("DELETE FROM rate_limits WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
         } catch (\Throwable $e) {
-            error_log('[RateLimiter] Cleanup failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[RateLimiter] Cleanup failed: ' . $e->getMessage());
         }
     }
 }

@@ -952,7 +952,7 @@ PROMPT;
             (int) ($story['quality_attempts'] ?? 0) + 1,
             $errorKey
         );
-        error_log('[StratFlow] UserStory score error: ' . $errorKey);
+        \StratFlow\Services\Logger::warn('[StratFlow] UserStory score error: ' . $errorKey);
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
     }
 

@@ -154,7 +154,7 @@ class GitHubAppController
                 // another org's installation_id via the callback.
                 if ((int) $existingRow['org_id'] !== $orgId) {
                     $this->db->getPdo()->rollBack();
-                    error_log('[GitHubApp] callback: installation_id=' . $installationId . ' org mismatch');
+                    \StratFlow\Services\Logger::warn('[GitHubApp] callback: installation_id=' . $installationId . ' org mismatch');
                     $_SESSION['flash_error'] = 'This GitHub installation is already connected to a different organisation.';
                     $this->response->redirect('/app/admin/integrations');
                     return;
@@ -200,7 +200,7 @@ class GitHubAppController
             if ($this->db->getPdo()->inTransaction()) {
                 $this->db->getPdo()->rollBack();
             }
-            error_log('[GitHubApp] callback error: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[GitHubApp] callback error: ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Failed to complete GitHub App installation. Please try again.';
         }
 

@@ -86,7 +86,7 @@ class GitWebhookController
         // Step 1 — verify HMAC before trusting any content
         $signatureHeader = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
         if (!GitHubAppClient::verifySignature($rawBody, $signatureHeader)) {
-            error_log('[GitWebhook] GitHub: invalid HMAC signature');
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: invalid HMAC signature');
             http_response_code(401);
             echo json_encode(['error' => 'Invalid signature']);
             return;
@@ -105,7 +105,7 @@ class GitWebhookController
         // Step 2 — extract installation_id for multi-tenant routing
         $installationId = (int) ($payload['installation']['id'] ?? 0);
         if ($installationId === 0) {
-            error_log('[GitWebhook] GitHub: missing installation.id — not a GitHub App webhook');
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: missing installation.id — not a GitHub App webhook');
             http_response_code(401);
             echo json_encode(['error' => 'installation_missing']);
             return;
@@ -177,7 +177,7 @@ class GitWebhookController
                 }
             }
 
-            error_log(sprintf(
+            \StratFlow\Services\Logger::warn(sprintf(
                 '[GitWebhook] GitHub push %s branch=%s org_id=%d commits=%d explicit_links=%d ai_queue=%d',
                 $pushData['repo_full_name'],
                 $pushData['branch'],
@@ -216,7 +216,7 @@ class GitWebhookController
         // Step 4 — resolve integration for PR events
         $integration = Integration::findActiveByInstallationId($this->db, $installationId);
         if ($integration === null) {
-            error_log('[GitWebhook] GitHub: unknown installation_id=' . $installationId);
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: unknown installation_id=' . $installationId);
             http_response_code(404);
             echo json_encode(['error' => 'unknown_installation']);
             return;
@@ -240,7 +240,7 @@ class GitWebhookController
         );
 
         if ($repoRow === null) {
-            error_log(sprintf(
+            \StratFlow\Services\Logger::warn(sprintf(
                 '[GitWebhook] GitHub: repo_github_id=%d not on allowlist for installation_id=%d',
                 $event['repo_github_id'],
                 $installationId
@@ -254,7 +254,7 @@ class GitWebhookController
         $service  = new GitLinkService($this->db, $orgId);
         $affected = $this->dispatchEvent($service, $event, 'github');
 
-        error_log(sprintf(
+        \StratFlow\Services\Logger::warn(sprintf(
             '[GitWebhook] GitHub PR %s action=%s org_id=%d links_affected=%d',
             $event['pr_url'],
             $event['action'],
@@ -316,14 +316,14 @@ class GitWebhookController
         $secret      = $this->fetchGitLabSecret();
 
         if ($secret === null) {
-            error_log('[GitWebhook] GitLab: no active integration found — rejecting');
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitLab: no active integration found — rejecting');
             http_response_code(401);
             echo json_encode(['error' => 'No active GitLab integration']);
             return;
         }
 
         if (!GitLabClient::verifyToken($tokenHeader, $secret)) {
-            error_log('[GitWebhook] GitLab: invalid token — rejecting');
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitLab: invalid token — rejecting');
             http_response_code(401);
             echo json_encode(['error' => 'Invalid token']);
             return;
@@ -338,7 +338,7 @@ class GitWebhookController
 
         $event = GitLabClient::parseMergeRequestEvent($payload);
         if ($event === null) {
-            error_log('[GitWebhook] GitLab: not an MR event — ignored');
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitLab: not an MR event — ignored');
             http_response_code(200);
             echo json_encode(['ok' => true, 'links_affected' => 0]);
             return;
@@ -347,7 +347,7 @@ class GitWebhookController
         $service  = new GitLinkService($this->db);
         $affected = $this->dispatchEvent($service, $event, 'gitlab');
 
-        error_log("[GitWebhook] GitLab MR {$event['pr_url']} action={$event['action']} links_affected={$affected}");
+        \StratFlow\Services\Logger::warn("[GitWebhook] GitLab MR {$event['pr_url']} action={$event['action']} links_affected={$affected}");
         http_response_code(200);
         echo json_encode(['ok' => true, 'links_affected' => $affected]);
     }
@@ -379,7 +379,7 @@ class GitWebhookController
                 $row = Integration::findActiveByInstallationId($this->db, $installationId);
                 if ($row !== null) {
                     Integration::update($this->db, (int) $row['id'], ['status' => 'revoked']);
-                    error_log('[GitWebhook] GitHub: installation_id=' . $installationId . ' deleted → revoked');
+                    \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: installation_id=' . $installationId . ' deleted → revoked');
                 }
             })(),
             'suspend' => (function () use ($installationId): void {
@@ -388,7 +388,7 @@ class GitWebhookController
                 $row = Integration::findActiveByInstallationId($this->db, $installationId);
                 if ($row !== null) {
                     Integration::update($this->db, (int) $row['id'], ['status' => 'inactive']);
-                    error_log('[GitWebhook] GitHub: installation_id=' . $installationId . ' suspended → inactive');
+                    \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: installation_id=' . $installationId . ' suspended → inactive');
                 }
             })(),
             'unsuspend' => (function () use ($installationId): void {
@@ -406,10 +406,10 @@ class GitWebhookController
                 $row = $stmt->fetch();
                 if ($row !== false) {
                     Integration::update($this->db, (int) $row['id'], ['status' => 'active']);
-                    error_log('[GitWebhook] GitHub: installation_id=' . $installationId . ' reactivated from suspended');
+                    \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: installation_id=' . $installationId . ' reactivated from suspended');
                 }
             })(),
-            default => error_log('[GitWebhook] GitHub: installation event action=' . $event['action'] . ' installation_id=' . $installationId . ' (no-op)'),
+            default => \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: installation event action=' . $event['action'] . ' installation_id=' . $installationId . ' (no-op)'),
         };
     }
 
@@ -431,7 +431,7 @@ class GitWebhookController
 
         $integration = Integration::findActiveByInstallationId($this->db, $installationId);
         if ($integration === null) {
-            error_log('[GitWebhook] GitHub: installation_repositories for unknown installation_id=' . $installationId);
+            \StratFlow\Services\Logger::warn('[GitWebhook] GitHub: installation_repositories for unknown installation_id=' . $installationId);
             return;
         }
 
@@ -446,7 +446,7 @@ class GitWebhookController
             IntegrationRepo::deleteByIntegrationAndGithubId($this->db, $integrationId, $repo['id']);
         }
 
-        error_log(sprintf(
+        \StratFlow\Services\Logger::warn(sprintf(
             '[GitWebhook] GitHub: installation_repositories installation_id=%d added=%d removed=%d',
             $installationId,
             count($event['added']),

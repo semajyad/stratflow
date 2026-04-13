@@ -274,7 +274,7 @@ class SprintController
             Sprint::delete($this->db, (int) $id);
             $_SESSION['flash_message'] = 'Sprint deleted. Stories returned to backlog.';
         } catch (\Throwable $e) {
-            error_log('[StratFlow] Sprint delete error: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[StratFlow] Sprint delete error: ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Failed to delete sprint: ' . $e->getMessage();
         }
         $this->response->redirect('/app/sprints?project_id=' . $projectId);

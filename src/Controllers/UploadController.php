@@ -146,7 +146,7 @@ class UploadController
                 $fileSize      = (int) $uploadedFile['size'];
                 $extractedText = $processor->extractText($uploadDir . $filename, $mimeType);
             } catch (\Throwable $e) {
-                error_log("[StratFlow] Upload processing error: " . $e->getMessage());
+                \StratFlow\Services\Logger::warn("[StratFlow] Upload processing error: " . $e->getMessage());
                 $_SESSION['flash_error'] = 'Failed to process uploaded file. Please try a different file or paste the text directly.';
                 $this->response->redirect('/app/upload?project_id=' . $projectId);
                 return;

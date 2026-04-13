@@ -138,7 +138,7 @@ class AuditLogger
         } catch (\Throwable $e) {
             // Audit logging must never break the application flow, but failures
             // must themselves be recorded — write to fallback file.
-            error_log('[AuditLogger] Failed to write audit log: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[AuditLogger] Failed to write audit log: ' . $e->getMessage());
             self::writeFallback($entry, $e->getMessage());
         }
     }
@@ -198,7 +198,7 @@ class AuditLogger
 
             return ['ok' => true, 'broken_at' => null, 'total' => $total];
         } catch (\Throwable $e) {
-            error_log('[AuditLogger] Chain verification failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[AuditLogger] Chain verification failed: ' . $e->getMessage());
             return ['ok' => false, 'broken_at' => null, 'total' => 0];
         }
     }

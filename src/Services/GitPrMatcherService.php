@@ -80,7 +80,7 @@ class GitPrMatcherService
         try {
             $matches = $this->gemini->generateJson(GitPrMatchPrompt::PROMPT, $input);
         } catch (\Throwable $e) {
-            error_log('[GitPrMatcherService] Gemini error: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[GitPrMatcherService] Gemini error: ' . $e->getMessage());
             return 0;
         }
 

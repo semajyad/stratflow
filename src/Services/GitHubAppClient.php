@@ -183,7 +183,7 @@ class GitHubAppClient
     {
         $secret = $_ENV['GITHUB_APP_WEBHOOK_SECRET'] ?? '';
         if ($secret === '') {
-            error_log('[GitHubAppClient] GITHUB_APP_WEBHOOK_SECRET not configured');
+            \StratFlow\Services\Logger::warn('[GitHubAppClient] GITHUB_APP_WEBHOOK_SECRET not configured');
             return false;
         }
 

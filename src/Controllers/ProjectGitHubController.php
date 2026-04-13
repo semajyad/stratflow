@@ -176,7 +176,7 @@ class ProjectGitHubController
             if ($this->db->getPdo()->inTransaction()) {
                 $this->db->getPdo()->rollBack();
             }
-            error_log('[ProjectGitHub] save error project_id=' . $id . ': ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[ProjectGitHub] save error project_id=' . $id . ': ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Failed to save repo selection. Please try again.';
         }
 

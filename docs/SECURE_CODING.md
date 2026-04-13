@@ -54,6 +54,52 @@ Rules:
 - Omitting the `binary` attribute with `core.autocrlf=true` on Windows corrupts binary files committed from Windows.
 - SVG is text — use it for logos and icons so corruption is impossible.
 
+## Morning Security Check
+
+**This rule applies to the first code session each calendar day.**
+
+1. Read `security-reports/shannon-latest.md`. Check the `<!-- Shannon run: ... -->` comment.
+   - Overnight report (≤18 h old) → proceed to step 2.
+   - Stale (>24 h) → note it, continue — Shannon may not have run yet.
+2. Triage: **HIGH** = fix before other work. **MEDIUM** = fix same day. **LOW** = may defer ≤2 days.
+3. Fix HIGH/MEDIUM issues first. Commit fixes before other work.
+4. Read `security-reports/zap-latest.md`. Address any new findings.
+5. After fixing a HIGH/MEDIUM finding, add a permanent rule sub-section below (tool + finding ID + why).
+
+**Do not skip because "there's more important work." Regressions compound if deferred.**
+
+Similarly, check `tests/performance/summary-latest.json` for k6 p95 > 800ms or error-rate > 1%.
+Address any perf threshold breaches on the same day they appear.
+
+## ZAP-Sourced Rules (2026-04-12/13)
+
+### HTTP Security Headers (ZAP-10038, ZAP-10035, ZAP-10036, ZAP-10037, ZAP-10049, ZAP-10096, ZAP-10021)
+
+- Every response path incl. middleware rejections, error handlers, fatal shutdown → call `Response::applySecurityHeaders()` first.
+- Root cause of ZAP-10038: `/checkout` CSRF rejection wrote output before calling `applySecurityHeaders()`.
+- HSTS: send when `APP_URL` starts with `https://` — do not gate on `$_SERVER['HTTPS']` (Railway proxy strips it).
+
+### CSP (ZAP-10055)
+
+- Never `'unsafe-inline'` in `script-src`. All JS in `/assets/js/` bundles.
+- `style-src 'unsafe-inline'` allowed only in `'app'` CSP profile. Do not extend to `'public'`.
+- External scripts MUST have `integrity="sha384-..."` + `crossorigin="anonymous"` (SRI). Only `cdn.jsdelivr.net` is allowed.
+
+### XSS (ZAP-10031)
+
+- Every echo into HTML attribute or tag body → `htmlspecialchars($val, ENT_QUOTES, 'UTF-8')`. No exceptions.
+- CSRF tokens: `random_bytes(32)` → `bin2hex()`. Never base64 (ZAP-10094 Base64 Disclosure).
+
+### Caching (ZAP-10049)
+
+- Authenticated: `Cache-Control: no-store, no-cache, must-revalidate, private`. Never override.
+- Static `/assets/`: `Cache-Control: public, max-age=86400`. Do not apply `no-store`.
+
+### Server Leakage (ZAP-10037)
+
+- `header_remove('X-Powered-By')` already in `applySecurityHeaders()`. Never undo.
+- Never expose PHP version, framework version, or server software in any response.
+
 ## Review Triggers
 
 Before merging, re-check these risk areas:

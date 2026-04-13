@@ -13,6 +13,10 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.3', '8.4']
 
     services:
       mysql:
@@ -37,7 +41,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: ${{ matrix.php-version }}
           extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
           coverage: pcov
 
@@ -100,5 +104,36 @@ jobs:
             mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
           done
 
-      - name: Run tests
-        run: vendor/bin/phpunit --configuration tests/phpunit.xml --coverage-text --colors=never
+      - name: Run tests with coverage
+        run: |
+          vendor/bin/phpunit \
+            --configuration tests/phpunit.xml \
+            --coverage-text \
+            --coverage-clover coverage.xml \
+            --log-junit junit.xml \
+            --colors=never
+
+      - name: Enforce coverage threshold (≥60%)
+        run: |
+          COVERAGE=$(php -r "
+            \$xml = simplexml_load_file('coverage.xml');
+            \$metrics = \$xml->project->metrics;
+            \$total = (int) \$metrics['elements'];
+            \$covered = (int) \$metrics['coveredelements'];
+            echo \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
+          ")
+          echo "Line coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below the 60% threshold."
+            exit 1
+          fi
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-php${{ matrix.php-version }}
+          path: |
+            junit.xml
+            coverage.xml
+          retention-days: 14

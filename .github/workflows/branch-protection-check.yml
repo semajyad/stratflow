@@ -25,8 +25,10 @@ jobs:
             "test"
             "review"
             "gitleaks"
-            "snyk"
             "dependency-review"
+            # "snyk" removed: snyk.yml runs on schedule only and never posts a PR check
+            # context, so listing it here caused the assertion to report a false gap.
+            # Snyk coverage is maintained by the nightly scheduled run + SARIF upload.
           )
 
           PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || {

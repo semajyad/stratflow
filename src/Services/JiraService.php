@@ -842,8 +842,8 @@ class JiraService
             }
             $errorMsg = !empty($errorParts) ? implode('; ', $errorParts) : ('HTTP ' . $httpCode);
 
-            error_log("[StratFlow] Jira API error ($httpCode): $errorMsg");
-            error_log("[StratFlow] Jira request body: " . ($body ? json_encode($body) : 'none'));
+            \StratFlow\Services\Logger::warn("[StratFlow] Jira API error ($httpCode): $errorMsg");
+            \StratFlow\Services\Logger::warn("[StratFlow] Jira request body: " . ($body ? json_encode($body) : 'none'));
 
             if ($this->db && $this->integration) {
                 Integration::recordError($this->db, (int) $this->integration['id'], $errorMsg);

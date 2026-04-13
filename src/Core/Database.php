@@ -91,7 +91,7 @@ class Database
 
         $elapsed = microtime(true) - $start;
         if ($elapsed > self::SLOW_QUERY_THRESHOLD) {
-            error_log(sprintf(
+            \StratFlow\Services\Logger::warn(sprintf(
                 '[StratFlow] Slow query (%.2fs): %s',
                 $elapsed,
                 substr($sql, 0, 200)

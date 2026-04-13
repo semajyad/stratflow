@@ -828,7 +828,7 @@ class JiraSyncService
         $newStatus = $this->mapJiraStatusName($jiraStatusName);
 
         if ($newStatus === null) {
-            error_log("[JiraStatusPull] Unknown Jira status '{$jiraStatusName}' for {$issueKey} — skipping");
+            \StratFlow\Services\Logger::warn("[JiraStatusPull] Unknown Jira status '{$jiraStatusName}' for {$issueKey} — skipping");
             return false;
         }
 
@@ -908,13 +908,13 @@ class JiraSyncService
                             $updated++;
                         }
                     } catch (\Throwable $e) {
-                        error_log("[JiraStatusBulk] Error pulling status for {$issue['key']}: " . $e->getMessage());
+                        \StratFlow\Services\Logger::warn("[JiraStatusBulk] Error pulling status for {$issue['key']}: " . $e->getMessage());
                     }
                 }
                 $startAt += $pageSize;
             } while (count($page) === $pageSize && $startAt < 2000);
         } catch (\Throwable $e) {
-            error_log('[JiraStatusBulk] JQL fetch failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[JiraStatusBulk] JQL fetch failed: ' . $e->getMessage());
         }
 
         return $updated;
@@ -1218,7 +1218,7 @@ class JiraSyncService
                     }
                 }
             } catch (\Throwable $e) {
-                error_log("[JiraPush] Sprint push error: " . $e->getMessage());
+                \StratFlow\Services\Logger::warn("[JiraPush] Sprint push error: " . $e->getMessage());
                 $counts['errors']++;
             }
         }
@@ -1573,7 +1573,7 @@ class JiraSyncService
                                 );
                             }
                         } catch (\Throwable $e) {
-                            error_log('[JiraSyncService] KR child goal error: ' . $e->getMessage());
+                            \StratFlow\Services\Logger::warn('[JiraSyncService] KR child goal error: ' . $e->getMessage());
                         }
                     }
 
@@ -1589,7 +1589,7 @@ class JiraSyncService
                     ]);
                 }
             } catch (\Throwable $e) {
-                error_log('[GoalsSync] Failed to create goal: ' . $e->getMessage());
+                \StratFlow\Services\Logger::warn('[GoalsSync] Failed to create goal: ' . $e->getMessage());
                 $counts['errors']++;
             }
         }
@@ -1737,7 +1737,7 @@ class JiraSyncService
                 );
                 $counts['updated']++;
             } catch (\Throwable $e) {
-                error_log('[JiraSyncService] pullKrStatus error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
+                \StratFlow\Services\Logger::warn('[JiraSyncService] pullKrStatus error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
                 $counts['errors']++;
             }
         }

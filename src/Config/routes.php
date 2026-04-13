@@ -222,6 +222,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/admin/billing/seats/stripe',   'AdminController@purchaseSeatsStripe',  ['auth', 'billing', 'csrf']);
 
     // Xero OAuth — callback is GET with no CSRF (Xero redirects back)
+    // Security note: Xero integration is OUTBOUND-ONLY (OAuth + invoice push).
+    // There is no inbound Xero webhook endpoint. If one is ever added it MUST
+    // verify Xero's HMAC-SHA256 signature (X-Xero-Signature header) before
+    // processing any payload — see docs/SECURE_CODING.md.
     $router->add('GET',  '/app/admin/xero/connect',          'XeroController@connect',           ['auth', 'billing']);
     $router->add('GET',  '/app/admin/xero/callback',         'XeroController@callback',          ['auth', 'billing']);
     $router->add('POST', '/app/admin/xero/disconnect',       'XeroController@disconnect',        ['auth', 'billing', 'csrf']);

@@ -94,14 +94,14 @@ class WebhookController
                 'expand' => ['customer_details', 'line_items', 'customer'],
             ]);
         } catch (\Throwable $e) {
-            error_log("[StratFlow] Failed to expand checkout session: " . $e->getMessage());
+            \StratFlow\Services\Logger::warn("[StratFlow] Failed to expand checkout session: " . $e->getMessage());
         }
 
         $customerEmail    = $this->extractCustomerEmail($session);
         $stripeCustomerId = $this->extractStripeCustomerId($session->customer ?? null);
         $stripeSubId      = $session->subscription ?? '';
 
-        error_log("[StratFlow] Checkout completed: email={$customerEmail}, customer={$stripeCustomerId}, sub={$stripeSubId}");
+        \StratFlow\Services\Logger::warn("[StratFlow] Checkout completed: email={$customerEmail}, customer={$stripeCustomerId}, sub={$stripeSubId}");
 
         // Determine plan type from the first line item price ID
         $planType = 'product';
@@ -167,7 +167,7 @@ class WebhookController
 
                 $emailService = new EmailService($this->config);
                 $sent = $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
-                error_log("[StratFlow] Welcome email to {$customerEmail}: " . ($sent ? 'SENT' : 'FAILED'));
+                \StratFlow\Services\Logger::warn("[StratFlow] Welcome email to {$customerEmail}: " . ($sent ? 'SENT' : 'FAILED'));
             }
         }
     }

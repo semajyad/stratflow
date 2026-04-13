@@ -1,0 +1,83 @@
+name: Deploy to Railway
+
+# Triggered automatically when tests + security checks pass on main,
+# but requires manual approval via a GitHub Environment protection rule
+# before the actual deploy step executes.
+#
+# Required GitHub Secrets:
+#   RAILWAY_TOKEN — Railway API token with deploy access
+#
+# Required GitHub Environment:
+#   "railway-test" — set up at Settings → Environments with required reviewers
+#                    if you want manual approval on every deploy.
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'deploy' to confirm manual deployment"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-railway
+  cancel-in-progress: false   # never cancel a deploy in flight; queue instead
+
+jobs:
+  gate:
+    name: Pre-deploy gate
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.confirm == 'deploy')
+
+    steps:
+      - name: Confirm triggering workflow passed
+        if: github.event_name == 'workflow_run'
+        run: |
+          echo "Triggered by: ${{ github.event.workflow_run.name }}"
+          echo "Conclusion:   ${{ github.event.workflow_run.conclusion }}"
+          echo "Head SHA:     ${{ github.event.workflow_run.head_sha }}"
+
+  deploy:
+    name: Deploy to Railway (test env)
+    needs: gate
+    runs-on: ubuntu-latest
+    environment: railway-test   # <- set required reviewers here for manual approval
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up --detach
+          echo "Deployment triggered. Check Railway dashboard for status."
+
+      - name: Post-deploy healthcheck
+        env:
+          HEALTHZ_URL: ${{ vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}/healthz
+        run: |
+          # Wait up to 2 minutes for the app to come up
+          for i in $(seq 1 24); do
+            STATUS=$(curl -sf "$HEALTHZ_URL" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+            if [ "$STATUS" = "ok" ]; then
+              echo "Healthcheck passed after $((i * 5))s"
+              exit 0
+            fi
+            echo "Waiting... ($((i * 5))s)"
+            sleep 5
+          done
+          echo "::error::Healthcheck failed after 120s — $HEALTHZ_URL did not return {status: ok}"
+          exit 1

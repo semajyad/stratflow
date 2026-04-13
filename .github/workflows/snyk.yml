@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: "0 15 * * *"
 
+concurrency:
+  group: snyk
+  cancel-in-progress: true
+
 jobs:
   snyk:
     runs-on: ubuntu-latest

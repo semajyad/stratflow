@@ -214,8 +214,6 @@ class AccessTokenController
 
         $teamValue = $team !== '' ? $team : null;
 
-        error_log(sprintf('[StratFlow] saveTeam: userId=%d team=%s', $userId, var_export($teamValue, true)));
-
         User::update($this->db, $userId, ['team' => $teamValue]);
 
         // Verify the write actually landed
@@ -223,7 +221,6 @@ class AccessTokenController
             'SELECT team FROM users WHERE id = :id LIMIT 1',
             [':id' => $userId]
         )->fetch();
-        error_log(sprintf('[StratFlow] saveTeam verify: team=%s', var_export($verify['team'] ?? 'COLUMN_MISSING', true)));
 
         // Refresh session so the page shows the updated value immediately
         $_SESSION['user']['team'] = $teamValue;

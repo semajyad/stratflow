@@ -1,0 +1,126 @@
+name: Performance Tests (k6)
+
+# Nightly k6 load test against the staging environment.
+# Thresholds: p95 response time < 800ms, error rate < 1%.
+# A threshold breach fails this workflow but does NOT block merges
+# (advisory only — prevents perf regressions going unnoticed).
+#
+# Required GitHub Variable: APP_URL_STAGING (defaults to Railway test URL)
+# k6 scripts: tests/performance/k6-baseline-run.js
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL for load test (must NOT be production)"
+        required: false
+        default: ""
+        type: string
+  schedule:
+    # 12:30 UTC daily = ~12:30 am NZT — after mutation tests, before Shannon
+    - cron: "30 12 * * *"
+
+concurrency:
+  group: performance-tests
+  cancel-in-progress: true
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to commit summary-latest.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve and guard target URL
+        id: target
+        run: |
+          URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
+          PROD_HOSTNAMES=("stratflow.io" "app.stratflow.io" "stratflow-app-production.up.railway.app")
+          for PROD in "${PROD_HOSTNAMES[@]}"; do
+            if echo "$URL" | grep -qiF "$PROD"; then
+              echo "::error::Performance test target '$URL' is a production hostname. Set APP_URL_STAGING to a non-prod URL."
+              exit 1
+            fi
+          done
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Load test target: $URL"
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -q
+          sudo apt-get install -y k6
+
+      - name: Run k6 baseline
+        env:
+          BASE_URL: ${{ steps.target.outputs.url }}
+        run: |
+          k6 run \
+            --env BASE_URL="$BASE_URL" \
+            --out json=tests/performance/results-${{ github.run_id }}.json \
+            --summary-export tests/performance/summary-latest.json \
+            tests/performance/k6-baseline-run.js
+        continue-on-error: true   # capture exit code without failing immediately
+
+      - name: Check thresholds
+        run: |
+          if [ -f tests/performance/summary-latest.json ]; then
+            python3 - <<'EOF'
+          import json, sys
+          summary = json.load(open('tests/performance/summary-latest.json'))
+          metrics  = summary.get('metrics', {})
+
+          p95 = metrics.get('http_req_duration', {}).get('values', {}).get('p(95)', None)
+          err = metrics.get('http_req_failed',   {}).get('values', {}).get('rate',   None)
+
+          ok = True
+          if p95 is not None:
+              print(f'p95 response time: {p95:.0f}ms (threshold: 800ms)')
+              if p95 > 800:
+                  print('::error::p95 response time exceeds 800ms threshold')
+                  ok = False
+          if err is not None:
+              pct = err * 100
+              print(f'Error rate: {pct:.2f}% (threshold: 1%)')
+              if err > 0.01:
+                  print('::error::Error rate exceeds 1% threshold')
+                  ok = False
+
+          sys.exit(0 if ok else 1)
+          EOF
+          else
+            echo "::warning::summary-latest.json not found — k6 may have failed to run"
+            exit 1
+          fi
+
+      - name: Upload k6 results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: tests/performance/
+          retention-days: 30
+
+      - name: Commit updated summary-latest.json
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/performance/summary-latest.json
+          # Clean up per-run JSON file before commit (it's captured in the artifact)
+          git rm --ignore-unmatch tests/performance/results-*.json
+          if git diff --cached --quiet; then
+            echo "No changes to summary-latest.json"
+          else
+            git commit -m "chore: k6 performance summary $(date -u '+%Y-%m-%d')"
+            git push
+          fi

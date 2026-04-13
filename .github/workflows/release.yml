@@ -17,6 +17,10 @@ permissions:
   packages: write       # push container image to GHCR
   id-token: write       # OIDC for cosign keyless signing + SLSA
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a release in flight; queue instead
+
 jobs:
   sbom:
     name: Generate SBOM

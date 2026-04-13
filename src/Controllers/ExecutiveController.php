@@ -223,7 +223,7 @@ class ExecutiveController
                 [':oid' => $orgId]
             )->fetchAll();
         } catch (\Throwable $e) {
-            error_log('[Executive] diagram_nodes OKR query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] diagram_nodes OKR query failed: ' . $e->getMessage());
         }
 
         // Parse KR text lines from okr_description for each node.
@@ -284,7 +284,7 @@ class ExecutiveController
                 $okrHealth['off_track'] += (int) $kc['off_track'];
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] KR counts query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] KR counts query failed: ' . $e->getMessage());
         }
 
         // ── Structured KR detail per OKR (for per-KR progress in expanded rows) ──
@@ -312,7 +312,7 @@ class ExecutiveController
                 $structuredKrsByKey[$key][] = $row;
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] structured KR detail query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] structured KR detail query failed: ' . $e->getMessage());
         }
 
         // ── Story completion per project (progress proxy for OKR rows) ──────────
@@ -343,7 +343,7 @@ class ExecutiveController
                 ];
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] story progress query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] story progress query failed: ' . $e->getMessage());
         }
 
         // ── Merged PR count per project (activity indicator) ─────────────────
@@ -366,7 +366,7 @@ class ExecutiveController
                 $mergedPrByProject[(int) $row['project_id']] = (int) $row['merged_prs'];
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] merged PR count query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] merged PR count query failed: ' . $e->getMessage());
         }
 
         // ── Table A: Top 10 active risks ──────────────────────────────────────
@@ -481,7 +481,7 @@ class ExecutiveController
                 [':pid' => $id]
             )->fetchAll();
         } catch (\Throwable $e) {
-            error_log('[Executive] projectDashboard OKR query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] projectDashboard OKR query failed: ' . $e->getMessage());
         }
 
         // Parse KR text lines from each node's okr_description.
@@ -546,7 +546,7 @@ class ExecutiveController
                 }
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] projectDashboard story progress query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] projectDashboard story progress query failed: ' . $e->getMessage());
         }
 
         // ── Structured key_results for work items in this project ──────────
@@ -574,7 +574,7 @@ class ExecutiveController
                 $structuredKrsByOkrTitle[$key][] = $row;
             }
         } catch (\Throwable $e) {
-            error_log('[Executive] projectDashboard structured KR query failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[Executive] projectDashboard structured KR query failed: ' . $e->getMessage());
         }
 
         // ── Attach progress data to each OKR item ────────────────────────────

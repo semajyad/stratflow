@@ -373,7 +373,7 @@ class FileProcessor
             }
         } catch (\Throwable $e) {
             // Non-critical — log and continue
-            error_log('[FileProcessor] EXIF strip failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[FileProcessor] EXIF strip failed: ' . $e->getMessage());
         }
     }
 
@@ -401,7 +401,7 @@ class FileProcessor
             return $text;
         }
 
-        error_log("[FileProcessor] All PDF extraction methods failed for: " . basename($filePath));
+        \StratFlow\Services\Logger::warn("[FileProcessor] All PDF extraction methods failed for: " . basename($filePath));
         return '';
     }
 
@@ -435,7 +435,7 @@ class FileProcessor
             return trim($text);
         } catch (\Throwable $e) {
             ini_set('memory_limit', $prevMemory);
-            error_log("[FileProcessor] smalot failed: " . $e->getMessage());
+            \StratFlow\Services\Logger::warn("[FileProcessor] smalot failed: " . $e->getMessage());
             return '';
         }
     }
@@ -443,7 +443,7 @@ class FileProcessor
     private function extractPdfViaGemini(string $filePath): string
     {
         if (!$this->externalAiProcessingEnabled()) {
-            error_log('[FileProcessor] External AI PDF extraction disabled by policy');
+            \StratFlow\Services\Logger::warn('[FileProcessor] External AI PDF extraction disabled by policy');
             return '';
         }
 
@@ -454,13 +454,13 @@ class FileProcessor
                ?: '';
 
         if ($apiKey === '') {
-            error_log("[FileProcessor] No Gemini API key available for PDF fallback");
+            \StratFlow\Services\Logger::warn("[FileProcessor] No Gemini API key available for PDF fallback");
             return '';
         }
 
         try {
             $fileSize = filesize($filePath);
-            error_log("[FileProcessor] Attempting Gemini PDF extraction for " . basename($filePath) . " ({$fileSize} bytes)");
+            \StratFlow\Services\Logger::warn("[FileProcessor] Attempting Gemini PDF extraction for " . basename($filePath) . " ({$fileSize} bytes)");
 
             $pdfData = file_get_contents($filePath);
             if ($pdfData === false) return '';
@@ -498,32 +498,34 @@ class FileProcessor
             curl_close($ch);
 
             if ($response === false) {
-                error_log("[FileProcessor] Gemini PDF extraction: curl failed - " . $curlError);
+                \StratFlow\Services\Logger::warn("[FileProcessor] Gemini PDF extraction: curl failed - " . $curlError);
                 return '';
             }
 
             if ($httpCode !== 200) {
-                error_log("[FileProcessor] Gemini PDF extraction HTTP {$httpCode}: " . substr($response, 0, 500));
+                // Response body intentionally excluded — may contain extracted document text (PII).
+                \StratFlow\Services\Logger::warn('[FileProcessor] Gemini PDF extraction failed', ['http_code' => $httpCode]);
                 return '';
             }
 
             $data = json_decode($response, true);
 
             if (!empty($data['error'])) {
-                error_log("[FileProcessor] Gemini API error: " . ($data['error']['message'] ?? json_encode($data['error'])));
+                \StratFlow\Services\Logger::warn("[FileProcessor] Gemini API error: " . ($data['error']['message'] ?? json_encode($data['error'])));
                 return '';
             }
 
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
             if (trim($text) !== '') {
-                error_log("[FileProcessor] Gemini extracted " . strlen($text) . " chars from PDF");
+                \StratFlow\Services\Logger::warn("[FileProcessor] Gemini extracted " . strlen($text) . " chars from PDF");
                 return trim($text);
             }
 
-            error_log("[FileProcessor] Gemini returned empty text. Response: " . substr($response, 0, 300));
+            // Response body intentionally excluded — may contain extracted document text (PII).
+            \StratFlow\Services\Logger::warn('[FileProcessor] Gemini returned empty text for PDF');
         } catch (\Throwable $e) {
-            error_log("[FileProcessor] Gemini PDF extraction failed: " . $e->getMessage());
+            \StratFlow\Services\Logger::warn("[FileProcessor] Gemini PDF extraction failed: " . $e->getMessage());
         }
 
         return '';
@@ -668,7 +670,7 @@ class FileProcessor
     private function extractMediaViaGemini(string $filePath, string $mimeType): string
     {
         if (!$this->externalAiProcessingEnabled()) {
-            error_log('[FileProcessor] External AI media transcription disabled by policy');
+            \StratFlow\Services\Logger::warn('[FileProcessor] External AI media transcription disabled by policy');
             return '';
         }
 
@@ -678,7 +680,7 @@ class FileProcessor
                ?: '';
 
         if ($apiKey === '') {
-            error_log('[FileProcessor] No Gemini API key for media transcription');
+            \StratFlow\Services\Logger::warn('[FileProcessor] No Gemini API key for media transcription');
             return '';
         }
 
@@ -692,7 +694,7 @@ class FileProcessor
             $fileName = $this->geminiFileUriToName($fileUri);
 
             if (!$this->geminiFilesPollActive($fileName, $apiKey)) {
-                error_log('[FileProcessor] Gemini file did not become ACTIVE within timeout');
+                \StratFlow\Services\Logger::warn('[FileProcessor] Gemini file did not become ACTIVE within timeout');
                 $this->geminiFilesDelete($fileName, $apiKey);
                 return '';
             }
@@ -702,7 +704,7 @@ class FileProcessor
 
             return $transcript;
         } catch (\Throwable $e) {
-            error_log('[FileProcessor] Media transcription failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[FileProcessor] Media transcription failed: ' . $e->getMessage());
             return '';
         }
     }
@@ -801,7 +803,7 @@ class FileProcessor
                 return true;
             }
             if ($state === 'FAILED') {
-                error_log('[FileProcessor] Gemini file processing FAILED: ' . json_encode($data['error'] ?? []));
+                \StratFlow\Services\Logger::warn('[FileProcessor] Gemini file processing FAILED: ' . json_encode($data['error'] ?? []));
                 return false;
             }
         }

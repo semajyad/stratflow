@@ -206,6 +206,17 @@ class AuthController
         $ip   = $this->request->ip();
         $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
+        // Rate-limit MFA attempts to prevent TOTP brute-force (shared bucket with login)
+        if ($this->auth->isRateLimited($ip)) {
+            AuditLogger::log($this->db, (int) ($_SESSION['_mfa_pending_user_id'] ?? 0), AuditLogger::LOGIN_FAILURE, $ip, $ua, [
+                'reason' => 'mfa_rate_limited',
+            ]);
+            unset($_SESSION['_mfa_pending_user_id']);
+            $_SESSION['login_error'] = 'Too many attempts. Please try again in 15 minutes.';
+            $this->response->redirect('/login');
+            return;
+        }
+
         if ($this->auth->attemptMfa($code)) {
             $user = $this->auth->user();
             AuditLogger::log($this->db, (int) ($user['id'] ?? 0), AuditLogger::LOGIN_SUCCESS, $ip, $ua, [
@@ -226,6 +237,7 @@ class AuthController
             'reason' => 'mfa_code_invalid',
         ]);
 
+        $this->auth->recordFailedAttempt($ip);
         $_SESSION['mfa_error'] = 'Invalid code. Please try again.';
         $this->response->redirect('/login/mfa');
     }

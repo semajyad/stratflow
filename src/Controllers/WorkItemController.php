@@ -101,7 +101,7 @@ class WorkItemController
         } catch (\Throwable $e) {
             // Graceful degradation if key_results table is missing (pending migration)
             $krsByItemId = [];
-            error_log('[WorkItems] KR lookup failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[WorkItems] KR lookup failed: ' . $e->getMessage());
         }
 
         // Distinct non-empty OKR titles for the modal datalist
@@ -859,7 +859,7 @@ class WorkItemController
             (int) ($item['quality_attempts'] ?? 0) + 1,
             $errorKey
         );
-        error_log('[StratFlow] WorkItem score error: ' . $errorKey);
+        \StratFlow\Services\Logger::warn('[StratFlow] WorkItem score error: ' . $errorKey);
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
 
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);

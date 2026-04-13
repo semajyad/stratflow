@@ -157,10 +157,10 @@ class DiagramController
                 }
 
                 $lastError = 'AI did not return valid Mermaid diagram code (attempt ' . $attempt . ')';
-                error_log("[DiagramGen] Attempt {$attempt} failed: no 'graph' keyword. Raw output: " . substr($raw, 0, 200));
+                \StratFlow\Services\Logger::warn("[DiagramGen] Attempt {$attempt} failed: no 'graph' keyword. Raw output: " . substr($raw, 0, 200));
             } catch (\RuntimeException $e) {
                 $lastError = $e->getMessage();
-                error_log("[DiagramGen] Attempt {$attempt} exception: " . $e->getMessage());
+                \StratFlow\Services\Logger::warn("[DiagramGen] Attempt {$attempt} exception: " . $e->getMessage());
             }
         }
 

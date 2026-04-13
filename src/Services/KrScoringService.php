@@ -131,7 +131,7 @@ class KrScoringService
         try {
             $result = $this->gemini->generateJson(KrScoringPrompt::PROMPT, $input);
         } catch (\Throwable $e) {
-            error_log('[KrScoringService] Gemini error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[KrScoringService] Gemini error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
             return;
         }
 

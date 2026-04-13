@@ -51,11 +51,11 @@ class EmailService
                     $htmlBody
                 );
                 if ($sent) {
-                    error_log("[StratFlow] Email sent via SMTP to {$to}");
+                    \StratFlow\Services\Logger::warn("[StratFlow] Email sent via SMTP to {$to}");
                     return true;
                 }
             } catch (\Throwable $e) {
-                error_log("[StratFlow] SMTP failed: {$e->getMessage()}");
+                \StratFlow\Services\Logger::warn("[StratFlow] SMTP failed: {$e->getMessage()}");
             }
         }
 
@@ -65,11 +65,11 @@ class EmailService
             try {
                 $sent = $this->sendViaResendApi($resendApiKey, $fromName, $fromEmail, $to, $subject, $htmlBody);
                 if ($sent) {
-                    error_log("[StratFlow] Email sent via Resend API to {$to}");
+                    \StratFlow\Services\Logger::warn("[StratFlow] Email sent via Resend API to {$to}");
                     return true;
                 }
             } catch (\Throwable $e) {
-                error_log("[StratFlow] Resend API failed: {$e->getMessage()}");
+                \StratFlow\Services\Logger::warn("[StratFlow] Resend API failed: {$e->getMessage()}");
             }
         }
 
@@ -80,15 +80,15 @@ class EmailService
             try {
                 $sent = $this->sendViaMailerSend($mailerSendKey, $fromName, $mailerSendFrom, $to, $subject, $htmlBody);
                 if ($sent) {
-                    error_log("[StratFlow] Email sent via MailerSend to {$to}");
+                    \StratFlow\Services\Logger::warn("[StratFlow] Email sent via MailerSend to {$to}");
                     return true;
                 }
             } catch (\Throwable $e) {
-                error_log("[StratFlow] MailerSend failed: {$e->getMessage()}");
+                \StratFlow\Services\Logger::warn("[StratFlow] MailerSend failed: {$e->getMessage()}");
             }
         }
 
-        error_log("[StratFlow] Email FAILED to {$to} — no delivery method succeeded");
+        \StratFlow\Services\Logger::warn("[StratFlow] Email FAILED to {$to} — no delivery method succeeded");
         return false;
     }
 

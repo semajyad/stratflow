@@ -131,7 +131,7 @@ class GitLinkService
                 // Don't let a transient DB error abort the whole webhook —
                 // log and keep processing the remaining matches. The webhook
                 // handler still returns 200 so the provider doesn't retry.
-                error_log('[GitLink] linkFromPrBody per-id failure (id=' . $numericId . '): ' . $e->getMessage());
+                \StratFlow\Services\Logger::warn('[GitLink] linkFromPrBody per-id failure (id=' . $numericId . '): ' . $e->getMessage());
                 continue;
             }
         }

@@ -124,7 +124,7 @@ class GitLinkController
                 'status'     => 'unknown',
             ]);
         } catch (\Throwable $e) {
-            error_log('[GitLink] create failed: ' . $e->getMessage());
+            \StratFlow\Services\Logger::warn('[GitLink] create failed: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Database error']);
             return;
