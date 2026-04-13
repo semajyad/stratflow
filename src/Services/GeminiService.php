@@ -409,7 +409,7 @@ class GeminiService
     private function openaiGenerate(string $prompt, string $input): string
     {
         $payload = json_encode([
-            'model' => 'gpt-4o-mini',
+            'model' => 'gpt-4o-mini-2024-07-18',
             'messages' => [
                 ['role' => 'system', 'content' => $prompt],
                 ['role' => 'user', 'content' => $input],

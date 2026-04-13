@@ -3719,12 +3719,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'ok') {
                 self.updateUI(task, data);
             } else {
+                task.el.classList.remove('js-quality-score-placeholder');
                 task.el.textContent = '!';
                 task.el.title = data.message || 'Scoring failed';
                 task.el.style.backgroundColor = '#6b7280';
             }
         })
         .catch(function(err) {
+            task.el.classList.remove('js-quality-score-placeholder');
             task.el.textContent = '!';
             task.el.style.backgroundColor = '#6b7280';
             console.error('Quality scoring failed:', err);

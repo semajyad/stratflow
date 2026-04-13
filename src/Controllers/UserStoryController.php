@@ -832,8 +832,9 @@ PROMPT;
      *
      * @param int $id User story primary key
      */
-    public function score(int $id): void
+    public function score(string $id): void
     {
+        $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
@@ -896,11 +897,12 @@ PROMPT;
                 return;
             }
         } catch (\Throwable $e) {
-            $this->response->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            error_log('[StratFlow] UserStory score error: ' . $e->getMessage());
+            $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
             return;
         }
 
-        $this->response->json(['status' => 'error', 'message' => 'Scoring failed'], 500);
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
     }
 
     /**

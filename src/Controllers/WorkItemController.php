@@ -733,8 +733,9 @@ class WorkItemController
      *
      * @param int $id HL work item primary key
      */
-    public function score(int $id): void
+    public function score(string $id): void
     {
+        $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
 
@@ -797,11 +798,12 @@ class WorkItemController
                 return;
             }
         } catch (\Throwable $e) {
-            $this->response->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            error_log('[StratFlow] WorkItem score error: ' . $e->getMessage());
+            $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
             return;
         }
 
-        $this->response->json(['status' => 'error', 'message' => 'Scoring failed'], 500);
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
     }
 
     /**
