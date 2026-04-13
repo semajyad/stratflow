@@ -297,7 +297,7 @@ git commit -m "feat(models): add quality_score + quality_breakdown to UserStory"
 
 ```php
     public const QUALITY_PROMPT = <<<'PROMPT'
-You are a strict Agile quality auditor. Score the following High-Level Work Item (HLWI)
+You are a strict Agile quality auditor. Score the following High-Level Work Item (High Level Work Item)
 across exactly 6 dimensions. Be strict — a vague "so that users benefit" must lose value
 points; missing acceptance criteria must lose AC points; no KR reference means 0 for kr_linkage.
 
@@ -836,7 +836,7 @@ Replace with:
             $input .= $qualityBlock;
 ```
 
-- [ ] **Step 3: Instantiate scorer once per HL item loop iteration** — insert immediately after the `$qualityBlock =` block (still inside the `foreach ($hlItemIds as $hlItemId)` loop):
+- [ ] **Step 3: Instantiate scorer once per High Level item loop iteration** — insert immediately after the `$qualityBlock =` block (still inside the `foreach ($hlItemIds as $hlItemId)` loop):
 
 ```php
             $scorer = new StoryQualityScorer(new GeminiService($this->config));

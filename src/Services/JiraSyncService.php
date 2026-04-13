@@ -3,7 +3,7 @@
  * JiraSyncService — Push & Pull Sync Engine
  *
  * Handles bidirectional synchronisation between StratFlow items
- * (HL work items, user stories) and Jira Cloud issues. Pushes
+ * (High Level work items, user stories) and Jira Cloud issues. Pushes
  * create Epics/Stories in Jira; pulls update local items from
  * Jira changes.
  *
@@ -225,7 +225,7 @@ class JiraSyncService
     // ===========================
 
     /**
-     * Push HL work items to Jira as Epics.
+     * Push High Level work items to Jira as Epics.
      *
      * Creates new Epics for unmapped items, updates existing ones
      * if the sync hash has changed. Logs every operation.

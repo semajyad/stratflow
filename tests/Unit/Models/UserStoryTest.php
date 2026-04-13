@@ -14,7 +14,7 @@ use StratFlow\Models\UserStory;
  * UserStoryTest
  *
  * Tests CRUD operations for the UserStory model against the real Docker MySQL database.
- * setUp creates a test org + user + project + HL work item; tearDown removes all test data.
+ * setUp creates a test org + user + project + High Level work item; tearDown removes all test data.
  */
 class UserStoryTest extends TestCase
 {
@@ -63,11 +63,11 @@ class UserStoryTest extends TestCase
         );
         self::$projectId = (int) self::$db->lastInsertId();
 
-        // Create an HL work item to use as parent
+        // Create an High Level work item to use as parent
         self::$hlItemId = HLWorkItem::create(self::$db, [
             'project_id'      => self::$projectId,
             'priority_number' => 1,
-            'title'           => 'Parent HL Item - UserStoryTest',
+            'title'           => 'Parent High Level Item - UserStoryTest',
         ]);
     }
 

@@ -2,7 +2,7 @@
 /**
  * Traceability Template
  *
- * Read-only collapsible tree: OKR nodes → HL work items → user stories →
+ * Read-only collapsible tree: OKR nodes → High Level work items → user stories →
  * Jira keys → git link pills. Status rollups and progress bars at every level.
  *
  * Variables: $project (array), $tree (array with keys: project, okrs, unlinked_stories)

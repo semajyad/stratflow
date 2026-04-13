@@ -3,7 +3,7 @@
  * TraceabilityController
  *
  * Renders the Traceability page: a read-only collapsible tree showing the
- * full chain from OKR node → HL work item → user story → Jira key → git
+ * full chain from OKR node → High Level work item → user story → Jira key → git
  * links, with status rollups at every level.
  *
  * This is a monitoring view — no forms, no writes, no AI calls.

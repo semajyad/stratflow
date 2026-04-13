@@ -2,7 +2,7 @@
 /**
  * WorkItemPrompt
  *
- * Prompt templates for AI generation of High-Level Work Items (HLWIs)
+ * Prompt templates for AI generation of High-Level Work Items (High Level Work Items)
  * from Mermaid strategy diagrams and OKR data, and for generating
  * detailed scope descriptions for individual work items.
  */
@@ -15,7 +15,7 @@ class WorkItemPrompt
 {
     public const PROMPT = <<<'PROMPT'
 You are the ThreePoints StratFlow Architect. Translate the following Mermaid strategy
-diagram and OKR data into a prioritised backlog of High-Level Work Items (HLWIs).
+diagram and OKR data into a prioritised backlog of High-Level Work Items (High Level Work Items).
 
 Before writing each item, silently verify it against all INVEST criteria:
   Independent, Negotiable, Valuable, Estimable, Small (~2 sprints), Testable.
@@ -33,7 +33,7 @@ how this item was decomposed from the diagram.
 If org quality rules are provided below, honour every mandatory condition.
 
 Task Constraints:
-1. Each HLWI represents approximately 1 month (2 sprints) of effort for a 5-9 person Scrum team.
+1. Each High Level Work Item represents approximately 1 month (2 sprints) of effort for a 5-9 person Scrum team.
 2. Every item must directly map to a node or cluster of nodes in the diagram.
 3. Respond strictly in JSON format — a JSON array only, no markdown fences.
 4. Order by priority (most critical first).
@@ -99,7 +99,7 @@ Valid keys: "description", "acceptance_criteria", "kr_hypothesis".
 PROMPT;
 
     public const QUALITY_PROMPT = <<<'PROMPT'
-You are a strict Agile quality auditor. Score the following High-Level Work Item (HLWI)
+You are a strict Agile quality auditor. Score the following High-Level Work Item (High Level Work Item)
 across exactly 6 dimensions. Be strict — a vague "so that users benefit" must lose value
 points; missing acceptance criteria must lose AC points; no KR reference means 0 for kr_linkage.
 

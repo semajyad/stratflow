@@ -14,7 +14,7 @@ StratFlow V1 (Items 1–9) established the strategy-to-delivery pipeline: upload
 
 ### Week 1: One-Way Push to Jira Cloud & Azure DevOps
 
-**Focus:** Implement OAuth 2.0 authentication flows for both Jira Cloud and Azure DevOps, build the integration configuration screens, and deliver one-way push of HL work items as Epics and user stories as Stories with configurable field mapping.
+**Focus:** Implement OAuth 2.0 authentication flows for both Jira Cloud and Azure DevOps, build the integration configuration screens, and deliver one-way push of High Level work items as Epics and user stories as Stories with configurable field mapping.
 
 #### Phase 1: OAuth Authentication & Data Model (Days 1–3)
 
@@ -33,7 +33,7 @@ StratFlow V1 (Items 1–9) established the strategy-to-delivery pipeline: upload
 
 ● **Task 10.4: Integration Hub Templates.** Build `templates/admin/integrations.php` — integration list view showing all configured integrations with provider badge, project name, status (Active/Paused/Error), last sync timestamp, mapped item count, and action buttons (Configure, Sync Now, Pause/Resume, Delete). Include Jira connection form, Azure DevOps connection form, and field mapping table.
 
-● **Task 10.5: One-Way Push Implementation.** Implement push logic: `JiraService::pushWorkItem()` creates a Jira Epic from an HL work item, `pushUserStory()` creates a Jira Story linked to the parent Epic. Insert a `sync_mappings` row on each push recording the local type, local ID, external ID, external URL, and a SHA-256 sync hash of field values for change detection.
+● **Task 10.5: One-Way Push Implementation.** Implement push logic: `JiraService::pushWorkItem()` creates a Jira Epic from an High Level work item, `pushUserStory()` creates a Jira Story linked to the parent Epic. Insert a `sync_mappings` row on each push recording the local type, local ID, external ID, external URL, and a SHA-256 sync hash of field values for change detection.
 
 ● **Task 10.6: Push Trigger UI.** Add "Push to Jira" and "Push to Azure DevOps" buttons on Work Items and User Stories screens. Buttons appear only when an active integration exists for the respective provider. Button click triggers push and displays success/error feedback.
 
@@ -59,7 +59,7 @@ StratFlow V1 (Items 1–9) established the strategy-to-delivery pipeline: upload
 
 ● **Task 10.10: Azure DevOps Service.** Implement `AzureDevOpsService.php` — OAuth 2.0 client for Azure DevOps REST API with the same method signatures as JiraService. OAuth scopes: `vso.work_write`, `vso.hooks_write`. Register ADO webhook via Service Hooks API. Handle event types: `workitem.updated`, `workitem.created`, `workitem.deleted`.
 
-● **Task 10.11: Azure DevOps Connection UI.** Build Azure DevOps connection screen and field mapping configuration. Reuse Jira templates with provider-conditional rendering. Field mappings: HL Work Item → Feature, User Story → User Story, Sprint → Iteration, Priority Number → Priority, Story Points → Story Points, Owner → Assigned To.
+● **Task 10.11: Azure DevOps Connection UI.** Build Azure DevOps connection screen and field mapping configuration. Reuse Jira templates with provider-conditional rendering. Field mappings: High Level Work Item → Feature, User Story → User Story, Sprint → Iteration, Priority Number → Priority, Story Points → Story Points, Owner → Assigned To.
 
 ● **Task 10.12: Governance Dashboard Integration.** Add integration sync status to the Governance Dashboard — show count of pending external changes alongside drift alerts. Display sync health indicators: last sync timestamp, error count, and a "Sync Now" quick action.
 
@@ -71,7 +71,7 @@ Configurable mapping between StratFlow fields and external tool fields, presente
 
 | StratFlow Field | Maps To (Jira) | Maps To (Azure DevOps) | Default |
 |-----------------|----------------|------------------------|---------|
-| HL Work Item → | Epic | Feature | Auto |
+| High Level Work Item → | Epic | Feature | Auto |
 | User Story → | Story | User Story | Auto |
 | Sprint → | Sprint | Iteration | Auto |
 | Priority Number → | Priority | Priority | Auto |
@@ -90,7 +90,7 @@ Custom field mapping: a "+ Add Custom Mapping" row allows selecting any StratFlo
 | Requirement | Success Criteria |
 |-------------|-----------------|
 | OAuth 2.0 authentication | User can connect Jira Cloud and Azure DevOps via OAuth flow; tokens are stored encrypted in `integrations.config_json` |
-| One-way push | HL work items push as Epics, user stories push as Stories, with correct field mapping; `sync_mappings` rows created |
+| One-way push | High Level work items push as Epics, user stories push as Stories, with correct field mapping; `sync_mappings` rows created |
 | Bidirectional sync | Changes made in Jira or ADO are detected via webhook, reflected in StratFlow, and trigger drift detection |
 | Conflict resolution | Conflicting changes create governance queue items with both values; user can accept or reject |
 | Field mapping | Admin can customise field mapping; custom field mappings are persisted and applied on every sync |

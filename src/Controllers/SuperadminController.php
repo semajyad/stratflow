@@ -66,7 +66,7 @@ class SuperadminController
         ],
         'experienced_agile_product_owner' => [
             'title'    => 'Experienced Agile Product Owner',
-            'stage'    => 'Decompose HL Items into user stories',
+            'stage'    => 'Decompose High Level Items into user stories',
             'prompt'   => 'You are an Experienced Agile Product Owner. Your role is to decompose high-level work items into well-defined user stories that follow INVEST criteria with clear acceptance criteria.',
         ],
         'enterprise_business_strategist' => [

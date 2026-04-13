@@ -31,7 +31,7 @@ StratFlow generates beautiful sprint-ready backlogs, but enterprises already liv
 ### What to Build
 
 **Phase A: One-Way Push (2 weeks)**
-- Push HL work items as Jira Epics with OKR data in description
+- Push High Level work items as Jira Epics with OKR data in description
 - Push user stories as Jira Stories linked to parent Epics
 - Map StratFlow fields → Jira fields (priority, story points, sprint, assignee)
 - OAuth 2.0 authentication with Jira Cloud
@@ -170,7 +170,7 @@ StratFlow is currently single-player — one person uploads, generates, and mana
 - Shows who did what, when
 
 **Comments on Work Items & Stories**
-- Comment thread on each HL work item and user story
+- Comment thread on each High Level work item and user story
 - @mention users (triggers notification)
 - Markdown support for formatting
 - Comment count badge on item rows

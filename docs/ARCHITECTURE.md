@@ -132,7 +132,7 @@ stratflow/
 │   │   ├── StrategicBaseline.php   ← Phase 4: Point-in-time project snapshots for drift comparison
 │   │   ├── DriftAlert.php          ← Phase 4: Alerts for capacity/dependency tripwires and alignment issues
 │   │   ├── GovernanceItem.php      ← Phase 4: Change-control queue; pending items require human approval
-│   │   └── HLItemDependency.php    ← Phase 5: Blocking dependencies between HL work items; supports createBatch replace pattern
+│   │   └── HLItemDependency.php    ← Phase 5: Blocking dependencies between High Level work items; supports createBatch replace pattern
 │   └── Services/
 │       ├── FileProcessor.php   PDF text extraction (smalot/pdfparser)
 │       ├── GeminiService.php   Gemini API HTTP client

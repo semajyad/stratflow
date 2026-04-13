@@ -57,7 +57,7 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/risks/{id}/delete` | `RiskController@delete` | auth, csrf | Delete a risk |
 | POST | `/app/risks/{id}/mitigation` | `RiskController@generateMitigation` | auth | AJAX: AI generate mitigation strategy for a risk |
 | GET | `/app/user-stories` | `UserStoryController@index` | auth | User stories screen |
-| POST | `/app/user-stories/generate` | `UserStoryController@generate` | auth, csrf | AI decompose HL work items into user stories |
+| POST | `/app/user-stories/generate` | `UserStoryController@generate` | auth, csrf | AI decompose High Level work items into user stories |
 | POST | `/app/user-stories/store` | `UserStoryController@store` | auth, csrf | Create a user story manually |
 | POST | `/app/user-stories/reorder` | `UserStoryController@reorder` | auth | AJAX: update story priority order |
 | GET | `/app/user-stories/export` | `UserStoryController@export` | auth | Download CSV, JSON, or Jira-format export |

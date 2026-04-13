@@ -124,7 +124,7 @@ class RiskController
     /**
      * Auto-generate risks from work items using Gemini AI.
      *
-     * Loads all HL work items, sends to Gemini with GENERATE_PROMPT,
+     * Loads all High Level work items, sends to Gemini with GENERATE_PROMPT,
      * creates Risk records, and links them to matching work items.
      */
     public function generate(): void

@@ -28,7 +28,7 @@ This document catalogues all features built across Phases 1–5 of the V2 develo
 
 ### User Story Decomposition with Dependency Tracking
 
-- HL Work Items are decomposed into 5–10 granular user stories via AI.
+- High Level Work Items are decomposed into 5–10 granular user stories via AI.
 - Stories can be created manually, reordered by drag-and-drop, and exported as CSV, JSON, or Jira format.
 - Each story can be sized manually or via AI suggestion (modified Fibonacci scale: 1–20 points).
 - Stories support a self-referential `blocked_by` field for intra-story dependencies.
@@ -67,7 +67,7 @@ This document catalogues all features built across Phases 1–5 of the V2 develo
 
 - Admins can configure org-level defaults stored in `organisations.settings_json`:
   - Custom AI persona prompts
-  - HL Work Item default values
+  - High Level Work Item default values
   - Capacity tripwire thresholds for the Drift Engine
 - **Route:** `/app/admin/settings`
 
@@ -154,7 +154,7 @@ This document catalogues all features built across Phases 1–5 of the V2 develo
 
 ## Phase 5 — V2 Completion
 
-### HL Work Item Dependencies
+### High Level Work Item Dependencies
 
 - Work items can have blocking dependencies on other work items in the same project.
 - A row `(item_id, depends_on_id)` means `depends_on_id` must be completed before `item_id` begins.
@@ -167,7 +167,7 @@ This document catalogues all features built across Phases 1–5 of the V2 develo
 
 ### Manual Work Item Creation
 
-- Users can create HL Work Items manually without running AI generation.
+- Users can create High Level Work Items manually without running AI generation.
 - **Route:** `POST /app/work-items/store`
 
 ### Regenerate Sizing — Work Items
@@ -221,7 +221,7 @@ This document catalogues all features built across Phases 1–5 of the V2 develo
 | Sounding Boards | 3 | `persona_panels`, `persona_members`, `evaluation_results` | `/app/sounding-board/*` |
 | Superadmin Area | 3 | — | `/superadmin/*` |
 | Strategic Drift Engine | 4 | `strategic_baselines`, `drift_alerts`, `governance_queue` | `/app/governance/*` |
-| HL Work Item Dependencies | 5 | `hl_item_dependencies` | (via WorkItemController) |
+| High Level Work Item Dependencies | 5 | `hl_item_dependencies` | (via WorkItemController) |
 | Manual Work Item Creation | 5 | `hl_work_items` | `POST /app/work-items/store` |
 | Regenerate Sizing (items) | 5 | `hl_work_items` | `POST /app/work-items/regenerate-sizing` |
 | Regenerate Sizing (stories) | 5 | `user_stories` | `POST /app/user-stories/regenerate-sizing` |

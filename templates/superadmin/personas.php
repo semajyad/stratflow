@@ -15,7 +15,7 @@
 
 $reviewScopeLabels = [
     'strategy_okrs'     => 'Strategy Roadmap & OKRs',
-    'hl_items_stories'  => 'HL Work Items & User Stories',
+    'hl_items_stories'  => 'High Level Work Items & User Stories',
 ];
 ?>
 

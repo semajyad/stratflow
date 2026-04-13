@@ -70,7 +70,7 @@ class UserStory
 
     /**
      * Return all user stories for a project, ordered by priority ascending.
-     * Includes parent HL item title via LEFT JOIN.
+     * Includes parent High Level item title via LEFT JOIN.
      *
      * @param Database $db        Database instance
      * @param int      $projectId Project ID to scope the query
@@ -93,10 +93,10 @@ class UserStory
     }
 
     /**
-     * Return all user stories for a given parent HL work item.
+     * Return all user stories for a given parent High Level work item.
      *
      * @param Database $db       Database instance
-     * @param int      $parentId Parent HL work item ID
+     * @param int      $parentId Parent High Level work item ID
      * @return array             Array of story rows as associative arrays
      */
     public static function findByParentId(Database $db, int $parentId): array

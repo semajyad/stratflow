@@ -6237,7 +6237,7 @@ details[open] > summary .trace-chevron {
     color: var(--text, #1e293b);
 }
 
-/* HL Work Item row — indented inside an OKR */
+/* High Level Work Item row — indented inside an OKR */
 .trace-work-item {
     border-top: 1px solid var(--border, #e2e8f0);
     margin-left: 1.5rem;

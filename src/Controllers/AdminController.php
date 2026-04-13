@@ -937,7 +937,7 @@ class AdminController
                 'technical_project_manager'    => 'Generate a description of high-level work items',
                 'expert_system_architect'      => 'Convert the summary to analysis, analyse video from files',
                 'enterprise_risk_manager'      => 'Generate risks, read the risk, and write the mitigation strategy',
-                'agile_product_owner'          => 'Decompose the HL Items into user stories',
+                'agile_product_owner'          => 'Decompose the High Level Items into user stories',
                 'enterprise_business_strategist' => 'Analyse the provided file to a 3-paragraph summary',
             ],
             'hl_item_default_months'       => 2,

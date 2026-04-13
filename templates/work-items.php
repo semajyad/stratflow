@@ -2,7 +2,7 @@
 /**
  * Work Items Template
  *
- * Displays the prioritised backlog of High-Level Work Items (HLWIs)
+ * Displays the prioritised backlog of High-Level Work Items (High Level Work Items)
  * with drag-and-drop reordering, inline edit modal, AI generation,
  * and CSV/JSON export.
  *

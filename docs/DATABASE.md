@@ -59,7 +59,7 @@ Top-level tenant. Each paying customer is one organisation.
 | `name` | VARCHAR(255) | NOT NULL | Organisation display name |
 | `stripe_customer_id` | VARCHAR(255) | NULL | Stripe customer object ID |
 | `is_active` | TINYINT(1) | NOT NULL, DEFAULT 1 | 0 = suspended |
-| `settings_json` | JSON | NULL | Org-level workflow settings: AI persona prompts, HL item defaults, capacity tripwires |
+| `settings_json` | JSON | NULL | Org-level workflow settings: AI persona prompts, High Level item defaults, capacity tripwires |
 | `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
 
 ---
@@ -197,7 +197,7 @@ Individual nodes extracted from a diagram, with optional OKR metadata attached b
 
 ### `hl_work_items`
 
-High-Level Work Items (HLWIs) generated from the strategy diagram. Each item represents approximately one month of team effort. Phase 1 added RICE/WSJF scoring columns and a computed final score.
+High-Level Work Items (High Level Work Items) generated from the strategy diagram. Each item represents approximately one month of team effort. Phase 1 added RICE/WSJF scoring columns and a computed final score.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -477,7 +477,7 @@ Added in Phase 4 (Strategic Drift Engine).
 ### `hl_item_dependencies`
 
 Records blocking dependencies between High-Level Work Items. A row `(item_id, depends_on_id)` means "item_id depends on depends_on_id" — i.e., `depends_on_id` must be completed before `item_id` can begin.
-Added in Phase 5 (HL Work Item Dependencies).
+Added in Phase 5 (High Level Work Item Dependencies).
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|

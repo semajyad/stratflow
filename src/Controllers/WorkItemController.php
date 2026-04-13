@@ -2,7 +2,7 @@
 /**
  * WorkItemController
  *
- * Handles the High-Level Work Items (HLWI) page: AI generation from
+ * Handles the High-Level Work Items (High Level Work Item) page: AI generation from
  * strategy diagrams, drag-and-drop reordering, CRUD operations,
  * AI description generation, and CSV/JSON export.
  */

@@ -113,7 +113,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
 </div>
 
 <!-- ===========================
-     HL Item Selector — Batch AI Decomposition
+     High Level Item Selector — Batch AI Decomposition
      =========================== -->
 <?php if (!empty($work_items)): ?>
 <div class="card mb-6">

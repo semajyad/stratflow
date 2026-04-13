@@ -653,7 +653,7 @@ Replace everything from `public const PROMPT = <<<'PROMPT'` through the closing 
 ```php
 public const PROMPT = <<<'PROMPT'
 You are the ThreePoints StratFlow Architect. Translate the following Mermaid strategy
-diagram and OKR data into a prioritised backlog of High-Level Work Items (HLWIs).
+diagram and OKR data into a prioritised backlog of High-Level Work Items (High Level Work Items).
 
 Before writing each item, silently verify it against all INVEST criteria:
   Independent, Negotiable, Valuable, Estimable, Small (~2 sprints), Testable.
@@ -671,7 +671,7 @@ how this item was decomposed from the diagram.
 If org quality rules are provided below, honour every mandatory condition.
 
 Task Constraints:
-1. Each HLWI represents approximately 1 month (2 sprints) of effort for a 5-9 person Scrum team.
+1. Each High Level Work Item represents approximately 1 month (2 sprints) of effort for a 5-9 person Scrum team.
 2. Every item must directly map to a node or cluster of nodes in the diagram.
 3. Respond strictly in JSON format — a JSON array only, no markdown fences.
 4. Order by priority (most critical first).
@@ -927,7 +927,7 @@ use StratFlow\Models\KeyResult;
 
 Add alongside existing use statements.
 
-- [ ] **Step 2: In `generate()`, inject KR data + org config into the input for each HL item**
+- [ ] **Step 2: In `generate()`, inject KR data + org config into the input for each High Level item**
 
 Find the block that builds `$input` for each `$hlItem`:
 

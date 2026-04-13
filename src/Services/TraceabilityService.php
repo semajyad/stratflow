@@ -4,7 +4,7 @@
  *
  * Builds the full strategy-to-code traceability tree for one project.
  * Assembles virtual OKR buckets (grouped by hl_work_items.okr_title) →
- * HL work items → user stories → git links in ≤ 5 queries, with rollup
+ * High Level work items → user stories → git links in ≤ 5 queries, with rollup
  * counts at every level.
  *
  * Schema reality:
@@ -53,7 +53,7 @@ class TraceabilityService
      *
      * Queries issued (≤ 5):
      *   1. Ownership check  — projects WHERE id=? AND org_id=?
-     *   2. HL work items    — hl_work_items WHERE project_id=? ORDER BY priority_number
+     *   2. High Level work items    — hl_work_items WHERE project_id=? ORDER BY priority_number
      *   3. User stories     — user_stories LEFT JOIN sync_mappings (Jira key)
      *   4. Git links        — StoryGitLink::findByLocalItemsBulk for user_story
      *   5. Work item Jira   — hl_work_items LEFT JOIN sync_mappings (Jira key)
@@ -70,7 +70,7 @@ class TraceabilityService
             return null;
         }
 
-        // Query 2: HL work items ordered by priority
+        // Query 2: High Level work items ordered by priority
         $workItems = $this->fetchWorkItems($projectId);
 
         // Query 3: User stories with Jira keys
@@ -80,7 +80,7 @@ class TraceabilityService
         $storyIds    = array_map('intval', array_column($stories, 'id'));
         $gitLinksMap = StoryGitLink::findByLocalItemsBulk($this->db, 'user_story', $storyIds);
 
-        // Query 5: Jira keys for HL work items
+        // Query 5: Jira keys for High Level work items
         $workItemJiraMap = $this->fetchWorkItemJiraKeys($projectId, $orgId);
 
         // Assemble the full nested tree in PHP
@@ -116,7 +116,7 @@ class TraceabilityService
     }
 
     /**
-     * Load all HL work items for a project, ordered by priority number.
+     * Load all High Level work items for a project, ordered by priority number.
      *
      * @param int $projectId Project to scope the query
      * @return array         Array of hl_work_items rows
@@ -164,7 +164,7 @@ class TraceabilityService
     }
 
     /**
-     * Load Jira external keys for all HL work items in a project.
+     * Load Jira external keys for all High Level work items in a project.
      *
      * Returns a map of work_item_id => external_key (null when no mapping exists).
      *

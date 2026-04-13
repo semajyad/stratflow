@@ -101,7 +101,7 @@ valid Mermaid.js flowchart. Requirements:
 
 ### Purpose
 
-Translates the Mermaid strategy diagram and any OKR data attached to nodes into a prioritised backlog of High-Level Work Items (HLWIs). Each item represents approximately one month of effort for a standard Scrum team.
+Translates the Mermaid strategy diagram and any OKR data attached to nodes into a prioritised backlog of High-Level Work Items (High Level Work Items). Each item represents approximately one month of effort for a standard Scrum team.
 
 ### Input format
 
@@ -127,10 +127,10 @@ A strict JSON array — no markdown fences, no prose. Each element must have exa
 
 ```
 You are the ThreePoints StratFlow Architect. Translate the following Mermaid strategy
-diagram and OKR data into a prioritised backlog of High-Level Work Items (HLWIs).
+diagram and OKR data into a prioritised backlog of High-Level Work Items (High Level Work Items).
 
 Task Constraints:
-1. Each HLWI must represent approximately 1 month (4 weeks) of effort for a standard
+1. Each High Level Work Item must represent approximately 1 month (4 weeks) of effort for a standard
    Scrum team (5-9 people), which equals roughly 2 sprints.
 2. Every item must directly map back to a node or cluster of nodes in the diagram.
 3. Respond strictly in JSON format -- a JSON array only, no markdown fences.

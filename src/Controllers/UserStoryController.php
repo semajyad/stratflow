@@ -2,7 +2,7 @@
 /**
  * UserStoryController
  *
- * Handles the User Stories page: AI decomposition from HL work items,
+ * Handles the User Stories page: AI decomposition from High Level work items,
  * drag-and-drop reordering, CRUD operations, AI size suggestion,
  * dependency tracking, and CSV/JSON/Jira export.
  */
@@ -57,7 +57,7 @@ class UserStoryController
     /**
      * Render the user stories page for a specific project.
      *
-     * Loads stories with parent HL titles, and HL items for the
+     * Loads stories with parent High Level titles, and High Level items for the
      * split-selection checkboxes.
      */
     public function index(): void
@@ -116,9 +116,9 @@ class UserStoryController
     }
 
     /**
-     * Generate user stories from selected HL work items via AI.
+     * Generate user stories from selected High Level work items via AI.
      *
-     * For each selected HL item, sends title+description to Gemini
+     * For each selected High Level item, sends title+description to Gemini
      * with DECOMPOSE_PROMPT, parses JSON, and creates UserStory records.
      */
     public function generate(): void

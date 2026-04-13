@@ -131,7 +131,7 @@ class DriftDetectionService
     /**
      * Check if any work item's story count/size has grown beyond threshold.
      *
-     * Compares the current total story size per parent HL item against
+     * Compares the current total story size per parent High Level item against
      * the baseline snapshot. Flags parent items whose scope has grown
      * beyond the allowed threshold.
      *
@@ -272,7 +272,7 @@ class DriftDetectionService
     // ===========================
 
     /**
-     * Group stories by their parent HL item ID, summing sizes and counts.
+     * Group stories by their parent High Level item ID, summing sizes and counts.
      *
      * @param array $stories Array of story rows
      * @return array         Grouped data keyed by parent_hl_item_id

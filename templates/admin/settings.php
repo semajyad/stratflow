@@ -2,7 +2,7 @@
 /**
  * Admin Organisation Settings Template
  *
- * Editable workflow personas, HL item/user story defaults, and
+ * Editable workflow personas, High Level item/user story defaults, and
  * capacity/dependency tripwire configuration.
  * Sections are collapsible accordion cards, closed by default.
  *
@@ -134,7 +134,7 @@
             <button type="button" class="accordion-header js-accordion-toggle">
                 <span class="accordion-title">Default Values</span>
                 <span class="settings-accordion-meta">
-                    HL item size and story point limits
+                    High Level item size and story point limits
                 </span>
                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <polyline points="6 9 12 15 18 9"/>
@@ -161,7 +161,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">HL Item Default Size (months)</label>
+                        <label class="form-label">High Level Item Default Size (months)</label>
                         <select name="hl_item_default_months" class="form-input">
                             <?php for ($m = 1; $m <= 6; $m++): ?>
                                 <option value="<?= $m ?>" <?= (int) ($settings['hl_item_default_months'] ?? 2) === $m ? 'selected' : '' ?>>

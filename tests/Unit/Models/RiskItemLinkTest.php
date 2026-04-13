@@ -15,7 +15,7 @@ use StratFlow\Models\RiskItemLink;
  * RiskItemLinkTest
  *
  * Tests the risk_item_links junction table model against the real Docker MySQL database.
- * setUp creates a test org + user + project + HL work items + risks; tearDown removes all.
+ * setUp creates a test org + user + project + High Level work items + risks; tearDown removes all.
  */
 class RiskItemLinkTest extends TestCase
 {
@@ -66,7 +66,7 @@ class RiskItemLinkTest extends TestCase
         );
         self::$projectId = (int) self::$db->lastInsertId();
 
-        // Create HL work items used as link targets
+        // Create High Level work items used as link targets
         self::$workItemId1 = HLWorkItem::create(self::$db, [
             'project_id'      => self::$projectId,
             'priority_number' => 1,
