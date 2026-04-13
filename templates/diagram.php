@@ -110,7 +110,7 @@ $hasSummary = !empty($document_summary);
             <div class="accordion-list" id="okr-accordion-list">
             <?php foreach ($nodes as $idx => $node):
                 $hasOkr = !empty($node['okr_title']);
-                $isOpen = ($idx === 0);
+                $isOpen = false;
             ?>
                 <div class="accordion-item <?= $hasOkr ? 'accordion-item--complete' : '' ?> <?= $isOpen ? 'accordion-item--open' : '' ?>"
                      id="okr-node-<?= htmlspecialchars($node['node_key']) ?>"
