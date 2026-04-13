@@ -65,6 +65,9 @@ return [
     'openai' => [
         'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
     ],
+    'anthropic' => [
+        'api_key' => $_ENV['ANTHROPIC_API_KEY'] ?? '',
+    ],
     'jira' => [
         'client_id'      => $_ENV['JIRA_CLIENT_ID'] ?? '',
         'client_secret'  => $_ENV['JIRA_CLIENT_SECRET'] ?? '',
