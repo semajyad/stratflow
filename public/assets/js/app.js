@@ -3657,9 +3657,8 @@ function attachDiagramNodeClicks(container) {
     });
 }
 
- d o c u m e n t . a d d E v e n t L i s t e n e r ( ' D O M C o n t e n t L o a d e d ' ,   ( )   = >   { 
-         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' [ d a t a - s t y l e - w i d t h ] ' ) . f o r E a c h ( e l   = >   {   e l . s t y l e . w i d t h   =   e l . g e t A t t r i b u t e ( ' d a t a - s t y l e - w i d t h ' ) ;   } ) ; 
-         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' [ d a t a - s t y l e - b a c k g r o u n d ] ' ) . f o r E a c h ( e l   = >   {   e l . s t y l e . b a c k g r o u n d   =   e l . g e t A t t r i b u t e ( ' d a t a - s t y l e - b a c k g r o u n d ' ) ;   } ) ; 
-         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' [ d a t a - s t y l e - c o l o r ] ' ) . f o r E a c h ( e l   = >   {   e l . s t y l e . c o l o r   =   e l . g e t A t t r i b u t e ( ' d a t a - s t y l e - c o l o r ' ) ;   } ) ; 
- } ) ;  
- 
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-style-width]').forEach(el => { el.style.width = el.getAttribute('data-style-width'); });
+    document.querySelectorAll('[data-style-background]').forEach(el => { el.style.background = el.getAttribute('data-style-background'); });
+    document.querySelectorAll('[data-style-color]').forEach(el => { el.style.color = el.getAttribute('data-style-color'); });
+});
