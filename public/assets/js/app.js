@@ -2070,14 +2070,14 @@ function syncFieldSortOrder(list, input) {
 
 function updateAdminAiModelPlaceholder(provider) {
     var placeholders = {
-        '': 'e.g. gemini-2.5-flash',
-        google: 'e.g. gemini-2.5-flash',
+        '': 'e.g. gemini-2.0-flash',
+        google: 'e.g. gemini-2.0-flash',
         openai: 'e.g. gpt-4o',
         anthropic: 'e.g. claude-sonnet-4-6'
     };
     var hints = {
         '': 'Leave blank to use the platform default.',
-        google: 'e.g. gemini-2.5-flash, gemini-2.5-pro',
+        google: 'e.g. gemini-2.0-flash, gemini-1.5-pro',
         openai: 'e.g. gpt-4o, gpt-4o-mini',
         anthropic: 'e.g. claude-opus-4-6, claude-sonnet-4-6'
     };

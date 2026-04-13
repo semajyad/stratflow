@@ -86,7 +86,7 @@
             <div class="accordion-body">
                 <p class="text-muted settings-intro">
                     Override the AI provider, model, and API key for your organisation.
-                    Leave blank to use the StratFlow default (Google Gemini — gemini-3.0-preview).
+                    Leave blank to use the StratFlow default (Google Gemini — gemini-2.0-flash).
                 </p>
                 <div class="settings-flex-wrap">
                     <div class="form-group settings-field-flex">
@@ -105,7 +105,7 @@
                                id="ai-model-input"
                                class="form-input"
                                value="<?= htmlspecialchars($settings['ai']['model'] ?? '') ?>"
-                               placeholder="e.g. gemini-3.0-preview">
+                               placeholder="e.g. gemini-2.0-flash">
                         <small class="text-muted" id="ai-model-hint">Leave blank to use the platform default.</small>
                     </div>
                     <div class="form-group settings-field-flex">
@@ -459,14 +459,14 @@
 }());
 
 var _aiProviderPlaceholders = {
-    '':          'e.g. gemini-3.0-preview',
-    'google':    'e.g. gemini-3.0-preview',
+    '':          'e.g. gemini-2.0-flash',
+    'google':    'e.g. gemini-2.0-flash',
     'openai':    'e.g. gpt-4o',
     'anthropic': 'e.g. claude-sonnet-4-6',
 };
 var _aiProviderHints = {
     '':          'Leave blank to use the platform default.',
-    'google':    'e.g. gemini-3.0-preview, gemini-2.5-pro',
+    'google':    'e.g. gemini-2.0-flash, gemini-1.5-pro',
     'openai':    'e.g. gpt-4o, gpt-4o-mini',
     'anthropic': 'e.g. claude-opus-4-6, claude-sonnet-4-6',
 };

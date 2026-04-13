@@ -51,7 +51,7 @@ jobs:
           echo "DB_USERNAME=stratflow" >> .env
           echo "DB_PASSWORD=stratflow_secret" >> .env
           echo "GEMINI_API_KEY=test-key" >> .env
-          echo "GEMINI_MODEL=gemini-2.5-flash" >> .env
+          echo "GEMINI_MODEL=gemini-2.0-flash" >> .env
           echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
           echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
           echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env

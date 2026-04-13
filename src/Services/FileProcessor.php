@@ -469,7 +469,7 @@ class FileProcessor
             $model  = $this->appConfig['gemini']['model']
                    ?? $_ENV['GEMINI_MODEL']
                    ?? getenv('GEMINI_MODEL')
-                   ?: 'gemini-3.0-preview';
+                   ?: 'gemini-2.0-flash';
 
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
@@ -685,7 +685,7 @@ class FileProcessor
         $model = $this->appConfig['gemini']['model']
               ?? $_ENV['GEMINI_MODEL']
               ?? getenv('GEMINI_MODEL')
-              ?: 'gemini-3.0-preview';
+              ?: 'gemini-2.0-flash';
 
         try {
             $fileUri  = $this->geminiFilesUpload($filePath, $mimeType, $apiKey);

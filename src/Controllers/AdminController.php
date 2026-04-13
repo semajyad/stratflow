@@ -952,7 +952,7 @@ class AdminController
                 'enforcement' => 'warn',
             ],
             'ai' => [
-                'model'   => '',   // empty = use platform default (gemini-3.0-preview)
+                'model'   => '',   // empty = use platform default (gemini-2.0-flash)
                 'api_key' => '',   // empty = use platform default key
             ],
             'field_order_work_item' => ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'],
@@ -1185,7 +1185,7 @@ class AdminController
             $apiKey = $this->config['gemini_api_key'] ?? '';
         }
 
-        $resolvedModel = $model ?: 'gemini-3.0-preview';
+        $resolvedModel = $model ?: 'gemini-2.0-flash';
 
         try {
             $config = $this->config;

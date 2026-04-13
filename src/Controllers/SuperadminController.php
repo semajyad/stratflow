@@ -462,7 +462,7 @@ class SuperadminController
 
         $data = [
             'ai_provider'            => trim((string) $this->request->post('ai_provider', 'google')),
-            'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-3.0-preview')),
+            'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-2.0-flash')),
             'default_seat_limit'            => max(1, (int) $this->request->post('default_seat_limit', 5)),
             'default_price_per_seat_cents'  => max(0, (int) round((float) $this->request->post('default_price_per_seat', 0) * 100)),
             'default_plan_type'             => $this->request->post('default_plan_type', 'product'),

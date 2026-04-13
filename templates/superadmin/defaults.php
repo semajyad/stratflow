@@ -55,8 +55,8 @@ $s = $settings;
                     <div class="form-group">
                         <label class="form-label">Model Identifier</label>
                         <input type="text" name="ai_model" class="form-input"
-                               value="<?= htmlspecialchars($s['ai_model'] ?? 'gemini-3.0-preview') ?>"
-                               placeholder="e.g. gemini-3.0-preview, gpt-4o, claude-sonnet-4-6">
+                               value="<?= htmlspecialchars($s['ai_model'] ?? 'gemini-2.0-flash') ?>"
+                               placeholder="e.g. gemini-2.0-flash, gpt-4o, claude-sonnet-4-6">
                         <small class="text-muted">Enter the exact model identifier.</small>
                     </div>
                     <?php
