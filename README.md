@@ -24,7 +24,7 @@ StratFlow turns raw strategy documents into a prioritised engineering backlog in
 | Language | PHP 8.4 (vanilla MVC, no framework) |
 | Database | MySQL 8.4 |
 | Web server | Nginx |
-| AI | Google Gemini API (`gemini-2.0-flash`) |
+| AI | Google Gemini API (`gemini-3-flash-preview |
 | Payments | Stripe (Checkout + Webhooks) |
 | PDF parsing | smalot/pdfparser |
 | Container | Docker Compose |

@@ -2,7 +2,7 @@
 
 StratFlow uses seven prompt classes in `src/Services/Prompts/`. All prompts are PHP string constants — no templating library. They are passed to `GeminiService::generate()` alongside the user-supplied content.
 
-All prompts target the `gemini-2.0-flash` model.
+All prompts target the `gemini-3-flash-preview model.
 
 ---
 
@@ -600,7 +600,7 @@ Description: {story_description}
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| Model | `gemini-2.0-flash` | Fast, cost-effective; suitable for structured output tasks |
+| Model | `gemini-3-flash-preview | Fast, cost-effective; suitable for structured output tasks |
 | Temperature | 0.7 | Balances creativity and consistency; lower values (0.2–0.4) produce more deterministic JSON output |
 | maxOutputTokens | 4096 | Sufficient for all prompts; increase if work item lists are truncated on large diagrams |
 

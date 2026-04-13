@@ -618,7 +618,7 @@ Then add the `extractMediaViaGemini()` method in the `PRIVATE HELPERS` section:
         $model = $this->appConfig['gemini']['model']
               ?? $_ENV['GEMINI_MODEL']
               ?? getenv('GEMINI_MODEL')
-              ?: 'gemini-2.0-flash';
+              ?: 'gemini-3-flash-preview';
 
         try {
             // Step 1: Upload to Gemini Files API

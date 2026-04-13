@@ -27,7 +27,7 @@ class GeminiServiceTest extends TestCase
         return [
             'gemini' => [
                 'api_key' => $apiKey,
-                'model'   => 'gemini-1.5-flash',
+                'model'   => 'gemini-3-flash-preview',
             ],
         ];
     }
@@ -49,7 +49,7 @@ class GeminiServiceTest extends TestCase
         $config = [
             'gemini' => [
                 'api_key' => 'test_key',
-                'model'   => 'gemini-1.5-pro',
+                'model'   => 'gemini-3-flash-preview',
             ],
         ];
 

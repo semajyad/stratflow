@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 -- Seed the single row with safe defaults
 INSERT IGNORE INTO system_settings (id, settings_json) VALUES (1, JSON_OBJECT(
   'ai_provider',                  'google',
-  'ai_model',                     'gemini-2.0-flash',
+  'ai_model',                     'gemini-3-flash-preview',
   'default_seat_limit',           5,
   'default_plan_type',            'product',
   'default_billing_method',       'invoiced',

@@ -51,7 +51,7 @@ class SystemSettings
     /** Safe fallback defaults returned when the table row is missing. */
     private const DEFAULTS = [
         'ai_provider'            => 'google',
-        'ai_model'               => 'gemini-2.0-flash',
+        'ai_model'               => 'gemini-3-flash-preview',
         'default_seat_limit'     => 5,
         'default_plan_type'      => 'product',
         'default_billing_method' => 'invoiced',
