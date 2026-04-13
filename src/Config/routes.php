@@ -162,6 +162,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/app/admin/integrations/sync-log',        'IntegrationController@syncLog',          ['auth', 'admin']);
     $router->add('POST', '/app/admin/integrations/jira/import-teams',    'IntegrationController@jiraImportTeams',    ['auth', 'admin', 'csrf']);
     $router->add('POST', '/app/admin/integrations/jira/bulk-pull-status', 'IntegrationController@jiraBulkPullStatus', ['auth', 'admin', 'csrf']);
+    $router->add('GET',  '/app/admin/integrations/jira/users',       'IntegrationController@jiraSearchUsers',    ['auth', 'admin']);
     $router->add('POST', '/webhook/integration/jira',               'IntegrationController@jiraWebhook');
 
     // Git webhooks — NO middleware (public, HMAC-verified in controller)
@@ -246,10 +247,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);
 
     // Developer tokens — Personal Access Tokens for API / MCP access (any authenticated user)
-    $router->add('GET',  '/app/account/tokens',             'AccessTokenController@index',  ['auth']);
-    $router->add('POST', '/app/account/tokens',             'AccessTokenController@create', ['auth', 'csrf']);
-    $router->add('POST', '/app/account/tokens/{id}/revoke', 'AccessTokenController@revoke', ['auth', 'csrf']);
-    $router->add('POST', '/app/account/team',               'AccessTokenController@saveTeam', ['auth', 'csrf']);
+    $router->add('GET',  '/app/account/tokens',                  'AccessTokenController@index',          ['auth']);
+    $router->add('POST', '/app/account/tokens',                  'AccessTokenController@create',         ['auth', 'csrf']);
+    $router->add('POST', '/app/account/tokens/{id}/revoke',      'AccessTokenController@revoke',         ['auth', 'csrf']);
+    $router->add('POST', '/app/account/team',                    'AccessTokenController@saveTeam',       ['auth', 'csrf']);
+    $router->add('POST', '/app/account/jira-identity',           'AccessTokenController@saveJiraIdentity', ['auth', 'csrf']);
+    $router->add('GET',  '/app/account/jira/users',              'AccessTokenController@jiraUsers',      ['auth']);
 
     // ====== JSON API — PAT-authenticated, no CSRF, no session ======
     // CSRF-exempt precedent: /webhook/stripe, /webhook/git/*

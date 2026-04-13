@@ -33,7 +33,7 @@ class JiraService
     private const AUTH_URL  = 'https://auth.atlassian.com/authorize';
     private const TOKEN_URL = 'https://auth.atlassian.com/oauth/token';
     private const API_BASE  = 'https://api.atlassian.com';
-    private const SCOPES    = 'read:jira-work write:jira-work manage:jira-webhook offline_access read:jira-software write:jira-software read:sprint:jira-software write:sprint:jira-software read:board-scope:jira-software';
+    private const SCOPES    = 'read:jira-work write:jira-work manage:jira-webhook offline_access read:jira-user read:jira-software write:jira-software read:sprint:jira-software write:sprint:jira-software read:board-scope:jira-software';
 
     // ===========================
     // CONSTRUCTOR
@@ -212,6 +212,64 @@ class JiraService
     public function getFields(): array
     {
         return $this->makeAuthenticatedRequest('GET', '/rest/api/3/field');
+    }
+
+    // ===========================
+    // USER SEARCH
+    // ===========================
+
+    /**
+     * Search for Jira users by display name, email, or username.
+     *
+     * @param string $query      Partial name or email to search
+     * @param int    $maxResults Max results to return (default 20)
+     * @return array             Array of [{accountId, displayName, emailAddress, avatarUrls}]
+     */
+    public function searchUsers(string $query, int $maxResults = 20): array
+    {
+        $path = '/rest/api/3/user/search?' . http_build_query([
+            'query'      => $query,
+            'maxResults' => $maxResults,
+        ]);
+        $result = $this->makeAuthenticatedRequest('GET', $path);
+        return is_array($result) ? $result : [];
+    }
+
+    /**
+     * Get users assignable to a specific Jira project.
+     *
+     * @param string $projectKey Jira project key (e.g. 'PROJ')
+     * @param string $query      Optional partial name/email filter
+     * @param int    $maxResults Max results to return (default 20)
+     * @return array             Array of [{accountId, displayName, emailAddress, avatarUrls}]
+     */
+    public function getAssignableUsers(string $projectKey, string $query = '', int $maxResults = 20): array
+    {
+        $params = ['project' => $projectKey, 'maxResults' => $maxResults];
+        if ($query !== '') {
+            $params['query'] = $query;
+        }
+        $path   = '/rest/api/3/user/assignable/search?' . http_build_query($params);
+        $result = $this->makeAuthenticatedRequest('GET', $path);
+        return is_array($result) ? $result : [];
+    }
+
+    /**
+     * Fetch multiple Jira users by their account IDs.
+     *
+     * @param string[] $accountIds Array of Jira account IDs
+     * @return array               Array of [{accountId, displayName, emailAddress, avatarUrls}]
+     */
+    public function getUsersBulk(array $accountIds): array
+    {
+        if (empty($accountIds)) {
+            return [];
+        }
+        $params = array_map(fn($id) => 'accountId=' . urlencode($id), $accountIds);
+        $path   = '/rest/api/3/user/bulk?' . implode('&', $params);
+        $result = $this->makeAuthenticatedRequest('GET', $path);
+        // Response is {maxResults, startAt, total, isLast, values}
+        return $result['values'] ?? (is_array($result) ? $result : []);
     }
 
     /**

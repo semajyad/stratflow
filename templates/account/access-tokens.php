@@ -89,6 +89,115 @@
     </div>
 </section>
 
+<!-- Jira identity — who are you in Jira for story assignment -->
+<section class="card mb-4">
+    <div class="card-body access-token-team-row">
+        <div class="access-token-team-copy">
+            <label class="access-token-label">Your Jira identity</label>
+            <p class="access-token-team-help">
+                Links your StratFlow account to a Jira user so <code>claim_story</code> assigns
+                the issue to you in Jira automatically.
+            </p>
+        </div>
+        <?php if ($jira_connected ?? false): ?>
+            <form method="POST" action="/app/account/jira-identity" class="access-token-inline-form" id="jira-identity-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                <div class="jira-identity-picker" style="position:relative;flex:1;">
+                    <input type="text"
+                           id="jira-identity-search"
+                           class="form-control"
+                           placeholder="Search Jira users..."
+                           autocomplete="off"
+                           value="<?= htmlspecialchars($user['jira_display_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <ul id="jira-identity-suggestions" style="display:none;position:absolute;z-index:200;background:var(--bg-card,#fff);border:1px solid var(--border-color,#ddd);border-radius:6px;width:100%;max-height:220px;overflow-y:auto;margin:0;padding:0;list-style:none;box-shadow:0 4px 12px rgba(0,0,0,.12);"></ul>
+                    <input type="hidden" name="jira_account_id"   id="jira-account-id"   value="<?= htmlspecialchars($user['jira_account_id'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="jira_display_name" id="jira-display-name" value="<?= htmlspecialchars($user['jira_display_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                </div>
+                <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+            </form>
+            <?php if (!empty($user['jira_account_id'])): ?>
+                <p class="text-muted" style="font-size:.8em;margin-top:4px;">
+                    Currently linked: <strong><?= htmlspecialchars($user['jira_display_name'] ?? $user['jira_account_id'], ENT_QUOTES, 'UTF-8') ?></strong>
+                    &nbsp;<a href="#" id="clear-jira-identity" style="color:var(--danger,#dc2626);font-size:.9em;">Clear</a>
+                </p>
+            <?php endif; ?>
+        <?php else: ?>
+            <p class="text-muted" style="font-size:.9em;">
+                <a href="/app/admin/integrations/jira/connect">Connect Jira</a> to enable Jira identity binding.
+            </p>
+        <?php endif; ?>
+    </div>
+</section>
+
+<?php if ($jira_connected ?? false): ?>
+<script>
+(function () {
+    const input   = document.getElementById('jira-identity-search');
+    const list    = document.getElementById('jira-identity-suggestions');
+    const idField = document.getElementById('jira-account-id');
+    const dnField = document.getElementById('jira-display-name');
+    const clearLink = document.getElementById('clear-jira-identity');
+    let timer;
+
+    if (clearLink) {
+        clearLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            input.value = ''; idField.value = ''; dnField.value = '';
+            document.getElementById('jira-identity-form').submit();
+        });
+    }
+
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        idField.value = ''; dnField.value = '';
+        const q = this.value.trim();
+        if (q.length < 2) { list.style.display = 'none'; list.innerHTML = ''; return; }
+        timer = setTimeout(() => fetch('/app/account/jira/users?q=' + encodeURIComponent(q))
+            .then(r => r.json()).then(render).catch(() => {}), 280);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        const items = [...list.querySelectorAll('li')];
+        const active = list.querySelector('li.jip-active');
+        const idx = items.indexOf(active);
+        if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(idx+1,items.length-1)]?.classList.add('jip-active'); active?.classList.remove('jip-active'); }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); items[Math.max(idx-1,0)]?.classList.add('jip-active'); active?.classList.remove('jip-active'); }
+        if (e.key === 'Enter' && active) { e.preventDefault(); pick(active.dataset); }
+        if (e.key === 'Escape') { list.style.display = 'none'; }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.jira-identity-picker')) { list.style.display = 'none'; }
+    });
+
+    function render(data) {
+        list.innerHTML = '';
+        if (!data.users || !data.users.length) { list.style.display = 'none'; return; }
+        data.users.forEach(u => {
+            const li = document.createElement('li');
+            li.style.cssText = 'padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;';
+            li.dataset.accountId = u.accountId;
+            li.dataset.displayName = u.displayName;
+            li.innerHTML = (u.avatar ? `<img src="${u.avatar}" style="width:20px;height:20px;border-radius:50%;" alt="">` : '')
+                + `<span style="font-size:.9em;font-weight:500;">${esc(u.displayName)}</span>`
+                + (u.email ? `<span style="font-size:.8em;color:var(--text-muted,#888);margin-left:4px;">${esc(u.email)}</span>` : '');
+            li.addEventListener('mouseenter', () => { list.querySelectorAll('li').forEach(i => i.classList.remove('jip-active')); li.classList.add('jip-active'); });
+            li.addEventListener('click', () => pick(li.dataset));
+            list.appendChild(li);
+        });
+        list.style.display = 'block';
+    }
+
+    function pick(d) {
+        input.value = d.displayName; idField.value = d.accountId; dnField.value = d.displayName;
+        list.style.display = 'none';
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+})();
+</script>
+<?php endif; ?>
+
 <!-- Claude Code MCP setup guide — always visible, collapsible -->
 <section class="card mb-4">
     <button type="button"

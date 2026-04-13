@@ -219,6 +219,25 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                                 </label>
                                             </div>
                                         </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Jira Identity</label>
+                                            <?php if ($jira_connected ?? false): ?>
+                                                <div class="jira-user-picker" data-picker-id="edit-<?= (int) $u['id'] ?>">
+                                                    <input type="text"
+                                                           class="form-input jira-search-input"
+                                                           placeholder="Search Jira users..."
+                                                           autocomplete="off"
+                                                           value="<?= htmlspecialchars($u['jira_display_name'] ?? '') ?>">
+                                                    <ul class="jira-suggestions hidden"></ul>
+                                                    <input type="hidden" name="jira_account_id"   value="<?= htmlspecialchars($u['jira_account_id'] ?? '') ?>">
+                                                    <input type="hidden" name="jira_display_name" value="<?= htmlspecialchars($u['jira_display_name'] ?? '') ?>">
+                                                </div>
+                                            <?php else: ?>
+                                                <p class="text-muted form-note">Connect Jira first to link a Jira account.</p>
+                                                <input type="hidden" name="jira_account_id"   value="<?= htmlspecialchars($u['jira_account_id'] ?? '') ?>">
+                                                <input type="hidden" name="jira_display_name" value="<?= htmlspecialchars($u['jira_display_name'] ?? '') ?>">
+                                            <?php endif; ?>
+                                        </div>
                                         <div class="form-group gen-style-703ccd">
                                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
                                             <button type="button" class="btn btn-secondary btn-sm js-toggle-target"
@@ -296,10 +315,114 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                 </div>
             </div>
         </div>
+        <?php if ($jira_connected ?? false): ?>
+        <div class="form-row gap-4 mt-4">
+            <div class="form-group">
+                <label class="form-label">Jira Identity <small>(optional)</small></label>
+                <div class="jira-user-picker" data-picker-id="create">
+                    <input type="text"
+                           class="form-input jira-search-input"
+                           placeholder="Search Jira users..."
+                           autocomplete="off">
+                    <ul class="jira-suggestions hidden"></ul>
+                    <input type="hidden" name="jira_account_id"   value="">
+                    <input type="hidden" name="jira_display_name" value="">
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
         <p class="gen-style-8c82cd">A welcome email will be sent so the user can set their own password.</p>
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Create User</button>
         </div>
     </form>
 </section>
+
+<style>
+.jira-user-picker { position: relative; }
+.jira-suggestions {
+    position: absolute; z-index: 200; background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #ddd); border-radius: 6px;
+    width: 100%; max-height: 220px; overflow-y: auto; margin: 0; padding: 0;
+    list-style: none; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+.jira-suggestions li { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.jira-suggestions li:hover, .jira-suggestions li.active { background: var(--bg-hover, #f0f4ff); }
+.jira-suggestions li img { width: 20px; height: 20px; border-radius: 50%; }
+.jira-suggestions li .js-name { font-size: .9em; font-weight: 500; }
+.jira-suggestions li .js-email { font-size: .8em; color: var(--text-muted, #888); margin-left: 4px; }
+.hidden { display: none !important; }
+</style>
+
+<script>
+(function () {
+    const SEARCH_URL = '/app/admin/integrations/jira/users';
+    let debounceTimer;
+
+    function initPicker(container) {
+        const input   = container.querySelector('.jira-search-input');
+        const list    = container.querySelector('.jira-suggestions');
+        const idField = container.querySelector('input[name="jira_account_id"]');
+        const dnField = container.querySelector('input[name="jira_display_name"]');
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const q = this.value.trim();
+            idField.value = '';
+            dnField.value = '';
+            if (q.length < 2) { list.innerHTML = ''; list.classList.add('hidden'); return; }
+            debounceTimer = setTimeout(() => fetchUsers(q), 280);
+        });
+
+        input.addEventListener('keydown', function (e) {
+            const items = [...list.querySelectorAll('li')];
+            const active = list.querySelector('li.active');
+            const idx = items.indexOf(active);
+            if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(idx + 1, items.length - 1)]?.classList.add('active'); active?.classList.remove('active'); }
+            if (e.key === 'ArrowUp')   { e.preventDefault(); items[Math.max(idx - 1, 0)]?.classList.add('active'); active?.classList.remove('active'); }
+            if (e.key === 'Enter' && active) { e.preventDefault(); selectUser(active.dataset); }
+            if (e.key === 'Escape') { list.innerHTML = ''; list.classList.add('hidden'); }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!container.contains(e.target)) { list.innerHTML = ''; list.classList.add('hidden'); }
+        });
+
+        function fetchUsers(q) {
+            fetch(SEARCH_URL + '?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    if (!data.users || data.users.length === 0) { list.classList.add('hidden'); return; }
+                    data.users.forEach(u => {
+                        const li = document.createElement('li');
+                        li.dataset.accountId = u.accountId;
+                        li.dataset.displayName = u.displayName;
+                        li.innerHTML = (u.avatar ? `<img src="${u.avatar}" alt="">` : '')
+                            + `<span class="js-name">${escHtml(u.displayName)}</span>`
+                            + (u.email ? `<span class="js-email">${escHtml(u.email)}</span>` : '');
+                        li.addEventListener('click', () => selectUser(li.dataset));
+                        list.appendChild(li);
+                    });
+                    list.classList.remove('hidden');
+                })
+                .catch(() => {});
+        }
+
+        function selectUser(d) {
+            input.value  = d.displayName;
+            idField.value = d.accountId;
+            dnField.value = d.displayName;
+            list.innerHTML = '';
+            list.classList.add('hidden');
+        }
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    document.querySelectorAll('.jira-user-picker').forEach(initPicker);
+})();
+</script>
 

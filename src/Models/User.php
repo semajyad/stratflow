@@ -81,19 +81,26 @@ class User
 
         if ($db->tableExists('users')) {
             try {
-                $hasAccountType = (bool) $db->query(
-                    "SELECT 1
+                $cols = $db->query(
+                    "SELECT column_name
                      FROM information_schema.columns
                      WHERE table_schema = DATABASE()
                        AND table_name = 'users'
-                       AND column_name = 'account_type'
-                     LIMIT 1"
-                )->fetch();
+                       AND column_name IN ('account_type','jira_account_id','jira_display_name')"
+                )->fetchAll(\PDO::FETCH_COLUMN);
 
-                if ($hasAccountType) {
+                if (in_array('account_type', $cols)) {
                     $columns[] = 'account_type';
                     $params[':account_type'] = $data['account_type']
                         ?? PermissionService::accountTypeFor(['role' => $data['role'] ?? 'user']);
+                }
+                if (in_array('jira_account_id', $cols) && isset($data['jira_account_id'])) {
+                    $columns[] = 'jira_account_id';
+                    $params[':jira_account_id'] = $data['jira_account_id'];
+                }
+                if (in_array('jira_display_name', $cols) && isset($data['jira_display_name'])) {
+                    $columns[] = 'jira_display_name';
+                    $params[':jira_display_name'] = $data['jira_display_name'];
                 }
             } catch (\Throwable) {
                 // Keep create() backward-compatible on pre-migration databases.
@@ -120,6 +127,7 @@ class User
     private const UPDATABLE_COLUMNS = [
         'full_name', 'email', 'password_hash', 'role', 'is_active', 'team',
         'is_project_admin', 'has_billing_access', 'has_executive_access', 'password_changed_at', 'account_type',
+        'jira_account_id', 'jira_display_name',
     ];
 
     public static function update(Database $db, int $id, array $data): void
@@ -141,6 +149,23 @@ class User
                 }
             } catch (\Throwable) {
                 unset($data['account_type']);
+            }
+        }
+        if (array_key_exists('jira_display_name', $data)) {
+            try {
+                $hasCol = (bool) $db->query(
+                    "SELECT 1
+                     FROM information_schema.columns
+                     WHERE table_schema = DATABASE()
+                       AND table_name = 'users'
+                       AND column_name = 'jira_display_name'
+                     LIMIT 1"
+                )->fetch();
+                if (!$hasCol) {
+                    unset($data['jira_display_name']);
+                }
+            } catch (\Throwable) {
+                unset($data['jira_display_name']);
             }
         }
         if (empty($data)) {

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('viewer','user','project_manager','org_admin','superadmin','developer') NOT NULL DEFAULT 'user',
     account_type ENUM('viewer','member','manager','org_admin','superadmin','developer') NOT NULL DEFAULT 'member',
     jira_account_id    VARCHAR(255) NULL,
+    jira_display_name  VARCHAR(255) NULL,
     has_billing_access TINYINT(1) NOT NULL DEFAULT 0,
     has_executive_access TINYINT(1) NOT NULL DEFAULT 0,
     is_project_admin TINYINT(1) NOT NULL DEFAULT 0,

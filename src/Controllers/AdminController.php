@@ -141,15 +141,22 @@ class AdminController
         }
         unset($managedUser);
 
+        $jiraConnected = false;
+        try {
+            $jiraInteg = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+            $jiraConnected = $jiraInteg && ($jiraInteg['status'] ?? '') !== 'disconnected';
+        } catch (\Throwable) { /* non-critical */ }
+
         $this->response->render('admin/users', [
-            'user'          => $user,
-            'users'         => $users,
-            'seat_limit'    => $seatLimit,
-            'user_count'    => $userCount,
+            'user'             => $user,
+            'users'            => $users,
+            'seat_limit'       => $seatLimit,
+            'user_count'       => $userCount,
             'assignable_roles' => PermissionService::assignableRolesFor($user),
-            'active_page'   => 'admin',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'jira_connected'   => $jiraConnected,
+            'active_page'      => 'admin',
+            'flash_message'    => $_SESSION['flash_message'] ?? null,
+            'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
 
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
@@ -209,6 +216,9 @@ class AdminController
         // Generate a random password hash (user will never know this password)
         $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
+        $jiraAccountId   = trim((string) $this->request->post('jira_account_id', '')) ?: null;
+        $jiraDisplayName = trim((string) $this->request->post('jira_display_name', '')) ?: null;
+
         $newUserId = User::create($this->db, [
             'org_id'               => $orgId,
             'full_name'            => $fullName,
@@ -219,6 +229,8 @@ class AdminController
             'is_project_admin'     => $isProjectAdmin,
             'has_billing_access'   => $this->request->post('has_billing_access') === '1' ? 1 : 0,
             'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
+            'jira_account_id'      => $jiraAccountId,
+            'jira_display_name'    => $jiraDisplayName,
         ]);
 
         // Create set_password token and send welcome email
@@ -287,6 +299,9 @@ class AdminController
             ? 1
             : ($this->request->post('is_project_admin') === '1' ? 1 : 0);
 
+        $jiraAccountId   = trim((string) $this->request->post('jira_account_id', '')) ?: null;
+        $jiraDisplayName = trim((string) $this->request->post('jira_display_name', '')) ?: null;
+
         $data = [
             'full_name'            => $fullName,
             'email'                => $email,
@@ -295,6 +310,8 @@ class AdminController
             'is_project_admin'     => $isProjectAdmin,
             'has_billing_access'   => $this->request->post('has_billing_access')   === '1' ? 1 : 0,
             'has_executive_access' => $this->request->post('has_executive_access') === '1' ? 1 : 0,
+            'jira_account_id'      => $jiraAccountId,
+            'jira_display_name'    => $jiraDisplayName,
         ];
 
         // Enforce password policy if a new password is provided

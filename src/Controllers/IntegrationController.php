@@ -495,6 +495,58 @@ class IntegrationController
     // =========================================================================
 
     /**
+     * Search Jira users — JSON endpoint for admin autocomplete.
+     *
+     * Returns users assignable to the configured project (or all users if no
+     * project is configured). Admin-only.
+     *
+     * GET /app/admin/integrations/jira/users?q=...&project_key=...
+     */
+    public function jiraSearchUsers(): void
+    {
+        header('Content-Type: application/json');
+
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
+
+        if (!$integration || $integration['status'] === 'disconnected') {
+            echo json_encode(['users' => [], 'error' => 'Jira not connected']);
+            exit;
+        }
+
+        $q          = trim((string) $this->request->get('q', ''));
+        $projectKey = trim((string) $this->request->get('project_key', ''));
+
+        if ($projectKey === '') {
+            $cfg        = json_decode($integration['config_json'] ?? '{}', true) ?: [];
+            $projectKey = $cfg['project_key'] ?? '';
+        }
+
+        try {
+            $jira  = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $users = $projectKey !== ''
+                ? $jira->getAssignableUsers($projectKey, $q)
+                : $jira->searchUsers($q ?: 'a');
+
+            $mapped = array_map(fn($u) => [
+                'accountId'   => $u['accountId'] ?? '',
+                'displayName' => $u['displayName'] ?? '',
+                'email'       => $u['emailAddress'] ?? '',
+                'avatar'      => $u['avatarUrls']['24x24'] ?? '',
+            ], $users);
+
+            echo json_encode(['users' => array_values($mapped)]);
+        } catch (\Throwable $e) {
+            echo json_encode(['users' => [], 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // =========================================================================
+
+    /**
      * Push StratFlow items to Jira.
      *
      * Pushes all work items as Epics and user stories as Stories
