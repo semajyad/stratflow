@@ -365,13 +365,21 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
         const idField = container.querySelector('input[name="jira_account_id"]');
         const dnField = container.querySelector('input[name="jira_display_name"]');
 
+        // Show all assignable users on focus (empty query → endpoint sends 'a' fallback)
+        input.addEventListener('focus', function () {
+            if (list.children.length === 0) {
+                fetchUsers(this.value.trim());
+            } else {
+                list.classList.remove('hidden');
+            }
+        });
+
         input.addEventListener('input', function () {
             clearTimeout(debounceTimer);
-            const q = this.value.trim();
             idField.value = '';
             dnField.value = '';
-            if (q.length < 2) { list.innerHTML = ''; list.classList.add('hidden'); return; }
-            debounceTimer = setTimeout(() => fetchUsers(q), 280);
+            const q = this.value.trim();
+            debounceTimer = setTimeout(() => fetchUsers(q), 220);
         });
 
         input.addEventListener('keydown', function (e) {

@@ -147,13 +147,25 @@
         });
     }
 
+    function fetchAndRender(q) {
+        fetch('/app/account/jira/users?q=' + encodeURIComponent(q || ''))
+            .then(r => r.json()).then(render).catch(() => {});
+    }
+
+    // Show list on focus — fetch all assignable users immediately
+    input.addEventListener('focus', function () {
+        if (list.children.length === 0) {
+            fetchAndRender(this.value.trim());
+        } else {
+            list.style.display = 'block';
+        }
+    });
+
     input.addEventListener('input', function () {
         clearTimeout(timer);
         idField.value = ''; dnField.value = '';
         const q = this.value.trim();
-        if (q.length < 2) { list.style.display = 'none'; list.innerHTML = ''; return; }
-        timer = setTimeout(() => fetch('/app/account/jira/users?q=' + encodeURIComponent(q))
-            .then(r => r.json()).then(render).catch(() => {}), 280);
+        timer = setTimeout(() => fetchAndRender(q), 220);
     });
 
     input.addEventListener('keydown', function (e) {
