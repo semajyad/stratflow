@@ -1,0 +1,73 @@
+name: Mutation Testing (Infection)
+
+# Nightly mutation testing against security-critical packages.
+# Target: MSI >= 70% across src/Core and src/Services/AuditLogger.php
+# Too slow to run on every PR — nightly results are checked in morning review.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 13:00 UTC daily = ~1 am NZT
+    - cron: "0 13 * * *"
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, pcov
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create .env
+        run: |
+          echo "APP_ENV=testing" > .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+
+      - name: Initialize database
+        run: |
+          mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+          for f in database/migrations/*.sql; do
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
+      - name: Run Infection mutation testing
+        run: |
+          vendor/bin/infection \
+            --threads=4 \
+            --min-msi=70 \
+            --min-covered-msi=80 \
+            --only-covered \
+            --show-mutations \
+            --no-progress \
+            --filter="src/Core/SecretManager.php,src/Core/RateLimiter.php,src/Core/CSRF.php,src/Services/AuditLogger.php,src/Services/StoryImprovementService.php"

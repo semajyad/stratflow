@@ -3,14 +3,15 @@
  * Quality Scoring Worker
  *
  * Processes pending and failed (with backoff) quality score rows
- * for both user_stories and hl_work_items. Designed to run from
- * cron every 2 minutes inside the Docker php container.
+ * for both user_stories and hl_work_items.
  *
  * Usage:
- *   php bin/score_quality.php [--once] [--limit=N]
+ *   php bin/score_quality.php [--loop] [--limit=N]
  *
  * Flags:
- *   --once   Process one batch and exit (default behaviour; loop mode not used)
+ *   --loop   Run continuously, sleeping 120s between batches. Handles
+ *            SIGTERM/SIGINT for clean shutdown (Railway, Docker stop).
+ *            Without this flag, runs one batch and exits.
  *   --limit  Max rows per table per run (default: 25)
  *
  * Row selection:
@@ -27,11 +28,28 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../src/Config/config.php';
 
-$limit = 25;
+$limit  = 25;
+$loop   = false;
 foreach ($argv as $arg) {
     if (preg_match('/^--limit=(\d+)$/', $arg, $m)) {
         $limit = (int) $m[1];
     }
+    if ($arg === '--loop') {
+        $loop = true;
+    }
+}
+
+// === SIGTERM / SIGINT handling (loop mode) ===
+// Allows Railway / Docker to stop the worker cleanly without leaving
+// half-processed rows in flight.
+$shutdown = false;
+if (function_exists('pcntl_signal')) {
+    $handler = static function () use (&$shutdown): void {
+        $shutdown = true;
+        worker_log('Shutdown signal received — finishing current batch then exiting.');
+    };
+    pcntl_signal(SIGTERM, $handler);
+    pcntl_signal(SIGINT,  $handler);
 }
 
 // ===========================
@@ -197,14 +215,60 @@ function score_batch(
 // MAIN
 // ===========================
 
-$storyStats = score_batch($db, $scorer, $improver, 'user_stories', 'UserStory', 'scoreStory', 'improveStory', $limit);
-$itemStats  = score_batch($db, $scorer, $improver, 'hl_work_items', 'HLWorkItem', 'scoreWorkItem', 'improveWorkItem', $limit);
+/**
+ * Run one scoring batch and log a summary line.
+ */
+function run_once(
+    \StratFlow\Core\Database $db,
+    \StratFlow\Services\StoryQualityScorer $scorer,
+    \StratFlow\Services\StoryImprovementService $improver,
+    int $limit
+): void {
+    $storyStats = score_batch($db, $scorer, $improver, 'user_stories', 'UserStory', 'scoreStory', 'improveStory', $limit);
+    $itemStats  = score_batch($db, $scorer, $improver, 'hl_work_items', 'HLWorkItem', 'scoreWorkItem', 'improveWorkItem', $limit);
 
-$totalScored = $storyStats['scored'] + $itemStats['scored'];
-$totalFailed = $storyStats['failed'] + $itemStats['failed'];
-$allErrors   = array_unique(array_merge($storyStats['errors'], $itemStats['errors']));
+    $totalScored = $storyStats['scored'] + $itemStats['scored'];
+    $totalFailed = $storyStats['failed'] + $itemStats['failed'];
+    $allErrors   = array_unique(array_merge($storyStats['errors'], $itemStats['errors']));
 
-$errSummary = empty($allErrors) ? '' : ' errors=[' . implode(', ', $allErrors) . ']';
-worker_log("scored={$totalScored} failed={$totalFailed}{$errSummary}");
+    $errSummary = empty($allErrors) ? '' : ' errors=[' . implode(', ', $allErrors) . ']';
+    worker_log("scored={$totalScored} failed={$totalFailed}{$errSummary}");
+}
 
+if (!$loop) {
+    // Single-batch mode (default)
+    run_once($db, $scorer, $improver, $limit);
+    exit(0);
+}
+
+// Loop mode — runs continuously until SIGTERM/SIGINT
+worker_log('Worker started in loop mode (sleep=120s, limit=' . $limit . ').');
+
+while (!$shutdown) {
+    if (function_exists('pcntl_signal_dispatch')) {
+        pcntl_signal_dispatch();
+    }
+
+    if ($shutdown) {
+        break;
+    }
+
+    run_once($db, $scorer, $improver, $limit);
+
+    // Ping Healthchecks.io if configured
+    $hcUrl = $_ENV['HEALTHCHECKS_QUALITY_WORKER'] ?? '';
+    if ($hcUrl !== '') {
+        @file_get_contents($hcUrl);
+    }
+
+    // Sleep in 1s increments so SIGTERM is handled promptly
+    for ($i = 0; $i < 120 && !$shutdown; $i++) {
+        sleep(1);
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
+    }
+}
+
+worker_log('Worker stopped cleanly.');
 exit(0);

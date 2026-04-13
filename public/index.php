@@ -27,6 +27,30 @@ $config = require __DIR__ . '/../src/Config/config.php';
 // Asset cache-buster: opaque string, never a timestamp (prevents ZAP-10096 disclosure).
 define('ASSET_VERSION', $config['app']['asset_version']);
 
+// === Sentry (exception + performance monitoring) ===
+// Initialised before error handlers so it captures every uncaught exception.
+// Only active when SENTRY_DSN is set — safe to leave unset in dev/test.
+if (!empty($_ENV['SENTRY_DSN'])) {
+    \Sentry\init([
+        'dsn'              => $_ENV['SENTRY_DSN'],
+        'environment'      => $_ENV['APP_ENV'] ?? 'test',
+        'release'          => ASSET_VERSION,
+        'traces_sample_rate' => 0.1,
+        'before_send'      => static function (\Sentry\Event $event): ?\Sentry\Event {
+            // Scrub PII before shipping to Sentry
+            $extra = $event->getExtra();
+            foreach (['description', 'acceptance_criteria', 'kr_hypothesis', 'email', 'ip_address'] as $key) {
+                unset($extra[$key]);
+            }
+            $event->setExtra($extra);
+            return $event;
+        },
+    ]);
+}
+
+// === Request-scoped Logger init ===
+\StratFlow\Services\Logger::init();
+
 // === Error Handling ===
 if ($config['app']['debug']) {
     ini_set('display_errors', '1');
@@ -40,6 +64,11 @@ if ($config['app']['debug']) {
     register_shutdown_function(function () {
         $error = error_get_last();
         if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE], true)) {
+            \StratFlow\Services\Logger::error('Fatal error', [
+                'message' => $error['message'],
+                'file'    => $error['file'],
+                'line'    => $error['line'],
+            ]);
             error_log(sprintf(
                 '[StratFlow] Fatal error: %s in %s on line %d',
                 $error['message'],
@@ -57,6 +86,15 @@ if ($config['app']['debug']) {
 
     // Set exception handler for uncaught exceptions in production
     set_exception_handler(function (\Throwable $e) {
+        if (!empty($_ENV['SENTRY_DSN'])) {
+            \Sentry\captureException($e);
+        }
+        \StratFlow\Services\Logger::error('Uncaught exception', [
+            'class'   => get_class($e),
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+        ]);
         error_log(sprintf(
             '[StratFlow] Uncaught %s: %s in %s:%d',
             get_class($e),
@@ -96,6 +134,14 @@ $csrf = new \StratFlow\Core\CSRF($session);
 $auth = new \StratFlow\Core\Auth($session, $db);
 $request = new \StratFlow\Core\Request();
 $response = new \StratFlow\Core\Response($csrf);
+
+// === Set Logger context from session ===
+if (!empty($_SESSION['user']['org_id'])) {
+    \StratFlow\Services\Logger::setOrg((int) $_SESSION['user']['org_id']);
+}
+if (!empty($_SESSION['user']['id'])) {
+    \StratFlow\Services\Logger::setUser((int) $_SESSION['user']['id']);
+}
 
 // === Merge org-level AI settings into config (if user is logged in) ===
 // Allows admins to override the platform default Gemini model and API key

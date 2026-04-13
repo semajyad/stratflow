@@ -26,6 +26,7 @@ jobs:
             "review"
             "gitleaks"
             "snyk"
+            "dependency-review"
           )
 
           PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || {

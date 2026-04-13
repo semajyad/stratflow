@@ -1,0 +1,27 @@
+name: Dependency Review
+
+# Blocks PRs that introduce dependencies with known vulnerabilities.
+# Runs at merge time — complements the nightly Snyk scan which runs
+# against main after merge.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Block PRs introducing HIGH or CRITICAL CVEs
+          fail-on-severity: high
+          # Post a summary comment on the PR listing new dependencies
+          comment-summary-in-pr: always

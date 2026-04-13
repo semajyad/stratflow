@@ -22,6 +22,9 @@ class Session
     /** @var int Session ID regeneration interval in seconds (default: 15 minutes) */
     private const REGEN_INTERVAL = 900;
 
+    /** @var int Absolute session lifetime in seconds (default: 8 hours) */
+    private const ABSOLUTE_TIMEOUT = 28800;
+
     public function __construct(int $timeout = 1800, ?\PDO $pdo = null)
     {
         $this->timeout = $timeout;
@@ -71,22 +74,34 @@ class Session
     // ===========================
 
     /**
-     * Check for session inactivity timeout and destroy if expired.
+     * Check for session inactivity and absolute timeouts; destroy if either expired.
      *
-     * PCI-DSS requires 15-minute timeout; we use 30 minutes (configurable)
-     * which covers both HIPAA and general enterprise requirements.
+     * PCI-DSS requires 15-minute inactivity timeout; we use 30 minutes (configurable).
+     * Absolute timeout (8 hours) prevents indefinitely-lived sessions regardless of activity.
      */
     private function checkTimeout(): void
     {
+        $now = time();
+
+        // Absolute timeout — destroy after ABSOLUTE_TIMEOUT regardless of activity
+        if (isset($_SESSION['_session_started_at'])) {
+            if (($now - $_SESSION['_session_started_at']) > self::ABSOLUTE_TIMEOUT) {
+                $this->destroy();
+                return;
+            }
+        } else {
+            $_SESSION['_session_started_at'] = $now;
+        }
+
+        // Inactivity timeout
         if (isset($_SESSION['_last_activity'])) {
-            $elapsed = time() - $_SESSION['_last_activity'];
-            if ($elapsed > $this->timeout) {
+            if (($now - $_SESSION['_last_activity']) > $this->timeout) {
                 $this->destroy();
                 return;
             }
         }
 
-        $_SESSION['_last_activity'] = time();
+        $_SESSION['_last_activity'] = $now;
     }
 
     /**

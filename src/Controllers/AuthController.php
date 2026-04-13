@@ -22,6 +22,7 @@ use StratFlow\Models\User;
 use StratFlow\Security\PermissionService;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\EmailService;
+use StratFlow\Services\TotpService;
 
 class AuthController
 {
@@ -90,7 +91,15 @@ class AuthController
             return;
         }
 
-        if ($this->auth->attempt($email, $password)) {
+        $result = $this->auth->attempt($email, $password);
+
+        if ($result === 'mfa_required') {
+            // Credentials valid but MFA needed — redirect to TOTP challenge
+            $this->response->redirect('/login/mfa');
+            return;
+        }
+
+        if ($result === 'ok') {
             $user = $this->auth->user();
             AuditLogger::log($this->db, (int) $user['id'], AuditLogger::LOGIN_SUCCESS, $ip, $ua, [
                 'email' => $email,
@@ -124,6 +133,7 @@ class AuthController
             } else {
                 $this->response->redirect('/app/home');
             }
+            return;
         }
 
         AuditLogger::log($this->db, null, AuditLogger::LOGIN_FAILURE, $ip, $ua, [
@@ -157,6 +167,172 @@ class AuthController
 
         $this->auth->logout();
         $this->response->redirect('/login');
+    }
+
+    // =========================================================================
+    // MFA (TOTP) CHALLENGE FLOW — /login/mfa
+    // =========================================================================
+
+    /**
+     * Show the MFA challenge form.
+     * Only reachable when _mfa_pending_user_id is set in session (i.e. password
+     * was already verified by attempt()).
+     */
+    public function showMfaChallenge(): void
+    {
+        if (empty($_SESSION['_mfa_pending_user_id'])) {
+            $this->response->redirect('/login');
+            return;
+        }
+
+        $this->response->render('mfa-challenge', [
+            'error' => $_SESSION['mfa_error'] ?? null,
+        ]);
+        unset($_SESSION['mfa_error']);
+    }
+
+    /**
+     * Process the MFA challenge form.
+     * POST /login/mfa
+     */
+    public function verifyMfaChallenge(): void
+    {
+        if (empty($_SESSION['_mfa_pending_user_id'])) {
+            $this->response->redirect('/login');
+            return;
+        }
+
+        $code = trim((string) $this->request->post('code', ''));
+        $ip   = $this->request->ip();
+        $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+        if ($this->auth->attemptMfa($code)) {
+            $user = $this->auth->user();
+            AuditLogger::log($this->db, (int) ($user['id'] ?? 0), AuditLogger::LOGIN_SUCCESS, $ip, $ua, [
+                'method' => 'mfa_totp',
+            ]);
+
+            $intendedUrl = $_SESSION['_intended_url'] ?? null;
+            unset($_SESSION['_intended_url']);
+            if ($intendedUrl !== null && str_starts_with($intendedUrl, '/app/')) {
+                $this->response->redirect($intendedUrl);
+                return;
+            }
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        AuditLogger::log($this->db, (int) ($_SESSION['_mfa_pending_user_id'] ?? 0), AuditLogger::LOGIN_FAILURE, $ip, $ua, [
+            'reason' => 'mfa_code_invalid',
+        ]);
+
+        $_SESSION['mfa_error'] = 'Invalid code. Please try again.';
+        $this->response->redirect('/login/mfa');
+    }
+
+    // =========================================================================
+    // MFA SETUP — /app/account/mfa
+    // =========================================================================
+
+    /**
+     * Show the MFA setup page (current status + enable/disable controls).
+     * GET /app/account/mfa
+     */
+    public function showMfaSetup(): void
+    {
+        $user = $this->auth->user();
+        $row  = $this->db->query(
+            'SELECT mfa_enabled, mfa_recovery_codes FROM users WHERE id = ? LIMIT 1',
+            [(int) $user['id']]
+        )->fetch();
+
+        $secret  = TotpService::generateSecret();
+        $uri     = TotpService::uri($secret, (string) $user['email']);
+
+        // Store provisioning secret in session so verify can pick it up
+        $_SESSION['_mfa_provisioning_secret'] = $secret;
+
+        $this->response->render('mfa-setup', [
+            'mfa_enabled'  => (bool) ($row['mfa_enabled'] ?? false),
+            'totp_secret'  => $secret,
+            'totp_uri'     => $uri,
+            'recovery_remaining' => count(json_decode((string) ($row['mfa_recovery_codes'] ?? '[]'), true) ?? []),
+        ]);
+    }
+
+    /**
+     * Verify the initial TOTP code and activate MFA.
+     * POST /app/account/mfa/enable
+     */
+    public function enableMfa(): void
+    {
+        $user   = $this->auth->user();
+        $code   = trim((string) $this->request->post('code', ''));
+        $secret = (string) ($_SESSION['_mfa_provisioning_secret'] ?? '');
+
+        if ($secret === '' || !TotpService::verify($secret, $code)) {
+            $this->response->redirect('/app/account/mfa?error=invalid_code');
+            return;
+        }
+
+        $recoveryCodes = $this->auth->enableMfa((int) $user['id'], $secret);
+        unset($_SESSION['_mfa_provisioning_secret']);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED,
+            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'mfa_enabled']);
+
+        // Store plaintext codes in flash — shown ONCE then gone
+        $_SESSION['_mfa_recovery_codes_flash'] = $recoveryCodes;
+        $this->response->redirect('/app/account/mfa/recovery-codes');
+    }
+
+    /**
+     * Show one-time recovery codes after MFA setup.
+     * GET /app/account/mfa/recovery-codes
+     */
+    public function showRecoveryCodes(): void
+    {
+        $codes = $_SESSION['_mfa_recovery_codes_flash'] ?? null;
+        unset($_SESSION['_mfa_recovery_codes_flash']);
+
+        if ($codes === null) {
+            $this->response->redirect('/app/account/mfa');
+            return;
+        }
+
+        $this->response->render('mfa-recovery-codes', ['recovery_codes' => $codes]);
+    }
+
+    /**
+     * Disable MFA (requires current password confirmation).
+     * POST /app/account/mfa/disable
+     */
+    public function disableMfa(): void
+    {
+        $user     = $this->auth->user();
+        $password = (string) $this->request->post('password', '');
+        $ip       = $this->request->ip();
+        $ua       = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+        // Re-verify password before disabling MFA
+        $row = $this->db->query(
+            'SELECT password_hash FROM users WHERE id = ? LIMIT 1',
+            [(int) $user['id']]
+        )->fetch();
+
+        if (!$row || !password_verify($password, (string) $row['password_hash'])) {
+            $this->response->redirect('/app/account/mfa?error=wrong_password');
+            return;
+        }
+
+        $this->auth->disableMfa((int) $user['id']);
+
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED, $ip, $ua, [
+            'action' => 'mfa_disabled',
+        ]);
+
+        $this->response->redirect('/app/account/mfa?success=disabled');
     }
 
     // =========================================================================

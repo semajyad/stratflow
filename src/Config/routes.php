@@ -7,6 +7,9 @@
  */
 
 return function (\StratFlow\Core\Router $router) {
+    // Health check — public, no auth, used by uptime monitors
+    $router->add('GET', '/healthz', 'HealthController@index');
+
     // Public routes
     $router->add('GET', '/', 'PricingController@index');
     $router->add('GET', '/pricing', 'PricingController@index');
@@ -24,6 +27,10 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET',  '/login',  'AuthController@showLogin');
     $router->add('POST', '/login',  'AuthController@login',  ['csrf']);
     $router->add('POST', '/logout', 'AuthController@logout', ['csrf', 'auth']);
+
+    // MFA challenge (after password verified, before session fully established)
+    $router->add('GET',  '/login/mfa',  'AuthController@showMfaChallenge');
+    $router->add('POST', '/login/mfa',  'AuthController@verifyMfaChallenge', ['csrf']);
 
     // Password reset flow
     $router->add('GET',  '/forgot-password',      'AuthController@showForgotPassword');
@@ -257,6 +264,16 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/app/account/team',                    'AccessTokenController@saveTeam',       ['auth', 'csrf']);
     $router->add('POST', '/app/account/jira-identity',           'AccessTokenController@saveJiraIdentity', ['auth', 'csrf']);
     $router->add('GET',  '/app/account/jira/users',              'AccessTokenController@jiraUsers',      ['auth']);
+
+    // MFA setup — static routes before {id} pattern
+    $router->add('GET',  '/app/account/mfa',                     'AuthController@showMfaSetup',          ['auth']);
+    $router->add('GET',  '/app/account/mfa/recovery-codes',      'AuthController@showRecoveryCodes',     ['auth']);
+    $router->add('POST', '/app/account/mfa/enable',              'AuthController@enableMfa',             ['auth', 'csrf']);
+    $router->add('POST', '/app/account/mfa/disable',             'AuthController@disableMfa',            ['auth', 'csrf']);
+
+    // DSAR data export
+    $router->add('GET',  '/app/account/export-data',  'UserDataExportController@index',  ['auth']);
+    $router->add('POST', '/app/account/export-data',  'UserDataExportController@export', ['auth', 'csrf']);
 
     // ====== JSON API — PAT-authenticated, no CSRF, no session ======
     // CSRF-exempt precedent: /webhook/stripe, /webhook/git/*

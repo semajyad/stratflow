@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: "Target URL to scan"
+        description: "Target URL to scan (must NOT be the production hostname)"
         required: false
-        default: "https://stratflow-app-production.up.railway.app"
+        default: ""
         type: string
       pipeline_testing:
         description: "Use --pipeline-testing mode (faster, lower cost)"
@@ -46,10 +46,15 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Resolve scan target
+      - name: Resolve and guard scan target
         id: target
         run: |
-          URL="${{ inputs.target_url || vars.SHANNON_TARGET_URL || 'https://stratflow-app-production.up.railway.app' }}"
+          URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
+          # Hard guard — never run Shannon against the production hostname
+          if echo "$URL" | grep -qi "production"; then
+            echo "::error::Shannon scan target '$URL' looks like the production URL. Set APP_URL_STAGING to a non-prod hostname."
+            exit 1
+          fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Run Shannon pen test

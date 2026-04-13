@@ -52,13 +52,16 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: PHP syntax lint
-        run: find src public tests -name '*.php' -print0 | xargs -0 -P4 -n1 php -l | grep -v "No syntax errors" || true
+        run: find src public tests -name '*.php' -print0 | xargs -0 -P4 -n1 php -l | grep -v "No syntax errors"
 
       - name: Composer security audit
         run: composer audit --no-dev --format=plain
 
       - name: PHPStan static analysis
-        run: vendor/bin/phpstan analyse --memory-limit=512M src --level=5 --no-progress
+        run: vendor/bin/phpstan analyse --memory-limit=512M src --level=6 --no-progress
+
+      - name: PHPCS code style (PSR-12)
+        run: vendor/bin/phpcs --standard=PSR12 --extensions=php src/ --ignore=src/Services/Prompts/ -q
 
       - name: Create .env
         run: |

@@ -57,12 +57,13 @@ class Auth
     /**
      * Attempt to authenticate a user by email and password.
      *
-     * Does NOT check rate limiting -- caller should check isRateLimited() first
-     * and show an appropriate message.
+     * Does NOT check rate limiting -- caller should check isRateLimited() first.
+     * Returns 'ok' on full success, 'mfa_required' when TOTP challenge is needed,
+     * or false on bad credentials.
      *
-     * @return bool True if credentials are valid and user is now logged in
+     * @return 'ok'|'mfa_required'|false
      */
-    public function attempt(string $email, string $password): bool
+    public function attempt(string $email, string $password): string|false
     {
         $stmt = $this->db->query(
             'SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1',
@@ -75,8 +76,108 @@ class Auth
             return false;
         }
 
+        // MFA gate — store pending user id in session, caller must redirect to /login/mfa
+        if (!empty($user['mfa_enabled'])) {
+            $_SESSION['_mfa_pending_user_id'] = (int) $user['id'];
+            return 'mfa_required';
+        }
+
         $this->login($user);
-        return true;
+        return 'ok';
+    }
+
+    /**
+     * Complete MFA verification. Fetches the pending user from session, verifies
+     * the TOTP code (or a recovery code), then calls login().
+     *
+     * @return bool True on success (session populated); false on bad code / no pending user
+     */
+    public function attemptMfa(string $code): bool
+    {
+        $pendingId = (int) ($_SESSION['_mfa_pending_user_id'] ?? 0);
+        if ($pendingId === 0) {
+            return false;
+        }
+
+        $stmt = $this->db->query(
+            'SELECT * FROM users WHERE id = ? AND is_active = 1 AND mfa_enabled = 1 LIMIT 1',
+            [$pendingId]
+        );
+        $user = $stmt->fetch();
+        if (!$user) {
+            return false;
+        }
+
+        $secret = \StratFlow\Core\SecretManager::unprotectString(
+            json_decode((string) $user['mfa_secret'], true) ?? $user['mfa_secret']
+        );
+
+        if ($secret === null) {
+            return false;
+        }
+
+        // Try TOTP code first
+        if (\StratFlow\Services\TotpService::verify($secret, $code)) {
+            unset($_SESSION['_mfa_pending_user_id']);
+            $this->login($user);
+            return true;
+        }
+
+        // Try recovery code
+        $stored = json_decode((string) ($user['mfa_recovery_codes'] ?? '[]'), true) ?? [];
+        $idx    = \StratFlow\Services\TotpService::matchRecoveryCode($code, $stored);
+        if ($idx >= 0) {
+            // Invalidate the used recovery code
+            unset($stored[$idx]);
+            $this->db->query(
+                'UPDATE users SET mfa_recovery_codes = ? WHERE id = ?',
+                [json_encode(array_values($stored)), $pendingId]
+            );
+            unset($_SESSION['_mfa_pending_user_id']);
+            $this->login($user);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Enable TOTP MFA for the given user. Stores the encrypted secret and hashed
+     * recovery codes. Returns the plaintext recovery codes for one-time display.
+     *
+     * @return string[]  Plaintext recovery codes to show the user
+     */
+    public function enableMfa(int $userId, string $secret): array
+    {
+        $recoveryCodes  = \StratFlow\Services\TotpService::generateRecoveryCodes(8);
+        $hashedCodes    = array_map(
+            [\StratFlow\Services\TotpService::class, 'hashRecoveryCode'],
+            $recoveryCodes
+        );
+
+        // Encrypt the secret at rest
+        $encryptedSecret = \StratFlow\Core\SecretManager::protectString($secret);
+        $storedSecret    = is_array($encryptedSecret)
+            ? json_encode($encryptedSecret, JSON_UNESCAPED_SLASHES)
+            : $encryptedSecret;
+
+        $this->db->query(
+            'UPDATE users SET mfa_secret = ?, mfa_enabled = 1, mfa_recovery_codes = ? WHERE id = ?',
+            [$storedSecret, json_encode($hashedCodes), $userId]
+        );
+
+        return $recoveryCodes;
+    }
+
+    /**
+     * Disable TOTP MFA for the given user.
+     */
+    public function disableMfa(int $userId): void
+    {
+        $this->db->query(
+            'UPDATE users SET mfa_secret = NULL, mfa_enabled = 0, mfa_recovery_codes = NULL WHERE id = ?',
+            [$userId]
+        );
     }
 
     /**

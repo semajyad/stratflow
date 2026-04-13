@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: "Target URL to scan"
+        description: "Target URL to scan (must NOT be the production hostname)"
         required: false
-        default: "https://stratflow-app-production.up.railway.app"
+        default: ""
         type: string
       scan_mode:
         description: "ZAP scan mode"
@@ -38,10 +38,22 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve and guard scan target
+        id: target
+        run: |
+          URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
+          # Hard guard — never scan the production hostname
+          if echo "$URL" | grep -qi "production"; then
+            echo "::error::ZAP scan target '$URL' looks like the production URL. Set APP_URL_STAGING to a non-prod hostname."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Scan target: $URL"
+
       - name: Run ZAP baseline scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          target: ${{ github.event_name == 'pull_request' && format('https://stratflow-app-{0}.up.railway.app', github.event.pull_request.head.ref) || inputs.target_url || vars.ZAP_TARGET_URL || 'https://stratflow-app-production.up.railway.app' }}
+          target: ${{ steps.target.outputs.url }}
           docker_name: ghcr.io/zaproxy/zaproxy:stable
           # -a aggregate alerts  -j json output  -m 10 max requests  -T 15 timeout
           cmd_options: "-a -j -m 10 -T 15"
@@ -83,10 +95,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Resolve and guard scan target
+        id: target
+        run: |
+          URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
+          if echo "$URL" | grep -qi "production"; then
+            echo "::error::ZAP full scan target '$URL' looks like the production URL."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
       - name: Run ZAP full scan
         uses: zaproxy/action-full-scan@v0.13.0
         with:
-          target: ${{ inputs.target_url || vars.ZAP_TARGET_URL || 'https://stratflow-app-production.up.railway.app' }}
+          target: ${{ steps.target.outputs.url }}
           docker_name: ghcr.io/zaproxy/zaproxy:stable
           cmd_options: "-a -j -T 30"
           allow_issue_writing: false
