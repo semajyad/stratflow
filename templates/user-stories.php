@@ -2,7 +2,7 @@
 /**
  * User Stories Template
  *
- * Displays user stories grouped under their parent work item (epic),
+ * Displays user stories grouped under their parent High Level work item,
  * with per-epic AI generation, drag-and-drop reordering, edit modal,
  * dependency tracking, and CSV/JSON/Jira export.
  *
@@ -28,7 +28,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
         <span class="page-title-count"><?= count($stories) ?></span>
         <span class="page-info" tabindex="0" role="button" aria-label="About this page">
             <span class="page-info-btn" aria-hidden="true">i</span>
-            <span class="page-info-popover" role="tooltip">User stories break down high-level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.</span>
+            <span class="page-info-popover" role="tooltip">User stories break down High Level work items into developer-ready tasks of approximately 3 days each. Select work items to decompose, manage dependencies, and export to your project management tool.</span>
         </span>
     </h1>
     <div class="flex items-center gap-2">
@@ -47,18 +47,18 @@ $unlinkedStories = $storiesByItem[0] ?? [];
 </div>
 
 <!-- ===========================
-     High Level Item Selector — Batch AI Decomposition
+     High Level Selector — Batch AI Decomposition
      =========================== -->
 <?php if (!empty($work_items)): ?>
 <div class="card mb-6">
     <div class="card-header">
-        <h3>Split Work Items to User Stories (AI)</h3>
+        <h3>Split High Level Items into User Stories (AI)</h3>
     </div>
     <div class="card-body">
         <form method="POST" action="/app/user-stories/generate"
               class="js-story-split-form"
               data-loading="Decomposing into user stories..."
-              data-overlay="Decomposing work items into user stories. This may take 15-30 seconds.">
+              data-overlay="Decomposing High Level items into user stories. This may take 15-30 seconds.">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="high-level-selector">
@@ -122,7 +122,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
             <?php else: ?>
             <div class="card-body">
                 <p class="gen-style-44292d">
-                    No User Stories generated yet. Click the button to decompose this epic.
+                    No User Stories generated yet. Click the button to decompose this High Level item.
                 </p>
             </div>
             <?php endif; ?>

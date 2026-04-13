@@ -64,7 +64,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
                     <?php endif; ?>
                 </div>
                 <div>
-                    <span class="text-muted integration-stat-label">Epics</span>
+                    <span class="text-muted integration-stat-label">High Level Items</span>
                     <strong class="integration-stat-value"><?= (int) ($sh['epics'] ?? 0) ?></strong>
                 </div>
                 <div>
@@ -100,46 +100,49 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
 
             <!-- Action buttons -->
             <div class="integration-actions">
-                <a href="/app/admin/integrations/jira/configure" class="btn btn-sm btn-secondary">Configure</a>
+                <div class="integration-actions-main">
+                    <a href="/app/admin/integrations/jira/configure" class="btn btn-sm btn-secondary">Configure</a>
+                    <a href="/app/admin/integrations/sync-log" class="btn btn-sm btn-secondary">Sync Log</a>
 
-                <form method="POST" action="/app/admin/integrations/jira/push" class="inline-form"
-                      data-loading="Pushing to Jira..."
-                      data-overlay="Pushing work items and user stories to Jira. This may take a moment."
-                      class="inline-form integration-push-form">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <select name="project_id" class="form-control integration-select-compact" required>
-                        <option value="">Project...</option>
-                        <?php if (!empty($all_projects)): ?>
-                            <?php foreach ($all_projects as $ap): ?>
-                                <option value="<?= (int) $ap['id'] ?>" <?= ((int)($ap['id'] ?? 0)) === (int)($_SESSION['_last_project_id'] ?? 0) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($ap['name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary"
-                            class="js-jira-push-submit"
-                            data-confirm="Push work items and stories to Jira?">
-                        Push
-                    </button>
-                </form>
+                    <div class="integration-sync-group">
+                        <form method="POST" action="/app/admin/integrations/jira/push"
+                              class="inline-form integration-inline-form"
+                              data-loading="Pushing to Jira..."
+                              data-overlay="Pushing work items and user stories to Jira. This may take a moment.">
+                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <select name="project_id" class="form-control integration-select-compact" required aria-label="Project selection">
+                                <option value="">Project...</option>
+                                <?php if (!empty($all_projects)): ?>
+                                    <?php foreach ($all_projects as $ap): ?>
+                                        <option value="<?= (int) $ap['id'] ?>" <?= ((int)($ap['id'] ?? 0)) === (int)($_SESSION['_last_project_id'] ?? 0) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($ap['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary"
+                                    data-confirm="Push work items and stories to Jira?">
+                                Push to Jira
+                            </button>
+                        </form>
 
-                <form method="POST" action="/app/admin/integrations/jira/pull" class="inline-form"
-                      data-loading="Pulling from Jira...">
-                    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
-                    <button type="submit" class="btn btn-sm btn-secondary"
-                            data-confirm="Pull changes from Jira?">
-                        Pull Changes
-                    </button>
-                </form>
+                        <form method="POST" action="/app/admin/integrations/jira/pull"
+                              class="inline-form integration-inline-form"
+                              data-loading="Pulling from Jira...">
+                            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <input type="hidden" name="project_id" value="<?= (int) ($_SESSION['_last_project_id'] ?? 0) ?>">
+                            <button type="submit" class="btn btn-sm btn-secondary"
+                                    data-confirm="Pull changes from Jira?">
+                                Pull Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-                <a href="/app/admin/integrations/sync-log" class="btn btn-sm btn-secondary">Sync Log</a>
-
-                <div class="integration-actions-spacer">
+                <div class="integration-actions-danger">
                     <form method="POST" action="/app/admin/integrations/jira/disconnect" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <button type="submit" class="btn btn-sm btn-danger"
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
                                 data-confirm="Disconnect Jira Cloud? Sync mappings will be preserved.">
                             Disconnect
                         </button>
@@ -149,7 +152,7 @@ $gitlabConfig = $gitlab ? (json_decode($gitlab['config_json'] ?? '{}', true) ?: 
         <?php else: ?>
             <!-- Disconnected state -->
             <p class="text-muted integration-copy-spaced">
-                Connect your Jira Cloud instance to sync high-level work items as Epics
+                Connect your Jira Cloud instance to sync High Level items as Epics
                 and user stories as Stories. Changes can be pushed and pulled bidirectionally.
             </p>
             <a href="/app/admin/integrations/jira/connect" class="btn btn-primary">

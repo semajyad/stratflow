@@ -39,14 +39,14 @@
         <div class="admin-card-hint">View and manage all organisations</div>
     </a>
 
-    <a href="/superadmin/organisations" class="admin-card">
+    <a href="/superadmin/users" class="admin-card">
         <div class="admin-card-icon">&#128101;</div>
         <div class="admin-card-count"><?= (int) $user_count ?></div>
         <div class="admin-card-label">Total Users</div>
         <div class="admin-card-hint">Active users across all organisations</div>
     </a>
 
-    <a href="/superadmin/organisations" class="admin-card">
+    <a href="/superadmin/subscriptions" class="admin-card">
         <div class="admin-card-icon">&#128179;</div>
         <div class="admin-card-count"><?= (int) $subscription_count ?></div>
         <div class="admin-card-label">Active Subscriptions</div>

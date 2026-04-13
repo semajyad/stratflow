@@ -141,6 +141,48 @@ class SuperadminController
     }
 
     /**
+     * List all users across all organisations.
+     */
+    public function users(): void
+    {
+        $user = $this->auth->user();
+        $stmt = $this->db->query(
+            "SELECT u.*, o.name AS org_name
+             FROM users u
+             LEFT JOIN organisations o ON o.id = u.org_id
+             ORDER BY u.created_at DESC"
+        );
+        $allUsers = $stmt->fetchAll();
+
+        $this->response->render('superadmin/users', [
+            'user'        => $user,
+            'all_users'   => $allUsers,
+            'active_page' => 'superadmin',
+        ], 'app');
+    }
+
+    /**
+     * List all subscriptions across all organisations.
+     */
+    public function subscriptions(): void
+    {
+        $user = $this->auth->user();
+        $stmt = $this->db->query(
+            "SELECT s.*, o.name AS org_name
+             FROM subscriptions s
+             LEFT JOIN organisations o ON o.id = s.org_id
+             ORDER BY s.created_at DESC"
+        );
+        $allSubscriptions = $stmt->fetchAll();
+
+        $this->response->render('superadmin/subscriptions', [
+            'user'              => $user,
+            'all_subscriptions' => $allSubscriptions,
+            'active_page'       => 'superadmin',
+        ], 'app');
+    }
+
+    /**
      * Create a new organisation with an optional initial subscription.
      */
     public function createOrg(): void

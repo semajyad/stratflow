@@ -241,6 +241,8 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/personas/evaluate',        'SuperadminController@evaluatePersona', ['auth', 'superadmin', 'csrf']);
     $router->add('GET',  '/superadmin/audit-logs/export',          'SuperadminController@exportAuditLogs',  ['auth', 'superadmin']);
     $router->add('GET',  '/superadmin/audit-logs',                'SuperadminController@auditLogs',        ['auth', 'superadmin']);
+    $router->add('GET',  '/superadmin/users',                     'SuperadminController@users',            ['auth', 'superadmin']);
+    $router->add('GET',  '/superadmin/subscriptions',             'SuperadminController@subscriptions',    ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/assign-superadmin',         'SuperadminController@assignSuperadmin', ['auth', 'superadmin', 'csrf']);
 
     // Developer tokens — Personal Access Tokens for API / MCP access (any authenticated user)

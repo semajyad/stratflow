@@ -95,7 +95,17 @@ class SystemSettings
         }
 
         $stored = json_decode($row['settings_json'], true) ?: [];
-        return array_merge(self::DEFAULTS, $stored);
+        $merged = array_merge(self::DEFAULTS, $stored);
+
+        // Enforce gemini-3-flash-preview as the minimum model for Google provider
+        if (($merged['ai_provider'] ?? '') === 'google') {
+            $allowedGemini = ['gemini-3-flash-preview', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+            if (!in_array($merged['ai_model'], $allowedGemini)) {
+                $merged['ai_model'] = 'gemini-3-flash-preview';
+            }
+        }
+
+        return $merged;
     }
 
     /**

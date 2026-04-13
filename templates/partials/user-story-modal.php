@@ -40,9 +40,9 @@
 
                 <div class="modal-field-wrap" data-field="parent_hl_item_id">
                     <div class="form-group">
-                        <label for="story-parent">Parent Work Item</label>
+                        <label for="edit-story-parent-id">Parent High Level Item</label>
                         <select id="story-parent" name="parent_hl_item_id" class="form-control">
-                            <option value="">-- None --</option>
+                            <option value="">— No High Level Item —</option>
                             <?php foreach ($work_items as $wi): ?>
                                 <option value="<?= (int) $wi['id'] ?>"><?= htmlspecialchars($wi['title']) ?></option>
                             <?php endforeach; ?>

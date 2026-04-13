@@ -216,7 +216,7 @@
                 $stLabels = [
                     'title'               => 'Title',
                     'description'         => 'Description',
-                    'parent_hl_item_id'   => 'Parent Work Item',
+                    'parent_hl_item_id'   => 'Parent High Level Item',
                     'team_assigned'       => 'Team Assigned',
                     'size'                => 'Size (Story Points)',
                     'acceptance_criteria' => 'Acceptance Criteria',

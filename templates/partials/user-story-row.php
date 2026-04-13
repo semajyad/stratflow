@@ -55,7 +55,7 @@
     <?php $qs = (int) $story['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
     <?php else: ?>
-    <span class="quality-pill js-quality-score-placeholder" data-id="<?= (int) $story['id'] ?>" data-type="story" title="Calculating quality score...">...</span>
+    <span class="quality-pill js-quality-score-placeholder" data-task-id="<?= (int) $story['id'] ?>" data-task-type="story" title="Calculating quality score...">...</span>
     <?php endif; ?>
     <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>

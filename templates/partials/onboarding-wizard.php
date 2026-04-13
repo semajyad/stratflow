@@ -52,7 +52,7 @@ $roleHint = match ($userRole) {
                 <div class="onboarding-list">
                     <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">1</span> <strong>Upload</strong> - PDF/DOCX/PPTX strategy documents</div>
                     <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">2</span> <strong>Roadmap</strong> - AI generates visual strategy map</div>
-                    <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">3</span> <strong>Work Items</strong> - AI creates high-level epics</div>
+                    <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">3</span> <strong>Work Items</strong> - AI creates High Level items</div>
                     <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">4</span> <strong>Prioritise</strong> - Score with RICE or WSJF</div>
                     <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">5</span> <strong>Risks</strong> - AI identifies and scores risks</div>
                     <div class="onboarding-list-item"><span class="badge badge-primary onboarding-step-badge">6</span> <strong>Stories</strong> - Decompose to ~3-day user stories</div>
@@ -67,7 +67,7 @@ $roleHint = match ($userRole) {
                     StratFlow connects to Jira Cloud so your strategy flows straight into your team's execution pipeline:
                 </p>
                 <ul class="onboarding-jira-list">
-                    <li><strong>Epics</strong> - Work items push as Jira Epics</li>
+                    <li><strong>High Level Items</strong> - Work items push as Jira Epics</li>
                     <li><strong>Stories</strong> - User stories push as Jira Stories with points</li>
                     <li><strong>Risks</strong> - Risks push as Jira Risk issues with likelihood/impact</li>
                     <li><strong>Sprints</strong> - Sprints create on your chosen team board</li>

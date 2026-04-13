@@ -7,9 +7,9 @@
  * Fields are wrapped in .modal-field-wrap[data-field] for order control.
  *
  * Expects $csrf_token (string), $project (array), $teams (array),
- * $hl_sizing_method (string) from the parent scope.
+ * $high_level_sizing_method (string) from the parent scope.
  */
-$sizingMethod = $hl_sizing_method ?? 'sprints';
+$sizingMethod = $high_level_sizing_method ?? 'sprints';
 $sizingLabels = [
     'sprints' => 'Estimated Sprints',
     'weeks'   => 'Estimated Weeks',

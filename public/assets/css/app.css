@@ -6491,6 +6491,20 @@ details[open] > summary .trace-chevron {
 
 /* === Logo Branding ======================================================== */
 
+.topbar-left-brand {
+    display: flex;
+    align-items: center;
+    margin-left: 0.75rem;
+    margin-right: 1.5rem;
+}
+
+.topbar-stratflow-logo {
+    height: 28px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
 .topbar-threepoints-logo {
     height: 28px;
     width: auto;
@@ -7323,10 +7337,26 @@ a.okr-title:hover {
 }
 
 .integration-select-compact {
-    font-size: 0.8125rem;
-    padding: 0.25rem 0.5rem;
-    min-width: 150px;
-}
+    width: 160px;
+    height: 32px;
+    font-size: 0.85rem;
+    padding: 2px 8px;
+  }
+
+  .integration-actions-danger {
+    margin-left: auto;
+  }
+
+  .btn-outline-danger {
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+    background: transparent;
+  }
+
+  .btn-outline-danger:hover {
+    background: var(--danger-color);
+    color: white;
+  }
 
 .integration-actions-spacer {
     margin-left: auto;
