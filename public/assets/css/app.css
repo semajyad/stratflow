@@ -8647,3 +8647,87 @@ a.okr-title:hover {
 .gen-style-f8a732 { margin-top: 0.5rem; }
 .gen-style-fb2a71 { font-size: 0.8rem; }
 .gen-style-fcb571 { font-weight:600; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:0.5rem; }
+
+/* === Superadmin Personas (CSP Migration) ==================================== */
+.persona-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius, 8px);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+}
+.persona-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+.persona-card-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text, #1f2937);
+}
+.persona-stage-badge {
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+.panel-sub-accordion {
+    margin-left: 0;
+    border-color: var(--border, #e5e7eb);
+}
+.persona-panel-actions {
+    border-top: 1px solid var(--border, #e5e7eb);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+.persona-actions-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* Modal System (Generic) */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
+}
+.modal-content {
+    background: var(--surface, #fff);
+    border-radius: var(--radius-lg, 12px);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+    width: 100%;
+}
+.modal-lg { max-width: 720px; }
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+.modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+}
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted, #6b7280);
+    line-height: 1;
+}
+.modal-close:hover { color: var(--text, #1f2937); }
+.modal-body { padding: 1.5rem; }
