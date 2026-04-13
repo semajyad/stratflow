@@ -6538,8 +6538,9 @@ details[open] > summary .trace-chevron {
 }
 
 .auth-logo img {
-    height: 72px;
+    height: 48px;
     width: auto;
+    max-width: 240px;
     display: inline-block;
 }
 

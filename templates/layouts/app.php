@@ -17,12 +17,12 @@
                 <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
                 <div class="topbar-left-brand">
                     <a href="/app/home" class="topbar-logo-link">
-                        <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow" class="topbar-stratflow-logo">
+                        <img src="/assets/images/StratFlow_logo.svg" alt="StratFlow" class="topbar-stratflow-logo">
                     </a>
                 </div>
                 <?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
                 <div class="topbar-right">
-                    <img src="/assets/images/threepoints-logo.png" alt="ThreePoints" class="topbar-threepoints-logo">
+                    <img src="/assets/images/threepoints-logo.svg" alt="ThreePoints" class="topbar-threepoints-logo">
                     <form method="POST" action="/logout" class="inline-form">
                         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <button type="submit" class="btn btn-sm btn-secondary">Logout</button>

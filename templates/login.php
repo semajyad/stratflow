@@ -12,7 +12,7 @@
 
         <div class="auth-card-header">
             <div class="auth-logo">
-                <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow">
+                <img src="/assets/images/StratFlow_logo.svg" alt="StratFlow">
             </div>
             <h2 class="auth-heading">Sign in to your account</h2>
         </div>
