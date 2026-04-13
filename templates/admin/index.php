@@ -31,8 +31,8 @@
             $seatPct = $seat_limit > 0 ? min(100, ($user_count / $seat_limit) * 100) : 0;
             $seatColor = $seatPct >= 90 ? 'var(--danger)' : ($seatPct >= 70 ? '#f0ad4e' : 'var(--primary)');
         ?>
-        <div style="margin-top:0.75rem; background:var(--border); border-radius:3px; height:5px;">
-            <div style="background:<?= $seatColor ?>; height:100%; border-radius:3px; width:<?= $seatPct ?>%; transition:width 300ms ease;"></div>
+        <div class="gen-style-4d19ca">
+            <div class="gen-style-393e6a"></div>
         </div>
     </a>
 
@@ -88,20 +88,20 @@
 <?php if (!empty($recent_activity)): ?>
 <section class="card mt-6">
     <div class="card-header flex justify-between items-center">
-        <h2 class="card-title" style="margin:0;">Recent Activity</h2>
+        <h2 class="card-title gen-style-46dcee">Recent Activity</h2>
         <a href="/app/admin/audit-logs" class="btn btn-sm btn-secondary">View All Logs</a>
     </div>
-    <div class="card-body" style="padding:0;">
+    <div class="card-body gen-style-26dd46">
         <?php foreach ($recent_activity as $log):
             $details = json_decode($log['details_json'] ?? '{}', true) ?: [];
             $eventLabel = ucwords(str_replace('_', ' ', strtolower($log['event_type'])));
             $isWarning = str_contains($log['event_type'], 'FAILURE') || str_contains($log['event_type'], 'DELETED');
         ?>
-            <div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 1.25rem; border-bottom:1px solid var(--border); font-size:0.875rem;">
-                <span class="badge <?= $isWarning ? 'badge-warning' : 'badge-secondary' ?>" style="font-size:0.7rem; flex-shrink:0;">
+            <div class="gen-style-7b090a">
+                <span class="badge <?= $isWarning ? 'badge-warning' : 'badge-secondary' ?> gen-style-963e14">
                     <?= htmlspecialchars($eventLabel) ?>
                 </span>
-                <span style="flex:1; color:var(--text);">
+                <span class="gen-style-25eb7a">
                     <strong><?= htmlspecialchars($log['full_name'] ?? 'System') ?></strong>
                     <?php if (!empty($details)): ?>
                         <?php
@@ -117,7 +117,7 @@
                         ?>
                     <?php endif; ?>
                 </span>
-                <span class="text-muted" style="flex-shrink:0; font-size:0.75rem;">
+                <span class="text-muted gen-style-aa73f6">
                     <?= date('j M g:ia', strtotime($log['created_at'])) ?>
                 </span>
             </div>

@@ -67,7 +67,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                     <textarea id="risk-description" name="description" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="flex gap-4">
-                    <div class="form-group" style="flex: 1;">
+                    <div class="form-group gen-style-49cdf8">
                         <label for="risk-likelihood">Likelihood</label>
                         <select id="risk-likelihood" name="likelihood" class="form-control">
                             <?php foreach ($likelihoodLabels as $val => $label): ?>
@@ -75,7 +75,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1;">
+                    <div class="form-group gen-style-49cdf8">
                         <label for="risk-impact">Impact</label>
                         <select id="risk-impact" name="impact" class="form-control">
                             <?php foreach ($impactLabels as $val => $label): ?>
@@ -84,7 +84,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
                         </select>
                     </div>
                 </div>
-                <div class="form-group" style="margin-top: 0.5rem;">
+                <div class="form-group gen-style-f8a732">
                     <label>RPN Preview: <span id="rpn-preview" class="risk-rpn">9</span></label>
                 </div>
                 <div class="form-group">
@@ -134,7 +134,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 <div class="card mb-6">
     <div class="card-header">
         <h3>Risk Heatmap</h3>
-        <span class="text-muted" style="font-size: 0.8125rem;">Likelihood vs Impact (count of risks per cell)</span>
+        <span class="text-muted gen-style-0a07c7">Likelihood vs Impact (count of risks per cell)</span>
     </div>
     <div class="card-body">
         <div class="heatmap-container">
@@ -185,7 +185,7 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
     <div class="card-header">
         <h3>Project Risks (<?= count($risks) ?>)</h3>
     </div>
-    <div class="card-body" style="padding: 0;">
+    <div class="card-body gen-style-b662f2">
         <div class="risk-list">
             <?php foreach ($risks as $risk): ?>
                 <?php require __DIR__ . '/partials/risk-row.php'; ?>
@@ -195,8 +195,8 @@ $impactLabels     = [1 => 'Negligible', 2 => 'Minor', 3 => 'Moderate', 4 => 'Maj
 </div>
 <?php else: ?>
 <div class="card mb-6">
-    <div class="card-body text-center" style="padding: 3rem;">
-        <p class="text-muted" style="font-size: 1.125rem;">
+    <div class="card-body text-center gen-style-cfdf60">
+        <p class="text-muted gen-style-2917c0">
             No risks identified yet. Use <strong>Auto-Generate Risks</strong> to analyse your work items,
             or <strong>Add Risk Manually</strong>.
         </p>

@@ -27,7 +27,7 @@
         <?php if (!empty($story['jira_url'])): ?>
             <a href="<?= htmlspecialchars($story['jira_url']) ?>" target="_blank" rel="noopener"
                title="Synced to Jira: <?= htmlspecialchars($story['jira_key'] ?? '') ?>"
-               class="badge badge-info" style="text-decoration: none; font-size: 0.75rem;">
+               class="badge badge-info gen-style-616405">
                 Jira: <?= htmlspecialchars($story['jira_key'] ?? '') ?>
             </a>
         <?php endif; ?>
@@ -52,7 +52,7 @@
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
     <?php if (($show_quality ?? true) && $story['quality_score'] !== null): ?>
     <?php $qs = (int) $story['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
-    <span class="quality-pill" style="background:<?= $qc ?>;" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
     <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>
     <?php
@@ -124,10 +124,10 @@
             <div class="quality-dim">
                 <div class="quality-dim-header">
                     <span class="quality-dim-label"><?= htmlspecialchars($dimLabel, ENT_QUOTES, 'UTF-8') ?></span>
-                    <span class="quality-dim-score" style="color:<?= $dimColor ?>;"><?= $dimScore ?>/<?= $dimMax ?></span>
+                    <span class="quality-dim-score" data-style-color="<?= $dimColor ?>"><?= $dimScore ?>/<?= $dimMax ?></span>
                 </div>
                 <div class="quality-dim-bar-track">
-                    <div class="quality-dim-bar-fill" style="width:<?= $dimPct ?>%; background:<?= $dimColor ?>;"></div>
+                    <div class="quality-dim-bar-fill" data-style-width="<?= $dimPct ?>%" data-style-background="<?= $dimColor ?>"></div>
                 </div>
                 <?php foreach ($dim['issues'] ?? [] as $issue): ?>
                 <div class="quality-dim-issue">&#8627; <?= htmlspecialchars((string) $issue, ENT_QUOTES, 'UTF-8') ?></div>

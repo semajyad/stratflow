@@ -13,7 +13,7 @@
         <div class="sprint-title-row">
             <h4><?= htmlspecialchars($sprint['name']) ?></h4>
             <?php if (!empty($sprint['team_name'])): ?>
-                <span class="badge badge-primary" style="font-size: 0.7rem;"><?= htmlspecialchars($sprint['team_name']) ?></span>
+                <span class="badge badge-primary gen-style-dcab71"><?= htmlspecialchars($sprint['team_name']) ?></span>
             <?php endif; ?>
             <span class="sprint-dates"><?= htmlspecialchars($sprint['start_date'] ?? 'TBD') ?> &mdash; <?= htmlspecialchars($sprint['end_date'] ?? 'TBD') ?></span>
         </div>
@@ -24,7 +24,7 @@
                 $pct       = min(100, ($totalSize / $capacity) * 100);
                 $overClass = $totalSize > $capacity ? ' over-capacity' : '';
             ?>
-            <div class="capacity-fill<?= $overClass ?>" style="width: <?= $pct ?>%"></div>
+            <div class="capacity-fill<?= $overClass ?> gen-style-3c621e"></div>
             <span class="capacity-label"><?= $totalSize ?> / <?= $sprint['team_capacity'] ?? '?' ?> pts</span>
         </div>
         <div class="sprint-actions">
@@ -43,12 +43,12 @@
         <form method="POST" action="/app/sprints/<?= (int) $sprint['id'] ?>">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
-            <div class="sprint-form-row" style="flex-wrap: wrap;">
+            <div class="sprint-form-row gen-style-14c236">
                 <input type="hidden" name="team_id" value="<?= (int) ($sprint['team_id'] ?? 0) ?>">
                 <input type="text" name="name" value="<?= htmlspecialchars($sprint['name']) ?>" placeholder="Sprint name" class="form-control form-control-sm" required>
                 <input type="date" name="start_date" value="<?= htmlspecialchars($sprint['start_date'] ?? '') ?>" class="form-control form-control-sm">
                 <input type="date" name="end_date" value="<?= htmlspecialchars($sprint['end_date'] ?? '') ?>" class="form-control form-control-sm">
-                <input type="number" name="team_capacity" value="<?= $sprint['team_capacity'] ?? '' ?>" placeholder="Capacity" class="form-control form-control-sm" min="1" style="width: 80px;">
+                <input type="number" name="team_capacity" value="<?= $sprint['team_capacity'] ?? '' ?>" placeholder="Capacity" class="form-control form-control-sm gen-style-588c2d" min="1">
                 <button type="submit" class="btn btn-sm btn-primary">Save</button>
                 <button type="button" class="btn btn-sm btn-secondary js-toggle-sprint-edit" data-sprint-id="<?= (int) $sprint['id'] ?>">Cancel</button>
             </div>

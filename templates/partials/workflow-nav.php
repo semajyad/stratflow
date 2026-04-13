@@ -38,7 +38,7 @@ $nextStep     = ($currentIndex !== false && $currentIndex < count($stepKeys) - 1
         <span></span>
     <?php endif; ?>
 
-    <span class="text-muted" style="font-size: 0.8rem;">
+    <span class="text-muted gen-style-fb2a71">
         Step <?= ($currentIndex !== false ? $currentIndex + 1 : '?') ?> of <?= count($stepKeys) ?>
     </span>
 

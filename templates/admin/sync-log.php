@@ -39,16 +39,16 @@
     <div class="card-body">
         <form method="GET" action="/app/admin/integrations/sync-log" class="d-flex align-items-end gap-3 flex-wrap">
             <div>
-                <label for="filter-direction" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Direction</label>
-                <select id="filter-direction" name="direction" class="form-select form-select-sm" style="min-width: 120px;">
+                <label for="filter-direction" class="form-label gen-style-6b7db9">Direction</label>
+                <select id="filter-direction" name="direction" class="form-select form-select-sm gen-style-075804">
                     <option value="">All</option>
                     <option value="push" <?= ($direction ?? '') === 'push' ? 'selected' : '' ?>>Push</option>
                     <option value="pull" <?= ($direction ?? '') === 'pull' ? 'selected' : '' ?>>Pull</option>
                 </select>
             </div>
             <div>
-                <label for="filter-status" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Status</label>
-                <select id="filter-status" name="status" class="form-select form-select-sm" style="min-width: 120px;">
+                <label for="filter-status" class="form-label gen-style-6b7db9">Status</label>
+                <select id="filter-status" name="status" class="form-select form-select-sm gen-style-075804">
                     <option value="">All</option>
                     <option value="success" <?= ($status ?? '') === 'success' ? 'selected' : '' ?>>Success</option>
                     <option value="error" <?= ($status ?? '') === 'error' ? 'selected' : '' ?>>Error</option>
@@ -78,11 +78,11 @@
 <section class="card mt-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="card-title mb-0">Sync Operations</h2>
-        <span class="text-muted" style="font-size: 0.85rem;">
+        <span class="text-muted gen-style-e7992d">
             <?= number_format($total ?? 0) ?> total <?= ($total ?? 0) === 1 ? 'entry' : 'entries' ?>
         </span>
     </div>
-    <div class="card-body" style="overflow-x: auto;">
+    <div class="card-body gen-style-b56181">
         <?php if (empty($logs)): ?>
             <p class="text-muted">No sync operations match the current filters.</p>
         <?php else: ?>
@@ -103,7 +103,7 @@
                     <?php foreach ($logs as $log): ?>
                         <?php $details = json_decode($log['details_json'] ?? '{}', true) ?: []; ?>
                         <tr>
-                            <td style="white-space: nowrap; font-size: 0.85rem;">
+                            <td class="gen-style-91792f">
                                 <?= htmlspecialchars($log['created_at'] ?? '') ?>
                             </td>
                             <td>
@@ -126,13 +126,13 @@
                                 ?>
                                 <span class="badge <?= $actionBadge ?>"><?= htmlspecialchars(ucfirst($log['action'] ?? '')) ?></span>
                             </td>
-                            <td style="font-size: 0.85rem;">
+                            <td class="gen-style-e7992d">
                                 <?= htmlspecialchars(str_replace('_', ' ', ucfirst($log['local_type'] ?? '-'))) ?>
                             </td>
-                            <td style="font-size: 0.85rem;">
+                            <td class="gen-style-e7992d">
                                 <?= $log['local_id'] ? (int) $log['local_id'] : '-' ?>
                             </td>
-                            <td style="font-size: 0.85rem;">
+                            <td class="gen-style-e7992d">
                                 <?php if (!empty($log['external_id']) && !empty($integration['site_url'])): ?>
                                     <a href="<?= htmlspecialchars(rtrim($integration['site_url'], '/') . '/browse/' . $log['external_id']) ?>"
                                        target="_blank" rel="noopener">
@@ -151,7 +151,7 @@
                                     <span class="badge badge-danger">Error</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="font-size: 0.8rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                            <td class="gen-style-1459fb"
                                 title="<?= htmlspecialchars(json_encode($details)) ?>">
                                 <?php if (!empty($details['error'])): ?>
                                     <?= htmlspecialchars(substr($details['error'], 0, 80)) ?>
@@ -187,7 +187,7 @@
                             <span class="btn btn-sm btn-outline-secondary disabled">&laquo; Previous</span>
                         <?php endif; ?>
                     </div>
-                    <div class="text-muted" style="font-size: 0.85rem;">
+                    <div class="text-muted gen-style-e7992d">
                         Page <?= $page ?> of <?= $totalPages ?>
                     </div>
                     <div>

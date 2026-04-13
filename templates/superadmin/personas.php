@@ -64,8 +64,8 @@
         </section>
     <?php endforeach; ?>
 
-    <div class="mt-6" style="margin-bottom: 2rem;">
+    <div class="mt-6 gen-style-257995">
         <button type="submit" class="btn btn-primary">Save Personas</button>
-        <a href="/superadmin" class="btn btn-secondary" style="margin-left: 0.5rem;">Back to Dashboard</a>
+        <a href="/superadmin" class="btn btn-secondary gen-style-600069">Back to Dashboard</a>
     </div>
 </form>

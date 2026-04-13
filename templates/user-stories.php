@@ -62,7 +62,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
             <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
             <div class="hl-selector">
-                <label class="checkbox-label" style="font-weight:600; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:0.5rem;">
+                <label class="checkbox-label gen-style-fcb571">
                     <input type="checkbox" id="select-all-hl" class="js-select-all-hl">
                     Select All
                 </label>
@@ -91,12 +91,12 @@ $unlinkedStories = $storiesByItem[0] ?? [];
         $epicHasStories = !empty($epicStories);
         ?>
         <div class="card mb-4">
-            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; background:var(--surface-2, #f1f5f9);">
-                <div style="display:flex; align-items:center; gap:0.75rem;">
-                    <span class="priority-number" style="flex-shrink:0;"><?= $epicIndex + 1 ?></span>
+            <div class="card-header gen-style-34964f">
+                <div class="gen-style-13f83e">
+                    <span class="priority-number gen-style-5b214b"><?= $epicIndex + 1 ?></span>
                     <div>
-                        <strong style="font-size:0.9375rem;"><?= htmlspecialchars($wi['title']) ?></strong>
-                        <div class="text-muted" style="font-size:0.8rem; margin-top:0.1rem;">
+                        <strong class="gen-style-8796ca"><?= htmlspecialchars($wi['title']) ?></strong>
+                        <div class="text-muted gen-style-3bdbf2">
                             Owner: <?= htmlspecialchars($wi['owner'] ?? 'Unassigned') ?>
                         </div>
                     </div>
@@ -112,7 +112,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                 </form>
             </div>
             <?php if ($epicHasStories): ?>
-            <div class="card-body" style="padding:0;">
+            <div class="card-body gen-style-26dd46">
                 <div class="user-stories-list">
                     <?php foreach ($epicStories as $story): ?>
                         <?php require __DIR__ . '/partials/user-story-row.php'; ?>
@@ -121,7 +121,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
             </div>
             <?php else: ?>
             <div class="card-body">
-                <p style="color:var(--text-secondary); font-style:italic; margin:0; font-size:0.875rem;">
+                <p class="gen-style-44292d">
                     No User Stories generated yet. Click the button to decompose this epic.
                 </p>
             </div>
@@ -138,7 +138,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
     <div class="card-header">
         <h3>Unlinked Stories</h3>
     </div>
-    <div class="card-body" style="padding:0;">
+    <div class="card-body gen-style-26dd46">
         <div class="user-stories-list">
             <?php foreach ($unlinkedStories as $story): ?>
                 <?php require __DIR__ . '/partials/user-story-row.php'; ?>
@@ -153,8 +153,8 @@ $unlinkedStories = $storiesByItem[0] ?? [];
      =========================== -->
 <?php if (empty($work_items) && empty($stories)): ?>
 <div class="card mb-6">
-    <div class="card-body text-center" style="padding:3rem;">
-        <p class="text-muted" style="font-size:1.125rem;">
+    <div class="card-body text-center gen-style-217e9b">
+        <p class="text-muted gen-style-5678e1">
             No user stories yet. Select work items above to decompose with AI, or add stories manually.
         </p>
     </div>
@@ -167,7 +167,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
 <?php if (!empty($stories)): ?>
 <div class="card mb-6">
     <div class="card-body export-section">
-        <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="flex items-center justify-between gen-style-972f37">
             <div>
                 <strong>Export User Stories</strong>
                 <div class="flex items-center gap-2 mt-2">

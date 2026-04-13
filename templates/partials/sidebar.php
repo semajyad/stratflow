@@ -83,7 +83,7 @@ $icon = function (string $name): string {
         <?php elseif ($pid && isset($project)): ?>
         <span class="sidebar-project-name"><?= htmlspecialchars($project['name']) ?></span>
         <?php else: ?>
-        <span class="sidebar-project-name" style="color: #64748b; font-style: italic;">No project selected</span>
+        <span class="sidebar-project-name gen-style-a95f6d">No project selected</span>
         <?php endif; ?>
     </div>
     <nav class="sidebar-nav">

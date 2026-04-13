@@ -43,10 +43,10 @@
      Generate Work Items
      =========================== -->
 <div class="card mb-6">
-    <div class="card-body flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem;">
+    <div class="card-body flex items-center justify-between gen-style-972f37">
         <div>
             <strong>AI Work Item Generation</strong>
-            <p class="text-muted" style="margin:0.25rem 0 0; font-size:0.875rem;">
+            <p class="text-muted gen-style-4aca16">
                 <?php if (!empty($work_items)): ?>
                     Warning: This will replace all <?= count($work_items) ?> existing work items.
                 <?php else: ?>
@@ -54,7 +54,7 @@
                 <?php endif; ?>
             </p>
         </div>
-        <div class="flex items-center gap-2" style="flex-wrap: wrap; margin-left: auto;">
+        <div class="flex items-center gap-2 gen-style-156729">
             <form method="POST" action="/app/work-items/generate"
                   data-loading="Generating work items..."
                   data-overlay="Generating work items from diagram. This may take 15-30 seconds.">
@@ -95,7 +95,7 @@
     <div class="card-header">
         <h3>Work Items (<?= count($work_items) ?>)</h3>
     </div>
-    <div class="card-body" style="padding:0;">
+    <div class="card-body gen-style-26dd46">
         <div id="work-items-list">
             <?php foreach ($work_items as $item): ?>
                 <?php require __DIR__ . '/partials/work-item-row.php'; ?>
@@ -145,8 +145,8 @@
 
 <?php else: ?>
 <div class="card">
-    <div class="card-body text-center" style="padding:3rem;">
-        <p class="text-muted" style="font-size:1.125rem;">No work items yet. Generate them from your strategy diagram above.</p>
+    <div class="card-body text-center gen-style-217e9b">
+        <p class="text-muted gen-style-5678e1">No work items yet. Generate them from your strategy diagram above.</p>
     </div>
 </div>
 <?php endif; ?>

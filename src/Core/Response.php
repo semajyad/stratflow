@@ -128,6 +128,7 @@ class Response
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
         header('Content-Security-Policy: ' . self::buildContentSecurityPolicy($profile));
+        header('Cross-Origin-Embedder-Policy: require-corp');
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
         header('Cache-Control: no-store, no-cache, must-revalidate, private');
@@ -140,9 +141,15 @@ class Response
         header('Content-Type: ' . $contentType);
         header('Content-Length: ' . $contentLength);
         header('Cache-Control: public, max-age=' . $maxAge);
+        header('X-Frame-Options: DENY');
+        header('X-XSS-Protection: 1; mode=block');
+        header('X-Permitted-Cross-Domain-Policies: none');
+        header('Origin-Agent-Cluster: ?1');
         header('X-Content-Type-Options: nosniff');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy('app')); // Default to app profile for static assets to be safe or maybe a restricted one. Actually, static assets don't need inline scripts/styles allowed.
+        header('Cross-Origin-Embedder-Policy: require-corp');
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
         if (self::isSecureTransport()) {
@@ -188,9 +195,9 @@ class Response
     private static function buildContentSecurityPolicy(string $profile): string
     {
         if ($profile === 'public') {
-            return "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+            return "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
         }
 
-        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
     }
 }

@@ -1,3 +1,22 @@
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/inter/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/inter/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/inter/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
 /* =============================================================================
    StratFlow — Application Stylesheet
    Professional blue-based palette with CSS custom properties.
@@ -8541,3 +8560,89 @@ a.okr-title:hover {
 .access-token-table-cell--actions {
     text-align: right;
 }
+
+/* Generated Extracted Styles */
+.gen-style-0596d1 { font-size:0.75rem; margin-top:0.4rem; line-height:1.45; }
+.gen-style-075804 { min-width: 120px; }
+.gen-style-0a07c7 { font-size: 0.8125rem; }
+.gen-style-0f09ce { margin: 0; flex-shrink: 0; }
+.gen-style-111a68 { font-weight:400; color:#6b7280; }
+.gen-style-13f83e { display:flex; align-items:center; gap:0.75rem; }
+.gen-style-1459fb { font-size: 0.8rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gen-style-14c236 { flex-wrap: wrap; }
+.gen-style-156729 { flex-wrap: wrap; margin-left: auto; }
+.gen-style-217e9b { padding:3rem; }
+.gen-style-257995 { margin-bottom: 2rem; }
+.gen-style-25eb7a { flex:1; color:var(--text); }
+.gen-style-26dd46 { padding:0; }
+.gen-style-26ef78 { display: flex; align-items: center; gap: 0.625rem; }
+.gen-style-2917c0 { font-size: 1.125rem; }
+.gen-style-33f917 { width:100%; font-size:0.8125rem; border:1px solid #d1d5db; border-radius:4px; padding:0.5rem; }
+.gen-style-34964f { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; background:var(--surface-2, #f1f5f9); }
+.gen-style-393e6a { background:<?= $seatColor ?>; height:100%; border-radius:3px; width:<?= $seatPct ?>%; transition:width 300ms ease; }
+.gen-style-39b6fc { padding:0.6rem 0.85rem; font-size:0.875rem; font-weight:600; color:#065f46; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; background:#ecfdf5; border-radius:6px; user-select:none; }
+.gen-style-3bdbf2 { font-size:0.8rem; margin-top:0.1rem; }
+.gen-style-3c621e { width: <?= $pct ?>% }
+.gen-style-40caf7 { width:100%; font-size:0.8125rem; font-family:inherit; border:1px solid #d1d5db; border-radius:4px; padding:0.5rem; resize:vertical; }
+.gen-style-44292d { color:var(--text-secondary); font-style:italic; margin:0; font-size:0.875rem; }
+.gen-style-45ff67 { font-size:0.8rem; margin-top:0.4rem; }
+.gen-style-464282 { font-size: 0.9rem; font-weight: 600; color: var(--text-muted);
+                               text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem;
+                               border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+.gen-style-46dcee { margin:0; }
+.gen-style-49cdf8 { flex: 1; }
+.gen-style-4aca16 { margin:0.25rem 0 0; font-size:0.875rem; }
+.gen-style-4cb8ce { position:relative; }
+.gen-style-4d19ca { margin-top:0.75rem; background:var(--border); border-radius:3px; height:5px; }
+.gen-style-50915c { font-size:0.875rem; }
+.gen-style-53a668 { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.5rem; min-height:0; }
+.gen-style-5678e1 { font-size:1.125rem; }
+.gen-style-588c2d { width: 80px; }
+.gen-style-5b214b { flex-shrink:0; }
+.gen-style-5cca83 { gap:0.25rem; }
+.gen-style-5e9beb { padding:0.75rem 0.85rem 0.85rem; }
+.gen-style-600069 { margin-left: 0.5rem; }
+.gen-style-616405 { text-decoration: none; font-size: 0.75rem; }
+.gen-style-6420dc { width: 130px; flex: 0 0 auto; }
+.gen-style-6b7db9 { font-size: 0.85rem; font-weight: 600; }
+.gen-style-6be3bc { display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer; }
+.gen-style-703ccd { align-self: flex-end; }
+.gen-style-754ab1 { margin-left: auto; font-size: 0.8rem; color: var(--text-muted); }
+.gen-style-793a57 { margin-top:0.25rem; }
+.gen-style-7b090a { display:flex; align-items:center; gap:1rem; padding:0.75rem 1.25rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
+.gen-style-7f3b53 { padding:0.6rem 0.85rem; font-size:0.875rem; font-weight:600; color:#5b21b6; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; background:#f5f3ff; border-radius:6px; user-select:none; }
+.gen-style-83bdfb { font-size: 0.875rem; word-break: break-all; }
+.gen-style-860063 { font-size:0.75rem; color:#6b7280; font-weight:400; }
+.gen-style-8796ca { font-size:0.9375rem; }
+.gen-style-889e64 { display:flex; flex-direction:column; gap:6px; padding-top:4px; }
+.gen-style-8c82cd { color: #64748b; font-size: 14px; margin-top: 8px; }
+.gen-style-91792f { white-space: nowrap; font-size: 0.85rem; }
+.gen-style-963e14 { font-size:0.7rem; flex-shrink:0; }
+.gen-style-972f37 { flex-wrap: wrap; gap: 1rem; }
+.gen-style-9c9fd4 { padding-top: 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: center; }
+.gen-style-a530f6 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap; }
+.gen-style-a95f6d { color: #64748b; font-style: italic; }
+.gen-style-aa73f6 { flex-shrink:0; font-size:0.75rem; }
+.gen-style-ad4b28 { border:1px solid #d1fae5; border-radius:6px; margin-bottom:0.75rem; }
+.gen-style-b56181 { overflow-x: auto; }
+.gen-style-b662f2 { padding: 0; }
+.gen-style-c54f77 { border:1px solid #ede9fe; border-radius:6px; margin-bottom:0.75rem; }
+.gen-style-ca0e4e { display:none; position:absolute; top:calc(100% + 2px); left:0; right:0; z-index:200;
+                    background:#fff; border:1px solid var(--border); border-radius:6px;
+                    box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:200px; overflow-y:auto; }
+.gen-style-cb4589 { display:none }
+.gen-style-cfdf60 { padding: 3rem; }
+.gen-style-d3297f { margin-bottom: 1.5rem; }
+.gen-style-d3af80 { display: flex; align-items: center; gap: 0.5rem;
+                                      padding: 0.4rem 0.6rem; border-radius: 4px; cursor: pointer;
+                                      background: <?= $checked ? 'var(--primary-light, #eff6ff)' : 'transparent' ?>;
+                                      border: 1px solid <?= $checked ? 'var(--primary, #3b82f6)' : 'var(--border)' ?>; }
+.gen-style-daea08 { font-size:0.75rem; margin-top:0.35rem; }
+.gen-style-dcab71 { font-size: 0.7rem; }
+.gen-style-dd0c1e { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.4rem; }
+.gen-style-e2b74b { margin: 0; }
+.gen-style-e7992d { font-size: 0.85rem; }
+.gen-style-f49cbe { font-size:0.75rem; margin:0 0 0.5rem; }
+.gen-style-f8a732 { margin-top: 0.5rem; }
+.gen-style-fb2a71 { font-size: 0.8rem; }
+.gen-style-fcb571 { font-weight:600; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:0.5rem; }

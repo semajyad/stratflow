@@ -97,7 +97,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                 <span class="badge <?= $roleBadge ?>">
                                     <?= $roleLabel ?>
                                 </span>
-                                <div class="text-muted" style="font-size:0.75rem; margin-top:0.35rem;">
+                                <div class="text-muted gen-style-daea08">
                                     Account type: <?= htmlspecialchars(ucwords(str_replace('_', ' ', $u['account_type'] ?? $u['role']))) ?>
                                 </div>
                             </td>
@@ -119,7 +119,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                     <span class="badge badge-info" title="Executive dashboard access">Exec</span>
                                 <?php endif; ?>
                                 <?php if (!empty($u['access_summary'])): ?>
-                                    <div class="text-muted" style="font-size:0.75rem; margin-top:0.4rem; line-height:1.45;">
+                                    <div class="text-muted gen-style-0596d1">
                                         <?= htmlspecialchars(implode(' | ', $u['access_summary'])) ?>
                                     </div>
                                 <?php endif; ?>
@@ -178,7 +178,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                                 <input type="password" name="password" class="form-input" placeholder="Leave blank to keep" minlength="12">
                                                 <button type="button" class="password-toggle" aria-label="Toggle password visibility">
                                                     <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                                    <svg class="eye-off-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                    <svg class="eye-off-icon gen-style-cb4589" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                                                 </button>
                                             </div>
                                         </div>
@@ -190,20 +190,20 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                                     <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($accessFlagsHelpText) ?></span>
                                                 </span>
                                             </label>
-                                            <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
-                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                            <div class="gen-style-889e64">
+                                                <label class="gen-style-6be3bc">
                                                     <input type="hidden" name="is_project_admin" value="0">
                                                     <input type="checkbox" name="is_project_admin" value="1"
                                                            <?= ($u['is_project_admin'] ?? false) ? 'checked' : '' ?>>
                                                     Project admin (create &amp; manage projects)
                                                 </label>
-                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                                <label class="gen-style-6be3bc">
                                                     <input type="hidden" name="has_billing_access" value="0">
                                                     <input type="checkbox" name="has_billing_access" value="1"
                                                            <?= $u['has_billing_access'] ? 'checked' : '' ?>>
                                                     Billing access
                                                 </label>
-                                                <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                                                <label class="gen-style-6be3bc">
                                                     <input type="hidden" name="has_executive_access" value="0">
                                                     <input type="checkbox" name="has_executive_access" value="1"
                                                            <?= $u['has_executive_access'] ? 'checked' : '' ?>>
@@ -211,7 +211,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="form-group" style="align-self: flex-end;">
+                                        <div class="form-group gen-style-703ccd">
                                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
                                             <button type="button" class="btn btn-secondary btn-sm js-toggle-target"
                                                     data-target-id="edit-user-<?= (int) $u['id'] ?>">Cancel</button>
@@ -269,18 +269,18 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                         <span class="page-info-popover" role="tooltip"><?= htmlspecialchars($accessFlagsHelpText) ?></span>
                     </span>
                 </label>
-                <div style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                <div class="gen-style-889e64">
+                    <label class="gen-style-6be3bc">
                         <input type="hidden" name="is_project_admin" value="0">
                         <input type="checkbox" name="is_project_admin" value="1">
                         Project admin (create &amp; manage projects)
                     </label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                    <label class="gen-style-6be3bc">
                         <input type="hidden" name="has_billing_access" value="0">
                         <input type="checkbox" name="has_billing_access" value="1">
                         Billing access
                     </label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                    <label class="gen-style-6be3bc">
                         <input type="hidden" name="has_executive_access" value="0">
                         <input type="checkbox" name="has_executive_access" value="1">
                         Executive dashboard
@@ -288,7 +288,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                 </div>
             </div>
         </div>
-        <p style="color: #64748b; font-size: 14px; margin-top: 8px;">A welcome email will be sent so the user can set their own password.</p>
+        <p class="gen-style-8c82cd">A welcome email will be sent so the user can set their own password.</p>
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Create User</button>
         </div>

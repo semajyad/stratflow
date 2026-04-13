@@ -29,7 +29,7 @@
      =========================== -->
 <section class="card mt-4">
     <div class="card-header">
-        <h2 class="card-title" style="margin: 0;">Linked Repositories</h2>
+        <h2 class="card-title gen-style-e2b74b">Linked Repositories</h2>
         <small class="text-muted">
             Select which repos should feed pull request links into this project.
             A repo can be linked to multiple projects independently.
@@ -47,27 +47,21 @@
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
                 <?php foreach ($repos_by_account as $accountLogin => $repos): ?>
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);
-                               text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem;
-                               border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">
+                <div class="gen-style-d3297f">
+                    <h3 class="gen-style-464282">
                         @<?= htmlspecialchars($accountLogin) ?>
                     </h3>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.4rem;">
+                    <div class="gen-style-dd0c1e">
                         <?php foreach ($repos as $repo): ?>
                         <?php $checked = isset($linked_id_set[(int) $repo['id']]); ?>
-                        <label class="js-github-repo-label" style="display: flex; align-items: center; gap: 0.5rem;
-                                      padding: 0.4rem 0.6rem; border-radius: 4px; cursor: pointer;
-                                      background: <?= $checked ? 'var(--primary-light, #eff6ff)' : 'transparent' ?>;
-                                      border: 1px solid <?= $checked ? 'var(--primary, #3b82f6)' : 'var(--border)' ?>;">
+                        <label class="js-github-repo-label gen-style-d3af80">
                             <input type="checkbox"
                                    class="js-github-repo-checkbox"
                                    name="integration_repo_ids[]"
                                    value="<?= (int) $repo['id'] ?>"
-                                   <?= $checked ? 'checked' : '' ?>
-                                   style="margin: 0; flex-shrink: 0;">
-                            <span style="font-size: 0.875rem; word-break: break-all;">
+                                   <?= $checked ? 'checked' : '' ?> class="gen-style-0f09ce">
+                            <span class="gen-style-83bdfb">
                                 <?= htmlspecialchars($repo['repo_full_name']) ?>
                             </span>
                         </label>
@@ -76,10 +70,10 @@
                 </div>
                 <?php endforeach; ?>
 
-                <div style="padding-top: 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: center;">
+                <div class="gen-style-9c9fd4">
                     <button type="submit" class="btn btn-primary">Save</button>
                     <a href="/app/home" class="btn btn-secondary">Cancel</a>
-                    <span style="margin-left: auto; font-size: 0.8rem; color: var(--text-muted);">
+                    <span class="gen-style-754ab1">
                         Changes take effect immediately for new webhooks.
                     </span>
                 </div>
