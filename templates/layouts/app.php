@@ -17,7 +17,7 @@
                 <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
                 <div class="topbar-left-brand">
                     <a href="/app/home" class="topbar-logo-link">
-                        <img src="/assets/images/StratFlow_logo.svg" alt="StratFlow" class="topbar-stratflow-logo">
+                        <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow" class="topbar-stratflow-logo">
                     </a>
                 </div>
                 <?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
