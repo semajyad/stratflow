@@ -68,6 +68,18 @@
                 </button>
             </form>
             <?php if (!empty($work_items)): ?>
+            <?php if ($showQuality ?? false): ?>
+            <form method="POST" action="/app/work-items/refine-all"
+                  data-loading="Refining work item quality…"
+                  data-overlay="Improving quality for work items scoring below 80. This may take 30–60 seconds.">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-ai"
+                        title="Refine all work items scoring below 80">
+                    Refine All Quality
+                </button>
+            </form>
+            <?php endif; ?>
             <form method="POST" action="/app/work-items/regenerate-sizing"
                   data-loading="Regenerating sizing estimates..."
                   data-overlay="Re-estimating sprint sizing for all work items using AI.">

@@ -182,6 +182,19 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                     </a>
                 </div>
             </div>
+            <div class="flex items-center gap-2">
+            <?php if ($showQuality ?? false): ?>
+            <form method="POST" action="/app/user-stories/refine-all"
+                  data-loading="Refining story quality…"
+                  data-overlay="Improving quality for stories scoring below 80. This may take 30–60 seconds.">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="btn btn-ai btn-sm"
+                        title="Refine all stories scoring below 80">
+                    Refine All Quality
+                </button>
+            </form>
+            <?php endif; ?>
             <form method="POST" action="/app/user-stories/regenerate-sizing"
                   data-loading="Re-estimating story sizes..."
                   data-overlay="Re-estimating story point sizes for all user stories using AI.">
@@ -192,6 +205,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                     Regenerate Sizing
                 </button>
             </form>
+            </div>
         </div>
     </div>
 </div>

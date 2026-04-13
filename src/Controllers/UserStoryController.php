@@ -226,6 +226,37 @@ class UserStoryController
                                              : null,
                 ]);
 
+                // Score immediately so the user sees real scores on page load.
+                // If the score is below 80, run one improvement pass (capped to prevent latency blowout).
+                try {
+                    $freshStory   = UserStory::findById($this->db, $newStoryId);
+                    $geminiSvc    = new GeminiService($this->config);
+                    $scorer       = new StoryQualityScorer($geminiSvc);
+                    $scored       = $scorer->scoreStory($freshStory, $qualityBlock);
+                    if ($scored['score'] !== null) {
+                        if ($scored['score'] < 80) {
+                            // One improvement pass — never recurse
+                            $improver       = new StoryImprovementService($geminiSvc);
+                            $improvedFields = $improver->improveStory($freshStory, $scored['breakdown'], $qualityBlock);
+                            if (!empty($improvedFields)) {
+                                UserStory::update($this->db, $newStoryId, $improvedFields);
+                                $freshStory = array_merge($freshStory, $improvedFields);
+                            }
+                            $scored2 = $scorer->scoreStory($freshStory, $qualityBlock);
+                            if ($scored2['score'] !== null) {
+                                UserStory::markQualityScored($this->db, $newStoryId, $scored2['score'], $scored2['breakdown']);
+                            } else {
+                                UserStory::markQualityScored($this->db, $newStoryId, $scored['score'], $scored['breakdown']);
+                            }
+                        } else {
+                            UserStory::markQualityScored($this->db, $newStoryId, $scored['score'], $scored['breakdown']);
+                        }
+                    }
+                    // On failure, quality_status stays 'pending' — the async worker will retry
+                } catch (\Throwable) {
+                    // Non-fatal: worker will pick it up on its next tick
+                }
+
                 $totalCreated++;
             }
         }
@@ -477,6 +508,123 @@ class UserStoryController
         }
 
         $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=1');
+    }
+
+    /**
+     * Refine quality for a single story (no confirmation prompt — field-scoped, title-safe).
+     */
+    public function refineQuality($id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $story = UserStory::findById($this->db, (int) $id);
+        if ($story === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        // Ensure we have a breakdown to work from
+        if ($story['quality_score'] === null || empty($story['quality_breakdown'])) {
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
+            $scored = $scorer->scoreStory($story, $qualityBlock);
+            if ($scored['score'] !== null) {
+                UserStory::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
+                $story = UserStory::findById($this->db, (int) $id);
+            }
+        }
+
+        $breakdown = !empty($story['quality_breakdown'])
+            ? json_decode((string) $story['quality_breakdown'], true)
+            : null;
+
+        if ($breakdown === null) {
+            $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
+            return;
+        }
+
+        $improver       = new StoryImprovementService(new GeminiService($this->config));
+        $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
+
+        if (!empty($improvedFields)) {
+            UserStory::update($this->db, (int) $id, $improvedFields);
+        }
+
+        UserStory::markQualityPending($this->db, (int) $id);
+        $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
+    }
+
+    /**
+     * Refine quality for all stories in a project that score below 80 (up to 50 rows).
+     */
+    public function refineAll(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        $rows = $this->db->query(
+            "SELECT s.* FROM user_stories s
+             JOIN projects p ON p.id = s.project_id
+             WHERE s.project_id = :pid
+               AND p.org_id = :oid
+               AND s.quality_status = 'scored'
+               AND s.quality_score < 80
+             ORDER BY s.quality_score ASC
+             LIMIT 50",
+            [':pid' => $projectId, ':oid' => $orgId]
+        )->fetchAll();
+
+        $refined = 0;
+        $geminiSvc = new GeminiService($this->config);
+        $improver  = new StoryImprovementService($geminiSvc);
+
+        foreach ($rows as $story) {
+            $breakdown = !empty($story['quality_breakdown'])
+                ? json_decode((string) $story['quality_breakdown'], true)
+                : null;
+
+            if ($breakdown === null) {
+                continue;
+            }
+
+            $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
+            if (!empty($improvedFields)) {
+                UserStory::update($this->db, (int) $story['id'], $improvedFields);
+            }
+            UserStory::markQualityPending($this->db, (int) $story['id']);
+            $refined++;
+        }
+
+        if ($refined > 0) {
+            $_SESSION['flash_message'] = "Refined {$refined} " . ($refined === 1 ? 'story' : 'stories') . " — new scores in 1–2 min.";
+        } else {
+            $_SESSION['flash_message'] = 'All stories already meet the quality threshold.';
+        }
+
+        $this->response->redirect('/app/user-stories?project_id=' . $projectId);
     }
 
     /**

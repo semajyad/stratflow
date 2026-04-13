@@ -60,7 +60,7 @@
     <?php elseif ($qStatus === 'skipped'): ?>
     <?php /* skipped = quality disabled for this org; render nothing */ ?>
     <?php else: ?>
-    <span class="quality-pill quality-pill--pending js-quality-score-placeholder" data-task-id="<?= (int) $story['id'] ?>" data-task-type="story" title="Quality scoring in progress…">…</span>
+    <span class="quality-pill quality-pill--pending js-quality-score-placeholder" data-task-id="<?= (int) $story['id'] ?>" data-task-type="story" title="Quality scoring in progress…"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
     <?php endif; ?>
     <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>
@@ -71,6 +71,22 @@
         $row_delete_confirm = 'Delete this user story?';
         $row_close_action   = '/app/user-stories/' . (int) $story['id'] . '/close';
         $row_extra_items_html = null;
+        if (($story['quality_status'] ?? null) === 'scored' && (int)($story['quality_score'] ?? 100) < 80) {
+            ob_start();
+            ?>
+            <form method="POST" action="/app/user-stories/<?= (int) $story['id'] ?>/refine-quality" class="row-actions-form">
+                <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                <button type="submit" class="row-actions-item" role="menuitem">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    Refine quality
+                </button>
+            </form>
+            <?php
+            $row_extra_items_html = ob_get_clean();
+        }
         include __DIR__ . '/row-actions-menu.php';
     ?>
 </summary>

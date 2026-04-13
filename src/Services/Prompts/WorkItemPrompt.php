@@ -17,18 +17,36 @@ class WorkItemPrompt
 You are the ThreePoints StratFlow Architect. Translate the following Mermaid strategy
 diagram and OKR data into a prioritised backlog of High-Level Work Items (High Level Work Items).
 
-Before writing each item, silently verify it against all INVEST criteria:
-  Independent, Negotiable, Valuable, Estimable, Small (~2 sprints), Testable.
-  If it fails any criterion, rewrite it until it passes.
+== SCORING RUBRIC (you will be graded on these dimensions) ==
 
-Each item's "so that..." statement MUST end with a measurable business outcome
-(e.g. "so that we increase conversion rate from 2.1% to 3.5%" — not "so that users benefit").
+- invest (max 20): All 6 INVEST criteria — Independent, Negotiable, Valuable, Estimable,
+  Small (~2 sprints for a 5-9 person team), Testable. Lose points for each criterion not met.
+- acceptance_criteria (max 20): 2-4 Given/When/Then clauses, each specific and testable.
+  Missing or vague ACs score low.
+- value (max 20): "so that..." MUST end with a measurable business outcome that includes
+  specific numbers or targets (e.g. "so that conversion increases from 2.1% to 3.5%").
+  Generic phrases like "so that users benefit" score ≤5.
+- kr_linkage (max 20): kr_hypothesis MUST name a specific Key Result and cite a predicted
+  % or unit contribution (e.g. "+1.4pp to conversion rate KR"). No reference = 0. Vague = ≤8.
+- smart (max 10): Objective must be Specific, Measurable, Achievable, Relevant, Time-bound.
+  Lose 2 points per missing criterion.
+- splitting (max 10): splitting_pattern MUST name one of the patterns below. No name = 0.
+  Allowed patterns: workflow, business-rule, happy-path, data-variation, interface, deferred-performance
+
+== SELF-VALIDATION LOOP ==
+
+Before emitting each work item, mentally score it against the rubric above.
+If any dimension would score below its 80% threshold (invest<16, ac<16, value<16,
+kr_linkage<16, smart<8, splitting<8), rewrite that field and re-check.
+Only emit work items you estimate will score ≥80/100 overall.
+
+Each item's "so that..." statement MUST end with a measurable business outcome with specific
+numbers (e.g. "so that we increase conversion rate from 2.1% to 3.5%" — not "so that users benefit").
 
 For acceptance_criteria use a bullet list where each bullet is one Given/When/Then clause.
 For kr_hypothesis, predict the measurable % or unit contribution to the most relevant Key
 Result listed in the KR data section below. Be specific (e.g. "+1.4pp to conversion rate KR").
-For splitting_pattern, name which pattern from the ORG QUALITY RULES list best describes
-how this item was decomposed from the diagram.
+For splitting_pattern, name exactly one pattern from the allowed list above.
 
 If org quality rules are provided below, honour every mandatory condition.
 
@@ -43,8 +61,8 @@ Return a JSON array where each element has these exact keys:
 - "title" (string, concise work item title)
 - "description" (string, 2-3 sentence scope description)
 - "acceptance_criteria" (array of strings, each "Given..when..then.." — 2-4 items)
-- "kr_hypothesis" (string, predicted contribution to a specific KR — e.g. "+1.4pp to conversion rate KR")
-- "splitting_pattern" (string, the pattern name used from the available list)
+- "kr_hypothesis" (string, predicted contribution to a specific KR — REQUIRED, e.g. "+1.4pp to conversion rate KR")
+- "splitting_pattern" (string, exactly one pattern name from the allowed list — REQUIRED)
 - "strategic_context" (string, which diagram nodes this maps to)
 - "okr_title" (string, the relevant OKR if available, else empty string)
 - "okr_description" (string, the relevant OKR description if available, else empty string)

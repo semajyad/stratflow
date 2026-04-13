@@ -16,16 +16,36 @@ class UserStoryPrompt
 You are an Experienced Agile Product Owner. Decompose the following high-level work item
 into 5-10 actionable user stories.
 
-Before writing each story, silently verify it passes all INVEST criteria:
-  Independent, Negotiable, Valuable, Estimable, Small (~3 days), Testable.
-  Rewrite until it passes.
+== SCORING RUBRIC (you will be graded on these dimensions) ==
+
+- invest (max 20): All 6 INVEST criteria — Independent, Negotiable, Valuable, Estimable,
+  Small (~3 days for one developer), Testable. Lose points for each criterion not met.
+- acceptance_criteria (max 20): 2-4 Given/When/Then clauses, each specific and testable.
+  Missing or vague ACs score low.
+- value (max 20): "so that..." MUST end with a measurable business outcome that includes
+  specific numbers or targets (e.g. "so that checkout conversion increases from 2.1% to 3.5%").
+  Stories without numbers in the outcome score ≤5.
+- kr_linkage (max 20): kr_hypothesis MUST name a specific Key Result and cite a predicted
+  % or unit contribution. No reference = 0. Vague reference = ≤8.
+- smart (max 10): Objective must be Specific, Measurable, Achievable, Relevant, Time-bound.
+  Lose 2 points per missing criterion.
+- splitting (max 10): splitting_pattern MUST name one of the patterns below. No name = 0.
+  Allowed patterns: workflow, business-rule, happy-path, data-variation, interface, deferred-performance
+
+== SELF-VALIDATION LOOP ==
+
+Before emitting each story, mentally score it against the rubric above.
+If any dimension would score below its 80% threshold (invest<16, ac<16, value<16,
+kr_linkage<16, smart<8, splitting<8), rewrite that field and re-check.
+Only emit stories you estimate will score ≥80/100 overall.
 
 Each story MUST:
 - Follow the format: "As a [specific role], I want [specific action], so that [measurable outcome]"
-- End "so that..." with a measurable business outcome tied to the KR data below (if provided)
+- End "so that..." with a measurable business outcome that includes specific numbers
 - Have 2-4 acceptance criteria in Given/When/Then format
-- Include a kr_hypothesis predicting its specific % contribution to a KR (if KR data is provided)
-- Name the splitting_pattern used from the list in the org quality rules (if provided)
+- Include a kr_hypothesis naming a KR and citing a predicted % or unit contribution
+- Name exactly one splitting_pattern from the allowed list above
+- Represent ~3 days of work for one developer (Small criterion of INVEST)
 
 If org quality rules are provided, honour every mandatory condition.
 
@@ -33,8 +53,8 @@ Return a JSON array where each element has:
 - "title" (string, the "As a..." story in full)
 - "description" (string, 2-3 sentence technical description of what needs to be built)
 - "acceptance_criteria" (array of strings, each a "Given..when..then.." clause — 2-4 items)
-- "kr_hypothesis" (string, predicted contribution to a KR, or empty string if no KR data)
-- "splitting_pattern" (string, pattern name used, or empty string if no rules provided)
+- "kr_hypothesis" (string, predicted % or unit contribution to a named KR — REQUIRED)
+- "splitting_pattern" (string, exactly one pattern name from the allowed list — REQUIRED)
 - "size" (integer, story points: 1, 2, 3, 5, 8, or 13)
 PROMPT;
 

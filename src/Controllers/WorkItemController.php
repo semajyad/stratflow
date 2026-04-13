@@ -271,6 +271,41 @@ class WorkItemController
             $priorityToId[$priorityNumber] = $newId;
         }
 
+        // Score each new item immediately so the user sees real scores on page load.
+        // One improvement pass if score <80 (capped to prevent latency blowout).
+        try {
+            $geminiSvc = new GeminiService($this->config);
+            $scorer    = new StoryQualityScorer($geminiSvc);
+            $improver  = new StoryImprovementService($geminiSvc);
+            foreach ($priorityToId as $newId) {
+                $freshItem = HLWorkItem::findById($this->db, $newId);
+                if ($freshItem === null) {
+                    continue;
+                }
+                $scored = $scorer->scoreWorkItem($freshItem, $qualityBlock);
+                if ($scored['score'] !== null) {
+                    if ($scored['score'] < 80) {
+                        $improvedFields = $improver->improveWorkItem($freshItem, $scored['breakdown'], $qualityBlock);
+                        if (!empty($improvedFields)) {
+                            HLWorkItem::update($this->db, $newId, $improvedFields);
+                            $freshItem = array_merge($freshItem, $improvedFields);
+                        }
+                        $scored2 = $scorer->scoreWorkItem($freshItem, $qualityBlock);
+                        if ($scored2['score'] !== null) {
+                            HLWorkItem::markQualityScored($this->db, $newId, $scored2['score'], $scored2['breakdown']);
+                        } else {
+                            HLWorkItem::markQualityScored($this->db, $newId, $scored['score'], $scored['breakdown']);
+                        }
+                    } else {
+                        HLWorkItem::markQualityScored($this->db, $newId, $scored['score'], $scored['breakdown']);
+                    }
+                }
+                // On failure, quality_status stays 'pending' — the async worker will retry
+            }
+        } catch (\Throwable) {
+            // Non-fatal: worker will pick up any unscored items on its next tick
+        }
+
         // Second pass: create dependency records using the priority → id map
         foreach ($itemsData as $index => $item) {
             $priorityNumber  = (int) ($item['priority_number'] ?? ($index + 1));
@@ -550,6 +585,123 @@ class WorkItemController
         }
 
         $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=1');
+    }
+
+    /**
+     * Refine quality for a single work item (no confirmation prompt — field-scoped, title-safe).
+     */
+    public function refineQuality($id): void
+    {
+        $user  = $this->auth->user();
+        $orgId = (int) $user['org_id'];
+
+        $item = HLWorkItem::findById($this->db, (int) $id);
+        if ($item === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        // Ensure we have a breakdown to work from
+        if ($item['quality_score'] === null || empty($item['quality_breakdown'])) {
+            $scorer = new StoryQualityScorer(new GeminiService($this->config));
+            $scored = $scorer->scoreWorkItem($item, $qualityBlock);
+            if ($scored['score'] !== null) {
+                HLWorkItem::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
+                $item = HLWorkItem::findById($this->db, (int) $id);
+            }
+        }
+
+        $breakdown = !empty($item['quality_breakdown'])
+            ? json_decode((string) $item['quality_breakdown'], true)
+            : null;
+
+        if ($breakdown === null) {
+            $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id']);
+            return;
+        }
+
+        $improver       = new StoryImprovementService(new GeminiService($this->config));
+        $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
+
+        if (!empty($improvedFields)) {
+            HLWorkItem::update($this->db, (int) $id, $improvedFields);
+        }
+
+        HLWorkItem::markQualityPending($this->db, (int) $id);
+        $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id']);
+    }
+
+    /**
+     * Refine quality for all work items in a project that score below 80 (up to 50 rows).
+     */
+    public function refineAll(): void
+    {
+        $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
+        $projectId = (int) $this->request->post('project_id', 0);
+
+        $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
+        if ($project === null) {
+            $this->response->redirect('/app/home');
+            return;
+        }
+
+        $qualityBlock = '';
+        try {
+            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
+        } catch (\Throwable) {}
+
+        $rows = $this->db->query(
+            "SELECT wi.* FROM hl_work_items wi
+             JOIN projects p ON p.id = wi.project_id
+             WHERE wi.project_id = :pid
+               AND p.org_id = :oid
+               AND wi.quality_status = 'scored'
+               AND wi.quality_score < 80
+             ORDER BY wi.quality_score ASC
+             LIMIT 50",
+            [':pid' => $projectId, ':oid' => $orgId]
+        )->fetchAll();
+
+        $refined = 0;
+        $geminiSvc = new GeminiService($this->config);
+        $improver  = new StoryImprovementService($geminiSvc);
+
+        foreach ($rows as $item) {
+            $breakdown = !empty($item['quality_breakdown'])
+                ? json_decode((string) $item['quality_breakdown'], true)
+                : null;
+
+            if ($breakdown === null) {
+                continue;
+            }
+
+            $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
+            if (!empty($improvedFields)) {
+                HLWorkItem::update($this->db, (int) $item['id'], $improvedFields);
+            }
+            HLWorkItem::markQualityPending($this->db, (int) $item['id']);
+            $refined++;
+        }
+
+        if ($refined > 0) {
+            $_SESSION['flash_message'] = "Refined {$refined} work " . ($refined === 1 ? 'item' : 'items') . " — new scores in 1–2 min.";
+        } else {
+            $_SESSION['flash_message'] = 'All work items already meet the quality threshold.';
+        }
+
+        $this->response->redirect('/app/work-items?project_id=' . $projectId);
     }
 
     /**
