@@ -15,12 +15,7 @@
         <div class="app-main">
             <header class="app-topbar">
                 <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
-                <div class="topbar-left-brand">
-                    <a href="/app/home" class="topbar-logo-link">
-                        <img src="/assets/images/StratFlow_logo.webp" alt="StratFlow" class="topbar-stratflow-logo">
-                    </a>
-                </div>
-                <?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
+<?php require __DIR__ . '/../partials/workflow-stepper.php'; ?>
                 <div class="topbar-right">
                     <img src="/assets/images/threepoints-logo.png" alt="ThreePoints" class="topbar-threepoints-logo">
                     <form method="POST" action="/logout" class="inline-form">
