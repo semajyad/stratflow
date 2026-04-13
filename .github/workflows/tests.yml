@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -35,10 +39,26 @@ jobs:
         with:
           php-version: '8.4'
           extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
-          coverage: none
+          coverage: pcov
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
+
+      - name: PHP syntax lint
+        run: find src public tests -name '*.php' -print0 | xargs -0 -P4 -n1 php -l | grep -v "No syntax errors" || true
+
+      - name: Composer security audit
+        run: composer audit --no-dev --format=plain
+
+      - name: PHPStan static analysis
+        run: vendor/bin/phpstan analyse --memory-limit=512M src --level=5 --no-progress
 
       - name: Create .env
         run: |
@@ -78,4 +98,4 @@ jobs:
           done
 
       - name: Run tests
-        run: vendor/bin/phpunit --configuration tests/phpunit.xml
+        run: vendor/bin/phpunit --configuration tests/phpunit.xml --coverage-text --colors=never

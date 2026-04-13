@@ -25,6 +25,25 @@ services:
     networks:
       - stratflow
 
+  quality-worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - PHP_MEMORY_LIMIT=256M
+    networks:
+      - stratflow
+    # Run the quality scorer every 2 minutes via a simple shell loop.
+    # 'sleep 120' keeps CPU near zero between runs.
+    command: >
+      sh -c "while true; do php /var/www/html/bin/score_quality.php --limit=25; sleep 120; done"
+    restart: unless-stopped
+
   mysql:
     image: mysql:8.4
     environment:

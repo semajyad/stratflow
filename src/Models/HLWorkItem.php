@@ -125,6 +125,8 @@ class HLWorkItem
     private const UPDATABLE_COLUMNS = [
         'priority_number', 'title', 'description', 'strategic_context',
         'okr_title', 'okr_description', 'acceptance_criteria', 'kr_hypothesis', 'quality_score', 'quality_breakdown',
+        'quality_status', 'quality_scored_at', 'quality_attempts',
+        'quality_last_attempt_at', 'quality_error',
         'owner', 'team_assigned', 'estimated_sprints',
         'rice_reach', 'rice_impact', 'rice_confidence', 'rice_effort',
         'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
@@ -281,5 +283,51 @@ class HLWorkItem
             "DELETE FROM hl_work_items WHERE project_id = :project_id",
             [':project_id' => $projectId]
         );
+    }
+
+    // ===========================
+    // QUALITY STATE HELPERS
+    // ===========================
+
+    /**
+     * Enqueue a work item for async quality scoring by the background worker.
+     * Resets attempts and clears any previous error.
+     */
+    public static function markQualityPending(Database $db, int $id): void
+    {
+        self::update($db, $id, [
+            'quality_status'   => 'pending',
+            'quality_attempts' => 0,
+            'quality_error'    => null,
+        ]);
+    }
+
+    /**
+     * Record a successful quality score from the background worker.
+     */
+    public static function markQualityScored(Database $db, int $id, int $score, ?array $breakdown): void
+    {
+        self::update($db, $id, [
+            'quality_score'     => $score,
+            'quality_breakdown' => $breakdown !== null ? json_encode($breakdown) : null,
+            'quality_status'    => 'scored',
+            'quality_scored_at' => date('Y-m-d H:i:s'),
+            'quality_error'     => null,
+        ]);
+    }
+
+    /**
+     * Record a failed scoring attempt from the background worker.
+     *
+     * @param string $error Short error key, e.g. 'schema:invest' or 'exc:RuntimeException'
+     */
+    public static function markQualityFailed(Database $db, int $id, int $attempts, string $error): void
+    {
+        self::update($db, $id, [
+            'quality_status'          => 'failed',
+            'quality_attempts'        => $attempts,
+            'quality_last_attempt_at' => date('Y-m-d H:i:s'),
+            'quality_error'           => mb_substr($error, 0, 500),
+        ]);
     }
 }

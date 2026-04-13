@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -S
 """PreToolUse guard: block destructive Bash commands in StratFlow.
 
 Reads the tool invocation JSON from stdin, matches the command against

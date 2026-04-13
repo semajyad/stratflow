@@ -387,27 +387,8 @@ class UserStoryController
 
         UserStory::update($this->db, (int) $id, $storyUpdateData);
 
-        // Re-score after update — failure is non-fatal
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-        try {
-            $scorer = new StoryQualityScorer(new GeminiService($this->config));
-            $storyForScore = array_merge($story, [
-                'title'               => trim((string) $this->request->post('title', $story['title'])),
-                'description'         => trim((string) $this->request->post('description', $story['description'] ?? '')),
-                'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
-                'kr_hypothesis'       => mb_substr(trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')), 0, 500) ?: null,
-            ]);
-            $scored = $scorer->scoreStory($storyForScore, $qualityBlock);
-            if ($scored['score'] !== null) {
-                UserStory::update($this->db, (int) $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown']),
-                ]);
-            }
-        } catch (\Throwable) {}
+        // Enqueue for async quality scoring — the background worker will score shortly
+        UserStory::markQualityPending($this->db, (int) $id);
 
         // Flag parent work item for review if size changed significantly
         if ($oldSize > 0 && $newSize > 0 && abs($newSize - $oldSize) >= 2 && $story['parent_hl_item_id']) {
@@ -451,11 +432,15 @@ class UserStoryController
             $scorer = new StoryQualityScorer(new GeminiService($this->config));
             $scored = $scorer->scoreStory($story, $qualityBlock);
             if ($scored['score'] !== null) {
-                UserStory::update($this->db, (int) $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown']),
-                ]);
+                UserStory::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
                 $story = UserStory::findById($this->db, (int) $id);
+            } else {
+                UserStory::markQualityFailed(
+                    $this->db,
+                    (int) $id,
+                    (int) ($story['quality_attempts'] ?? 0) + 1,
+                    $scored['error'] ?? 'unknown'
+                );
             }
         }
 
@@ -481,15 +466,14 @@ class UserStoryController
 
         UserStory::update($this->db, (int) $id, $improvedFields);
 
-        // Re-score with the improved content — failure is non-fatal
+        // Re-score with the improved content — enqueue if Gemini is unavailable
         $storyForScore = array_merge($story, $improvedFields);
         $scorer        = new StoryQualityScorer(new GeminiService($this->config));
         $scored        = $scorer->scoreStory($storyForScore, $qualityBlock);
         if ($scored['score'] !== null) {
-            UserStory::update($this->db, (int) $id, [
-                'quality_score'     => $scored['score'],
-                'quality_breakdown' => json_encode($scored['breakdown']),
-            ]);
+            UserStory::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
+        } else {
+            UserStory::markQualityPending($this->db, (int) $id);
         }
 
         $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=1');
@@ -869,40 +853,40 @@ PROMPT;
             $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {}
 
-        try {
-            $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
-            $scored = $scorer->scoreStory($story, $qualityBlock);
+        $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+        $scored = $scorer->scoreStory($story, $qualityBlock);
 
-            if ($scored['score'] !== null) {
-                \StratFlow\Models\UserStory::update($this->db, $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown'])
-                ]);
+        if ($scored['score'] !== null) {
+            \StratFlow\Models\UserStory::markQualityScored($this->db, $id, $scored['score'], $scored['breakdown']);
 
-                $html = '';
-                ob_start();
-                $breakdownData = $scored['breakdown'];
-                $itemId        = $id;
-                $itemType      = 'story';
-                $csrf_token    = $this->request->post('_csrf_token');
-                require __DIR__ . '/../../templates/partials/quality-breakdown.php';
-                $html = ob_get_clean();
+            $html = '';
+            ob_start();
+            $breakdownData = $scored['breakdown'];
+            $itemId        = $id;
+            $itemType      = 'story';
+            $csrf_token    = $this->request->post('_csrf_token');
+            require __DIR__ . '/../../templates/partials/quality-breakdown.php';
+            $html = ob_get_clean();
 
-                $this->response->json([
-                    'status'    => 'ok',
-                    'score'     => $scored['score'],
-                    'breakdown' => $scored['breakdown'],
-                    'html'      => $html
-                ]);
-                return;
-            }
-        } catch (\Throwable $e) {
-            error_log('[StratFlow] UserStory score error: ' . $e->getMessage());
-            $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
+            $this->response->json([
+                'status'    => 'ok',
+                'score'     => $scored['score'],
+                'breakdown' => $scored['breakdown'],
+                'html'      => $html
+            ]);
             return;
         }
 
-        $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
+        // Scoring failed — update state and surface the error
+        $errorKey = $scored['error'] ?? 'unknown';
+        \StratFlow\Models\UserStory::markQualityFailed(
+            $this->db,
+            $id,
+            (int) ($story['quality_attempts'] ?? 0) + 1,
+            $errorKey
+        );
+        error_log('[StratFlow] UserStory score error: ' . $errorKey);
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
     }
 
     /**

@@ -51,11 +51,16 @@
     </div>
     <span class="story-size"><?= $story['size'] !== null ? (int) $story['size'] . ' pts' : '- pts' ?></span>
     <?php if (($showQuality ?? false)): ?>
-    <?php if ($story['quality_score'] !== null): ?>
+    <?php $qStatus = $story['quality_status'] ?? 'pending'; ?>
+    <?php if ($qStatus === 'scored' && $story['quality_score'] !== null): ?>
     <?php $qs = (int) $story['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <?php elseif ($qStatus === 'failed'): ?>
+    <span class="quality-pill quality-pill--failed" title="<?= htmlspecialchars('Scoring failed: ' . ($story['quality_error'] ?? 'unknown'), ENT_QUOTES, 'UTF-8') ?>">!</span>
+    <?php elseif ($qStatus === 'skipped'): ?>
+    <?php /* skipped = quality disabled for this org; render nothing */ ?>
     <?php else: ?>
-    <span class="quality-pill js-quality-score-placeholder" data-task-id="<?= (int) $story['id'] ?>" data-task-type="story" title="Calculating quality score...">...</span>
+    <span class="quality-pill quality-pill--pending js-quality-score-placeholder" data-task-id="<?= (int) $story['id'] ?>" data-task-type="story" title="Quality scoring in progress…">…</span>
     <?php endif; ?>
     <?php endif; ?>
     <span class="story-team"><?= htmlspecialchars($story['team_assigned'] ?? 'Unassigned') ?></span>

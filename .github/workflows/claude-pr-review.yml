@@ -5,6 +5,10 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -36,75 +40,113 @@ jobs:
             mv /tmp/pr_truncated.diff /tmp/pr.diff
           fi
 
+      - name: Write review script
+        run: |
+          cat > /tmp/claude_review.py << 'SCRIPTEOF'
+          import os, json, urllib.request, sys
+
+          diff = open("/tmp/pr.diff").read()
+
+          # System prompt is stable across runs — cached by Anthropic (prompt caching)
+          system_prompt = """You are reviewing a PHP pull request for StratFlow, a multi-tenant SaaS application.
+
+Review the following diff for these critical issues:
+
+## CRITICAL (must flag)
+1. SQL injection — string interpolation in queries instead of PDO prepared statements
+2. Missing org_id filter — SELECT/UPDATE/DELETE on tenant tables without org_id = ?
+3. Missing CSRF — POST handlers without $this->verifyCsrf() as first line
+4. XSS — echoing user input without htmlspecialchars()
+5. Hardcoded secrets — API keys, passwords, tokens in code
+6. Raw exception output — die($e->getMessage()) leaking internals
+
+## IMPORTANT (should flag)
+- Missing return types on new methods
+- Debug statements left in (var_dump, print_r)
+- Silent exception catches with no logging
+- Stripe events not checked for idempotency via stripe_events table
+
+Format your response as GitHub markdown. Start with a one-paragraph summary.
+Then list issues found under ## Issues. Use ✅ if clean, 🔴 for critical, 🟡 for important.
+Be concise — max 400 words total."""
+
+          payload = json.dumps({
+              "model": "claude-sonnet-4-6",
+              "max_tokens": 1024,
+              "system": [
+                  {
+                      "type": "text",
+                      "text": system_prompt,
+                      "cache_control": {"type": "ephemeral"}
+                  }
+              ],
+              "messages": [
+                  {
+                      "role": "user",
+                      "content": f"Diff to review:\n```diff\n{diff}\n```"
+                  }
+              ]
+          }).encode()
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={
+                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                  "anthropic-version": "2023-06-01",
+                  "anthropic-beta": "prompt-caching-2024-07-31",
+                  "content-type": "application/json",
+              }
+          )
+          resp = json.loads(urllib.request.urlopen(req).read())
+
+          # Log cache stats if available
+          usage = resp.get("usage", {})
+          cache_read = usage.get("cache_read_input_tokens", 0)
+          cache_write = usage.get("cache_creation_input_tokens", 0)
+          if cache_read or cache_write:
+              print(f"[cache] read={cache_read} write={cache_write}", file=sys.stderr)
+
+          print(resp["content"][0]["text"])
+          SCRIPTEOF
+
       - name: Claude code review
         id: claude
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          DIFF=$(cat /tmp/pr.diff)
-          REVIEW=$(python3 - <<'PYEOF'
-          import os, json, urllib.request
-
-          diff = open("/tmp/pr.diff").read()
-
-          prompt = f"""You are reviewing a PHP pull request for StratFlow, a multi-tenant SaaS application.
-
-          Review the following diff for these critical issues:
-
-          ## CRITICAL (must flag)
-          1. SQL injection — string interpolation in queries instead of PDO prepared statements
-          2. Missing org_id filter — SELECT/UPDATE/DELETE on tenant tables without org_id = ?
-          3. Missing CSRF — POST handlers without $this->verifyCsrf() as first line
-          4. XSS — echoing user input without htmlspecialchars()
-          5. Hardcoded secrets — API keys, passwords, tokens in code
-          6. Raw exception output — die($e->getMessage()) leaking internals
-
-          ## IMPORTANT (should flag)
-          - Missing return types on new methods
-          - Debug statements left in (var_dump, print_r)
-          - Silent exception catches with no logging
-          - Stripe events not checked for idempotency via stripe_events table
-
-          Format your response as GitHub markdown. Start with a one-paragraph summary.
-          Then list issues found under ## Issues. Use ✅ if clean, 🔴 for critical, 🟡 for important.
-          Be concise — max 400 words total.
-
-          Diff to review:
-          ```diff
-          {diff}
-          ```"""
-
-          payload = json.dumps({{
-              "model": "claude-sonnet-4-6",
-              "max_tokens": 1024,
-              "messages": [{{"role": "user", "content": prompt}}]
-          }}).encode()
-
-          req = urllib.request.Request(
-              "https://api.anthropic.com/v1/messages",
-              data=payload,
-              headers={{
-                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                  "anthropic-version": "2023-06-01",
-                  "content-type": "application/json",
-              }}
-          )
-          resp = json.loads(urllib.request.urlopen(req).read())
-          print(resp["content"][0]["text"])
-          PYEOF
-          )
+          REVIEW=$(python3 /tmp/claude_review.py)
           echo "review<<EOF" >> $GITHUB_OUTPUT
           echo "$REVIEW" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Post review comment
+      - name: Post or update review comment
         uses: actions/github-script@v7
         with:
           script: |
-            const review = `## 🤖 Claude Code Review\n\n${{ steps.claude.outputs.review }}`;
-            await github.rest.issues.createComment({
+            const header = '## 🤖 Claude Code Review';
+            const body = `${header}\n\n${{ steps.claude.outputs.review }}`;
+
+            // Find existing review comment to update (avoids spam on synchronize)
+            const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: review
             });
+            const existing = comments.data.find(c => c.body.startsWith(header));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

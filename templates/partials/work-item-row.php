@@ -54,11 +54,16 @@
     </div>
     <span class="badge badge-primary"><?= (int) $item['estimated_sprints'] ?> sprint<?= $item['estimated_sprints'] != 1 ? 's' : '' ?></span>
     <?php if (($showQuality ?? false)): ?>
-    <?php if ($item['quality_score'] !== null): ?>
+    <?php $qStatus = $item['quality_status'] ?? 'pending'; ?>
+    <?php if ($qStatus === 'scored' && $item['quality_score'] !== null): ?>
     <?php $qs = (int) $item['quality_score']; $qc = $qs >= 80 ? '#10b981' : ($qs >= 50 ? '#f59e0b' : '#ef4444'); ?>
     <span class="quality-pill" data-style-background="<?= $qc ?>" title="Quality score: <?= $qs ?>/100"><?= $qs ?></span>
+    <?php elseif ($qStatus === 'failed'): ?>
+    <span class="quality-pill quality-pill--failed" title="<?= htmlspecialchars('Scoring failed: ' . ($item['quality_error'] ?? 'unknown'), ENT_QUOTES, 'UTF-8') ?>">!</span>
+    <?php elseif ($qStatus === 'skipped'): ?>
+    <?php /* skipped = quality disabled for this org; render nothing */ ?>
     <?php else: ?>
-    <span class="quality-pill js-quality-score-placeholder" data-task-id="<?= (int) $item['id'] ?>" data-task-type="work-item" title="Calculating quality score...">...</span>
+    <span class="quality-pill quality-pill--pending js-quality-score-placeholder" data-task-id="<?= (int) $item['id'] ?>" data-task-type="work-item" title="Quality scoring in progress…">…</span>
     <?php endif; ?>
     <?php endif; ?>
     <span class="work-item-owner"><?= htmlspecialchars($item['owner'] ?? 'Unassigned') ?></span>

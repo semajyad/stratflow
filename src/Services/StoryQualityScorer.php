@@ -64,6 +64,7 @@ class StoryQualityScorer
     /**
      * Call Gemini and validate the response shape.
      * Returns null scores on any failure — never throws.
+     * Error key: 'schema:<dim>' for missing dimensions, 'exc:<class>' for exceptions.
      */
     private function score(string $input, string $prompt): array
     {
@@ -71,8 +72,9 @@ class StoryQualityScorer
             $result = $this->gemini->generateJson($prompt, $input);
             return $this->validate($result);
         } catch (\Throwable $e) {
+            $errorKey = 'exc:' . (new \ReflectionClass($e))->getShortName();
             error_log('[StoryQualityScorer] scoring failed: ' . $e->getMessage());
-            return ['score' => null, 'breakdown' => null];
+            return ['score' => null, 'breakdown' => null, 'error' => $errorKey];
         }
     }
 
@@ -84,7 +86,7 @@ class StoryQualityScorer
         foreach (self::REQUIRED_DIMENSIONS as $key) {
             if (!isset($result[$key])) {
                 error_log('[StoryQualityScorer] missing dimension key: ' . $key);
-                return ['score' => null, 'breakdown' => null];
+                return ['score' => null, 'breakdown' => null, 'error' => 'schema:' . $key];
             }
         }
 
@@ -93,7 +95,7 @@ class StoryQualityScorer
         // Remove overall from breakdown — it's stored separately as quality_score
         $breakdown = array_intersect_key($result, array_flip(self::REQUIRED_DIMENSIONS));
 
-        return ['score' => $overall, 'breakdown' => $breakdown];
+        return ['score' => $overall, 'breakdown' => $breakdown, 'error' => null];
     }
 
     /**

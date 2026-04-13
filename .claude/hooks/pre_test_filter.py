@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -S
 """PreToolUse: rewrite test commands to show only failures.
 
 Large test runs can emit 10,000+ lines of output that burn tokens when

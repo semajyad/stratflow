@@ -1,0 +1,56 @@
+name: Branch Protection Assertion
+
+# Runs daily to confirm that required status checks on main haven't drifted.
+# Alerts via a workflow failure (visible in Actions + GitHub notifications) if
+# any required check is missing.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 17:00 UTC daily = ~5 am NZT
+    - cron: "0 17 * * *"
+
+jobs:
+  assert:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check required status checks on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REQUIRED_CHECKS=(
+            "test"
+            "review"
+            "gitleaks"
+            "snyk"
+          )
+
+          PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || {
+            echo "::error::Could not read branch protection for main. Is it configured?"
+            exit 1
+          }
+
+          CONFIGURED=$(echo "$PROTECTION" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          checks = data.get('required_status_checks', {}).get('checks', [])
+          print(' '.join(c['context'] for c in checks))
+          " 2>/dev/null || echo "")
+
+          MISSING=()
+          for check in "${REQUIRED_CHECKS[@]}"; do
+            if ! echo "$CONFIGURED" | grep -qw "$check"; then
+              MISSING+=("$check")
+            fi
+          done
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Branch protection missing required checks: ${MISSING[*]}"
+            echo "Go to Settings → Branches → main → Edit to add them."
+            exit 1
+          fi
+
+          echo "✅ All required status checks are configured on main: ${REQUIRED_CHECKS[*]}"

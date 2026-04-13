@@ -191,6 +191,8 @@ class UserStory
         'priority_number', 'title', 'description', 'parent_hl_item_id',
         'parent_link', 'team_assigned', 'assignee_user_id', 'size', 'blocked_by',
         'acceptance_criteria', 'kr_hypothesis', 'quality_score', 'quality_breakdown',
+        'quality_status', 'quality_scored_at', 'quality_attempts',
+        'quality_last_attempt_at', 'quality_error',
         'requires_review', 'status', 'last_jira_sync_at',
     ];
 
@@ -271,5 +273,51 @@ class UserStory
             "DELETE FROM user_stories WHERE project_id = :project_id",
             [':project_id' => $projectId]
         );
+    }
+
+    // ===========================
+    // QUALITY STATE HELPERS
+    // ===========================
+
+    /**
+     * Enqueue a story for async quality scoring by the background worker.
+     * Resets attempts and clears any previous error.
+     */
+    public static function markQualityPending(Database $db, int $id): void
+    {
+        self::update($db, $id, [
+            'quality_status'  => 'pending',
+            'quality_attempts' => 0,
+            'quality_error'   => null,
+        ]);
+    }
+
+    /**
+     * Record a successful quality score from the background worker.
+     */
+    public static function markQualityScored(Database $db, int $id, int $score, ?array $breakdown): void
+    {
+        self::update($db, $id, [
+            'quality_score'     => $score,
+            'quality_breakdown' => $breakdown !== null ? json_encode($breakdown) : null,
+            'quality_status'    => 'scored',
+            'quality_scored_at' => date('Y-m-d H:i:s'),
+            'quality_error'     => null,
+        ]);
+    }
+
+    /**
+     * Record a failed scoring attempt from the background worker.
+     *
+     * @param string $error Short error key, e.g. 'schema:invest' or 'exc:RuntimeException'
+     */
+    public static function markQualityFailed(Database $db, int $id, int $attempts, string $error): void
+    {
+        self::update($db, $id, [
+            'quality_status'          => 'failed',
+            'quality_attempts'        => $attempts,
+            'quality_last_attempt_at' => date('Y-m-d H:i:s'),
+            'quality_error'           => mb_substr($error, 0, 500),
+        ]);
     }
 }

@@ -457,22 +457,8 @@ class WorkItemController
 
         HLWorkItem::update($this->db, (int) $id, $updateData);
 
-        // Re-score after update — failure is non-fatal
-        $qualityBlock = '';
-        try {
-            $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
-        try {
-            $scorer       = new StoryQualityScorer(new GeminiService($this->config));
-            $itemForScore = array_merge($item, $updateData);
-            $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
-            if ($scored['score'] !== null) {
-                HLWorkItem::update($this->db, (int) $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown']),
-                ]);
-            }
-        } catch (\Throwable) {}
+        // Enqueue for async quality scoring — the background worker will score shortly
+        HLWorkItem::markQualityPending($this->db, (int) $id);
 
         // Flag for review if description or sprint estimate changed
         $descChanged    = $newDescription !== ($item['description'] ?? '');
@@ -518,11 +504,15 @@ class WorkItemController
             $scorer = new StoryQualityScorer(new GeminiService($this->config));
             $scored = $scorer->scoreWorkItem($item, $qualityBlock);
             if ($scored['score'] !== null) {
-                HLWorkItem::update($this->db, (int) $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown']),
-                ]);
+                HLWorkItem::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
                 $item = HLWorkItem::findById($this->db, (int) $id);
+            } else {
+                HLWorkItem::markQualityFailed(
+                    $this->db,
+                    (int) $id,
+                    (int) ($item['quality_attempts'] ?? 0) + 1,
+                    $scored['error'] ?? 'unknown'
+                );
             }
         }
 
@@ -550,13 +540,13 @@ class WorkItemController
 
         // Re-score with the improved content — failure is non-fatal
         $itemForScore = array_merge($item, $improvedFields);
+        // Re-score with the improved content — enqueue if Gemini is unavailable
         $scorer       = new StoryQualityScorer(new GeminiService($this->config));
         $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
         if ($scored['score'] !== null) {
-            HLWorkItem::update($this->db, (int) $id, [
-                'quality_score'     => $scored['score'],
-                'quality_breakdown' => json_encode($scored['breakdown']),
-            ]);
+            HLWorkItem::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
+        } else {
+            HLWorkItem::markQualityPending($this->db, (int) $id);
         }
 
         $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=1');
@@ -770,38 +760,40 @@ class WorkItemController
             $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {}
 
-        try {
-            $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
-            $scored = $scorer->scoreWorkItem($item, $qualityBlock);
+        $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
+        $scored = $scorer->scoreWorkItem($item, $qualityBlock);
 
-            if ($scored['score'] !== null) {
-                \StratFlow\Models\HLWorkItem::update($this->db, $id, [
-                    'quality_score'     => $scored['score'],
-                    'quality_breakdown' => json_encode($scored['breakdown'])
-                ]);
+        if ($scored['score'] !== null) {
+            \StratFlow\Models\HLWorkItem::markQualityScored($this->db, $id, $scored['score'], $scored['breakdown']);
 
-                $html = '';
-                ob_start();
-                $breakdownData = $scored['breakdown'];
-                $itemId        = $id;
-                $itemType      = 'work-item';
-                $csrf_token    = $this->request->post('_csrf_token');
-                require __DIR__ . '/../../templates/partials/quality-breakdown.php';
-                $html = ob_get_clean();
+            $html = '';
+            ob_start();
+            $breakdownData = $scored['breakdown'];
+            $itemId        = $id;
+            $itemType      = 'work-item';
+            $csrf_token    = $this->request->post('_csrf_token');
+            require __DIR__ . '/../../templates/partials/quality-breakdown.php';
+            $html = ob_get_clean();
 
-                $this->response->json([
-                    'status'    => 'ok',
-                    'score'     => $scored['score'],
-                    'breakdown' => $scored['breakdown'],
-                    'html'      => $html
-                ]);
-                return;
-            }
-        } catch (\Throwable $e) {
-            error_log('[StratFlow] WorkItem score error: ' . $e->getMessage());
-            $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
+            $this->response->json([
+                'status'    => 'ok',
+                'score'     => $scored['score'],
+                'breakdown' => $scored['breakdown'],
+                'html'      => $html
+            ]);
             return;
         }
+
+        // Scoring failed — update state and surface the error
+        $errorKey = $scored['error'] ?? 'unknown';
+        \StratFlow\Models\HLWorkItem::markQualityFailed(
+            $this->db,
+            $id,
+            (int) ($item['quality_attempts'] ?? 0) + 1,
+            $errorKey
+        );
+        error_log('[StratFlow] WorkItem score error: ' . $errorKey);
+        $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
 
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
     }
