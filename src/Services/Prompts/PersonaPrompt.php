@@ -34,11 +34,13 @@ class PersonaPrompt
      * @param string $promptDescription Additional context about the persona's perspective
      * @param string $evaluationLevel  One of: devils_advocate, red_teaming, gordon_ramsay
      * @param string $screenContent    The page content to evaluate
+     * @param array|null $customLevels Optional overrides for evaluation level prompts
      * @return string                  Complete prompt ready for LLM submission
      */
-    public static function buildPrompt(string $roleTitle, string $promptDescription, string $evaluationLevel, string $screenContent): string
+    public static function buildPrompt(string $roleTitle, string $promptDescription, string $evaluationLevel, string $screenContent, ?array $customLevels = null): string
     {
-        $levelInstruction = self::EVALUATION_LEVELS[$evaluationLevel] ?? self::EVALUATION_LEVELS['devils_advocate'];
+        $levels = $customLevels ?: self::EVALUATION_LEVELS;
+        $levelInstruction = $levels[$evaluationLevel] ?? self::EVALUATION_LEVELS[$evaluationLevel] ?? self::EVALUATION_LEVELS['devils_advocate'];
 
         return <<<PROMPT
 You are a {$roleTitle}. {$promptDescription}

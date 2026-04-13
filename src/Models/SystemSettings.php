@@ -44,6 +44,8 @@ class SystemSettings
         'billing_rate_annual_cents',
         // Workflow persona defaults
         'workflow_personas_json',
+        // Critical review evaluation level prompts
+        'evaluation_levels_json',
     ];
 
     /** Safe fallback defaults returned when the table row is missing. */
@@ -72,6 +74,8 @@ class SystemSettings
         'billing_rate_annual_cents'     => 0,
         // Workflow persona defaults
         'workflow_personas_json'        => '',
+        // Critical review evaluation level prompts
+        'evaluation_levels_json'        => '',
     ];
 
     /**

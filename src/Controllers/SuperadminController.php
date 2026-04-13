@@ -670,11 +670,22 @@ class SuperadminController
             }
         }
 
+        // Load evaluation levels (critical review prompts)
+        $defaultLevels = \StratFlow\Services\Prompts\PersonaPrompt::EVALUATION_LEVELS;
+        $evaluationLevels = $defaultLevels;
+        if (!empty($settings['evaluation_levels_json'])) {
+            $storedLevels = json_decode($settings['evaluation_levels_json'], true);
+            if (is_array($storedLevels) && !empty($storedLevels)) {
+                $evaluationLevels = array_merge($defaultLevels, $storedLevels);
+            }
+        }
+
         $this->response->render('superadmin/personas', [
             'user'               => $user,
             'panels'             => $panels,
             'panel_members'      => $panelMembers,
             'workflow_personas'  => $workflowPersonas,
+            'evaluation_levels'  => $evaluationLevels,
             'active_page'        => 'superadmin',
             'flash_message'      => $_SESSION['flash_message'] ?? null,
             'flash_error'        => $_SESSION['flash_error']   ?? null,
@@ -733,7 +744,34 @@ class SuperadminController
             ]);
         }
 
-        $_SESSION['flash_message'] = 'Default personas updated successfully.';
+        // Save evaluation level prompts to system_settings
+        $defaultLevels = \StratFlow\Services\Prompts\PersonaPrompt::EVALUATION_LEVELS;
+        $evaluationLevels = $defaultLevels;
+        if (!empty($settings['evaluation_levels_json'])) {
+            $storedLevels = json_decode($settings['evaluation_levels_json'], true);
+            if (is_array($storedLevels) && !empty($storedLevels)) {
+                $evaluationLevels = array_merge($defaultLevels, $storedLevels);
+            }
+        }
+
+        $levelsUpdated = false;
+        foreach ($post as $key => $value) {
+            if (strpos($key, 'level_') === 0) {
+                $lvlKey = str_replace('level_', '', $key);
+                if (isset($evaluationLevels[$lvlKey])) {
+                    $evaluationLevels[$lvlKey] = trim((string) $value);
+                    $levelsUpdated = true;
+                }
+            }
+        }
+
+        if ($levelsUpdated) {
+            SystemSettings::save($this->db, [
+                'evaluation_levels_json' => json_encode($evaluationLevels),
+            ]);
+        }
+
+        $_SESSION['flash_message'] = 'Default personas and levels updated successfully.';
         $this->response->redirect('/superadmin/personas');
     }
 
@@ -773,6 +811,13 @@ class SuperadminController
             return;
         }
 
+        // Load custom levels if any
+        $settings = SystemSettings::get($this->db);
+        $customLevels = null;
+        if (!empty($settings['evaluation_levels_json'])) {
+            $customLevels = json_decode($settings['evaluation_levels_json'], true);
+        }
+
         $gemini  = new \StratFlow\Services\GeminiService($this->config);
         $results = [];
 
@@ -781,7 +826,8 @@ class SuperadminController
                 $member['role_title'],
                 $member['prompt_description'] ?? '',
                 $evaluationLevel,
-                $content
+                $content,
+                $customLevels
             );
 
             try {

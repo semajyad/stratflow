@@ -40,9 +40,10 @@ class SoundingBoardService
      * @param array  $panelMembers    Array of member rows (id, role_title, prompt_description)
      * @param string $evaluationLevel One of: devils_advocate, red_teaming, gordon_ramsay
      * @param string $screenContent   The page content to evaluate
+     * @param array|null $customLevels Optional custom prompts for the 3 levels
      * @return array                  Array of persona response objects with role_title, member_id, response, status
      */
-    public function evaluate(array $panelMembers, string $evaluationLevel, string $screenContent): array
+    public function evaluate(array $panelMembers, string $evaluationLevel, string $screenContent, ?array $customLevels = null): array
     {
         $results = [];
 
@@ -51,7 +52,8 @@ class SoundingBoardService
                 $member['role_title'],
                 $member['prompt_description'],
                 $evaluationLevel,
-                $screenContent
+                $screenContent,
+                $customLevels
             );
 
             try {

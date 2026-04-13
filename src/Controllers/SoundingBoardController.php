@@ -137,10 +137,17 @@ class SoundingBoardController
             return;
         }
 
+        // Load custom level prompts if any
+        $settings = SystemSettings::get($this->db);
+        $customLevels = null;
+        if (!empty($settings['evaluation_levels_json'])) {
+            $customLevels = json_decode($settings['evaluation_levels_json'], true);
+        }
+
         // Run the AI evaluation
         $gemini  = new GeminiService($this->config);
         $service = new SoundingBoardService($gemini);
-        $results = $service->evaluate($members, $evaluationLevel, $screenContent);
+        $results = $service->evaluate($members, $evaluationLevel, $screenContent, $customLevels);
 
         // Store results
         $evalId = EvaluationResult::create($this->db, [
