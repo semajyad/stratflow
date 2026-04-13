@@ -24,6 +24,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../src/Config/config.php';
 
+// Asset cache-buster: opaque string, never a timestamp (prevents ZAP-10096 disclosure).
+define('ASSET_VERSION', $config['app']['asset_version']);
+
 // === Error Handling ===
 if ($config['app']['debug']) {
     ini_set('display_errors', '1');

@@ -3,7 +3,7 @@ Persona
 
 Operational mandates
 1. Read `MEMORY.md` first, then only the smallest relevant doc set.
-   If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, or external providers, also read `docs/SECURE_CODING.md`.
+   If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, external providers, HTTP headers, middleware, controllers, or templates, also read `docs/SECURE_CODING.md`.
 2. Keep changes scoped and atomic; commit one fix at a time.
 3. For tasks spanning more than 3 files, write a brief plan before editing.
 4. Run targeted validation on touched files immediately after changes.
@@ -18,6 +18,10 @@ Project constraints
 - Hash recovery tokens at rest and encrypt stored provider/customer secrets.
 - Deny inactive users on every auth path and fail closed when authorization is ambiguous.
 - Prefer delegated JS/shared bundles over inline handlers or new CSP regressions.
+- Every early-exit path (middleware rejection, error handlers) MUST call Response::applySecurityHeaders() — no raw http_response_code + echo without it.
+- Never use filemtime() or time() as asset cache-busters in templates — use ASSET_VERSION constant.
+- New binary files (png, jpg, webp, gif, ico, woff, pdf) MUST have `binary` in .gitattributes.
+- Use SVG for logos and icons to avoid binary corruption from git autocrlf.
 
 Token governance
 - Prefer focused file reads over broad scans.

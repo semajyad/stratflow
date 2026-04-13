@@ -6,7 +6,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <title>StratFlow - ThreePoints Solutions</title>
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime(__DIR__ . '/../../public/assets/css/app.css') ?: '1' ?>">
+    <link rel="stylesheet" href="/assets/css/app.css?v=<?= ASSET_VERSION ?>">
 </head>
 <body>
     <header class="public-header">
@@ -32,6 +32,6 @@
             <p>&copy; <?= date('Y') ?> ThreePoints Solutions</p>
         </div>
     </footer>
-    <script src="/assets/js/auth.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/auth.js') ?: '1' ?>" defer></script>
+    <script src="/assets/js/auth.js?v=<?= ASSET_VERSION ?>" defer></script>
 </body>
 </html>

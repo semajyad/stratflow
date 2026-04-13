@@ -124,7 +124,10 @@ class Response
         header('Origin-Agent-Cluster: ?1');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
-        if (self::isSecureTransport()) {
+        // Always send HSTS when APP_URL is https (covers Railway's TLS-terminating proxy
+        // where isSecureTransport() may miss the first request in a session).
+        $appUrl = (string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '');
+        if (self::isSecureTransport() || str_starts_with($appUrl, 'https://')) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
         header('Content-Security-Policy: ' . self::buildContentSecurityPolicy($profile));
@@ -152,7 +155,10 @@ class Response
         header('Cross-Origin-Embedder-Policy: require-corp');
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
-        if (self::isSecureTransport()) {
+        // Always send HSTS when APP_URL is https (covers Railway's TLS-terminating proxy
+        // where isSecureTransport() may miss the first request in a session).
+        $appUrl = (string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '');
+        if (self::isSecureTransport() || str_starts_with($appUrl, 'https://')) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
     }

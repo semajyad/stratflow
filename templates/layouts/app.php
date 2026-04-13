@@ -6,8 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <title>StratFlow</title>
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime(__DIR__ . '/../../public/assets/css/app.css') ?: '1' ?>">
-    <script src="/assets/js/app-preload.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/app-preload.js') ?: '1' ?>"></script>
+    <link rel="stylesheet" href="/assets/css/app.css?v=<?= ASSET_VERSION ?>">
+    <script src="/assets/js/app-preload.js?v=<?= ASSET_VERSION ?>"></script>
 </head>
 <body class="app-layout">
     <div class="app-wrapper">
@@ -42,6 +42,6 @@
     </div>
     <?php include __DIR__ . '/../partials/sounding-board-modal.php'; ?>
     <?php include __DIR__ . '/../partials/onboarding-wizard.php'; ?>
-    <script src="/assets/js/app.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/app.js') ?: '1' ?>"></script>
+    <script src="/assets/js/app.js?v=<?= ASSET_VERSION ?>"></script>
 </body>
 </html>

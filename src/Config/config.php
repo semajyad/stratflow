@@ -35,11 +35,27 @@ if (!empty($_ENV['DATABASE_URL'])) {
     ];
 }
 
+// Static asset version: uses ASSET_VERSION env var (set at deploy) or falls back to git commit short hash.
+// This prevents timestamp disclosure (ZAP-10096) while still busting caches on deploy.
+$assetVersion = $_ENV['ASSET_VERSION']
+    ?? (function () {
+        $ref = dirname(__DIR__, 2) . '/.git/HEAD';
+        if (!is_readable($ref)) { return '1'; }
+        $head = trim(file_get_contents($ref));
+        // Packed refs: HEAD points to a ref file
+        if (str_starts_with($head, 'ref: ')) {
+            $refFile = dirname(__DIR__, 2) . '/.git/' . substr($head, 5);
+            $head = is_readable($refFile) ? trim(file_get_contents($refFile)) : '1';
+        }
+        return substr($head, 0, 8) ?: '1';
+    })();
+
 return [
     'app' => [
-        'env' => $_ENV['APP_ENV'] ?? 'production',
-        'url' => $_ENV['APP_URL'] ?? 'http://localhost:8890',
-        'debug' => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        'env'           => $_ENV['APP_ENV'] ?? 'production',
+        'url'           => $_ENV['APP_URL'] ?? 'http://localhost:8890',
+        'debug'         => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        'asset_version' => $assetVersion,
     ],
     'db' => $dbConfig,
     'gemini' => [

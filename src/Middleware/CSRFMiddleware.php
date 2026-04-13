@@ -29,6 +29,7 @@ class CSRFMiddleware
             $token = $request->post('_csrf_token', '');
 
             if (!$csrf->validateToken($token)) {
+                Response::applySecurityHeaders('app');
                 http_response_code(403);
                 echo '<h1>403 - Invalid CSRF Token</h1>';
                 return false;

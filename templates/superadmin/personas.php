@@ -207,4 +207,4 @@ $reviewScopeLabels = [
 <!-- ===========================
      Critical Review JS
      =========================== -->
-<script src="/assets/js/superadmin-personas.js?v=<?= @filemtime(__DIR__ . '/../../public/assets/js/superadmin-personas.js') ?: '1' ?>" defer></script>
+<script src="/assets/js/superadmin-personas.js?v=<?= ASSET_VERSION ?>" defer></script>
