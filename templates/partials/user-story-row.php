@@ -113,6 +113,7 @@
         $csrf_token    = $csrf_token ?? '';
         require __DIR__ . '/quality-breakdown.php';
     }
+    ?>
     </div>
 </div>
 </details>

@@ -3,7 +3,7 @@
  * User Stories Template
  *
  * Displays user stories grouped under their parent High Level work item,
- * with per-epic AI generation, drag-and-drop reordering, edit modal,
+ * with per-High Level item AI generation, drag-and-drop reordering, edit modal,
  * dependency tracking, and CSV/JSON/Jira export.
  *
  * Variables: $project (array), $stories (array), $work_items (array),
@@ -82,18 +82,18 @@ $unlinkedStories = $storiesByItem[0] ?? [];
 <?php endif; ?>
 
 <!-- ===========================
-     Per-Epic Story Sections
+     Per-High Level Item Story Sections
      =========================== -->
 <?php if (!empty($work_items)): ?>
-    <?php foreach ($work_items as $epicIndex => $wi): ?>
+    <?php foreach ($work_items as $itemIndex => $wi): ?>
         <?php
-        $epicStories    = $storiesByItem[(int) $wi['id']] ?? [];
-        $epicHasStories = !empty($epicStories);
+        $itemStories    = $storiesByItem[(int) $wi['id']] ?? [];
+        $itemHasStories = !empty($itemStories);
         ?>
         <div class="card mb-4">
             <div class="card-header gen-style-34964f">
                 <div class="gen-style-13f83e">
-                    <span class="priority-number gen-style-5b214b"><?= $epicIndex + 1 ?></span>
+                    <span class="priority-number gen-style-5b214b"><?= $itemIndex + 1 ?></span>
                     <div>
                         <strong class="gen-style-8796ca"><?= htmlspecialchars($wi['title']) ?></strong>
                         <div class="text-muted gen-style-3bdbf2">
@@ -107,14 +107,14 @@ $unlinkedStories = $storiesByItem[0] ?? [];
                     <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
                     <input type="hidden" name="hl_item_ids[]" value="<?= (int) $wi['id'] ?>">
                     <button type="submit" class="btn btn-ai btn-sm">
-                        <?= $epicHasStories ? '✨ Generate More Stories' : '✨ Generate User Stories' ?>
+                        <?= $itemHasStories ? '✨ Generate More Stories' : '✨ Generate User Stories' ?>
                     </button>
                 </form>
             </div>
-            <?php if ($epicHasStories): ?>
+            <?php if ($itemHasStories): ?>
             <div class="card-body gen-style-26dd46">
                 <div class="user-stories-list">
-                    <?php foreach ($epicStories as $story): ?>
+                    <?php foreach ($itemStories as $story): ?>
                         <?php require __DIR__ . '/partials/user-story-row.php'; ?>
                     <?php endforeach; ?>
                 </div>

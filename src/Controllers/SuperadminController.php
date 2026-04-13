@@ -171,7 +171,7 @@ class SuperadminController
             "SELECT s.*, o.name AS org_name
              FROM subscriptions s
              LEFT JOIN organisations o ON o.id = s.org_id
-             ORDER BY s.created_at DESC"
+             ORDER BY s.id DESC"
         );
         $allSubscriptions = $stmt->fetchAll();
 

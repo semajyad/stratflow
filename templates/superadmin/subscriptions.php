@@ -67,7 +67,7 @@
                             <?php endif; ?>
                         </td>
                         <td class="text-muted text-sm">
-                            <?= !empty($s['started_at']) ? date('M j, Y', strtotime($s['started_at'])) : date('M j, Y', strtotime($s['created_at'])) ?>
+                            <?= !empty($s['started_at']) ? date('M j, Y', strtotime($s['started_at'])) : '-' ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

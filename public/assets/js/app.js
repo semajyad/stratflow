@@ -3679,8 +3679,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.js-quality-score-placeholder').forEach(function(el) {
             self.queue.push({
                 el: el,
-                id: el.dataset.id,
-                type: el.dataset.type // 'story' or 'work-item'
+                id: el.dataset.taskId,
+                type: el.dataset.taskType // 'story' or 'work-item'
             });
         });
 
