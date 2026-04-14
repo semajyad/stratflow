@@ -61,8 +61,9 @@ jobs:
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'StratFlow App' }}
         run: |
-          railway up --detach --service "StratFlow App"
+          railway up --detach --service "$RAILWAY_SERVICE"
           echo "Deployment triggered. Check Railway dashboard for status."
 
       - name: Post-deploy healthcheck

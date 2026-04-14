@@ -10,11 +10,12 @@ on:
 
 jobs:
   autofix:
-    # Only run when CodeRabbit requests changes on a non-Dependabot PR
+    # Only run when CodeRabbit requests changes on a non-Dependabot PR from this repo (not forks)
     if: >
       github.event.review.user.login == 'coderabbitai[bot]' &&
       github.event.review.state == 'changes_requested' &&
-      !startsWith(github.event.pull_request.user.login, 'dependabot')
+      !startsWith(github.event.pull_request.user.login, 'dependabot') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -68,7 +69,6 @@ jobs:
       - name: Run Claude Code to fix review findings
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BRANCH: ${{ github.event.pull_request.head.ref }}
           REPO: ${{ github.repository }}
