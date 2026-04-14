@@ -118,13 +118,13 @@ jobs:
           COVERAGE=$(php -r "
             \$xml = simplexml_load_file('coverage.xml');
             \$metrics = \$xml->project->metrics;
-            \$total = (int) \$metrics['elements'];
-            \$covered = (int) \$metrics['coveredelements'];
+            \$total = (int) \$metrics['statements'];
+            \$covered = (int) \$metrics['coveredstatements'];
             echo \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
           ")
           echo "Line coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below the 60% threshold."
+            echo "::error::Coverage ${COVERAGE}% is below the 60% threshold (whitelisted src/ only)."
             exit 1
           fi
 

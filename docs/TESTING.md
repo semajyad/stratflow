@@ -1,6 +1,6 @@
 # Testing
 
-StratFlow uses [PHPUnit 11](https://phpunit.de/) for automated testing. Tests live in the `tests/` directory and are split into unit and integration suites.
+StratFlow uses [PHPUnit 11](https://phpunit.de/) for automated testing, with a multi-layer test pyramid running in CI on every PR.
 
 ## Running the Test Suite
 
@@ -17,33 +17,93 @@ docker compose exec php composer test:unit
 docker compose exec php composer test:integration
 ```
 
-The `composer test` script maps to:
-
-```bash
-phpunit --configuration tests/phpunit.xml
-```
+Coverage measurement requires [pcov](https://github.com/krakjoe/pcov), which is enabled in CI via `shivammathur/setup-php`. It is **not** available in the local Docker image — run coverage in CI or install pcov locally.
 
 ---
 
-## Test Suite Breakdown
+## Test Pyramid
 
-### Unit Tests (`tests/Unit/`)
+```
+Unit (PHPUnit)     → tests/Unit/
+Integration (PHPUnit) → tests/Integration/
+E2E (Playwright)   → tests/Playwright/
+Performance (k6)   → tests/performance/
+Security (ZAP)     → tests/zap/
+```
 
-Unit tests exercise a single class in isolation. External dependencies (database, HTTP, session) are replaced with PHPUnit mocks.
+### Coverage Targets (line coverage, enforced in CI)
 
-**Current coverage:**
+| Layer | Wave 1 floor | Wave 2 target | Wave 5 target |
+|---|---|---|---|
+| Unit — Services | measured in CI | 75% | 85% |
+| Unit — Models | measured in CI | 85% | 90% |
+| Unit — Controllers | measured in CI | 60% | 80% |
+| Overall (whitelisted `src/`) | ≥ 60% (current gate) | ≥ 75% | ≥ 85% |
 
-| Test File | Class Under Test | What Is Tested |
-|-----------|-----------------|----------------|
-| `Unit/Core/RouterTest.php` | `Core\Router` | Route registration, method normalisation, middleware storage, `patternToRegex()` conversion, URI matching, no false positives on deeper paths |
+> **Note:** The pre-Wave 1 coverage gate counted all pcov-detected files, including vendor-adjacent paths. From Wave 1 onward, coverage is measured against the `src/` whitelist only (excluding `src/Services/Prompts/` and `src/Config/`). The gate was kept at 60% pending the first CI run with the new whitelist. Update this table after that run with the true per-layer baseline.
 
-Unit tests use `ReflectionMethod` and `ReflectionProperty` to access private internals where needed (e.g., `patternToRegex`, `$routes`). This avoids changing visibility for testability while still validating internal logic.
+---
 
-### Integration Tests (`tests/Integration/`)
+## Source Whitelist
 
-Integration tests wire up real application components against a test database. They are slower and require a running MySQL instance.
+`tests/phpunit.xml` includes a `<source>` block that scopes coverage to:
 
-The test bootstrap (`tests/bootstrap.php`) loads the application's `.env` file, so integration tests use the same environment variables as the running app. Point `DB_NAME` at a separate test database to avoid corrupting development data.
+- **Included:** `src/` (all `.php` files)
+- **Excluded:** `src/Services/Prompts/` (AI prompt constants), `src/Config/` (static config files)
+
+This ensures coverage numbers reflect the application logic only.
+
+---
+
+## Test Utilities
+
+### `tests/Support/DatabaseTestCase.php`
+
+Base class for integration tests that need a real database. Extends `TestCase`, opens a connection in `setUp()`, starts a transaction, and rolls back in `tearDown()`. Each test runs in isolation — no manual DELETE statements needed.
+
+```php
+use StratFlow\Tests\Support\DatabaseTestCase;
+
+class MyIntegrationTest extends DatabaseTestCase
+{
+    public function testSomething(): void
+    {
+        // $this->db is available and connected
+        // any rows inserted are rolled back automatically
+    }
+}
+```
+
+### `tests/Support/Factory/`
+
+Plain-PHP factory classes that create model rows via the canonical `Model::create($db, $data)` interface:
+
+| Factory | Model | Notable defaults |
+|---|---|---|
+| `OrgFactory` | `Organisation` | `is_active=1`, auto-sequenced `cus_test_N` Stripe ID |
+| `UserFactory` | `User` | `role=user`, pre-computed bcrypt hash |
+| `ProjectFactory` | `Project` | `status=active` |
+| `UserStoryFactory` | `UserStory` | `status=backlog`, auto-sequenced `priority_number` |
+| `HLWorkItemFactory` | `HLWorkItem` | `status=backlog`, auto-sequenced `priority_number` |
+| `IntegrationFactory` | `Integration` | `provider=jira`, `status=disconnected` |
+
+Usage:
+
+```php
+use StratFlow\Tests\Support\DatabaseTestCase;
+use StratFlow\Tests\Support\Factory\{OrgFactory, UserFactory, ProjectFactory};
+
+class MyTest extends DatabaseTestCase
+{
+    public function testStoryCreation(): void
+    {
+        $orgId     = OrgFactory::create($this->db);
+        $userId    = UserFactory::create($this->db, $orgId);
+        $projectId = ProjectFactory::create($this->db, $orgId, $userId);
+        // ... assert against $projectId
+    }
+}
+```
 
 ---
 
@@ -63,67 +123,37 @@ use StratFlow\<ClassUnderTest>;
 
 class <ClassUnderTest>Test extends TestCase
 {
-    // ===========================
-    // HELPERS
-    // ===========================
-
     private function makeSubject(): <ClassUnderTest>
     {
-        // Construct with mocked dependencies
         $dep = $this->createMock(SomeDependency::class);
         return new <ClassUnderTest>($dep);
     }
 
-    // ===========================
-    // TESTS
-    // ===========================
-
-    /** @test */
     public function testItDoesSomething(): void
     {
         $subject = $this->makeSubject();
-        $result  = $subject->doSomething('input');
-
-        $this->assertSame('expected', $result);
+        $this->assertSame('expected', $subject->doSomething('input'));
     }
 }
 ```
 
-Place unit test files in `tests/Unit/<Namespace>/` mirroring the `src/` structure. For example, a test for `src/Services/GeminiService.php` goes in `tests/Unit/Services/GeminiServiceTest.php`.
+Place unit test files in `tests/Unit/<Namespace>/` mirroring the `src/` structure.
 
 ### Mocking notes
 
-- Use `$this->createMock(ClassName::class)` for classes that should be fully stubbed
-- Use `$this->createStub()` when you only need return values and don't care about call assertions
-- Use `$this->getMockBuilder()` when you need partial mocks (mock some methods, call real implementations for others)
-- Mock the `Database` class to avoid real SQL in unit tests; assert that specific query methods are called with expected arguments
-
-### Integration test notes
-
-- Integration tests should use a dedicated test database (configure via `.env` or a `.env.testing` override)
-- Wrap each test in a transaction and roll back in `tearDown()` to keep the database clean:
-  ```php
-  protected function setUp(): void    { $this->db->beginTransaction(); }
-  protected function tearDown(): void { $this->db->rollBack(); }
-  ```
-- Test the full controller→model→database chain for critical paths (e.g., login, project creation, work item generation)
-
----
-
-## Test Database
-
-For integration tests, point the application at a separate database. The simplest approach when using Docker is to create a second database in the MySQL container:
-
-```bash
-docker compose exec mysql mysql -u root -proot_secret -e "CREATE DATABASE stratflow_test;"
-docker compose exec mysql mysql -u root -proot_secret -e \
-  "GRANT ALL PRIVILEGES ON stratflow_test.* TO 'stratflow'@'%';"
-```
-
-Then export a test-specific `.env` or temporarily set `DB_NAME=stratflow_test` before running integration tests.
+- `$this->createMock()` — fully stubbed, call assertions available
+- `$this->createStub()` — return-value stubs only, no call assertions
+- `$this->getMockBuilder()->onlyMethods([])` — partial mocks
 
 ---
 
 ## Continuous Integration
 
-There is no CI pipeline configured yet. To add one, run `composer test` as part of your CI workflow after `docker compose up -d --build` and waiting for MySQL to be healthy.
+CI runs on every push/PR to `main` via `.github/workflows/tests.yml` against PHP 8.3 and 8.4:
+
+1. Lint (`php -l`) → PHPStan level 6 → PHPCS PSR-12
+2. PHPUnit full suite with pcov coverage
+3. Coverage gate: overall line coverage ≥ **60%** against the whitelisted `src/` (ratchets up each wave — never decreases)
+4. Mutation testing (Infection) — nightly, `minMsi=70`, scoped via `infection.json`
+
+See `.github/workflows/tests.yml` for the full configuration.
