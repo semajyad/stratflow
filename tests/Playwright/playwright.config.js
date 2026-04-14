@@ -12,7 +12,7 @@ module.exports = defineConfig({
   retries: isCI ? 2 : 0,          // retry flaky specs in CI only
   reporter: [
     ['list'],
-    ['html', { open: 'never', outputFolder: 'test-results/report' }],
+    ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ...(isCI ? [['github']] : []),
   ],
   outputDir: 'test-results',

@@ -115,6 +115,11 @@ jobs:
         env:
           CI: 'true'
           BASE_URL: 'http://localhost:8890'
+          DB_HOST: '127.0.0.1'
+          DB_PORT: '3306'
+          DB_USERNAME: 'stratflow'
+          DB_PASSWORD: 'stratflow_secret'
+          DB_DATABASE: 'stratflow'
         run: npx playwright test --project=fast
 
       - name: Upload Playwright artifacts on failure

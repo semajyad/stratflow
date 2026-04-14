@@ -7,10 +7,10 @@ module.exports = {
   REGULAR_EMAIL: 'pw_regular@test.invalid',
   REGULAR_PASS: 'password123',
   DB_CONFIG: {
-    host: '127.0.0.1',
-    port: 3307,
-    user: 'stratflow',
-    password: 'stratflow_secret',
-    database: 'stratflow',
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: parseInt(process.env.DB_PORT || '3307', 10),
+    user: process.env.DB_USERNAME || 'stratflow',
+    password: process.env.DB_PASSWORD || 'stratflow_secret',
+    database: process.env.DB_DATABASE || 'stratflow',
   },
 };
