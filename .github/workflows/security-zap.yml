@@ -95,32 +95,56 @@ jobs:
           fail_action: false
           artifact_name: zap-baseline-report
 
-      - name: Write nightly status
+      - name: Check against baseline + write nightly status
         if: always()
         run: |
           python3 - <<'PYEOF'
-          import json, os, re, glob as globmod
-          # Count HIGH alerts from ZAP JSON output if available
-          high_count = None
+          import json, os, glob as globmod, sys
+
+          # Count HIGH alerts (riskcode=3) from ZAP JSON output
+          high_count = 0
           for f in globmod.glob("**/*.json", recursive=True):
               try:
                   data = json.load(open(f))
-                  highs = [a for s in data.get("site", []) for a in s.get("alerts", []) if a.get("riskcode") == "3"]
-                  high_count = len(highs)
-                  break
+                  if "site" in data:
+                      highs = [a for s in data["site"] for a in s.get("alerts", []) if a.get("riskcode") == "3"]
+                      high_count = len(highs)
+                      break
               except Exception:
                   continue
-          failed = os.environ.get("JOB_STATUS") != "success"
-          status = "fail" if failed else ("warn" if high_count else "pass")
+
+          # Compare against accepted baseline
+          baseline_count = 0
+          try:
+              b = json.load(open("tests/security/baseline-zap.json"))
+              baseline_count = (b.get("metric") or {}).get("high_count", 0) or 0
+          except Exception:
+              pass
+
+          new_findings = max(0, high_count - baseline_count)
+          if new_findings > 0:
+              print(f"::error::ZAP found {new_findings} new HIGH finding(s) above accepted baseline ({baseline_count}). "
+                    f"Fix them or run: python scripts/ci/update_security_baseline.py zap")
+              scan_status = "fail"
+          elif high_count > 0:
+              print(f"::warning::ZAP found {high_count} HIGH finding(s) — all within accepted baseline.")
+              scan_status = "warn"
+          else:
+              print("ZAP: no HIGH findings.")
+              scan_status = "pass"
+
           payload = {
               "job": "zap",
-              "status": status,
-              "metric": {"high_count": high_count},
-              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status != "pass" else None,
+              "status": scan_status,
+              "metric": {"high_count": high_count, "new_findings": new_findings},
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if scan_status == "fail" else None,
               "run_id": os.environ["GITHUB_RUN_ID"],
           }
           with open("nightly-status.json", "w") as f:
               json.dump(payload, f)
+
+          if scan_status == "fail":
+              sys.exit(1)
           PYEOF
         env:
           JOB_STATUS: ${{ job.status }}

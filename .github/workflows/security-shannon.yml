@@ -81,7 +81,7 @@ jobs:
           echo "Workspace: $WORKSPACE"
           echo "Flags:     $PIPELINE_FLAG"
 
-          # Run Shannon; capture exit code without failing the job immediately
+          # Run Shannon; capture exit code — baseline-diff step below decides pass/fail
           npx -y @keygraph/shannon@latest start \
             --url "${{ steps.target.outputs.url }}" \
             --repo "." \
@@ -89,8 +89,9 @@ jobs:
             --output "./security-reports/shannon-nightly" \
             $PIPELINE_FLAG || SHANNON_EXIT=$?
 
+          echo "shannon_exit=${SHANNON_EXIT:-0}" >> "$GITHUB_ENV"
           if [ -n "$SHANNON_EXIT" ] && [ "$SHANNON_EXIT" -ne 0 ]; then
-            echo "::warning::Shannon exited with code $SHANNON_EXIT — review the report artifact."
+            echo "::warning::Shannon exited with code $SHANNON_EXIT — baseline check will determine pass/fail."
           fi
 
       - name: Promote latest report to shannon-latest.md
@@ -144,32 +145,61 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Write nightly status
+      - name: Check against baseline + write nightly status
         if: always()
         run: |
           python3 - <<'PYEOF'
-          import json, os, re
-          # Try to count HIGH/CRITICAL findings from the report markdown
+          import json, os, re, sys
+
+          # Count HIGH/CRITICAL mentions in the Shannon report
           high_count = 0
           try:
               text = open("security-reports/shannon-latest.md").read()
               high_count = len(re.findall(r'\b(HIGH|CRITICAL)\b', text, re.I))
           except Exception:
               pass
-          failed = os.environ.get("JOB_STATUS") != "success"
-          status = "fail" if failed else ("warn" if high_count else "pass")
+
+          # Compare against accepted baseline
+          baseline_count = 0
+          try:
+              b = json.load(open("tests/security/baseline-shannon.json"))
+              baseline_count = (b.get("metric") or {}).get("high_count", 0) or 0
+          except Exception:
+              pass
+
+          new_findings = max(0, high_count - baseline_count)
+          shannon_failed = os.environ.get("SHANNON_EXIT", "0") not in ("", "0")
+
+          if shannon_failed or new_findings > 0:
+              if new_findings > 0:
+                  print(f"::error::Shannon found {new_findings} new HIGH/CRITICAL finding(s) above accepted baseline ({baseline_count}). "
+                        f"Fix them or run: python scripts/ci/update_security_baseline.py shannon")
+              else:
+                  print(f"::error::Shannon tool exited non-zero (exit={os.environ.get('SHANNON_EXIT', '?')}). Review the report artifact.")
+              scan_status = "fail"
+          elif high_count > 0:
+              print(f"::warning::Shannon found {high_count} HIGH/CRITICAL finding(s) — all within accepted baseline.")
+              scan_status = "warn"
+          else:
+              print("Shannon: no HIGH/CRITICAL findings.")
+              scan_status = "pass"
+
           payload = {
               "job": "shannon",
-              "status": status,
-              "metric": {"high_count": high_count} if high_count else None,
-              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status != "pass" else None,
+              "status": scan_status,
+              "metric": {"high_count": high_count, "new_findings": new_findings} if high_count else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if scan_status == "fail" else None,
               "run_id": os.environ["GITHUB_RUN_ID"],
           }
           with open("nightly-status.json", "w") as f:
               json.dump(payload, f)
+
+          if scan_status == "fail":
+              sys.exit(1)
           PYEOF
         env:
           JOB_STATUS: ${{ job.status }}
+          SHANNON_EXIT: ${{ env.shannon_exit }}
 
       - name: Upload nightly status artifact
         if: always()

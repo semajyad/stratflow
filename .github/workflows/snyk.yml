@@ -30,11 +30,13 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Run Snyk PHP scan
+        id: snyk
         uses: snyk/actions/php@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high --sarif-file-output=snyk.sarif
+        continue-on-error: true   # baseline-diff step below decides pass/fail
 
       - name: Upload SARIF to GitHub code scanning
         if: always()
@@ -42,32 +44,56 @@ jobs:
         with:
           sarif_file: snyk.sarif
 
-      - name: Write nightly status
+      - name: Check against baseline + write nightly status
         if: always()
         run: |
           python3 - <<'PYEOF'
-          import json, os
+          import json, os, sys
+
+          # Count high/critical findings from SARIF
           critical_count = 0
           try:
               sarif = json.load(open("snyk.sarif"))
               for run in sarif.get("runs", []):
                   for result in run.get("results", []):
-                      level = result.get("level", "")
-                      if level in ("error", "critical"):
+                      if result.get("level") in ("error", "critical"):
                           critical_count += 1
           except Exception:
               pass
-          failed = os.environ.get("JOB_STATUS") != "success"
-          status = "fail" if failed else "pass"
+
+          # Compare against accepted baseline
+          baseline_count = 0
+          try:
+              b = json.load(open("tests/security/baseline-snyk.json"))
+              baseline_count = (b.get("metric") or {}).get("critical_count", 0) or 0
+          except Exception:
+              pass
+
+          new_findings = max(0, critical_count - baseline_count)
+
+          if new_findings > 0:
+              print(f"::error::Snyk found {new_findings} new high/critical CVE(s) above accepted baseline ({baseline_count}). "
+                    f"Fix them or run: python scripts/ci/update_security_baseline.py snyk")
+              scan_status = "fail"
+          elif critical_count > 0:
+              print(f"::warning::Snyk found {critical_count} high/critical CVE(s) — all within accepted baseline.")
+              scan_status = "warn"
+          else:
+              print("Snyk: no high/critical CVEs.")
+              scan_status = "pass"
+
           payload = {
               "job": "snyk",
-              "status": status,
-              "metric": {"critical_count": critical_count} if critical_count else None,
-              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "status": scan_status,
+              "metric": {"critical_count": critical_count, "new_findings": new_findings} if critical_count else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if scan_status == "fail" else None,
               "run_id": os.environ["GITHUB_RUN_ID"],
           }
           with open("nightly-status.json", "w") as f:
               json.dump(payload, f)
+
+          if scan_status == "fail":
+              sys.exit(1)
           PYEOF
         env:
           JOB_STATUS: ${{ job.status }}

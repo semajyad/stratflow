@@ -114,7 +114,7 @@ jobs:
           files: coverage.xml
           flags: unit
           name: php-${{ matrix.php-version }}
-          fail_ci_if_error: false
+          fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 

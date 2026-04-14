@@ -17,6 +17,12 @@ security-reports/
 !security-reports/shannon-latest.md
 !security-reports/zap-latest.md
 
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
 # Claude Code — ephemeral markers
 .claude/.security-audit-ok
 .claude/.playwright-ok
