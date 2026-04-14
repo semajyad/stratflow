@@ -47,11 +47,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
           CR_REVIEW_BODY: ${{ github.event.review.body }}
         run: |
-          # Get all PR review comments from CodeRabbit
+          # Get only comments from THIS review (not stale ones from previous reviews)
           gh api repos/$REPO/pulls/$PR/comments \
-            --jq '[.[] | select(.user.login == "coderabbitai[bot]") | {
+            --jq --argjson rid "$REVIEW_ID" \
+            '[.[] | select(.user.login == "coderabbitai[bot]" and .pull_request_review_id == $rid) | {
               path: .path,
               line: (.line // .original_line),
               body: .body
@@ -99,6 +101,7 @@ jobs:
       - name: Commit and push fixes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git config user.name "claude-code[bot]"
           git config user.email "claude-code[bot]@users.noreply.github.com"
@@ -114,7 +117,7 @@ jobs:
 
           Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
-          git push origin ${{ github.event.pull_request.head.ref }}
+          git push origin "$PR_BRANCH"
 
       - name: Re-request CodeRabbit review
         env:

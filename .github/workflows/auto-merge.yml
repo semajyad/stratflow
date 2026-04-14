@@ -112,11 +112,14 @@ jobs:
             fi
 
             # Human/bot PRs: need at least one APPROVED review, no blocking CHANGES_REQUESTED
-            # Deduplicate by reviewer — use each user's latest review state only
+            # Filter to decisive states only (ignore COMMENTED/PENDING which don't change stance),
+            # then deduplicate by reviewer using their latest decisive review.
             APPROVED=$(gh api repos/$REPO/pulls/$PR/reviews \
-              --jq '[group_by(.user.login)[] | max_by(.id) | select(.state == "APPROVED")] | length')
+              --jq '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
+                    | group_by(.user.login)[] | max_by(.id) | select(.state == "APPROVED") | .id' | wc -l | tr -d ' ')
             BLOCKING=$(gh api repos/$REPO/pulls/$PR/reviews \
-              --jq '[group_by(.user.login)[] | max_by(.id) | select(.state == "CHANGES_REQUESTED")] | length')
+              --jq '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
+                    | group_by(.user.login)[] | max_by(.id) | select(.state == "CHANGES_REQUESTED") | .id' | wc -l | tr -d ' ')
 
             echo "  Reviews: $APPROVED approved, $BLOCKING requesting changes"
 
