@@ -13,7 +13,7 @@
         "phpunit/phpunit": "^11.0",
         "phpstan/phpstan": "^2.0",
         "squizlabs/php_codesniffer": "^3.0",
-        "infection/infection": "^0.29"
+        "infection/infection": "^0.32"
     },
     "config": {
         "allow-plugins": {
