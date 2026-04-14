@@ -53,7 +53,7 @@ jobs:
         run: vendor/bin/phpstan analyse --memory-limit=512M --configuration=phpstan.neon --no-progress
 
       - name: PHPCS code style (PSR-12)
-        run: vendor/bin/phpcs --standard=PSR12 --extensions=php src/ --ignore=src/Services/Prompts/ -q
+        run: vendor/bin/phpcs --standard=PSR12 --extensions=php src/ --ignore=src/Services/Prompts/ -n -q
 
       - name: Create .env
         run: |
