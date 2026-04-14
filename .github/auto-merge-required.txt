@@ -6,7 +6,6 @@
 #
 # When a new required check is added to tests.yml, add its name here too.
 
-unit
-integration
-e2e-fast
-PHPStan
+PHPUnit unit (PHP 8.4)
+PHPUnit integration (PHP 8.4)
+Playwright (fast — Chromium)
