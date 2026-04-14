@@ -123,7 +123,7 @@ class AuthFlowTest extends TestCase
     public function testCorrectCredentialsReturnsTrue(): void
     {
         $result = $this->auth->attempt(self::TEST_EMAIL, self::TEST_PASSWORD);
-        $this->assertTrue($result);
+        $this->assertSame('ok', $result);
     }
 
     #[Test]

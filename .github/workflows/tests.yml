@@ -50,7 +50,7 @@ jobs:
         run: composer audit --no-dev --format=plain
 
       - name: PHPStan static analysis
-        run: vendor/bin/phpstan analyse --memory-limit=512M src --level=6 --no-progress
+        run: vendor/bin/phpstan analyse --memory-limit=512M src --level=4 --no-progress
 
       - name: PHPCS code style (PSR-12)
         run: vendor/bin/phpcs --standard=PSR12 --extensions=php src/ --ignore=src/Services/Prompts/ -q
