@@ -79,6 +79,7 @@ jobs:
             HEAD_SHA=$(gh api repos/$REPO/pulls/$PR --jq '.head.sha')
             CHECKS=$(gh api repos/$REPO/commits/$HEAD_SHA/check-runs \
               --jq '.check_runs | map(select(
+                .name != "Dependency Review" and
                 .name != "dependency-review" and
                 .name != "CodeRabbit Review"
               ))')
@@ -111,10 +112,11 @@ jobs:
             fi
 
             # Human/bot PRs: need at least one APPROVED review, no blocking CHANGES_REQUESTED
+            # Deduplicate by reviewer — use each user's latest review state only
             APPROVED=$(gh api repos/$REPO/pulls/$PR/reviews \
-              --jq '[.[] | select(.state == "APPROVED")] | length')
+              --jq '[group_by(.user.login)[] | max_by(.id) | select(.state == "APPROVED")] | length')
             BLOCKING=$(gh api repos/$REPO/pulls/$PR/reviews \
-              --jq '[.[] | select(.state == "CHANGES_REQUESTED")] | length')
+              --jq '[group_by(.user.login)[] | max_by(.id) | select(.state == "CHANGES_REQUESTED")] | length')
 
             echo "  Reviews: $APPROVED approved, $BLOCKING requesting changes"
 

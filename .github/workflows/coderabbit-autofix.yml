@@ -47,10 +47,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          CR_REVIEW_BODY: ${{ github.event.review.body }}
         run: |
-          # Fetch inline comments from CodeRabbit's latest review
-          REVIEW_ID="${{ github.event.review.id }}"
-
           # Get all PR review comments from CodeRabbit
           gh api repos/$REPO/pulls/$PR/comments \
             --jq '[.[] | select(.user.login == "coderabbitai[bot]") | {
@@ -59,8 +57,8 @@ jobs:
               body: .body
             }]' > /tmp/cr-comments.json
 
-          # Also get the review body itself
-          echo '${{ toJson(github.event.review.body) }}' > /tmp/cr-review-body.txt
+          # Write review body via env var to avoid bash quoting issues
+          printf '%s' "$CR_REVIEW_BODY" > /tmp/cr-review-body.txt
 
           echo "Comment count: $(jq length /tmp/cr-comments.json)"
           cat /tmp/cr-comments.json | head -50
