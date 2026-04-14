@@ -1,4 +1,5 @@
 <?php
+
 /**
  * IntegrationRepo Model
  *
@@ -39,21 +40,17 @@ class IntegrationRepo
      */
     public static function upsert(Database $db, int $integrationId, int $orgId, int $repoGithubId, string $repoFullName): int
     {
-        $db->query(
-            "INSERT INTO integration_repos
+        $db->query("INSERT INTO integration_repos
                 (integration_id, org_id, repo_github_id, repo_full_name)
              VALUES
                 (:integration_id, :org_id, :repo_github_id, :repo_full_name)
              ON DUPLICATE KEY UPDATE
-                repo_full_name = VALUES(repo_full_name)",
-            [
+                repo_full_name = VALUES(repo_full_name)", [
                 ':integration_id' => $integrationId,
                 ':org_id'         => $orgId,
                 ':repo_github_id' => $repoGithubId,
                 ':repo_full_name' => $repoFullName,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -71,12 +68,8 @@ class IntegrationRepo
      */
     public static function findByIdForOrg(Database $db, int $id, int $orgId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integration_repos WHERE id = :id AND org_id = :org_id LIMIT 1",
-            [':id' => $id, ':org_id' => $orgId]
-        );
+        $stmt = $db->query("SELECT * FROM integration_repos WHERE id = :id AND org_id = :org_id LIMIT 1", [':id' => $id, ':org_id' => $orgId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -92,14 +85,10 @@ class IntegrationRepo
      */
     public static function findByIntegrationAndGithubId(Database $db, int $integrationId, int $repoGithubId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integration_repos
+        $stmt = $db->query("SELECT * FROM integration_repos
              WHERE integration_id = :integration_id AND repo_github_id = :repo_github_id
-             LIMIT 1",
-            [':integration_id' => $integrationId, ':repo_github_id' => $repoGithubId]
-        );
+             LIMIT 1", [':integration_id' => $integrationId, ':repo_github_id' => $repoGithubId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -112,13 +101,9 @@ class IntegrationRepo
      */
     public static function findByIntegration(Database $db, int $integrationId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integration_repos
+        $stmt = $db->query("SELECT * FROM integration_repos
              WHERE integration_id = :integration_id
-             ORDER BY repo_full_name ASC",
-            [':integration_id' => $integrationId]
-        );
-
+             ORDER BY repo_full_name ASC", [':integration_id' => $integrationId]);
         return $stmt->fetchAll();
     }
 
@@ -134,17 +119,13 @@ class IntegrationRepo
      */
     public static function findAllForOrg(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT ir.*, i.account_login, i.id AS integration_id_col
+        $stmt = $db->query("SELECT ir.*, i.account_login, i.id AS integration_id_col
              FROM integration_repos ir
              JOIN integrations i ON i.id = ir.integration_id
              WHERE ir.org_id = :org_id
                AND i.provider = 'github'
                AND i.status   = 'active'
-             ORDER BY i.account_login ASC, ir.repo_full_name ASC",
-            [':org_id' => $orgId]
-        );
-
+             ORDER BY i.account_login ASC, ir.repo_full_name ASC", [':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -162,11 +143,8 @@ class IntegrationRepo
      */
     public static function deleteByIntegrationAndGithubId(Database $db, int $integrationId, int $repoGithubId): void
     {
-        $db->query(
-            "DELETE FROM integration_repos
-             WHERE integration_id = :integration_id AND repo_github_id = :repo_github_id",
-            [':integration_id' => $integrationId, ':repo_github_id' => $repoGithubId]
-        );
+        $db->query("DELETE FROM integration_repos
+             WHERE integration_id = :integration_id AND repo_github_id = :repo_github_id", [':integration_id' => $integrationId, ':repo_github_id' => $repoGithubId]);
     }
 
     /**
@@ -177,9 +155,6 @@ class IntegrationRepo
      */
     public static function deleteByIntegration(Database $db, int $integrationId): void
     {
-        $db->query(
-            "DELETE FROM integration_repos WHERE integration_id = :integration_id",
-            [':integration_id' => $integrationId]
-        );
+        $db->query("DELETE FROM integration_repos WHERE integration_id = :integration_id", [':integration_id' => $integrationId]);
     }
 }

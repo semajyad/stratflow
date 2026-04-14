@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitHubAppClient
  *
@@ -25,12 +26,10 @@ namespace StratFlow\Services;
 class GitHubAppClient
 {
     private const GITHUB_API_BASE = 'https://api.github.com';
-
-    // Per-process token cache: installation_id => ['token' => string, 'expires_at' => int]
+// Per-process token cache: installation_id => ['token' => string, 'expires_at' => int]
     /** @var array<int, array{token: string, expires_at: int}> */
     private static array $tokenCache = [];
-
-    // ===========================
+// ===========================
     // JWT / TOKEN MINTING
     // ===========================
 
@@ -67,7 +66,6 @@ class GitHubAppClient
 
         // Railway stores env vars as single-line; restore newlines if collapsed.
         $pem = str_replace('\n', "\n", $pem);
-
         $now = time();
         $header  = self::base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR));
         $payload = self::base64UrlEncode(json_encode([
@@ -75,7 +73,6 @@ class GitHubAppClient
             'exp' => $now + 540,  // 9 minutes (GitHub max is 10)
             'iss' => $appId,
         ], JSON_THROW_ON_ERROR));
-
         $signingInput = $header . '.' . $payload;
         $key = openssl_pkey_get_private($pem);
         if ($key === false) {
@@ -109,12 +106,9 @@ class GitHubAppClient
 
         $jwt = self::mintAppJwt();
         $url = self::GITHUB_API_BASE . '/app/installations/' . $installationId . '/access_tokens';
-
         $response = self::apiPost($url, [], $jwt);
-
         $token     = $response['token'] ?? '';
         $expiresAt = $response['expires_at'] ?? '';
-
         if ($token === '') {
             throw new \RuntimeException('[GitHubAppClient] Empty token in installation access_tokens response');
         }
@@ -123,7 +117,6 @@ class GitHubAppClient
             'token'      => $token,
             'expires_at' => $expiresAt !== '' ? (int) strtotime($expiresAt) : time() + 3600,
         ];
-
         return $token;
     }
 
@@ -145,11 +138,9 @@ class GitHubAppClient
         $token = self::getInstallationToken($installationId);
         $repos = [];
         $page  = 1;
-
         do {
             $url  = self::GITHUB_API_BASE . '/installation/repositories?per_page=100&page=' . $page;
             $body = self::apiGet($url, $token);
-
             $batch = $body['repositories'] ?? [];
             foreach ($batch as $repo) {
                 $repos[] = [
@@ -161,7 +152,6 @@ class GitHubAppClient
             $total = (int) ($body['total_count'] ?? 0);
             $page++;
         } while (count($repos) < $total && count($batch) === 100);
-
         return $repos;
     }
 
@@ -193,7 +183,6 @@ class GitHubAppClient
 
         $providedHash = substr($signatureHeader, 7);
         $expectedHash = hash_hmac('sha256', $rawBody, $secret);
-
         return hash_equals($expectedHash, $providedHash);
     }
 
@@ -220,7 +209,6 @@ class GitHubAppClient
 
         $pr     = $payload['pull_request'];
         $action = $payload['action'] ?? '';
-
         if (!in_array($action, ['opened', 'reopened', 'synchronize', 'closed'], true)) {
             return null;
         }
@@ -251,13 +239,13 @@ class GitHubAppClient
         }
 
         $map = static function (array $list): array {
+
             $out = [];
             foreach ($list as $r) {
                 $out[] = ['id' => (int) $r['id'], 'full_name' => (string) $r['full_name']];
             }
             return $out;
         };
-
         return [
             'installation_id' => (int) $payload['installation']['id'],
             'added'           => $map($payload['repositories_added']),
@@ -289,7 +277,6 @@ class GitHubAppClient
 
         $ref    = $payload['ref'] ?? '';
         $branch = preg_replace('#^refs/heads/#', '', $ref);
-
         $parsed = [];
         foreach ($commits as $c) {
             $parsed[] = [
@@ -316,7 +303,6 @@ class GitHubAppClient
 
         $install = $payload['installation'];
         $action  = $payload['action'] ?? '';
-
         if (!in_array($action, ['created', 'deleted', 'suspend', 'unsuspend'], true)) {
             return null;
         }
@@ -376,13 +362,11 @@ class GitHubAppClient
             'X-GitHub-Api-Version: 2022-11-28',
             'User-Agent: StratFlow-GitHub-App',
         ];
-
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 15,
             CURLOPT_HTTPHEADER     => $headers,
         ]);
-
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_THROW_ON_ERROR));
@@ -392,7 +376,6 @@ class GitHubAppClient
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err  = curl_error($ch);
         curl_close($ch);
-
         if ($raw === false || $err !== '') {
             throw new \RuntimeException('[GitHubAppClient] curl error: ' . $err);
         }

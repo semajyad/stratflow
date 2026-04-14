@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace StratFlow\Models;
@@ -22,31 +23,22 @@ class KeyResultContribution
      * @param int      $score            AI relevance score 0–10
      * @param string|null $rationale     AI one-sentence rationale
      */
-    public static function upsert(
-        Database $db,
-        int      $keyResultId,
-        int      $storyGitLinkId,
-        int      $orgId,
-        int      $score,
-        ?string  $rationale
-    ): void {
+    public static function upsert(Database $db, int $keyResultId, int $storyGitLinkId, int $orgId, int $score, ?string $rationale): void
+    {
         $score = max(0, min(10, $score));
-        $db->query(
-            "INSERT INTO key_result_contributions
+        $db->query("INSERT INTO key_result_contributions
                 (key_result_id, story_git_link_id, org_id, ai_relevance_score, ai_rationale)
              VALUES (:kr_id, :link_id, :org_id, :score, :rationale)
              ON DUPLICATE KEY UPDATE
                ai_relevance_score = VALUES(ai_relevance_score),
                ai_rationale       = VALUES(ai_rationale),
-               scored_at          = NOW()",
-            [
+               scored_at          = NOW()", [
                 ':kr_id'     => $keyResultId,
                 ':link_id'   => $storyGitLinkId,
                 ':org_id'    => $orgId,
                 ':score'     => $score,
                 ':rationale' => $rationale,
-            ]
-        );
+            ]);
     }
 
     // ===========================
@@ -63,14 +55,11 @@ class KeyResultContribution
      */
     public static function findByKeyResultId(Database $db, int $keyResultId, int $orgId): array
     {
-        return $db->query(
-            "SELECT krc.*, sgl.ref_url, sgl.ref_label
+        return $db->query("SELECT krc.*, sgl.ref_url, sgl.ref_label
                FROM key_result_contributions krc
                JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
               WHERE krc.key_result_id = :kr_id AND krc.org_id = :oid
-              ORDER BY krc.scored_at DESC",
-            [':kr_id' => $keyResultId, ':oid' => $orgId]
-        )->fetchAll();
+              ORDER BY krc.scored_at DESC", [':kr_id' => $keyResultId, ':oid' => $orgId])->fetchAll();
     }
 
     /**
@@ -86,16 +75,12 @@ class KeyResultContribution
             return [];
         }
         $placeholders = implode(',', array_fill(0, count($krIds), '?'));
-        $rows = $db->query(
-            "SELECT krc.*, sgl.ref_url, sgl.ref_label
+        $rows = $db->query("SELECT krc.*, sgl.ref_url, sgl.ref_label
                FROM key_result_contributions krc
                JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
               WHERE krc.key_result_id IN ({$placeholders})
                 AND krc.org_id = ?
-              ORDER BY krc.scored_at DESC",
-            [...$krIds, $orgId]
-        )->fetchAll();
-
+              ORDER BY krc.scored_at DESC", [...$krIds, $orgId])->fetchAll();
         $grouped = [];
         foreach ($rows as $row) {
             $grouped[(int) $row['key_result_id']][] = $row;
@@ -112,20 +97,13 @@ class KeyResultContribution
      * @param int      $limit        Max rows to return (default 10)
      * @return array
      */
-    public static function findRecentByKeyResultId(
-        Database $db,
-        int      $keyResultId,
-        int      $orgId,
-        int      $limit = 10
-    ): array {
-        return $db->query(
-            "SELECT krc.ai_relevance_score, krc.ai_rationale, sgl.ref_label
+    public static function findRecentByKeyResultId(Database $db, int $keyResultId, int $orgId, int $limit = 10): array
+    {
+        return $db->query("SELECT krc.ai_relevance_score, krc.ai_rationale, sgl.ref_label
                FROM key_result_contributions krc
                JOIN story_git_links sgl ON krc.story_git_link_id = sgl.id
               WHERE krc.key_result_id = :kr_id AND krc.org_id = :oid
               ORDER BY krc.scored_at DESC
-              LIMIT :lim",
-            [':kr_id' => $keyResultId, ':oid' => $orgId, ':lim' => $limit]
-        )->fetchAll();
+              LIMIT :lim", [':kr_id' => $keyResultId, ':oid' => $orgId, ':lim' => $limit])->fetchAll();
     }
 }

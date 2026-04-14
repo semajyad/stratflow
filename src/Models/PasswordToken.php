@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PasswordToken Model
  *
@@ -36,22 +37,18 @@ class PasswordToken
     {
         // Invalidate any existing tokens for this user
         self::invalidateForUser($db, $userId);
-
         $token     = bin2hex(random_bytes(32));
         $tokenHash = self::hashToken($token);
-        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 hours
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400);
+// 24 hours
 
-        $db->query(
-            "INSERT INTO password_tokens (user_id, token, type, expires_at)
-             VALUES (:user_id, :token, :type, :expires_at)",
-            [
+        $db->query("INSERT INTO password_tokens (user_id, token, type, expires_at)
+             VALUES (:user_id, :token, :type, :expires_at)", [
                 ':user_id'    => $userId,
                 ':token'      => $tokenHash,
                 ':type'       => $type,
                 ':expires_at' => $expiresAt,
-            ]
-        );
-
+            ]);
         return $token;
     }
 
@@ -65,18 +62,14 @@ class PasswordToken
     public static function findByToken(Database $db, string $token): ?array
     {
         $hashedToken = self::hashToken($token);
-        $stmt = $db->query(
-            "SELECT * FROM password_tokens
+        $stmt = $db->query("SELECT * FROM password_tokens
              WHERE (token = :token OR token = :legacy_token)
                AND expires_at > NOW()
                AND used_at IS NULL
-             LIMIT 1",
-            [
+             LIMIT 1", [
                 ':token'        => $hashedToken,
                 ':legacy_token' => $token,
-            ]
-        );
-
+            ]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -89,10 +82,7 @@ class PasswordToken
      */
     public static function markUsed(Database $db, int $id): void
     {
-        $db->query(
-            "UPDATE password_tokens SET used_at = NOW() WHERE id = :id",
-            [':id' => $id]
-        );
+        $db->query("UPDATE password_tokens SET used_at = NOW() WHERE id = :id", [':id' => $id]);
     }
 
     /**
@@ -115,9 +105,6 @@ class PasswordToken
      */
     public static function invalidateForUser(Database $db, int $userId): void
     {
-        $db->query(
-            "UPDATE password_tokens SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL",
-            [':user_id' => $userId]
-        );
+        $db->query("UPDATE password_tokens SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL", [':user_id' => $userId]);
     }
 }

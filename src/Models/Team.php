@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Team Model
  *
@@ -25,18 +26,14 @@ class Team
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO teams (org_id, name, description, capacity, jira_board_id)
-             VALUES (:org_id, :name, :description, :capacity, :jira_board_id)",
-            [
+        $db->query("INSERT INTO teams (org_id, name, description, capacity, jira_board_id)
+             VALUES (:org_id, :name, :description, :capacity, :jira_board_id)", [
                 ':org_id'        => $data['org_id'],
                 ':name'          => $data['name'],
                 ':description'   => $data['description'] ?? '',
                 ':capacity'      => $data['capacity'] ?? 0,
                 ':jira_board_id' => $data['jira_board_id'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -49,16 +46,12 @@ class Team
      */
     public static function findByOrgId(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT t.*, COUNT(tm.user_id) AS member_count
+        $stmt = $db->query("SELECT t.*, COUNT(tm.user_id) AS member_count
              FROM teams t
              LEFT JOIN team_members tm ON tm.team_id = t.id
              WHERE t.org_id = :org_id
              GROUP BY t.id
-             ORDER BY t.name ASC",
-            [':org_id' => $orgId]
-        );
-
+             ORDER BY t.name ASC", [':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -71,11 +64,7 @@ class Team
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM teams WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
-
+        $stmt = $db->query("SELECT * FROM teams WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -91,7 +80,6 @@ class Team
     private const UPDATABLE_COLUMNS = [
         'name', 'description', 'capacity', 'jira_board_id',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -100,21 +88,13 @@ class Team
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
-        $db->query(
-            "UPDATE teams SET {$setClauses} WHERE id = :id",
-            $bound
-        );
+        $db->query("UPDATE teams SET {$setClauses} WHERE id = :id", $bound);
     }
 
     /**

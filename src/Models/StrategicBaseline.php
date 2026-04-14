@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StrategicBaseline Model
  *
@@ -33,16 +34,11 @@ class StrategicBaseline
         $snapshotJson = is_array($data['snapshot_json'])
             ? json_encode($data['snapshot_json'])
             : $data['snapshot_json'];
-
-        $db->query(
-            "INSERT INTO strategic_baselines (project_id, snapshot_json)
-             VALUES (:project_id, :snapshot_json)",
-            [
+        $db->query("INSERT INTO strategic_baselines (project_id, snapshot_json)
+             VALUES (:project_id, :snapshot_json)", [
                 ':project_id'    => $data['project_id'],
                 ':snapshot_json' => $snapshotJson,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -59,15 +55,11 @@ class StrategicBaseline
      */
     public static function findLatestByProjectId(Database $db, int $projectId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM strategic_baselines
+        $stmt = $db->query("SELECT * FROM strategic_baselines
              WHERE project_id = :project_id
              ORDER BY created_at DESC
-             LIMIT 1",
-            [':project_id' => $projectId]
-        );
+             LIMIT 1", [':project_id' => $projectId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -80,13 +72,9 @@ class StrategicBaseline
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM strategic_baselines
+        $stmt = $db->query("SELECT * FROM strategic_baselines
              WHERE project_id = :project_id
-             ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 }

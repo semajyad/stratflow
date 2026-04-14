@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UploadController
  *
@@ -27,12 +28,11 @@ use StratFlow\Services\Prompts\SummaryPrompt;
 
 class UploadController
 {
-    protected Request       $request;
-    protected Response      $response;
-    protected Auth          $auth;
-    protected Database      $db;
-    protected array         $config;
-
+    protected Request $request;
+    protected Response $response;
+    protected Auth $auth;
+    protected Database $db;
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -57,7 +57,6 @@ class UploadController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -65,7 +64,6 @@ class UploadController
         }
 
         $documents = Document::findByProjectId($this->db, $projectId);
-
         $this->response->render('upload', [
             'user'          => $user,
             'project'       => $project,
@@ -74,7 +72,6 @@ class UploadController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -90,7 +87,6 @@ class UploadController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -107,10 +103,8 @@ class UploadController
 
         $pasteText = trim((string) $this->request->post('paste_text', ''));
         $uploadedFile = $this->request->file('document');
-
-        // Determine if we have a file upload or a text paste
+// Determine if we have a file upload or a text paste
         $hasFile = $uploadedFile !== null && $uploadedFile['error'] !== UPLOAD_ERR_NO_FILE;
-
         if (!$hasFile && $pasteText === '') {
             $_SESSION['flash_error'] = 'Please upload a file or paste text before submitting.';
             $this->response->redirect('/app/upload?project_id=' . $projectId);
@@ -125,8 +119,7 @@ class UploadController
         $originalName  = 'Pasted Text';
         $mimeType      = 'text/plain';
         $fileSize      = 0;
-
-        // Ensure uploads directory exists
+// Ensure uploads directory exists
         if (!is_dir($uploadDir)) {
             @mkdir($uploadDir, 0755, true);
         }
@@ -152,7 +145,7 @@ class UploadController
                 return;
             }
         } else {
-            // Text paste — treat as a virtual plain-text document
+        // Text paste — treat as a virtual plain-text document
             $extractedText = $pasteText;
             $fileSize      = strlen($pasteText);
         }
@@ -166,16 +159,13 @@ class UploadController
             'extracted_text' => $extractedText !== '' ? $extractedText : null,
             'uploaded_by'    => (int) $user['id'],
         ]);
-
         RateLimiter::record($this->db, RateLimiter::FILE_UPLOAD, $userId);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DOCUMENT_UPLOADED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'project_id'    => $projectId,
             'original_name' => $originalName,
             'mime_type'     => $mimeType,
             'file_size'     => $fileSize,
         ]);
-
         if ($extractedText !== '') {
             $_SESSION['flash_message'] = 'Document uploaded and text extracted. You can now generate an AI summary.';
         } else {
@@ -198,7 +188,6 @@ class UploadController
         $user       = $this->auth->user();
         $documentId = (int) $this->request->post('document_id', 0);
         $projectId  = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -228,7 +217,6 @@ class UploadController
         }
 
         Document::update($this->db, $documentId, ['ai_summary' => $aiSummary]);
-
         $_SESSION['flash_message'] = 'AI summary generated successfully.';
         $this->response->redirect('/app/upload?project_id=' . $projectId);
     }

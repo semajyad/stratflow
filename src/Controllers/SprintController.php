@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SprintController
  *
@@ -30,12 +31,11 @@ class SprintController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -60,7 +60,6 @@ class SprintController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -68,17 +67,14 @@ class SprintController
         }
 
         $sprints = Sprint::findByProjectId($this->db, $projectId);
-
-        // Load stories for each sprint
+// Load stories for each sprint
         foreach ($sprints as &$sprint) {
             $sprint['stories'] = SprintStory::findBySprintId($this->db, (int) $sprint['id']);
         }
         unset($sprint);
-
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
         $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
-
-        // Jira defaults are loaded client-side via /app/sprints/jira-defaults (background fetch)
+// Jira defaults are loaded client-side via /app/sprints/jira-defaults (background fetch)
         $jiraConnected = false;
         $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'connected') {
@@ -97,7 +93,6 @@ class SprintController
             'flash_message'   => $_SESSION['flash_message'] ?? null,
             'flash_error'     => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -116,7 +111,6 @@ class SprintController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
         $boardId   = (int) $this->request->get('board_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Not found'], 404);
@@ -138,7 +132,6 @@ class SprintController
             'next_sprint_number' => $localNextNumber,
             'suggested_capacity' => null,
         ];
-
         if ($boardId > 0) {
             $jiraIntegration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
             if ($jiraIntegration && ($jiraIntegration['status'] ?? '') === 'active') {
@@ -147,11 +140,9 @@ class SprintController
                     $spField   = $intConfig['field_mapping']['story_points_field'] ?? 'story_points';
                     $jira      = new \StratFlow\Services\JiraService($this->config['jira'], $jiraIntegration, $this->db);
                     $defaults  = $jira->getSprintDefaults($boardId, $spField);
-
                     $result['suggested_start']    = $defaults['suggested_start']    ?? null;
                     $result['sprint_length_days'] = $defaults['sprint_length_days'] ?? 14;
                     $result['suggested_capacity'] = $defaults['suggested_capacity'] ?? null;
-
                     // Jira's next sprint number wins if it's higher than local
                     if (!empty($defaults['next_sprint_number'])) {
                         $result['next_sprint_number'] = max($localNextNumber, (int) $defaults['next_sprint_number']);
@@ -173,7 +164,6 @@ class SprintController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -191,7 +181,6 @@ class SprintController
         $endDate      = $this->request->post('end_date', '') ?: null;
         $teamCapacity = $this->request->post('team_capacity', '');
         $teamId       = $this->request->post('team_id', '') ?: null;
-
         Sprint::create($this->db, [
             'project_id'    => $projectId,
             'name'          => $name,
@@ -200,7 +189,6 @@ class SprintController
             'team_capacity' => $teamCapacity !== '' ? (int) $teamCapacity : null,
             'team_id'       => $teamId ? (int) $teamId : null,
         ]);
-
         $_SESSION['flash_message'] = 'Sprint created.';
         $this->response->redirect('/app/sprints?project_id=' . $projectId);
     }
@@ -214,7 +202,6 @@ class SprintController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $sprint = Sprint::findById($this->db, (int) $id);
         if ($sprint === null) {
             $this->response->redirect('/app/home');
@@ -230,9 +217,7 @@ class SprintController
         $startDate    = $this->request->post('start_date', '') ?: null;
         $endDate      = $this->request->post('end_date', '') ?: null;
         $teamCapacity = $this->request->post('team_capacity', '');
-
         $teamId = $this->request->post('team_id', '');
-
         Sprint::update($this->db, $id, [
             'name'          => trim((string) $this->request->post('name', $sprint['name'])),
             'start_date'    => $startDate,
@@ -240,7 +225,6 @@ class SprintController
             'team_capacity' => $teamCapacity !== '' ? (int) $teamCapacity : null,
             'team_id'       => $teamId !== '' ? (int) $teamId : null,
         ]);
-
         $_SESSION['flash_message'] = 'Sprint updated.';
         $this->response->redirect('/app/sprints?project_id=' . $sprint['project_id']);
     }
@@ -254,7 +238,6 @@ class SprintController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $sprint = Sprint::findById($this->db, (int) $id);
         if ($sprint === null) {
             $this->response->redirect('/app/home');
@@ -269,7 +252,7 @@ class SprintController
         }
 
         try {
-            // Delete sprint stories first, then sprint
+// Delete sprint stories first, then sprint
             SprintStory::deleteBySprintId($this->db, (int) $id);
             Sprint::delete($this->db, (int) $id);
             $_SESSION['flash_message'] = 'Sprint deleted. Stories returned to backlog.';
@@ -290,11 +273,9 @@ class SprintController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $body     = json_decode($this->request->body(), true);
         $sprintId = (int) ($body['sprint_id'] ?? 0);
         $storyId  = (int) ($body['story_id'] ?? 0);
-
         if ($sprintId === 0 || $storyId === 0) {
             $this->response->json(['status' => 'error', 'message' => 'Missing sprint_id or story_id'], 400);
             return;
@@ -325,9 +306,7 @@ class SprintController
         }
 
         SprintStory::assign($this->db, $sprintId, $storyId);
-
         $load = SprintStory::getSprintLoad($this->db, $sprintId);
-
         $this->response->json(['status' => 'ok', 'sprint_load' => $load]);
     }
 
@@ -340,11 +319,9 @@ class SprintController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $body     = json_decode($this->request->body(), true);
         $sprintId = (int) ($body['sprint_id'] ?? 0);
         $storyId  = (int) ($body['story_id'] ?? 0);
-
         if ($sprintId === 0 || $storyId === 0) {
             $this->response->json(['status' => 'error', 'message' => 'Missing sprint_id or story_id'], 400);
             return;
@@ -363,9 +340,7 @@ class SprintController
         }
 
         SprintStory::unassign($this->db, $sprintId, $storyId);
-
         $load = SprintStory::getSprintLoad($this->db, $sprintId);
-
         $this->response->json(['status' => 'ok', 'sprint_load' => $load]);
     }
 
@@ -380,7 +355,6 @@ class SprintController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -389,7 +363,6 @@ class SprintController
 
         $sprints     = Sprint::findByProjectId($this->db, $projectId);
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
-
         if (empty($sprints)) {
             $_SESSION['flash_error'] = 'Create at least one sprint before auto-allocating.';
             $this->response->redirect('/app/sprints?project_id=' . $projectId);
@@ -418,12 +391,7 @@ class SprintController
             $storyLines[] = "- Story ID {$st['id']}: \"{$st['title']}\", priority: {$st['priority_number']}, size: {$size} pts{$blocked}";
         }
 
-        $prompt = str_replace(
-            ['{sprints}', '{stories}'],
-            [implode("\n", $sprintLines), implode("\n", $storyLines)],
-            SprintPrompt::ALLOCATE_PROMPT
-        );
-
+        $prompt = str_replace(['{sprints}', '{stories}'], [implode("\n", $sprintLines), implode("\n", $storyLines)], SprintPrompt::ALLOCATE_PROMPT);
         try {
             $gemini      = new GeminiService($this->config);
             $assignments = $gemini->generateJson($prompt, '');
@@ -443,11 +411,9 @@ class SprintController
         $validSprintIds = array_column($sprints, 'id');
         $validStoryIds  = array_column($unallocated, 'id');
         $assignedCount  = 0;
-
         foreach ($assignments as $assignment) {
             $sId = (int) ($assignment['sprint_id'] ?? 0);
             $stId = (int) ($assignment['story_id'] ?? 0);
-
             if (in_array($sId, $validSprintIds) && in_array($stId, $validStoryIds)) {
                 SprintStory::assign($this->db, $sId, $stId);
                 $assignedCount++;
@@ -469,7 +435,6 @@ class SprintController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -479,9 +444,7 @@ class SprintController
         $startDate    = $this->request->post('start_date', '');
         $sprintLength = (int) $this->request->post('sprint_length', 14);
         $capacity     = (int) $this->request->post('capacity', 0);
-
         $numSprints   = (int) $this->request->post('num_sprints', 0);
-
         if ($startDate === '' || $capacity <= 0 || $numSprints <= 0) {
             $_SESSION['flash_error'] = 'Please provide a start date, number of sprints, and default capacity.';
             $this->response->redirect('/app/sprints?project_id=' . $projectId);
@@ -491,7 +454,6 @@ class SprintController
         // Count existing sprints to continue numbering
         $existingSprints = Sprint::findByProjectId($this->db, $projectId);
         $nextNum = count($existingSprints) + 1;
-
         $currentDate = new \DateTime($startDate);
         $sprintsCreated = 0;
 
@@ -523,7 +485,6 @@ class SprintController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -532,7 +493,6 @@ class SprintController
 
         $sprints     = Sprint::findByProjectId($this->db, $projectId);
         $unallocated = UserStory::findUnallocated($this->db, $projectId);
-
         if (empty($sprints) || empty($unallocated)) {
             $_SESSION['flash_error'] = 'Need both sprints and unallocated stories to auto-fill.';
             $this->response->redirect('/app/sprints?project_id=' . $projectId);
@@ -543,30 +503,33 @@ class SprintController
         // Takes stories in priority order but if the next story doesn't fit,
         // tries smaller stories further down the queue to maximise utilisation.
         $assigned = 0;
-        $remaining_stories = $unallocated; // Copy — we'll remove assigned ones
+        $remaining_stories = $unallocated;
+// Copy — we'll remove assigned ones
 
         foreach ($sprints as $sprint) {
-            if (empty($remaining_stories)) break;
+            if (empty($remaining_stories)) {
+                break;
+            }
 
             $sprintId    = (int) $sprint['id'];
             $capacity    = (int) ($sprint['team_capacity'] ?? 0);
             $currentLoad = SprintStory::getSprintLoad($this->db, $sprintId);
             $remaining   = $capacity - $currentLoad;
-
-            if ($remaining <= 0) continue;
+            if ($remaining <= 0) {
+                continue;
+            }
 
             // Take stories in priority order; skip ones that don't fit
             // (they'll be tried in the next sprint)
             $still_remaining = [];
             foreach ($remaining_stories as $story) {
                 $size = (int) ($story['size'] ?? 1);
-
                 if ($remaining > 0 && $size <= $remaining) {
                     SprintStory::assign($this->db, $sprintId, (int) $story['id']);
                     $remaining -= $size;
                     $assigned++;
                 } else {
-                    // Doesn't fit this sprint — keep for next sprint
+    // Doesn't fit this sprint — keep for next sprint
                     $still_remaining[] = $story;
                 }
             }

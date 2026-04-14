@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ApiProjectsController
  *
@@ -22,12 +23,11 @@ use StratFlow\Models\Project;
 
 class ApiProjectsController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -47,14 +47,12 @@ class ApiProjectsController
     {
         $user   = $this->auth->user();
         $projects = Project::findAccessibleByOrgId($this->db, $user);
-
         $data = array_map(fn($p) => [
             'id'         => (int) $p['id'],
             'name'       => $p['name'],
             'visibility' => $p['visibility'] ?? 'everyone',
             'created_at' => $p['created_at'],
         ], $projects);
-
         $this->response->json(['data' => $data, 'count' => count($data)]);
     }
 }

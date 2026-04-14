@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AuthController
  *
@@ -31,7 +32,6 @@ class AuthController
     protected Auth $auth;
     protected Database $db;
     protected array $config;
-
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -60,7 +60,6 @@ class AuthController
             'error'         => $_SESSION['login_error'] ?? null,
             'flash_message' => $_SESSION['flash_message'] ?? null,
         ]);
-
         unset($_SESSION['login_error'], $_SESSION['flash_message']);
     }
 
@@ -78,23 +77,20 @@ class AuthController
         $password = (string) $this->request->post('password', '');
         $ip       = $this->request->ip();
         $ua       = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
         if ($this->auth->isRateLimited($ip)) {
             AuditLogger::log($this->db, null, AuditLogger::LOGIN_FAILURE, $ip, $ua, [
                 'email'  => $email,
                 'reason' => 'rate_limited',
             ]);
-
             $this->response->render('login', [
-                'error' => 'Too many login attempts. Please try again in 15 minutes.',
+                        'error' => 'Too many login attempts. Please try again in 15 minutes.',
             ]);
             return;
         }
 
         $result = $this->auth->attempt($email, $password);
-
         if ($result === 'mfa_required') {
-            // Credentials valid but MFA needed — redirect to TOTP challenge
+        // Credentials valid but MFA needed — redirect to TOTP challenge
             $this->response->redirect('/login/mfa');
             return;
         }
@@ -104,10 +100,8 @@ class AuthController
             AuditLogger::log($this->db, (int) $user['id'], AuditLogger::LOGIN_SUCCESS, $ip, $ua, [
                 'email' => $email,
             ]);
-
             $role = $user['role'] ?? 'user';
-
-            // Developers always land on token management — MCP is their primary interface.
+// Developers always land on token management — MCP is their primary interface.
             if (PermissionService::isDeveloper($user)) {
                 unset($_SESSION['_intended_url']);
                 $this->response->redirect('/app/account/tokens');
@@ -117,8 +111,7 @@ class AuthController
             // Redirect to intended URL (if session expired mid-flow), otherwise role-aware default
             $intendedUrl = $_SESSION['_intended_url'] ?? null;
             unset($_SESSION['_intended_url']);
-
-            // Validate the intended URL is a safe internal path before redirecting
+// Validate the intended URL is a safe internal path before redirecting
             if ($intendedUrl !== null && str_starts_with($intendedUrl, '/app/')) {
                 $this->response->redirect($intendedUrl);
                 return;
@@ -140,7 +133,6 @@ class AuthController
             'email'  => $email,
             'reason' => 'invalid_credentials',
         ]);
-
         $this->auth->recordFailedAttempt($ip);
         $this->response->render('login', [
             'error' => 'Invalid email or password.',
@@ -155,7 +147,6 @@ class AuthController
         $user = $this->auth->user();
         $ip   = $this->request->ip();
         $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
         if ($user) {
             AuditLogger::log($this->db, (int) $user['id'], AuditLogger::LOGOUT, $ip, $ua, [
                 'email' => $user['email'],
@@ -164,7 +155,6 @@ class AuthController
 
         // Clear project context so user doesn't land on stale project next login
         unset($_SESSION['_last_project_id']);
-
         $this->auth->logout();
         $this->response->redirect('/login');
     }
@@ -205,8 +195,7 @@ class AuthController
         $code = trim((string) $this->request->post('code', ''));
         $ip   = $this->request->ip();
         $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
-        // Rate-limit MFA attempts to prevent TOTP brute-force (shared bucket with login)
+// Rate-limit MFA attempts to prevent TOTP brute-force (shared bucket with login)
         if ($this->auth->isRateLimited($ip)) {
             AuditLogger::log($this->db, (int) ($_SESSION['_mfa_pending_user_id'] ?? 0), AuditLogger::LOGIN_FAILURE, $ip, $ua, [
                 'reason' => 'mfa_rate_limited',
@@ -222,7 +211,6 @@ class AuthController
             AuditLogger::log($this->db, (int) ($user['id'] ?? 0), AuditLogger::LOGIN_SUCCESS, $ip, $ua, [
                 'method' => 'mfa_totp',
             ]);
-
             $intendedUrl = $_SESSION['_intended_url'] ?? null;
             unset($_SESSION['_intended_url']);
             if ($intendedUrl !== null && str_starts_with($intendedUrl, '/app/')) {
@@ -236,7 +224,6 @@ class AuthController
         AuditLogger::log($this->db, (int) ($_SESSION['_mfa_pending_user_id'] ?? 0), AuditLogger::LOGIN_FAILURE, $ip, $ua, [
             'reason' => 'mfa_code_invalid',
         ]);
-
         $this->auth->recordFailedAttempt($ip);
         $_SESSION['mfa_error'] = 'Invalid code. Please try again.';
         $this->response->redirect('/login/mfa');
@@ -253,17 +240,11 @@ class AuthController
     public function showMfaSetup(): void
     {
         $user = $this->auth->user();
-        $row  = $this->db->query(
-            'SELECT mfa_enabled, mfa_recovery_codes FROM users WHERE id = ? LIMIT 1',
-            [(int) $user['id']]
-        )->fetch();
-
+        $row  = $this->db->query('SELECT mfa_enabled, mfa_recovery_codes FROM users WHERE id = ? LIMIT 1', [(int) $user['id']])->fetch();
         $secret  = TotpService::generateSecret();
         $uri     = TotpService::uri($secret, (string) $user['email']);
-
-        // Store provisioning secret in session so verify can pick it up
+// Store provisioning secret in session so verify can pick it up
         $_SESSION['_mfa_provisioning_secret'] = $secret;
-
         $this->response->render('mfa-setup', [
             'mfa_enabled'  => (bool) ($row['mfa_enabled'] ?? false),
             'totp_secret'  => $secret,
@@ -281,7 +262,6 @@ class AuthController
         $user   = $this->auth->user();
         $code   = trim((string) $this->request->post('code', ''));
         $secret = (string) ($_SESSION['_mfa_provisioning_secret'] ?? '');
-
         if ($secret === '' || !TotpService::verify($secret, $code)) {
             $this->response->redirect('/app/account/mfa?error=invalid_code');
             return;
@@ -290,11 +270,15 @@ class AuthController
         $recoveryCodes = $this->auth->enableMfa((int) $user['id'], $secret);
         unset($_SESSION['_mfa_provisioning_secret']);
 
-        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'mfa_enabled']);
-
-        // Store plaintext codes in flash — shown ONCE then gone
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::SETTINGS_CHANGED,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'mfa_enabled']
+        );
+// Store plaintext codes in flash — shown ONCE then gone
         $_SESSION['_mfa_recovery_codes_flash'] = $recoveryCodes;
         $this->response->redirect('/app/account/mfa/recovery-codes');
     }
@@ -307,7 +291,6 @@ class AuthController
     {
         $codes = $_SESSION['_mfa_recovery_codes_flash'] ?? null;
         unset($_SESSION['_mfa_recovery_codes_flash']);
-
         if ($codes === null) {
             $this->response->redirect('/app/account/mfa');
             return;
@@ -326,24 +309,17 @@ class AuthController
         $password = (string) $this->request->post('password', '');
         $ip       = $this->request->ip();
         $ua       = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
-        // Re-verify password before disabling MFA
-        $row = $this->db->query(
-            'SELECT password_hash FROM users WHERE id = ? LIMIT 1',
-            [(int) $user['id']]
-        )->fetch();
-
+// Re-verify password before disabling MFA
+        $row = $this->db->query('SELECT password_hash FROM users WHERE id = ? LIMIT 1', [(int) $user['id']])->fetch();
         if (!$row || !password_verify($password, (string) $row['password_hash'])) {
             $this->response->redirect('/app/account/mfa?error=wrong_password');
             return;
         }
 
         $this->auth->disableMfa((int) $user['id']);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED, $ip, $ua, [
             'action' => 'mfa_disabled',
         ]);
-
         $this->response->redirect('/app/account/mfa?success=disabled');
     }
 
@@ -378,8 +354,7 @@ class AuthController
         $email = trim((string) $this->request->post('email', ''));
         $ip    = $this->request->ip();
         $ua    = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
-        // Rate limit password reset requests: 3 per hour per IP (PCI-DSS)
+// Rate limit password reset requests: 3 per hour per IP (PCI-DSS)
         if (!RateLimiter::check($this->db, RateLimiter::PASSWORD_RESET, $ip, 3, 3600)) {
             $this->response->render('forgot-password', [
                 'success' => true, // Show generic success to prevent enumeration
@@ -388,18 +363,14 @@ class AuthController
         }
 
         RateLimiter::record($this->db, RateLimiter::PASSWORD_RESET, $ip);
-
         AuditLogger::log($this->db, null, AuditLogger::PASSWORD_RESET_REQUEST, $ip, $ua, [
             'email' => $email,
         ]);
-
-        // Always show success to prevent user enumeration
+// Always show success to prevent user enumeration
         $user = User::findByEmail($this->db, $email);
-
         if ($user && $user['is_active']) {
             $token = PasswordToken::create($this->db, (int) $user['id'], 'reset_password');
             $resetUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
-
             $emailService = new EmailService($this->config);
             $emailService->sendPasswordReset($email, $user['full_name'], $resetUrl);
         }
@@ -420,7 +391,6 @@ class AuthController
     public function showSetPassword(string $token): void
     {
         $tokenRow = PasswordToken::findByToken($this->db, $token);
-
         $this->response->render('set-password', [
             'token'                => $token,
             'token_valid'          => $tokenRow !== null,
@@ -440,7 +410,6 @@ class AuthController
     public function setPassword(string $token): void
     {
         $tokenRow = PasswordToken::findByToken($this->db, $token);
-
         if ($tokenRow === null) {
             $this->response->render('set-password', [
                 'token'       => $token,
@@ -451,8 +420,7 @@ class AuthController
 
         $password     = (string) $this->request->post('password', '');
         $confirmation = (string) $this->request->post('password_confirmation', '');
-
-        // Enforce password policy (HIPAA / PCI-DSS)
+// Enforce password policy (HIPAA / PCI-DSS)
         $policyErrors = PasswordPolicy::validate($password);
         if (!empty($policyErrors)) {
             $this->response->render('set-password', [
@@ -476,19 +444,15 @@ class AuthController
 
         $ip = $this->request->ip();
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
-        // Update user password and mark token as used
+// Update user password and mark token as used
         User::update($this->db, (int) $tokenRow['user_id'], [
             'password_hash'      => password_hash($password, PASSWORD_DEFAULT),
             'password_changed_at' => date('Y-m-d H:i:s'),
         ]);
-
         PasswordToken::markUsed($this->db, (int) $tokenRow['id']);
-
         AuditLogger::log($this->db, (int) $tokenRow['user_id'], AuditLogger::PASSWORD_CHANGE, $ip, $ua, [
             'method' => 'token_reset',
         ]);
-
         $_SESSION['login_error'] = null;
         $_SESSION['flash_message'] = 'Your password has been set. You can now sign in.';
         $this->response->redirect('/login');

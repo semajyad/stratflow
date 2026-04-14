@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PersonalAccessToken Model
  *
@@ -30,8 +31,7 @@ class PersonalAccessToken
         'stories:write-status',
         'stories:assign',
     ];
-
-    // ===========================
+// ===========================
     // TOKEN GENERATION
     // ===========================
 
@@ -84,26 +84,15 @@ class PersonalAccessToken
      * @param \DateTimeImmutable|null $expiresAt   Null = no expiry
      * @return array  Row data including 'raw' key (not in DB)
      */
-    public static function create(
-        Database $db,
-        int $userId,
-        int $orgId,
-        string $name,
-        string $raw,
-        string $prefix,
-        ?array $scopes = null,
-        ?\DateTimeImmutable $expiresAt = null
-    ): array {
+    public static function create(Database $db, int $userId, int $orgId, string $name, string $raw, string $prefix, ?array $scopes = null, ?\DateTimeImmutable $expiresAt = null): array
+    {
         $tokenHash = self::hash($raw);
         $expiresAtStr = $expiresAt?->format('Y-m-d H:i:s');
         $scopesJson = json_encode($scopes ?? self::DEFAULT_SCOPES, JSON_UNESCAPED_SLASHES);
-
-        $db->query(
-            "INSERT INTO personal_access_tokens
+        $db->query("INSERT INTO personal_access_tokens
                 (user_id, org_id, name, token_hash, token_prefix, scopes, expires_at)
              VALUES
-                (:user_id, :org_id, :name, :token_hash, :token_prefix, :scopes, :expires_at)",
-            [
+                (:user_id, :org_id, :name, :token_hash, :token_prefix, :scopes, :expires_at)", [
                 ':user_id'      => $userId,
                 ':org_id'       => $orgId,
                 ':name'         => $name,
@@ -111,11 +100,8 @@ class PersonalAccessToken
                 ':token_prefix' => $prefix,
                 ':scopes'       => $scopesJson,
                 ':expires_at'   => $expiresAtStr,
-            ]
-        );
-
+            ]);
         $id = $db->lastInsertId();
-
         return [
             'id'           => $id,
             'user_id'      => $userId,
@@ -144,15 +130,11 @@ class PersonalAccessToken
      */
     public static function findByHash(Database $db, string $hash): ?array
     {
-        $row = $db->query(
-            "SELECT id, user_id, org_id, name, token_prefix, scopes, last_used_at, expires_at, created_at
+        $row = $db->query("SELECT id, user_id, org_id, name, token_prefix, scopes, last_used_at, expires_at, created_at
              FROM personal_access_tokens
              WHERE token_hash = :hash
                AND revoked_at IS NULL
-               AND (expires_at IS NULL OR expires_at > NOW())",
-            [':hash' => $hash]
-        )->fetch();
-
+               AND (expires_at IS NULL OR expires_at > NOW())", [':hash' => $hash])->fetch();
         return $row ?: null;
     }
 
@@ -166,15 +148,12 @@ class PersonalAccessToken
      */
     public static function listForUser(Database $db, int $userId, int $orgId): array
     {
-        return $db->query(
-            "SELECT id, name, token_prefix, scopes, last_used_at, expires_at, created_at
+        return $db->query("SELECT id, name, token_prefix, scopes, last_used_at, expires_at, created_at
               FROM personal_access_tokens
               WHERE user_id = :user_id
                 AND org_id  = :org_id
                AND revoked_at IS NULL
-             ORDER BY created_at DESC",
-            [':user_id' => $userId, ':org_id' => $orgId]
-        )->fetchAll() ?: [];
+             ORDER BY created_at DESC", [':user_id' => $userId, ':org_id' => $orgId])->fetchAll() ?: [];
     }
 
     // ===========================
@@ -194,16 +173,12 @@ class PersonalAccessToken
      */
     public static function revoke(Database $db, int $id, int $userId, int $orgId): bool
     {
-        $stmt = $db->query(
-            "UPDATE personal_access_tokens
+        $stmt = $db->query("UPDATE personal_access_tokens
              SET revoked_at = NOW()
              WHERE id      = :id
                AND user_id = :user_id
                AND org_id  = :org_id
-               AND revoked_at IS NULL",
-            [':id' => $id, ':user_id' => $userId, ':org_id' => $orgId]
-        );
-
+               AND revoked_at IS NULL", [':id' => $id, ':user_id' => $userId, ':org_id' => $orgId]);
         return $stmt->rowCount() > 0;
     }
 
@@ -218,14 +193,11 @@ class PersonalAccessToken
     public static function touchLastUsed(Database $db, int $id, string $ip): void
     {
         try {
-            $db->query(
-                "UPDATE personal_access_tokens
+            $db->query("UPDATE personal_access_tokens
                  SET last_used_at = NOW(), last_used_ip = :ip
-                 WHERE id = :id",
-                [':ip' => $ip, ':id' => $id]
-            );
+                 WHERE id = :id", [':ip' => $ip, ':id' => $id]);
         } catch (\Throwable) {
-            // Non-critical — do not surface errors for audit touches
+        // Non-critical — do not surface errors for audit touches
         }
     }
 }

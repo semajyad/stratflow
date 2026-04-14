@@ -1,4 +1,5 @@
 <?php
+
 /**
  * XeroController
  *
@@ -30,12 +31,11 @@ class XeroController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -59,7 +59,6 @@ class XeroController
     {
         $state = bin2hex(random_bytes(16));
         $_SESSION['xero_oauth_state'] = $state;
-
         $xero = new XeroService($this->config);
         $this->response->redirect($xero->authUrl($state));
     }
@@ -83,7 +82,6 @@ class XeroController
         $state    = (string) $this->request->get('state', '');
         $expected = $_SESSION['xero_oauth_state'] ?? '';
         unset($_SESSION['xero_oauth_state']);
-
         if (!hash_equals($expected, $state) || $expected === '') {
             $_SESSION['flash_error'] = 'Xero OAuth state mismatch. Please try again.';
             $this->response->redirect('/app/admin/integrations');
@@ -101,8 +99,7 @@ class XeroController
             $xero   = new XeroService($this->config);
             $tokens = $xero->exchangeCode($code);
             $xero->setTokens($tokens);
-
-            // Fetch the first authorised tenant
+// Fetch the first authorised tenant
             $tenants  = $xero->getTenants();
             $tenantId = $tenants[0]['tenantId'] ?? null;
             if ($tenantId === null) {
@@ -116,10 +113,8 @@ class XeroController
                 'tenant_id'     => $tenantId,
                 'tenant_name'   => $tenants[0]['tenantName'] ?? 'Unknown',
             ];
-
             $user  = $this->auth->user();
             $orgId = (int) $user['org_id'];
-
             $existing = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
             if ($existing) {
                 Integration::update($this->db, (int) $existing['id'], [
@@ -154,7 +149,6 @@ class XeroController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         if (!$xeroIntegration || $xeroIntegration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Xero is not connected.';
@@ -165,30 +159,20 @@ class XeroController
         try {
             \Stripe\Stripe::setApiKey($this->config['stripe']['secret_key'] ?? '');
             $stripeInvoice = \Stripe\Invoice::retrieve($id);
-
             $config = json_decode($xeroIntegration['config_json'] ?? '{}', true) ?: [];
             $xero   = new XeroService($this->config);
             $xero->setTokens($config);
-
             $contactName = $stripeInvoice->customer_name
                 ?? $stripeInvoice->customer_email
                 ?? 'Customer';
             $amount      = (($stripeInvoice->amount_paid ?? $stripeInvoice->amount_due ?? 0)) / 100;
             $currency    = strtoupper($stripeInvoice->currency ?? 'NZD');
             $description = 'StratFlow Subscription — ' . date('M Y', $stripeInvoice->created ?? time());
-
-            $payload = XeroService::buildInvoicePayload(
-                $contactName,
-                $description,
-                $amount,
-                $currency,
-                $id   // Stripe invoice ID stored as reference for dedup tracking
-            );
+            $payload = XeroService::buildInvoicePayload($contactName, $description, $amount, $currency, $id);   // Stripe invoice ID stored as reference for dedup tracking
 
             $invoice = $xero->createInvoice($config['tenant_id'], $payload);
             $this->cacheXeroInvoice($orgId, $invoice);
             $this->persistTokens($xeroIntegration, $xero);
-
             $_SESSION['flash_message'] = 'Invoice pushed to Xero successfully.';
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Failed to push to Xero: ' . $e->getMessage();
@@ -206,7 +190,6 @@ class XeroController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         if ($integration) {
             Integration::update($this->db, (int) $integration['id'], ['status' => 'disconnected']);
@@ -214,7 +197,6 @@ class XeroController
 
         // Clear cached invoices
         $this->db->query("DELETE FROM xero_invoices WHERE org_id = :org_id", [':org_id' => $orgId]);
-
         $_SESSION['flash_message'] = 'Xero disconnected.';
         $this->response->redirect('/app/admin/integrations');
     }
@@ -232,24 +214,18 @@ class XeroController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Load Xero integration
+// Load Xero integration
         $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         $xeroConnected   = $xeroIntegration && $xeroIntegration['status'] === 'active';
-
-        // Load cached Xero invoices
+// Load cached Xero invoices
         $xeroInvoices = [];
         if ($xeroConnected) {
-            $stmt = $this->db->query(
-                "SELECT * FROM xero_invoices WHERE org_id = :org_id ORDER BY invoice_date DESC, created_at DESC",
-                [':org_id' => $orgId]
-            );
+            $stmt = $this->db->query("SELECT * FROM xero_invoices WHERE org_id = :org_id ORDER BY invoice_date DESC, created_at DESC", [':org_id' => $orgId]);
             $xeroInvoices = $stmt->fetchAll();
         }
 
         // Load Stripe invoices as fallback / supplement
         $stripeInvoices = $this->loadStripeInvoices($orgId);
-
         $this->response->render('admin/invoices', [
             'user'             => $user,
             'xero_invoices'    => $xeroInvoices,
@@ -262,7 +238,6 @@ class XeroController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -275,7 +250,6 @@ class XeroController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         if (!$xeroIntegration || $xeroIntegration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Xero is not connected. Connect it under Integrations first.';
@@ -287,13 +261,11 @@ class XeroController
             $config   = json_decode($xeroIntegration['config_json'] ?? '{}', true) ?: [];
             $xero     = new XeroService($this->config);
             $xero->setTokens($config);
-
             $contactName = trim((string) $this->request->post('contact_name', ''));
             $description = trim((string) $this->request->post('description', 'StratFlow Subscription'));
             $amount      = (float) $this->request->post('amount', '0');
             $currency    = strtoupper(trim((string) $this->request->post('currency', 'NZD')));
             $reference   = trim((string) $this->request->post('reference', ''));
-
             if ($contactName === '' || $amount <= 0) {
                 $_SESSION['flash_error'] = 'Contact name and a positive amount are required.';
                 $this->response->redirect('/app/admin/invoices');
@@ -302,13 +274,10 @@ class XeroController
 
             $payload = XeroService::buildInvoicePayload($contactName, $description, $amount, $currency, $reference);
             $invoice = $xero->createInvoice($config['tenant_id'], $payload);
-
-            // Cache locally
+// Cache locally
             $this->cacheXeroInvoice($orgId, $invoice);
-
-            // Persist refreshed tokens
+// Persist refreshed tokens
             $this->persistTokens($xeroIntegration, $xero);
-
             $_SESSION['flash_message'] = 'Invoice created in Xero: ' . htmlspecialchars($invoice['InvoiceNumber'] ?? '');
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Failed to create Xero invoice: ' . $e->getMessage();
@@ -326,7 +295,6 @@ class XeroController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $xeroIntegration = Integration::findByOrgAndProvider($this->db, $orgId, 'xero');
         if (!$xeroIntegration || $xeroIntegration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Xero is not connected.';
@@ -338,15 +306,12 @@ class XeroController
             $config   = json_decode($xeroIntegration['config_json'] ?? '{}', true) ?: [];
             $xero     = new XeroService($this->config);
             $xero->setTokens($config);
-
             $invoices = $xero->listInvoices($config['tenant_id']);
-
             foreach ($invoices as $invoice) {
                 $this->cacheXeroInvoice($orgId, $invoice);
             }
 
             $this->persistTokens($xeroIntegration, $xero);
-
             $_SESSION['flash_message'] = 'Synced ' . count($invoices) . ' invoice' . (count($invoices) !== 1 ? 's' : '') . ' from Xero.';
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Xero sync failed: ' . $e->getMessage();
@@ -372,8 +337,7 @@ class XeroController
             return;
         }
 
-        $this->db->query(
-            "INSERT INTO xero_invoices
+        $this->db->query("INSERT INTO xero_invoices
              (org_id, xero_invoice_id, invoice_number, contact_name, status,
               currency_code, amount_due, amount_paid, total, invoice_date, due_date, reference, xero_url)
              VALUES (:org_id, :xero_id, :number, :contact, :status,
@@ -390,8 +354,7 @@ class XeroController
                due_date       = VALUES(due_date),
                reference      = VALUES(reference),
                xero_url       = VALUES(xero_url),
-               synced_at      = NOW()",
-            [
+               synced_at      = NOW()", [
                 ':org_id'      => $orgId,
                 ':xero_id'     => $xeroId,
                 ':number'      => $invoice['InvoiceNumber'] ?? null,
@@ -405,8 +368,7 @@ class XeroController
                 ':due_date'    => !empty($invoice['DueDate']) ? substr($invoice['DueDate'], 0, 10) : null,
                 ':ref'         => $invoice['Reference'] ?? null,
                 ':url'         => $invoice['Url'] ?? null,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -440,10 +402,7 @@ class XeroController
                 return [];
             }
 
-            $stmt = $this->db->query(
-                "SELECT stripe_customer_id FROM organisations WHERE id = :id LIMIT 1",
-                [':id' => $orgId]
-            );
+            $stmt = $this->db->query("SELECT stripe_customer_id FROM organisations WHERE id = :id LIMIT 1", [':id' => $orgId]);
             $org = $stmt->fetch();
             if (!$org || empty($org['stripe_customer_id'])) {
                 return [];
@@ -454,7 +413,6 @@ class XeroController
                 'customer' => $org['stripe_customer_id'],
                 'limit'    => 24,
             ]);
-
             return $invoices->data ?? [];
         } catch (\Throwable) {
             return [];

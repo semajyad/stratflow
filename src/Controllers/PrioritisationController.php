@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PrioritisationController
  *
@@ -28,12 +29,11 @@ class PrioritisationController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -58,7 +58,6 @@ class PrioritisationController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -67,7 +66,6 @@ class PrioritisationController
 
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $framework = $project['selected_framework'] ?? 'rice';
-
         $this->response->render('prioritisation', [
             'user'                 => $user,
             'project'              => $project,
@@ -78,7 +76,6 @@ class PrioritisationController
             'flash_message'        => $_SESSION['flash_message'] ?? null,
             'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -94,7 +91,6 @@ class PrioritisationController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
         $framework = (string) $this->request->post('framework', 'rice');
-
         if (!in_array($framework, ['rice', 'wsjf'], true)) {
             $framework = 'rice';
         }
@@ -106,7 +102,6 @@ class PrioritisationController
         }
 
         Project::update($this->db, $projectId, ['selected_framework' => $framework], $orgId);
-
         $_SESSION['flash_message'] = 'Framework updated to ' . strtoupper($framework) . '.';
         $this->response->redirect('/app/prioritisation?project_id=' . $projectId);
     }
@@ -124,10 +119,8 @@ class PrioritisationController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $body  = json_decode($this->request->body(), true);
-
         $itemId = (int) ($body['item_id'] ?? 0);
         $scores = $body['scores'] ?? [];
-
         if ($itemId === 0 || empty($scores)) {
             $this->response->json(['status' => 'error', 'message' => 'Missing item_id or scores'], 400);
             return;
@@ -147,13 +140,10 @@ class PrioritisationController
         }
 
         $framework = $project['selected_framework'] ?? 'rice';
-
-        // Calculate final score
+// Calculate final score
         $finalScore = $this->calculateScore($framework, $scores);
         $scores['final_score'] = $finalScore;
-
         HLWorkItem::updateScores($this->db, $itemId, $scores);
-
         $this->response->json(['status' => 'ok', 'final_score' => round($finalScore, 1)]);
     }
 
@@ -168,7 +158,6 @@ class PrioritisationController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -177,7 +166,6 @@ class PrioritisationController
 
         $items   = HLWorkItem::findByProjectIdRankedByScore($this->db, $projectId);
         $updates = [];
-
         foreach ($items as $index => $item) {
             $updates[] = [
                 'id'              => (int) $item['id'],
@@ -207,7 +195,6 @@ class PrioritisationController
         $orgId     = (int) $user['org_id'];
         $body      = json_decode($this->request->body(), true);
         $projectId = (int) ($body['project_id'] ?? 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Project not found'], 404);
@@ -216,7 +203,6 @@ class PrioritisationController
 
         $framework = $project['selected_framework'] ?? 'rice';
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
-
         if (empty($workItems)) {
             $this->response->json(['status' => 'error', 'message' => 'No work items to score'], 400);
             return;
@@ -224,12 +210,10 @@ class PrioritisationController
 
         // Build input listing items
         $input = $this->buildAiInput($workItems);
-
-        // Select prompt based on framework
+// Select prompt based on framework
         $prompt = $framework === 'wsjf'
             ? PrioritisationPrompt::WSJF_PROMPT
             : PrioritisationPrompt::RICE_PROMPT;
-
         try {
             $gemini     = new GeminiService($this->config);
             $suggestions = $gemini->generateJson($prompt, $input);
@@ -267,7 +251,6 @@ class PrioritisationController
             $impact     = (float) ($scores['rice_impact'] ?? 0);
             $confidence = (float) ($scores['rice_confidence'] ?? 0);
             $effort     = (float) ($scores['rice_effort'] ?? 1);
-
             return $effort > 0 ? ($reach * $impact * $confidence) / $effort : 0;
         }
 
@@ -276,7 +259,6 @@ class PrioritisationController
         $tc   = (float) ($scores['wsjf_time_criticality'] ?? 0);
         $rr   = (float) ($scores['wsjf_risk_reduction'] ?? 0);
         $size = (float) ($scores['wsjf_job_size'] ?? 1);
-
         return $size > 0 ? ($bv + $tc + $rr) / $size : 0;
     }
 
@@ -289,7 +271,6 @@ class PrioritisationController
     private function buildAiInput(array $workItems): string
     {
         $lines = [];
-
         foreach ($workItems as $item) {
             $desc = !empty($item['description'])
                 ? ' - ' . mb_substr($item['description'], 0, 200)

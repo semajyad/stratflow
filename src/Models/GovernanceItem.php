@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GovernanceItem Model
  *
@@ -37,21 +38,16 @@ class GovernanceItem
         $proposedJson = is_array($data['proposed_change_json'])
             ? json_encode($data['proposed_change_json'])
             : $data['proposed_change_json'];
-
-        $db->query(
-            "INSERT INTO governance_queue
+        $db->query("INSERT INTO governance_queue
                 (project_id, change_type, proposed_change_json, status, reviewed_by)
              VALUES
-                (:project_id, :change_type, :proposed_change_json, :status, :reviewed_by)",
-            [
+                (:project_id, :change_type, :proposed_change_json, :status, :reviewed_by)", [
                 ':project_id'          => $data['project_id'],
                 ':change_type'         => $data['change_type'],
                 ':proposed_change_json' => $proposedJson,
                 ':status'              => $data['status'] ?? 'pending',
                 ':reviewed_by'         => $data['reviewed_by'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -68,14 +64,10 @@ class GovernanceItem
      */
     public static function findPendingByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM governance_queue
+        $stmt = $db->query("SELECT * FROM governance_queue
              WHERE project_id = :project_id
                AND status = 'pending'
-             ORDER BY created_at ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -89,13 +81,9 @@ class GovernanceItem
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM governance_queue
+        $stmt = $db->query("SELECT * FROM governance_queue
              WHERE project_id = :project_id
-             ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -108,12 +96,8 @@ class GovernanceItem
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM governance_queue WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM governance_queue WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -129,21 +113,14 @@ class GovernanceItem
      * @param string   $status     New status: 'pending', 'approved', or 'rejected'
      * @param int|null $reviewedBy User ID of the reviewer, or null if not yet reviewed
      */
-    public static function updateStatus(
-        Database $db,
-        int $id,
-        string $status,
-        ?int $reviewedBy = null
-    ): void {
-        $db->query(
-            "UPDATE governance_queue
+    public static function updateStatus(Database $db, int $id, string $status, ?int $reviewedBy = null): void
+    {
+        $db->query("UPDATE governance_queue
              SET status = :status, reviewed_by = :reviewed_by
-             WHERE id = :id",
-            [
+             WHERE id = :id", [
                 ':status'      => $status,
                 ':reviewed_by' => $reviewedBy,
                 ':id'          => $id,
-            ]
-        );
+            ]);
     }
 }

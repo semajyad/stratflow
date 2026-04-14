@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TraceabilityService
  *
@@ -33,7 +34,6 @@ class TraceabilityService
     // ===========================
 
     private Database $db;
-
     public function __construct(Database $db)
     {
         $this->db = $db;
@@ -72,25 +72,15 @@ class TraceabilityService
 
         // Query 2: High Level work items ordered by priority
         $workItems = $this->fetchWorkItems($projectId);
-
-        // Query 3: User stories with Jira keys
+// Query 3: User stories with Jira keys
         $stories = $this->fetchStories($projectId, $orgId);
-
-        // Query 4: Git links bulk-fetched for all stories
+// Query 4: Git links bulk-fetched for all stories
         $storyIds    = array_map('intval', array_column($stories, 'id'));
         $gitLinksMap = StoryGitLink::findByLocalItemsBulk($this->db, 'user_story', $storyIds);
-
-        // Query 5: Jira keys for High Level work items
+// Query 5: Jira keys for High Level work items
         $workItemJiraMap = $this->fetchWorkItemJiraKeys($projectId, $orgId);
-
-        // Assemble the full nested tree in PHP
-        return $this->assembleTree(
-            $project,
-            $workItems,
-            $stories,
-            $gitLinksMap,
-            $workItemJiraMap
-        );
+// Assemble the full nested tree in PHP
+        return $this->assembleTree($project, $workItems, $stories, $gitLinksMap, $workItemJiraMap);
     }
 
     // ===========================
@@ -106,12 +96,8 @@ class TraceabilityService
      */
     private function fetchProject(int $projectId, int $orgId): ?array
     {
-        $stmt = $this->db->query(
-            "SELECT * FROM projects WHERE id = :id AND org_id = :org_id LIMIT 1",
-            [':id' => $projectId, ':org_id' => $orgId]
-        );
+        $stmt = $this->db->query("SELECT * FROM projects WHERE id = :id AND org_id = :org_id LIMIT 1", [':id' => $projectId, ':org_id' => $orgId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -123,11 +109,7 @@ class TraceabilityService
      */
     private function fetchWorkItems(int $projectId): array
     {
-        $stmt = $this->db->query(
-            "SELECT * FROM hl_work_items WHERE project_id = :project_id ORDER BY priority_number ASC",
-            [':project_id' => $projectId]
-        );
-
+        $stmt = $this->db->query("SELECT * FROM hl_work_items WHERE project_id = :project_id ORDER BY priority_number ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -143,8 +125,7 @@ class TraceabilityService
      */
     private function fetchStories(int $projectId, int $orgId): array
     {
-        $stmt = $this->db->query(
-            "SELECT us.*,
+        $stmt = $this->db->query("SELECT us.*,
                     sm_story.external_key AS jira_key
              FROM user_stories us
              LEFT JOIN sync_mappings sm_story
@@ -156,10 +137,7 @@ class TraceabilityService
                         LIMIT 1
                     )
              WHERE us.project_id = :project_id
-             ORDER BY us.priority_number ASC",
-            [':project_id' => $projectId, ':org_id' => $orgId]
-        );
-
+             ORDER BY us.priority_number ASC", [':project_id' => $projectId, ':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -174,8 +152,7 @@ class TraceabilityService
      */
     private function fetchWorkItemJiraKeys(int $projectId, int $orgId): array
     {
-        $stmt = $this->db->query(
-            "SELECT hw.id,
+        $stmt = $this->db->query("SELECT hw.id,
                     sm.external_key AS jira_key
              FROM hl_work_items hw
              LEFT JOIN sync_mappings sm
@@ -186,10 +163,7 @@ class TraceabilityService
                         WHERE org_id = :org_id AND provider = 'jira'
                         LIMIT 1
                     )
-             WHERE hw.project_id = :project_id",
-            [':project_id' => $projectId, ':org_id' => $orgId]
-        );
-
+             WHERE hw.project_id = :project_id", [':project_id' => $projectId, ':org_id' => $orgId]);
         $map = [];
         foreach ($stmt->fetchAll() as $row) {
             $map[(int) $row['id']] = $row['jira_key'] ?: null;
@@ -217,13 +191,8 @@ class TraceabilityService
      * @param array<int, string> $workItemJiraMap Work item id => jira key
      * @return array             Assembled tree ready for the traceability template
      */
-    private function assembleTree(
-        array $project,
-        array $workItems,
-        array $stories,
-        array $gitLinksMap,
-        array $workItemJiraMap
-    ): array {
+    private function assembleTree(array $project, array $workItems, array $stories, array $gitLinksMap, array $workItemJiraMap): array
+    {
         // Index work items by id for quick lookup
         $workItemsById = [];
         foreach ($workItems as $wi) {
@@ -233,17 +202,14 @@ class TraceabilityService
         // Group stories by parent work item id; unmatched go to unlinked bucket
         $storiesByWorkItem  = [];
         $unlinkedStoryNodes = [];
-
         foreach ($stories as $story) {
             $storyId  = (int) $story['id'];
             $parentId = isset($story['parent_hl_item_id']) ? (int) $story['parent_hl_item_id'] : null;
-
             $storyNode = [
                 'story'     => $story,
                 'jira_key'  => $story['jira_key'] ?? null,
                 'git_links' => $gitLinksMap[$storyId] ?? [],
             ];
-
             if ($parentId !== null && isset($workItemsById[$parentId])) {
                 $storiesByWorkItem[$parentId][] = $storyNode;
             } else {
@@ -253,12 +219,12 @@ class TraceabilityService
 
         // Build work item nodes and group them into virtual OKR buckets by okr_title
         // Use a stable key: trim+lowercase of the title, or '__unassigned__' for blank
-        $okrBuckets = [];  // [okr_key => ['title' => string, 'description' => string, 'work_items' => []]]
+        $okrBuckets = [];
+// [okr_key => ['title' => string, 'description' => string, 'work_items' => []]]
 
         foreach ($workItems as $wi) {
             $wiId       = (int) $wi['id'];
             $wiStories  = $storiesByWorkItem[$wiId] ?? [];
-
             $storyCount   = count($wiStories);
             $doneCount    = 0;
             $gitLinkCount = 0;
@@ -277,11 +243,9 @@ class TraceabilityService
                 'git_link_count' => $gitLinkCount,
                 'jira_key'       => $workItemJiraMap[$wiId] ?? null,
             ];
-
-            // Bucket key: normalised okr_title string (empty → unassigned)
+// Bucket key: normalised okr_title string (empty → unassigned)
             $rawTitle  = trim((string) ($wi['okr_title'] ?? ''));
             $bucketKey = $rawTitle !== '' ? $rawTitle : '__unassigned__';
-
             if (!isset($okrBuckets[$bucketKey])) {
                 $okrBuckets[$bucketKey] = [
                     'title'       => $rawTitle !== '' ? $rawTitle : 'Unassigned',

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PricingController
  *
@@ -23,7 +24,6 @@ class PricingController
     protected Auth $auth;
     protected Database $db;
     protected array $config;
-
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;

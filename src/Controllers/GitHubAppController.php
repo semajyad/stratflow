@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitHubAppController
  *
@@ -31,12 +32,11 @@ class GitHubAppController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -70,10 +70,8 @@ class GitHubAppController
 
         $state = bin2hex(random_bytes(16));
         $_SESSION['github_install_state'] = $state;
-
         $installUrl = 'https://github.com/apps/' . rawurlencode($appSlug)
             . '/installations/new?state=' . rawurlencode($state);
-
         $this->response->redirect($installUrl);
     }
 
@@ -94,12 +92,10 @@ class GitHubAppController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // --- State nonce verification ---
+// --- State nonce verification ---
         $state         = $this->request->get('state', '');
         $sessionState  = $_SESSION['github_install_state'] ?? '';
         unset($_SESSION['github_install_state']);
-
         if ($state === '' || !hash_equals($sessionState, $state)) {
             $_SESSION['flash_error'] = 'Invalid GitHub install state. Please try again.';
             $this->response->redirect('/app/admin/integrations');
@@ -108,7 +104,6 @@ class GitHubAppController
 
         $installationId = (int) $this->request->get('installation_id', '0');
         $setupAction    = $this->request->get('setup_action', '');
-
         if ($installationId === 0) {
             $_SESSION['flash_error'] = 'Missing installation_id from GitHub callback.';
             $this->response->redirect('/app/admin/integrations');
@@ -117,21 +112,19 @@ class GitHubAppController
 
         // Handle delete/cancel — GitHub redirects with setup_action=delete on uninstall
         if ($setupAction === 'delete') {
-            // Handled via webhook; nothing to persist here
+// Handled via webhook; nothing to persist here
             $_SESSION['flash_message'] = 'GitHub App uninstalled.';
             $this->response->redirect('/app/admin/integrations');
             return;
         }
 
         try {
-            // --- Fetch repo list and account info ---
+// --- Fetch repo list and account info ---
             $jwt         = GitHubAppClient::mintAppJwt();
             $repos       = GitHubAppClient::listInstallationRepos($installationId);
             $accountLogin = $this->resolveAccountLogin($installationId, $jwt);
-
             $this->db->getPdo()->beginTransaction();
-
-            // Create a new integrations row for this GitHub account.
+// Create a new integrations row for this GitHub account.
             // We do NOT upsert — an org can accumulate many installations.
             // If this installation_id already exists (double-click), the UNIQUE
             // key on (provider, installation_id) will prevent a duplicate and we
@@ -140,16 +133,12 @@ class GitHubAppController
             // findActiveByInstallationId only finds 'active' rows; we also need to find
             // revoked/inactive rows here to handle re-installs gracefully instead of
             // hitting the UNIQUE key constraint and throwing a confusing error.
-            $existingStmt = $this->db->query(
-                "SELECT id, org_id FROM integrations
+            $existingStmt = $this->db->query("SELECT id, org_id FROM integrations
                  WHERE provider = 'github' AND installation_id = :id
-                 LIMIT 1",
-                [':id' => $installationId]
-            );
+                 LIMIT 1", [':id' => $installationId]);
             $existingRow = $existingStmt->fetch();
-
             if ($existingRow !== false) {
-                // Re-activating an existing (possibly revoked/inactive) integration.
+            // Re-activating an existing (possibly revoked/inactive) integration.
                 // Verify it still belongs to this org — prevents one org from hijacking
                 // another org's installation_id via the callback.
                 if ((int) $existingRow['org_id'] !== $orgId) {
@@ -178,24 +167,12 @@ class GitHubAppController
 
             // Bulk-upsert repos
             foreach ($repos as $repo) {
-                IntegrationRepo::upsert(
-                    $this->db,
-                    $integrationId,
-                    $orgId,
-                    $repo['id'],
-                    $repo['full_name']
-                );
+                IntegrationRepo::upsert($this->db, $integrationId, $orgId, $repo['id'], $repo['full_name']);
             }
 
             $this->db->getPdo()->commit();
-
             $repoCount = count($repos);
-            $_SESSION['flash_message'] = sprintf(
-                'Connected to @%s — %d %s linked.',
-                $accountLogin,
-                $repoCount,
-                $repoCount === 1 ? 'repo' : 'repos'
-            );
+            $_SESSION['flash_message'] = sprintf('Connected to @%s — %d %s linked.', $accountLogin, $repoCount, $repoCount === 1 ? 'repo' : 'repos');
         } catch (\Throwable $e) {
             if ($this->db->getPdo()->inTransaction()) {
                 $this->db->getPdo()->rollBack();
@@ -222,15 +199,10 @@ class GitHubAppController
         $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Verify the integration belongs to this org before updating
-        $stmt = $this->db->query(
-            "SELECT id FROM integrations
+// Verify the integration belongs to this org before updating
+        $stmt = $this->db->query("SELECT id FROM integrations
              WHERE id = :id AND org_id = :org_id AND provider = 'github'
-             LIMIT 1",
-            [':id' => $id, ':org_id' => $orgId]
-        );
-
+             LIMIT 1", [':id' => $id, ':org_id' => $orgId]);
         if ($stmt->fetch() === false) {
             $_SESSION['flash_error'] = 'GitHub integration not found.';
             $this->response->redirect('/app/admin/integrations');
@@ -238,7 +210,6 @@ class GitHubAppController
         }
 
         Integration::update($this->db, $id, ['status' => 'revoked']);
-
         $_SESSION['flash_message'] = 'GitHub installation disconnected.';
         $this->response->redirect('/app/admin/integrations');
     }
@@ -276,11 +247,9 @@ class GitHubAppController
                     'User-Agent: StratFlow-GitHub-App',
                 ],
             ]);
-
             $raw  = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-
             if ($raw === false || $code !== 200) {
                 return 'unknown';
             }

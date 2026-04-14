@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DriftAlert Model
  *
@@ -37,21 +38,16 @@ class DriftAlert
         $detailsJson = is_array($data['details_json'])
             ? json_encode($data['details_json'])
             : $data['details_json'];
-
-        $db->query(
-            "INSERT INTO drift_alerts
+        $db->query("INSERT INTO drift_alerts
                 (project_id, alert_type, severity, details_json, status)
              VALUES
-                (:project_id, :alert_type, :severity, :details_json, :status)",
-            [
+                (:project_id, :alert_type, :severity, :details_json, :status)", [
                 ':project_id'   => $data['project_id'],
                 ':alert_type'   => $data['alert_type'],
                 ':severity'     => $data['severity'] ?? 'warning',
                 ':details_json' => $detailsJson,
                 ':status'       => $data['status'] ?? 'active',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -68,14 +64,10 @@ class DriftAlert
      */
     public static function findActiveByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM drift_alerts
+        $stmt = $db->query("SELECT * FROM drift_alerts
              WHERE project_id = :project_id
                AND status = 'active'
-             ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -88,13 +80,9 @@ class DriftAlert
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM drift_alerts
+        $stmt = $db->query("SELECT * FROM drift_alerts
              WHERE project_id = :project_id
-             ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -107,12 +95,8 @@ class DriftAlert
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM drift_alerts WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM drift_alerts WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -129,13 +113,10 @@ class DriftAlert
      */
     public static function updateStatus(Database $db, int $id, string $status): void
     {
-        $db->query(
-            "UPDATE drift_alerts SET status = :status WHERE id = :id",
-            [
+        $db->query("UPDATE drift_alerts SET status = :status WHERE id = :id", [
                 ':status' => $status,
                 ':id'     => $id,
-            ]
-        );
+            ]);
     }
 
     // ===========================
@@ -151,14 +132,10 @@ class DriftAlert
      */
     public static function countActiveByProjectId(Database $db, int $projectId): int
     {
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM drift_alerts
+        $stmt = $db->query("SELECT COUNT(*) AS cnt FROM drift_alerts
              WHERE project_id = :project_id
-               AND status = 'active'",
-            [':project_id' => $projectId]
-        );
+               AND status = 'active'", [':project_id' => $projectId]);
         $row = $stmt->fetch();
-
         return (int) ($row['cnt'] ?? 0);
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * KrScoringService
  *
@@ -15,6 +16,7 @@
  *   $service = new KrScoringService($db, $gemini);
  *   $service->scoreForMergedPr($prUrl, $orgId);
  */
+
 declare(strict_types=1);
 
 namespace StratFlow\Services;
@@ -37,10 +39,9 @@ class KrScoringService
      * @param Database           $db     Database instance
      * @param GeminiService|null $gemini Gemini service; pass null to disable scoring
      */
-    public function __construct(
-        private readonly Database       $db,
-        private readonly ?GeminiService $gemini
-    ) {}
+    public function __construct(private readonly Database $db, private readonly ?GeminiService $gemini)
+    {
+    }
 
     // ===========================
     // PUBLIC API
@@ -61,12 +62,8 @@ class KrScoringService
             return;
         }
 
-        $links = $this->db->query(
-            "SELECT id, local_type, local_id, ref_label FROM story_git_links
-              WHERE ref_url = :url AND status = 'merged'",
-            [':url' => $prUrl]
-        )->fetchAll();
-
+        $links = $this->db->query("SELECT id, local_type, local_id, ref_label FROM story_git_links
+              WHERE ref_url = :url AND status = 'merged'", [':url' => $prUrl])->fetchAll();
         if (empty($links)) {
             return;
         }
@@ -92,7 +89,6 @@ class KrScoringService
         }
 
         $prTitle = $links[0]['ref_label'] ?? $prUrl;
-
         foreach ($krs as $kr) {
             foreach ($links as $link) {
                 $this->scoreOneKr($kr, (int) $link['id'], $orgId, $prTitle);
@@ -127,7 +123,6 @@ class KrScoringService
             'pr_title'       => $prTitle,
             'pr_body'        => '',
         ], JSON_UNESCAPED_UNICODE);
-
         try {
             $result = $this->gemini->generateJson(KrScoringPrompt::PROMPT, $input);
         } catch (\Throwable $e) {
@@ -137,7 +132,6 @@ class KrScoringService
 
         $score     = max(0, min(10, (int) ($result['score'] ?? 0)));
         $rationale = (string) ($result['rationale'] ?? '');
-
         KeyResultContribution::upsert($this->db, (int) $kr['id'], $linkId, $orgId, $score, $rationale);
     }
 
@@ -157,11 +151,7 @@ class KrScoringService
             return;
         }
 
-        $summary = 'Recent PRs: ' . implode('; ', array_map(
-            fn($c) => '"' . ($c['ref_title'] ?? $c['ref_label'] ?? 'PR') . '" scored ' . ($c['ai_relevance_score'] ?? 0) . '/10',
-            $recent
-        ));
-
+        $summary = 'Recent PRs: ' . implode('; ', array_map(fn($c) => '"' . ($c['ref_title'] ?? $c['ref_label'] ?? 'PR') . '" scored ' . ($c['ai_relevance_score'] ?? 0) . '/10', $recent));
         KeyResult::update($this->db, $krId, $orgId, ['ai_momentum' => mb_substr($summary, 0, 500)]);
     }
 
@@ -182,24 +172,17 @@ class KrScoringService
         foreach ($links as $link) {
             $localType = (string) ($link['local_type'] ?? '');
             $localId   = (int) ($link['local_id'] ?? 0);
-
             if ($localType === 'hl_work_item') {
-                $row = $this->db->query(
-                    "SELECT hwi.id FROM hl_work_items hwi
+                $row = $this->db->query("SELECT hwi.id FROM hl_work_items hwi
                        JOIN projects p ON hwi.project_id = p.id
-                      WHERE hwi.id = :id AND p.org_id = :oid LIMIT 1",
-                    [':id' => $localId, ':oid' => $orgId]
-                )->fetch();
+                      WHERE hwi.id = :id AND p.org_id = :oid LIMIT 1", [':id' => $localId, ':oid' => $orgId])->fetch();
                 if ($row !== false) {
-                    $ids[$localId] = $localId;
+                            $ids[$localId] = $localId;
                 }
             } elseif ($localType === 'user_story') {
-                $row = $this->db->query(
-                    "SELECT us.parent_hl_item_id FROM user_stories us
+                $row = $this->db->query("SELECT us.parent_hl_item_id FROM user_stories us
                        JOIN projects p ON us.project_id = p.id
-                      WHERE us.id = :id AND p.org_id = :oid LIMIT 1",
-                    [':id' => $localId, ':oid' => $orgId]
-                )->fetch();
+                      WHERE us.id = :id AND p.org_id = :oid LIMIT 1", [':id' => $localId, ':oid' => $orgId])->fetch();
                 if ($row !== false && $row['parent_hl_item_id'] !== null) {
                     $wid = (int) $row['parent_hl_item_id'];
                     $ids[$wid] = $wid;

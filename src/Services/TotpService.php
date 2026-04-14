@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TOTP Service (RFC 6238 / RFC 4226)
  *

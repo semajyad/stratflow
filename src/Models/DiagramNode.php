@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DiagramNode Model
  *
@@ -31,15 +32,12 @@ class DiagramNode
     public static function createBatch(Database $db, int $diagramId, array $nodes): void
     {
         foreach ($nodes as $node) {
-            $db->query(
-                "INSERT INTO diagram_nodes (diagram_id, node_key, label)
-                 VALUES (:diagram_id, :node_key, :label)",
-                [
+            $db->query("INSERT INTO diagram_nodes (diagram_id, node_key, label)
+                 VALUES (:diagram_id, :node_key, :label)", [
                     ':diagram_id' => $diagramId,
                     ':node_key'   => $node['node_key'],
                     ':label'      => $node['label'],
-                ]
-            );
+                ]);
         }
     }
 
@@ -56,11 +54,7 @@ class DiagramNode
      */
     public static function findByDiagramId(Database $db, int $diagramId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM diagram_nodes WHERE diagram_id = :diagram_id ORDER BY id ASC",
-            [':diagram_id' => $diagramId]
-        );
-
+        $stmt = $db->query("SELECT * FROM diagram_nodes WHERE diagram_id = :diagram_id ORDER BY id ASC", [':diagram_id' => $diagramId]);
         return $stmt->fetchAll();
     }
 
@@ -79,7 +73,6 @@ class DiagramNode
     private const UPDATABLE_COLUMNS = [
         'label', 'okr_title', 'okr_description',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -88,17 +81,12 @@ class DiagramNode
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE diagram_nodes SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -114,10 +102,7 @@ class DiagramNode
      */
     public static function deleteByDiagramId(Database $db, int $diagramId): void
     {
-        $db->query(
-            "DELETE FROM diagram_nodes WHERE diagram_id = :diagram_id",
-            [':diagram_id' => $diagramId]
-        );
+        $db->query("DELETE FROM diagram_nodes WHERE diagram_id = :diagram_id", [':diagram_id' => $diagramId]);
     }
 
     /**
@@ -128,9 +113,6 @@ class DiagramNode
      */
     public static function delete(Database $db, int $id): void
     {
-        $db->query(
-            "DELETE FROM diagram_nodes WHERE id = :id",
-            [':id' => $id]
-        );
+        $db->query("DELETE FROM diagram_nodes WHERE id = :id", [':id' => $id]);
     }
 }

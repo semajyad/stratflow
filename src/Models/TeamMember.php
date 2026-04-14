@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TeamMember Model
  *
@@ -25,13 +26,10 @@ class TeamMember
      */
     public static function addMember(Database $db, int $teamId, int $userId): void
     {
-        $db->query(
-            "INSERT IGNORE INTO team_members (team_id, user_id) VALUES (:team_id, :user_id)",
-            [
+        $db->query("INSERT IGNORE INTO team_members (team_id, user_id) VALUES (:team_id, :user_id)", [
                 ':team_id' => $teamId,
                 ':user_id' => $userId,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -43,13 +41,10 @@ class TeamMember
      */
     public static function removeMember(Database $db, int $teamId, int $userId): void
     {
-        $db->query(
-            "DELETE FROM team_members WHERE team_id = :team_id AND user_id = :user_id",
-            [
+        $db->query("DELETE FROM team_members WHERE team_id = :team_id AND user_id = :user_id", [
                 ':team_id' => $teamId,
                 ':user_id' => $userId,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -61,15 +56,11 @@ class TeamMember
      */
     public static function findByTeamId(Database $db, int $teamId): array
     {
-        $stmt = $db->query(
-            "SELECT u.id, u.full_name, u.email, u.role, u.is_active
+        $stmt = $db->query("SELECT u.id, u.full_name, u.email, u.role, u.is_active
              FROM team_members tm
              JOIN users u ON u.id = tm.user_id
              WHERE tm.team_id = :team_id
-             ORDER BY u.full_name ASC",
-            [':team_id' => $teamId]
-        );
-
+             ORDER BY u.full_name ASC", [':team_id' => $teamId]);
         return $stmt->fetchAll();
     }
 
@@ -82,15 +73,11 @@ class TeamMember
      */
     public static function findTeamsForUser(Database $db, int $userId): array
     {
-        $stmt = $db->query(
-            "SELECT t.*
+        $stmt = $db->query("SELECT t.*
              FROM team_members tm
              JOIN teams t ON t.id = tm.team_id
              WHERE tm.user_id = :user_id
-             ORDER BY t.name ASC",
-            [':user_id' => $userId]
-        );
-
+             ORDER BY t.name ASC", [':user_id' => $userId]);
         return $stmt->fetchAll();
     }
 }

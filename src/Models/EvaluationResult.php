@@ -1,4 +1,5 @@
 <?php
+
 /**
  * EvaluationResult Model
  *
@@ -32,21 +33,17 @@ class EvaluationResult
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO evaluation_results
+        $db->query("INSERT INTO evaluation_results
                 (project_id, panel_id, evaluation_level, screen_context, results_json, status)
              VALUES
-                (:project_id, :panel_id, :evaluation_level, :screen_context, :results_json, :status)",
-            [
+                (:project_id, :panel_id, :evaluation_level, :screen_context, :results_json, :status)", [
                 ':project_id'       => $data['project_id'],
                 ':panel_id'         => $data['panel_id'],
                 ':evaluation_level' => $data['evaluation_level'],
                 ':screen_context'   => $data['screen_context'],
                 ':results_json'     => $data['results_json'],
                 ':status'           => $data['status'] ?? 'pending',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -63,13 +60,9 @@ class EvaluationResult
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM evaluation_results
+        $stmt = $db->query("SELECT * FROM evaluation_results
              WHERE project_id = :project_id
-             ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -82,11 +75,7 @@ class EvaluationResult
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM evaluation_results WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
-
+        $stmt = $db->query("SELECT * FROM evaluation_results WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -102,17 +91,13 @@ class EvaluationResult
      */
     public static function findByProjectAndScreen(Database $db, int $projectId, string $screenContext): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM evaluation_results
+        $stmt = $db->query("SELECT * FROM evaluation_results
              WHERE project_id = :project_id
                AND screen_context = :screen_context
-             ORDER BY created_at DESC",
-            [
+             ORDER BY created_at DESC", [
                 ':project_id'     => $projectId,
                 ':screen_context' => $screenContext,
-            ]
-        );
-
+            ]);
         return $stmt->fetchAll();
     }
 
@@ -129,12 +114,9 @@ class EvaluationResult
      */
     public static function updateStatus(Database $db, int $id, string $status): void
     {
-        $db->query(
-            "UPDATE evaluation_results SET status = :status WHERE id = :id",
-            [
+        $db->query("UPDATE evaluation_results SET status = :status WHERE id = :id", [
                 ':status' => $status,
                 ':id'     => $id,
-            ]
-        );
+            ]);
     }
 }

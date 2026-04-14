@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StoryQualityController
  *
@@ -23,12 +24,11 @@ use StratFlow\Models\StoryQualityConfig;
 
 class StoryQualityController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -49,12 +49,9 @@ class StoryQualityController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Seed defaults if this org has never visited the page
+// Seed defaults if this org has never visited the page
         StoryQualityConfig::seedDefaults($this->db, $orgId);
-
         $rules = StoryQualityConfig::findByOrgId($this->db, $orgId);
-
         $this->response->render('admin/story-quality-rules', [
             'user'          => $user,
             'active_page'   => 'admin',
@@ -62,7 +59,6 @@ class StoryQualityController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -75,10 +71,8 @@ class StoryQualityController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $ruleType = $this->request->post('rule_type', '');
         $label    = trim((string) $this->request->post('label', ''));
-
         if ($label === '') {
             $_SESSION['flash_error'] = 'Label is required.';
             $this->response->redirect('/app/admin/story-quality-rules');
@@ -96,7 +90,6 @@ class StoryQualityController
             'rule_type' => $ruleType,
             'label'     => $label,
         ]);
-
         $_SESSION['flash_message'] = 'Quality rule added.';
         $this->response->redirect('/app/admin/story-quality-rules');
     }
@@ -113,9 +106,7 @@ class StoryQualityController
         $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         StoryQualityConfig::delete($this->db, $id, $orgId);
-
         $_SESSION['flash_message'] = 'Rule removed.';
         $this->response->redirect('/app/admin/story-quality-rules');
     }

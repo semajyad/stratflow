@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StripeService
  *
@@ -25,8 +26,7 @@ use Stripe\Webhook;
 class StripeService
 {
     private array $config;
-
-    /**
+/**
      * @param array $config Stripe config slice: secret_key, webhook_secret, price_product, price_consultancy
      */
     public function __construct(array $config)
@@ -45,13 +45,8 @@ class StripeService
      * @param string      $mode          Checkout mode: 'subscription' or 'payment' (default: 'subscription')
      * @return Session                   The created Checkout Session
      */
-    public function createCheckoutSession(
-        string $priceId,
-        string $successUrl,
-        string $cancelUrl,
-        ?string $customerEmail = null,
-        string $mode = 'subscription'
-    ): Session {
+    public function createCheckoutSession(string $priceId, string $successUrl, string $cancelUrl, ?string $customerEmail = null, string $mode = 'subscription'): Session
+    {
         $params = [
             'mode'        => $mode,
             'line_items'  => [
@@ -63,8 +58,7 @@ class StripeService
             'success_url' => $successUrl,
             'cancel_url'  => $cancelUrl,
         ];
-
-        // For one-time payments, ensure a customer is always created
+// For one-time payments, ensure a customer is always created
         // (subscriptions always create a customer automatically)
         if ($mode === 'payment') {
             $params['customer_creation'] = 'always';
@@ -167,13 +161,8 @@ class StripeService
      * @param string|null $customerId  Existing Stripe customer ID to pre-fill (optional)
      * @return Session                 The created Checkout Session
      */
-    public function createSeatCheckout(
-        string $priceId,
-        int $quantity,
-        string $successUrl,
-        string $cancelUrl,
-        ?string $customerId = null
-    ): Session {
+    public function createSeatCheckout(string $priceId, int $quantity, string $successUrl, string $cancelUrl, ?string $customerId = null): Session
+    {
         $params = [
             'mode'        => 'subscription',
             'line_items'  => [['price' => $priceId, 'quantity' => max(1, $quantity)]],
@@ -203,7 +192,6 @@ class StripeService
             'limit'    => 20,
             'expand'   => ['data.items.data.price'],
         ]);
-
         $out = [];
         foreach ($result->data as $sub) {
             $item = $sub->items->data[0] ?? null;
@@ -235,7 +223,6 @@ class StripeService
     {
         \Stripe\Stripe::setApiKey($this->config['secret_key']);
         $invoices = \Stripe\Invoice::all(['customer' => $customerId, 'limit' => 50]);
-
         return $invoices->data;
     }
 
@@ -249,7 +236,6 @@ class StripeService
     {
         \Stripe\Stripe::setApiKey($this->config['secret_key']);
         $invoice = \Stripe\Invoice::retrieve($invoiceId);
-
         return $invoice->invoice_pdf;
     }
 
@@ -266,12 +252,10 @@ class StripeService
     public function createPortalSession(string $customerId, string $returnUrl): string
     {
         \Stripe\Stripe::setApiKey($this->config['secret_key']);
-
         $session = \Stripe\BillingPortal\Session::create([
             'customer'   => $customerId,
             'return_url' => $returnUrl,
         ]);
-
         return $session->url;
     }
 
@@ -285,7 +269,6 @@ class StripeService
     {
         \Stripe\Stripe::setApiKey($this->config['secret_key']);
         $sub = \Stripe\Subscription::retrieve($subscriptionId);
-
         return [
             'id'              => $sub->id,
             'status'          => $sub->status,

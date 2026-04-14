@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StoryImprovementService
  *
@@ -29,11 +30,12 @@ class StoryImprovementService
         'smart'               => 10,
         'splitting'           => 10,
     ];
-
-    // Only these fields may be rewritten — title is PM-owned, never touched
+// Only these fields may be rewritten — title is PM-owned, never touched
     private const ALLOWED_FIELDS = ['description', 'acceptance_criteria', 'kr_hypothesis'];
 
-    public function __construct(private GeminiService $gemini) {}
+    public function __construct(private GeminiService $gemini)
+    {
+    }
 
     // ===========================
     // PUBLIC INTERFACE
@@ -76,7 +78,6 @@ class StoryImprovementService
     private function improve(array $item, array $breakdown, string $qualityBlock, string $prompt): array
     {
         $failing = $this->identifyFailingDimensions($breakdown);
-
         if (empty($failing)) {
             return [];
         }
@@ -119,7 +120,6 @@ class StoryImprovementService
             'Current item:',
             'Title: ' . ($item['title'] ?? ''),
         ];
-
         if (!empty($item['description'])) {
             $parts[] = 'Description: ' . $item['description'];
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SprintStory Model
  *
@@ -29,14 +30,11 @@ class SprintStory
      */
     public static function assign(Database $db, int $sprintId, int $userStoryId): void
     {
-        $db->query(
-            "INSERT IGNORE INTO sprint_stories (sprint_id, user_story_id)
-             VALUES (:sprint_id, :user_story_id)",
-            [
+        $db->query("INSERT IGNORE INTO sprint_stories (sprint_id, user_story_id)
+             VALUES (:sprint_id, :user_story_id)", [
                 ':sprint_id'     => $sprintId,
                 ':user_story_id' => $userStoryId,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -48,14 +46,11 @@ class SprintStory
      */
     public static function unassign(Database $db, int $sprintId, int $userStoryId): void
     {
-        $db->query(
-            "DELETE FROM sprint_stories
-             WHERE sprint_id = :sprint_id AND user_story_id = :user_story_id",
-            [
+        $db->query("DELETE FROM sprint_stories
+             WHERE sprint_id = :sprint_id AND user_story_id = :user_story_id", [
                 ':sprint_id'     => $sprintId,
                 ':user_story_id' => $userStoryId,
-            ]
-        );
+            ]);
     }
 
     // ===========================
@@ -71,16 +66,12 @@ class SprintStory
      */
     public static function findBySprintId(Database $db, int $sprintId): array
     {
-        $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title
+        $stmt = $db->query("SELECT us.*, hw.title AS parent_title
              FROM sprint_stories ss
              JOIN user_stories us ON ss.user_story_id = us.id
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
              WHERE ss.sprint_id = :sprint_id
-             ORDER BY us.priority_number ASC",
-            [':sprint_id' => $sprintId]
-        );
-
+             ORDER BY us.priority_number ASC", [':sprint_id' => $sprintId]);
         return $stmt->fetchAll();
     }
 
@@ -93,16 +84,12 @@ class SprintStory
      */
     public static function findSprintForStory(Database $db, int $storyId): ?array
     {
-        $stmt = $db->query(
-            "SELECT s.*
+        $stmt = $db->query("SELECT s.*
              FROM sprint_stories ss
              JOIN sprints s ON ss.sprint_id = s.id
              WHERE ss.user_story_id = :story_id
-             LIMIT 1",
-            [':story_id' => $storyId]
-        );
+             LIMIT 1", [':story_id' => $storyId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -114,10 +101,7 @@ class SprintStory
      */
     public static function deleteBySprintId(Database $db, int $sprintId): void
     {
-        $db->query(
-            "DELETE FROM sprint_stories WHERE sprint_id = :sprint_id",
-            [':sprint_id' => $sprintId]
-        );
+        $db->query("DELETE FROM sprint_stories WHERE sprint_id = :sprint_id", [':sprint_id' => $sprintId]);
     }
 
     /**
@@ -129,15 +113,11 @@ class SprintStory
      */
     public static function getSprintLoad(Database $db, int $sprintId): int
     {
-        $stmt = $db->query(
-            "SELECT COALESCE(SUM(us.size), 0) AS total_load
+        $stmt = $db->query("SELECT COALESCE(SUM(us.size), 0) AS total_load
              FROM sprint_stories ss
              JOIN user_stories us ON ss.user_story_id = us.id
-             WHERE ss.sprint_id = :sprint_id",
-            [':sprint_id' => $sprintId]
-        );
+             WHERE ss.sprint_id = :sprint_id", [':sprint_id' => $sprintId]);
         $row = $stmt->fetch();
-
         return (int) ($row['total_load'] ?? 0);
     }
 }

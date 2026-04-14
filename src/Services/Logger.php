@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Structured Request Logger
  *
@@ -32,10 +33,10 @@ class Logger
     // ===========================
 
     private static string $reqId  = '';
-    private static ?int   $orgId  = null;
-    private static ?int   $userId = null;
+    private static ?int $orgId  = null;
+    private static ?int $userId = null;
     private static string $route  = '';
-    private static float  $startedAt = 0.0;
+    private static float $startedAt = 0.0;
 
     /** @var resource|null Override stream for testing (null = STDOUT) */
     private static mixed $outputStream = null;

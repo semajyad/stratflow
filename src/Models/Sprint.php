@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Sprint Model
  *
@@ -31,19 +32,15 @@ class Sprint
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO sprints (project_id, name, start_date, end_date, team_capacity, team_id)
-             VALUES (:project_id, :name, :start_date, :end_date, :team_capacity, :team_id)",
-            [
+        $db->query("INSERT INTO sprints (project_id, name, start_date, end_date, team_capacity, team_id)
+             VALUES (:project_id, :name, :start_date, :end_date, :team_capacity, :team_id)", [
                 ':project_id'    => $data['project_id'],
                 ':name'          => $data['name'],
                 ':start_date'    => $data['start_date'] ?? null,
                 ':end_date'      => $data['end_date'] ?? null,
                 ':team_capacity' => $data['team_capacity'] ?? null,
                 ':team_id'       => $data['team_id'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -61,8 +58,7 @@ class Sprint
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT s.*,
+        $stmt = $db->query("SELECT s.*,
                     t.name AS team_name,
                     COALESCE(sub.story_count, 0) AS story_count,
                     COALESCE(sub.total_size, 0)  AS total_size
@@ -77,10 +73,7 @@ class Sprint
                  GROUP BY ss.sprint_id
              ) sub ON s.id = sub.sprint_id
              WHERE s.project_id = :project_id
-             ORDER BY t.name ASC, s.start_date ASC, s.id ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY t.name ASC, s.start_date ASC, s.id ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -93,12 +86,8 @@ class Sprint
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sprints WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM sprints WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -117,7 +106,6 @@ class Sprint
     private const UPDATABLE_COLUMNS = [
         'name', 'start_date', 'end_date', 'team_capacity', 'team_id',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -126,17 +114,12 @@ class Sprint
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE sprints SET {$setClauses} WHERE id = :id", $bound);
     }
 

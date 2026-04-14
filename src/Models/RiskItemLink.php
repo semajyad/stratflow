@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RiskItemLink Model
  *
@@ -36,14 +37,11 @@ class RiskItemLink
         }
 
         foreach ($workItemIds as $workItemId) {
-            $db->query(
-                "INSERT IGNORE INTO risk_item_links (risk_id, work_item_id)
-                 VALUES (:risk_id, :work_item_id)",
-                [
+            $db->query("INSERT IGNORE INTO risk_item_links (risk_id, work_item_id)
+                 VALUES (:risk_id, :work_item_id)", [
                     ':risk_id'      => $riskId,
                     ':work_item_id' => (int) $workItemId,
-                ]
-            );
+                ]);
         }
     }
 
@@ -60,11 +58,7 @@ class RiskItemLink
      */
     public static function findByRiskId(Database $db, int $riskId): array
     {
-        $stmt = $db->query(
-            "SELECT work_item_id FROM risk_item_links WHERE risk_id = :risk_id",
-            [':risk_id' => $riskId]
-        );
-
+        $stmt = $db->query("SELECT work_item_id FROM risk_item_links WHERE risk_id = :risk_id", [':risk_id' => $riskId]);
         return array_column($stmt->fetchAll(), 'work_item_id');
     }
 
@@ -77,11 +71,7 @@ class RiskItemLink
      */
     public static function findByWorkItemId(Database $db, int $workItemId): array
     {
-        $stmt = $db->query(
-            "SELECT risk_id FROM risk_item_links WHERE work_item_id = :work_item_id",
-            [':work_item_id' => $workItemId]
-        );
-
+        $stmt = $db->query("SELECT risk_id FROM risk_item_links WHERE work_item_id = :work_item_id", [':work_item_id' => $workItemId]);
         return array_column($stmt->fetchAll(), 'risk_id');
     }
 
@@ -97,9 +87,6 @@ class RiskItemLink
      */
     public static function deleteByRiskId(Database $db, int $riskId): void
     {
-        $db->query(
-            "DELETE FROM risk_item_links WHERE risk_id = :risk_id",
-            [':risk_id' => $riskId]
-        );
+        $db->query("DELETE FROM risk_item_links WHERE risk_id = :risk_id", [':risk_id' => $riskId]);
     }
 }

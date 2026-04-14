@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HomeController
  *
@@ -19,12 +20,11 @@ use StratFlow\Security\ProjectPolicy;
 
 class HomeController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -48,10 +48,8 @@ class HomeController
     {
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
-
         $projects = Project::findAccessibleByOrgId($this->db, $user);
-
-        // Compute smart "next step" destination and progress for each project
+// Compute smart "next step" destination and progress for each project
         foreach ($projects as &$p) {
             $stage = $this->getProjectStage($this->db, (int) $p['id']);
             $p['next_step_url']   = $stage['next_url'] . '?project_id=' . (int) $p['id'];
@@ -59,19 +57,14 @@ class HomeController
             $p['steps_complete']  = $stage['steps_complete'];
             $p['steps_total']     = $stage['steps_total'];
             $p['completion']      = $stage['completion'];
-            // Attach current memberships for the edit modal.
+// Attach current memberships for the edit modal.
             $p['memberships']     = Project::getMemberships($this->db, (int) $p['id']);
             $p['member_ids']      = array_column($p['memberships'], 'user_id');
         }
         unset($p);
-
-        // Load org users for the project member picker
-        $orgUsers = $this->db->query(
-            "SELECT id, full_name, email FROM users WHERE org_id = :org_id AND is_active = 1 ORDER BY full_name",
-            [':org_id' => $orgId]
-        )->fetchAll();
-
-        // Check if Jira is connected for this org and load Jira projects
+// Load org users for the project member picker
+        $orgUsers = $this->db->query("SELECT id, full_name, email FROM users WHERE org_id = :org_id AND is_active = 1 ORDER BY full_name", [':org_id' => $orgId])->fetchAll();
+// Check if Jira is connected for this org and load Jira projects
         $jiraConnected = false;
         $jiraProjects  = [];
         $integration   = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
@@ -95,7 +88,6 @@ class HomeController
             'flash_message'  => $_SESSION['flash_message'] ?? null,
             'flash_error'    => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -110,7 +102,6 @@ class HomeController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $name  = trim((string) $this->request->post('name', ''));
-
         if ($name === '') {
             $_SESSION['flash_error'] = 'Project name cannot be empty.';
             $this->response->redirect('/app/home');
@@ -118,15 +109,13 @@ class HomeController
         }
 
         $visibility = $this->request->post('visibility', 'everyone') === 'restricted' ? 'restricted' : 'everyone';
-
         $projectId = Project::create($this->db, [
             'org_id'     => $orgId,
             'name'       => $name,
             'status'     => 'draft',
             'created_by' => (int) $user['id'],
         ]);
-
-        // Set visibility and initial members if restricted
+// Set visibility and initial members if restricted
         Project::update($this->db, $projectId, ['visibility' => $visibility], $orgId);
         if ($visibility === 'restricted') {
             Project::setMembers($this->db, $projectId, $this->normalisePostedMemberships());
@@ -144,7 +133,6 @@ class HomeController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $projectId = (int) $id;
-
         $project = Project::findById($this->db, $projectId, $orgId);
         if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
@@ -155,7 +143,6 @@ class HomeController
         Project::update($this->db, $projectId, [
             'jira_project_key' => $jiraKey ?: null,
         ], $orgId);
-
         if ($jiraKey) {
             $_SESSION['flash_message'] = "Project linked to Jira project {$jiraKey}.";
         } else {
@@ -174,7 +161,6 @@ class HomeController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $id;
-
         $project = Project::findById($this->db, $projectId, $orgId);
         if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
@@ -184,19 +170,17 @@ class HomeController
         $name       = trim((string) $this->request->post('name', ''));
         $jiraKey    = trim((string) $this->request->post('jira_project_key', ''));
         $visibility = $this->request->post('visibility', 'everyone') === 'restricted' ? 'restricted' : 'everyone';
-
         $updates = ['visibility' => $visibility, 'jira_project_key' => $jiraKey ?: null];
         if ($name !== '') {
             $updates['name'] = $name;
         }
 
         Project::update($this->db, $projectId, $updates, $orgId);
-
-        // Replace member list when restricted (empty list = nobody extra)
+// Replace member list when restricted (empty list = nobody extra)
         if ($visibility === 'restricted') {
             Project::setMembers($this->db, $projectId, $this->normalisePostedMemberships());
         } else {
-            // Switching back to 'everyone' — clear any stored members
+        // Switching back to 'everyone' — clear any stored members
             Project::setMembers($this->db, $projectId, []);
         }
 
@@ -213,7 +197,6 @@ class HomeController
         $orgId = (int) $user['org_id'];
         $projectId = (int) $id;
         $name = trim((string) $this->request->post('name', ''));
-
         if ($name === '') {
             $_SESSION['flash_error'] = 'Project name cannot be empty.';
             $this->response->redirect('/app/home');
@@ -239,7 +222,6 @@ class HomeController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $projectId = (int) $id;
-
         $project = Project::findById($this->db, $projectId, $orgId);
         if ($project === null || !ProjectPolicy::canManageProject($this->db, $user, $project)) {
             $this->response->redirect('/app/home');
@@ -272,15 +254,12 @@ class HomeController
             ['key' => 'sprints',        'url' => '/app/sprints',        'label' => 'Allocate Sprints'],
             ['key' => 'governance',     'url' => '/app/governance',     'label' => 'Governance'],
         ];
-
-        // Run completion checks (avoid hammering DB — use simple COUNT queries)
+// Run completion checks (avoid hammering DB — use simple COUNT queries)
         $completion = self::computeStepCompletion($db, $projectId);
-
         $complete = 0;
         $nextUrl   = $steps[0]['url'];
         $nextLabel = $steps[0]['label'];
         $foundNext = false;
-
         foreach ($steps as $step) {
             if (!empty($completion[$step['key']])) {
                 $complete++;
@@ -315,64 +294,31 @@ class HomeController
     public static function computeStepCompletion(Database $db, int $projectId): array
     {
         $completion = [];
-
-        // Upload: has any document with extracted text
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM documents WHERE project_id = :p AND extracted_text IS NOT NULL AND extracted_text != ''",
-            [':p' => $projectId]
-        );
+// Upload: has any document with extracted text
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM documents WHERE project_id = :p AND extracted_text IS NOT NULL AND extracted_text != ''", [':p' => $projectId]);
         $completion['upload'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // Diagram: has strategy_diagrams row
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM strategy_diagrams WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// Diagram: has strategy_diagrams row
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM strategy_diagrams WHERE project_id = :p", [':p' => $projectId]);
         $completion['diagram'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // Work items
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM hl_work_items WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// Work items
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM hl_work_items WHERE project_id = :p", [':p' => $projectId]);
         $workItemCount = (int) ($stmt->fetch()['c'] ?? 0);
         $completion['work-items'] = $workItemCount > 0;
-
-        // Prioritisation: any work item with final_score set
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM hl_work_items WHERE project_id = :p AND final_score IS NOT NULL",
-            [':p' => $projectId]
-        );
+// Prioritisation: any work item with final_score set
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM hl_work_items WHERE project_id = :p AND final_score IS NOT NULL", [':p' => $projectId]);
         $completion['prioritisation'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // Risks
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM risks WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// Risks
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM risks WHERE project_id = :p", [':p' => $projectId]);
         $completion['risks'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // User stories
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM user_stories WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// User stories
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM user_stories WHERE project_id = :p", [':p' => $projectId]);
         $completion['user-stories'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // Sprints
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM sprints WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// Sprints
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM sprints WHERE project_id = :p", [':p' => $projectId]);
         $completion['sprints'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
-        // Governance: has a baseline
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS c FROM strategic_baselines WHERE project_id = :p",
-            [':p' => $projectId]
-        );
+// Governance: has a baseline
+        $stmt = $db->query("SELECT COUNT(*) AS c FROM strategic_baselines WHERE project_id = :p", [':p' => $projectId]);
         $completion['governance'] = ($stmt->fetch()['c'] ?? 0) > 0;
-
         return $completion;
     }
 
@@ -383,7 +329,6 @@ class HomeController
     {
         $rawRoles = (array) ($this->request->post('member_roles') ?? []);
         $memberships = [];
-
         foreach ($rawRoles as $userId => $membershipRole) {
             $uid = (int) $userId;
             if ($uid <= 0) {

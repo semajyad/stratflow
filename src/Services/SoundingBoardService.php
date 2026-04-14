@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SoundingBoardService
  *
@@ -20,7 +21,6 @@ class SoundingBoardService
     // ===========================
 
     private GeminiService $gemini;
-
     public function __construct(GeminiService $gemini)
     {
         $this->gemini = $gemini;
@@ -46,16 +46,8 @@ class SoundingBoardService
     public function evaluate(array $panelMembers, string $evaluationLevel, string $screenContent, ?array $customLevels = null): array
     {
         $results = [];
-
         foreach ($panelMembers as $member) {
-            $prompt = PersonaPrompt::buildPrompt(
-                $member['role_title'],
-                $member['prompt_description'],
-                $evaluationLevel,
-                $screenContent,
-                $customLevels
-            );
-
+            $prompt = PersonaPrompt::buildPrompt($member['role_title'], $member['prompt_description'], $evaluationLevel, $screenContent, $customLevels);
             try {
                 $response = $this->gemini->generate($prompt, '');
                 $results[] = [
@@ -66,10 +58,10 @@ class SoundingBoardService
                 ];
             } catch (\RuntimeException $e) {
                 $results[] = [
-                    'role_title' => $member['role_title'],
-                    'member_id' => $member['id'],
-                    'response'  => 'Error: ' . $e->getMessage(),
-                    'status'    => 'error',
+                'role_title' => $member['role_title'],
+                'member_id' => $member['id'],
+                'response'  => 'Error: ' . $e->getMessage(),
+                'status'    => 'error',
                 ];
             }
         }

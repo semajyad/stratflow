@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StrategyDiagram Model
  *
@@ -30,19 +31,15 @@ class StrategyDiagram
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO strategy_diagrams
+        $db->query("INSERT INTO strategy_diagrams
                 (project_id, mermaid_code, version, created_by)
              VALUES
-                (:project_id, :mermaid_code, :version, :created_by)",
-            [
+                (:project_id, :mermaid_code, :version, :created_by)", [
                 ':project_id'   => $data['project_id'],
                 ':mermaid_code' => $data['mermaid_code'],
                 ':version'      => $data['version'] ?? 1,
                 ':created_by'   => $data['created_by'],
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -59,15 +56,11 @@ class StrategyDiagram
      */
     public static function findByProjectId(Database $db, int $projectId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM strategy_diagrams
+        $stmt = $db->query("SELECT * FROM strategy_diagrams
              WHERE project_id = :project_id
              ORDER BY version DESC
-             LIMIT 1",
-            [':project_id' => $projectId]
-        );
+             LIMIT 1", [':project_id' => $projectId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -80,12 +73,8 @@ class StrategyDiagram
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM strategy_diagrams WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM strategy_diagrams WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -104,12 +93,10 @@ class StrategyDiagram
     private const UPDATABLE_COLUMNS = [
         'mermaid_code',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
         $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
-
         $setClauses = ['version = version + 1'];
         $bound      = [];
         foreach ($data as $col => $val) {
@@ -119,7 +106,6 @@ class StrategyDiagram
 
         $bound[':id'] = $id;
         $setStr = implode(', ', $setClauses);
-
         $db->query("UPDATE strategy_diagrams SET {$setStr} WHERE id = :id", $bound);
     }
 
@@ -135,9 +121,6 @@ class StrategyDiagram
      */
     public static function deleteByProjectId(Database $db, int $projectId): void
     {
-        $db->query(
-            "DELETE FROM strategy_diagrams WHERE project_id = :project_id",
-            [':project_id' => $projectId]
-        );
+        $db->query("DELETE FROM strategy_diagrams WHERE project_id = :project_id", [':project_id' => $projectId]);
     }
 }

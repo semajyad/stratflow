@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AccessTokenController
  *
@@ -31,12 +32,11 @@ use StratFlow\Services\JiraService;
 
 class AccessTokenController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -62,42 +62,34 @@ class AccessTokenController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $userId = (int) $user['id'];
-
         $tokens = PersonalAccessToken::listForUser($this->db, $userId, $orgId);
-
-        // Jira integration status for identity picker
+// Jira integration status for identity picker
         $jiraConnected = false;
         try {
             $jiraInteg     = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
             $jiraConnected = $jiraInteg && ($jiraInteg['status'] ?? '') !== 'disconnected';
-        } catch (\Throwable) { /* non-critical */ }
+        } catch (\Throwable) {
+        /* non-critical */
+        }
 
         // Consume the one-time flash of the raw token (shown once at creation)
         $newTokenRaw = $_SESSION['_flash']['new_pat'] ?? null;
         unset($_SESSION['_flash']['new_pat']);
-
-        // Build team options: formal teams + distinct values already in use
+// Build team options: formal teams + distinct values already in use
         $teamNames = [];
-        $formalTeams = $this->db->query(
-            "SELECT name FROM teams WHERE org_id = :org_id ORDER BY name ASC",
-            [':org_id' => $orgId]
-        )->fetchAll(\PDO::FETCH_COLUMN);
+        $formalTeams = $this->db->query("SELECT name FROM teams WHERE org_id = :org_id ORDER BY name ASC", [':org_id' => $orgId])->fetchAll(\PDO::FETCH_COLUMN);
         foreach ($formalTeams as $t) {
             $teamNames[$t] = true;
         }
-        $usedTeams = $this->db->query(
-            "SELECT DISTINCT team_assigned FROM hl_work_items
+        $usedTeams = $this->db->query("SELECT DISTINCT team_assigned FROM hl_work_items
              JOIN projects ON projects.id = hl_work_items.project_id
              WHERE projects.org_id = :org_id AND team_assigned IS NOT NULL AND team_assigned != ''
-             ORDER BY team_assigned ASC",
-            [':org_id' => $orgId]
-        )->fetchAll(\PDO::FETCH_COLUMN);
+             ORDER BY team_assigned ASC", [':org_id' => $orgId])->fetchAll(\PDO::FETCH_COLUMN);
         foreach ($usedTeams as $t) {
             $teamNames[$t] = true;
         }
         $teamOptions = array_keys($teamNames);
         sort($teamOptions);
-
         $this->response->render('account/access-tokens', [
             'user'               => $user,
             'tokens'             => $tokens,
@@ -124,7 +116,6 @@ class AccessTokenController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $userId = (int) $user['id'];
-
         $name = trim($this->request->post('name', ''));
         if ($name === '') {
             $_SESSION['_flash']['error'] = 'Token name is required.';
@@ -139,28 +130,10 @@ class AccessTokenController
         }
 
         $generated = PersonalAccessToken::generate();
-        PersonalAccessToken::create(
-            $this->db,
-            $userId,
-            $orgId,
-            $name,
-            $generated['raw'],
-            $generated['prefix'],
-            PersonalAccessToken::DEFAULT_SCOPES
-        );
-
-        // Flash the raw token — shown once, not stored in DB
+        PersonalAccessToken::create($this->db, $userId, $orgId, $name, $generated['raw'], $generated['prefix'], PersonalAccessToken::DEFAULT_SCOPES);
+// Flash the raw token — shown once, not stored in DB
         $_SESSION['_flash']['new_pat'] = $generated['raw'];
-
-        AuditLogger::log(
-            $this->db,
-            $userId,
-            AuditLogger::API_KEY_USED,
-            $this->request->ip(),
-            $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'pat_created', 'name' => $name, 'prefix' => $generated['prefix']]
-        );
-
+        AuditLogger::log($this->db, $userId, AuditLogger::API_KEY_USED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', ['action' => 'pat_created', 'name' => $name, 'prefix' => $generated['prefix']]);
         $this->response->redirect('/app/account/tokens');
     }
 
@@ -179,18 +152,9 @@ class AccessTokenController
         $orgId  = (int) $user['org_id'];
         $userId = (int) $user['id'];
         $tokenId = (int) $id;
-
         $revoked = PersonalAccessToken::revoke($this->db, $tokenId, $userId, $orgId);
-
         if ($revoked) {
-            AuditLogger::log(
-                $this->db,
-                $userId,
-                AuditLogger::API_KEY_USED,
-                $this->request->ip(),
-                $_SERVER['HTTP_USER_AGENT'] ?? '',
-                ['action' => 'pat_revoked', 'token_id' => $tokenId]
-            );
+            AuditLogger::log($this->db, $userId, AuditLogger::API_KEY_USED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', ['action' => 'pat_revoked', 'token_id' => $tokenId]);
             $_SESSION['_flash']['success'] = 'Token revoked successfully.';
         } else {
             $_SESSION['_flash']['error'] = 'Token not found or already revoked.';
@@ -209,22 +173,13 @@ class AccessTokenController
     {
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
-
         $team = trim((string) ($_POST['team'] ?? ''));
-
         $teamValue = $team !== '' ? $team : null;
-
         User::update($this->db, $userId, ['team' => $teamValue]);
-
-        // Verify the write actually landed
-        $verify = $this->db->query(
-            'SELECT team FROM users WHERE id = :id LIMIT 1',
-            [':id' => $userId]
-        )->fetch();
-
-        // Refresh session so the page shows the updated value immediately
+// Verify the write actually landed
+        $verify = $this->db->query('SELECT team FROM users WHERE id = :id LIMIT 1', [':id' => $userId])->fetch();
+// Refresh session so the page shows the updated value immediately
         $_SESSION['user']['team'] = $teamValue;
-
         $_SESSION['_flash']['success'] = 'Team saved.';
         $this->response->redirect('/app/account/tokens');
     }
@@ -239,28 +194,16 @@ class AccessTokenController
     {
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
-
         $accountId   = trim((string) ($_POST['jira_account_id']   ?? '')) ?: null;
         $displayName = trim((string) ($_POST['jira_display_name'] ?? '')) ?: null;
-
         User::update($this->db, $userId, [
             'jira_account_id'   => $accountId,
             'jira_display_name' => $displayName,
         ]);
-
-        // Refresh session so the page shows the updated value immediately
+// Refresh session so the page shows the updated value immediately
         $_SESSION['user']['jira_account_id']   = $accountId;
         $_SESSION['user']['jira_display_name'] = $displayName;
-
-        AuditLogger::log(
-            $this->db,
-            $userId,
-            AuditLogger::API_KEY_USED,
-            $this->request->ip(),
-            $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'jira_identity_set', 'jira_account_id' => $accountId, 'jira_display_name' => $displayName]
-        );
-
+        AuditLogger::log($this->db, $userId, AuditLogger::API_KEY_USED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', ['action' => 'jira_identity_set', 'jira_account_id' => $accountId, 'jira_display_name' => $displayName]);
         $_SESSION['_flash']['success'] = 'Jira identity saved.';
         $this->response->redirect('/app/account/tokens');
     }
@@ -274,10 +217,8 @@ class AccessTokenController
     public function jiraUsers(): void
     {
         header('Content-Type: application/json');
-
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         try {
             $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         } catch (\Throwable) {
@@ -292,20 +233,17 @@ class AccessTokenController
         $q          = trim((string) $this->request->get('q', ''));
         $cfg        = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $projectKey = $cfg['project_key'] ?? '';
-
         try {
             $jira  = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
             $users = $projectKey !== ''
                 ? $jira->getAssignableUsers($projectKey, $q)
                 : $jira->searchUsers($q ?: 'a');
-
             $mapped = array_map(fn($u) => [
                 'accountId'   => $u['accountId'] ?? '',
                 'displayName' => $u['displayName'] ?? '',
                 'email'       => $u['emailAddress'] ?? '',
                 'avatar'      => $u['avatarUrls']['24x24'] ?? '',
             ], $users);
-
             $this->response->json(['users' => array_values($mapped)]);
         } catch (\Throwable $e) {
             $this->response->json(['users' => [], 'error' => $e->getMessage()]);

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SystemSettings Model
  *
@@ -47,8 +48,7 @@ class SystemSettings
         // Critical review evaluation level prompts
         'evaluation_levels_json',
     ];
-
-    /** Safe fallback defaults returned when the table row is missing. */
+/** Safe fallback defaults returned when the table row is missing. */
     private const DEFAULTS = [
         'ai_provider'            => 'google',
         'ai_model'               => 'gemini-3-flash-preview',
@@ -77,8 +77,7 @@ class SystemSettings
         // Critical review evaluation level prompts
         'evaluation_levels_json'        => '',
     ];
-
-    /**
+/**
      * Return current settings as a flat array, merged over hardcoded defaults.
      */
     public static function get(Database $db): array
@@ -96,8 +95,7 @@ class SystemSettings
 
         $stored = json_decode($row['settings_json'], true) ?: [];
         $merged = array_merge(self::DEFAULTS, $stored);
-
-        // Enforce gemini-3-flash-preview as the minimum model for Google provider
+// Enforce gemini-3-flash-preview as the minimum model for Google provider
         if (($merged['ai_provider'] ?? '') === 'google') {
             $allowedGemini = ['gemini-3-flash-preview', 'gemini-1.5-pro', 'gemini-1.5-flash'];
             if (!in_array($merged['ai_model'], $allowedGemini)) {
@@ -119,12 +117,8 @@ class SystemSettings
         $current  = self::get($db);
         $filtered = array_intersect_key($data, array_flip(self::ALLOWED_KEYS));
         $merged   = array_merge($current, $filtered);
-
         $json = json_encode($merged);
-        $db->query(
-            "INSERT INTO system_settings (id, settings_json) VALUES (1, :json_insert)
-             ON DUPLICATE KEY UPDATE settings_json = :json_update, updated_at = NOW()",
-            [':json_insert' => $json, ':json_update' => $json]
-        );
+        $db->query("INSERT INTO system_settings (id, settings_json) VALUES (1, :json_insert)
+             ON DUPLICATE KEY UPDATE settings_json = :json_update, updated_at = NOW()", [':json_insert' => $json, ':json_update' => $json]);
     }
 }

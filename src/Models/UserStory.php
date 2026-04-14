@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UserStory Model
  *
@@ -34,16 +35,14 @@ class UserStory
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO user_stories
+        $db->query("INSERT INTO user_stories
                 (project_id, parent_hl_item_id, priority_number, title, description,
                  parent_link, team_assigned, size, blocked_by,
                  acceptance_criteria, kr_hypothesis, quality_score, quality_breakdown, status)
              VALUES
                 (:project_id, :parent_hl_item_id, :priority_number, :title, :description,
                  :parent_link, :team_assigned, :size, :blocked_by,
-                 :acceptance_criteria, :kr_hypothesis, :quality_score, :quality_breakdown, :status)",
-            [
+                 :acceptance_criteria, :kr_hypothesis, :quality_score, :quality_breakdown, :status)", [
                 ':project_id'          => $data['project_id'],
                 ':parent_hl_item_id'   => $data['parent_hl_item_id'] ?? null,
                 ':priority_number'     => $data['priority_number'],
@@ -58,9 +57,7 @@ class UserStory
                 ':quality_score'       => $data['quality_score'] ?? null,
                 ':quality_breakdown'   => $data['quality_breakdown'] ?? null,
                 ':status'              => $data['status'] ?? 'backlog',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -78,17 +75,13 @@ class UserStory
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title,
+        $stmt = $db->query("SELECT us.*, hw.title AS parent_title,
                     sm.external_key AS jira_key, sm.external_url AS jira_url
              FROM user_stories us
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
              LEFT JOIN sync_mappings sm ON sm.local_type = 'user_story' AND sm.local_id = us.id
              WHERE us.project_id = :project_id
-             ORDER BY us.priority_number ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY us.priority_number ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -101,15 +94,11 @@ class UserStory
      */
     public static function findByParentId(Database $db, int $parentId): array
     {
-        $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title
+        $stmt = $db->query("SELECT us.*, hw.title AS parent_title
              FROM user_stories us
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
              WHERE us.parent_hl_item_id = :parent_id
-             ORDER BY us.priority_number ASC",
-            [':parent_id' => $parentId]
-        );
-
+             ORDER BY us.priority_number ASC", [':parent_id' => $parentId]);
         return $stmt->fetchAll();
     }
 
@@ -122,15 +111,11 @@ class UserStory
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title
+        $stmt = $db->query("SELECT us.*, hw.title AS parent_title
              FROM user_stories us
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
-             WHERE us.id = :id LIMIT 1",
-            [':id' => $id]
-        );
+             WHERE us.id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -143,17 +128,13 @@ class UserStory
      */
     public static function findUnallocated(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT us.*, hw.title AS parent_title
+        $stmt = $db->query("SELECT us.*, hw.title AS parent_title
              FROM user_stories us
              LEFT JOIN hl_work_items hw ON us.parent_hl_item_id = hw.id
              LEFT JOIN sprint_stories ss ON us.id = ss.user_story_id
              WHERE us.project_id = :project_id
                AND ss.id IS NULL
-             ORDER BY us.priority_number ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY us.priority_number ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -166,12 +147,8 @@ class UserStory
      */
     public static function countByProjectId(Database $db, int $projectId): int
     {
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM user_stories WHERE project_id = :project_id",
-            [':project_id' => $projectId]
-        );
+        $stmt = $db->query("SELECT COUNT(*) AS cnt FROM user_stories WHERE project_id = :project_id", [':project_id' => $projectId]);
         $row = $stmt->fetch();
-
         return (int) ($row['cnt'] ?? 0);
     }
 
@@ -195,7 +172,6 @@ class UserStory
         'quality_last_attempt_at', 'quality_error',
         'requires_review', 'status', 'last_jira_sync_at',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -204,17 +180,12 @@ class UserStory
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE user_stories SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -228,16 +199,12 @@ class UserStory
     {
         $pdo = $db->getPdo();
         $pdo->beginTransaction();
-
         try {
             foreach ($items as $item) {
-                $db->query(
-                    "UPDATE user_stories SET priority_number = :priority_number WHERE id = :id",
-                    [
+                $db->query("UPDATE user_stories SET priority_number = :priority_number WHERE id = :id", [
                         ':priority_number' => $item['priority_number'],
                         ':id'              => $item['id'],
-                    ]
-                );
+                    ]);
             }
             $pdo->commit();
         } catch (\Exception $e) {
@@ -269,10 +236,7 @@ class UserStory
      */
     public static function deleteByProjectId(Database $db, int $projectId): void
     {
-        $db->query(
-            "DELETE FROM user_stories WHERE project_id = :project_id",
-            [':project_id' => $projectId]
-        );
+        $db->query("DELETE FROM user_stories WHERE project_id = :project_id", [':project_id' => $projectId]);
     }
 
     // ===========================

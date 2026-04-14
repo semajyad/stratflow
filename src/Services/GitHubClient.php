@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitHubClient
  *
@@ -32,7 +33,6 @@ class GitHubClient
 
         $providedHash = substr($signatureHeader, 7);
         $expectedHash = hash_hmac('sha256', $rawBody, $secret);
-
         return hash_equals($expectedHash, $providedHash);
     }
 
@@ -57,13 +57,11 @@ class GitHubClient
 
         $pr     = $payload['pull_request'];
         $action = $payload['action'] ?? '';
-
         if (!in_array($action, ['opened', 'reopened', 'synchronize', 'closed'], true)) {
             return null;
         }
 
         $merged = ($action === 'closed') && ($pr['merged'] ?? false);
-
         return [
             'action' => $action,
             'merged' => $merged,

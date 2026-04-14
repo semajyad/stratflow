@@ -1,4 +1,5 @@
 <?php
+
 /**
  * WebhookController
  *
@@ -34,7 +35,6 @@ class WebhookController
     protected Auth $auth;
     protected Database $db;
     protected array $config;
-
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -55,9 +55,7 @@ class WebhookController
     {
         $payload   = file_get_contents('php://input');
         $sigHeader = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
-
         $stripe = new StripeService($this->config['stripe']);
-
         try {
             $event = $stripe->constructWebhookEvent($payload, $sigHeader);
         } catch (\Stripe\Exception\SignatureVerificationException $e) {
@@ -100,10 +98,8 @@ class WebhookController
         $customerEmail    = $this->extractCustomerEmail($session);
         $stripeCustomerId = $this->extractStripeCustomerId($session->customer ?? null);
         $stripeSubId      = $session->subscription ?? '';
-
         \StratFlow\Services\Logger::warn("[StratFlow] Checkout completed: email={$customerEmail}, customer={$stripeCustomerId}, sub={$stripeSubId}");
-
-        // Determine plan type from the first line item price ID
+// Determine plan type from the first line item price ID
         $planType = 'product';
         if (!empty($session->line_items)) {
             $firstPrice = $session->line_items->data[0]->price->id ?? '';
@@ -124,7 +120,6 @@ class WebhookController
 
         // Subscription flow: find or create the organisation
         $org = Organisation::findByStripeCustomerId($this->db, $stripeCustomerId);
-
         if ($org === null) {
             $orgName = $customerEmail ?: ('org-' . $stripeCustomerId);
             $orgId   = Organisation::create($this->db, [
@@ -149,11 +144,9 @@ class WebhookController
         // Create the first user (org admin) with a welcome email
         if (!empty($customerEmail)) {
             $existingUser = User::findByEmail($this->db, $customerEmail);
-
             if ($existingUser === null) {
                 $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
                 $displayName    = explode('@', $customerEmail)[0];
-
                 $newUserId = User::create($this->db, [
                     'org_id'        => $orgId,
                     'full_name'     => $displayName,
@@ -161,10 +154,8 @@ class WebhookController
                     'password_hash' => $randomPassword,
                     'role'          => 'org_admin',
                 ]);
-
                 $token          = PasswordToken::create($this->db, $newUserId, 'set_password');
                 $setPasswordUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
-
                 $emailService = new EmailService($this->config);
                 $sent = $emailService->sendWelcome($customerEmail, $displayName, $setPasswordUrl);
                 \StratFlow\Services\Logger::warn("[StratFlow] Welcome email to {$customerEmail}: " . ($sent ? 'SENT' : 'FAILED'));
@@ -226,15 +217,9 @@ class WebhookController
 
         if ($planType === 'user_pack') {
             $newLimit = (int) $sub['user_seat_limit'] + 5;
-            $this->db->query(
-                "UPDATE subscriptions SET user_seat_limit = :limit WHERE id = :id",
-                [':limit' => $newLimit, ':id' => (int) $sub['id']]
-            );
+            $this->db->query("UPDATE subscriptions SET user_seat_limit = :limit WHERE id = :id", [':limit' => $newLimit, ':id' => (int) $sub['id']]);
         } elseif ($planType === 'evaluation_board') {
-            $this->db->query(
-                "UPDATE subscriptions SET has_evaluation_board = 1 WHERE id = :id",
-                [':id' => (int) $sub['id']]
-            );
+            $this->db->query("UPDATE subscriptions SET has_evaluation_board = 1 WHERE id = :id", [':id' => (int) $sub['id']]);
         }
     }
 }

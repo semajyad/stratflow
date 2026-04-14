@@ -1,4 +1,5 @@
 <?php
+
 /**
  * JiraService — OAuth + API Client
  *
@@ -29,13 +30,11 @@ class JiraService
     private string $redirectUri;
     private ?array $integration;
     private ?Database $db;
-
     private const AUTH_URL  = 'https://auth.atlassian.com/authorize';
     private const TOKEN_URL = 'https://auth.atlassian.com/oauth/token';
     private const API_BASE  = 'https://api.atlassian.com';
     private const SCOPES    = 'read:jira-work write:jira-work manage:jira-webhook offline_access read:jira-user read:jira-software write:jira-software read:sprint:jira-software write:sprint:jira-software read:board-scope:jira-software';
-
-    // ===========================
+// ===========================
     // CONSTRUCTOR
     // ===========================
 
@@ -74,7 +73,6 @@ class JiraService
             'response_type' => 'code',
             'prompt'        => 'consent',
         ];
-
         return self::AUTH_URL . '?' . http_build_query($params);
     }
 
@@ -94,9 +92,7 @@ class JiraService
             'code'          => $code,
             'redirect_uri'  => $this->redirectUri,
         ];
-
         $response = $this->httpPost(self::TOKEN_URL, $payload);
-
         if (empty($response['access_token'])) {
             throw new \RuntimeException('Jira token exchange failed: ' . json_encode($response));
         }
@@ -124,25 +120,15 @@ class JiraService
             'client_secret' => $this->clientSecret,
             'refresh_token' => $this->integration['refresh_token'],
         ];
-
         $response = $this->httpPost(self::TOKEN_URL, $payload);
-
         if (empty($response['access_token'])) {
             throw new \RuntimeException('Jira token refresh failed: ' . json_encode($response));
         }
 
         $expiresAt = date('Y-m-d H:i:s', time() + ($response['expires_in'] ?? 3600));
         $newRefreshToken = $response['refresh_token'] ?? $this->integration['refresh_token'];
-
-        Integration::updateTokens(
-            $this->db,
-            (int) $this->integration['id'],
-            $response['access_token'],
-            $newRefreshToken,
-            $expiresAt
-        );
-
-        // Update in-memory integration for subsequent calls
+        Integration::updateTokens($this->db, (int) $this->integration['id'], $response['access_token'], $newRefreshToken, $expiresAt);
+// Update in-memory integration for subsequent calls
         $this->integration['access_token']     = $response['access_token'];
         $this->integration['refresh_token']    = $newRefreshToken;
         $this->integration['token_expires_at'] = $expiresAt;
@@ -166,11 +152,9 @@ class JiraService
             ],
             CURLOPT_TIMEOUT => 15,
         ]);
-
         $body = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
         if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to get accessible resources: HTTP ' . $httpCode);
         }
@@ -268,7 +252,7 @@ class JiraService
         $params = array_map(fn($id) => 'accountId=' . urlencode($id), $accountIds);
         $path   = '/rest/api/3/user/bulk?' . implode('&', $params);
         $result = $this->makeAuthenticatedRequest('GET', $path);
-        // Response is {maxResults, startAt, total, isLast, values}
+// Response is {maxResults, startAt, total, isLast, values}
         return $result['values'] ?? (is_array($result) ? $result : []);
     }
 
@@ -302,11 +286,7 @@ class JiraService
      */
     public function assignIssue(string $issueKey, ?string $jiraAccountId): void
     {
-        $this->makeAuthenticatedRequest(
-            'PUT',
-            '/rest/api/3/issue/' . $issueKey . '/assignee',
-            ['accountId' => $jiraAccountId]
-        );
+        $this->makeAuthenticatedRequest('PUT', '/rest/api/3/issue/' . $issueKey . '/assignee', ['accountId' => $jiraAccountId]);
     }
 
     /**
@@ -322,14 +302,9 @@ class JiraService
     {
         $result = $this->makeAuthenticatedRequest('GET', '/rest/api/3/issue/' . $issueKey . '/transitions');
         $transitions = $result['transitions'] ?? [];
-
         foreach ($transitions as $t) {
             if (stripos($t['name'] ?? '', $statusName) !== false) {
-                $this->makeAuthenticatedRequest(
-                    'POST',
-                    '/rest/api/3/issue/' . $issueKey . '/transitions',
-                    ['transition' => ['id' => $t['id']]]
-                );
+                $this->makeAuthenticatedRequest('POST', '/rest/api/3/issue/' . $issueKey . '/transitions', ['transition' => ['id' => $t['id']]]);
                 return;
             }
         }
@@ -385,7 +360,6 @@ class JiraService
         $payload = [
             'issueUpdates' => array_map(fn($fields) => ['fields' => $fields], $issues),
         ];
-
         return $this->makeAuthenticatedRequest('POST', '/rest/api/3/issue/bulk', $payload);
     }
 
@@ -457,9 +431,9 @@ class JiraService
 
         // Find the sprint with the most recent end date
         usort($sprints, static function ($a, $b) {
+
             return strcmp($b['endDate'] ?? '', $a['endDate'] ?? '');
         });
-
         $endDate = $sprints[0]['endDate'] ?? null;
         if (!$endDate) {
             return null;
@@ -490,11 +464,11 @@ class JiraService
 
         // Sort by end date descending, take the last N
         usort($sprints, static function ($a, $b) {
+
             return strcmp($b['endDate'] ?? '', $a['endDate'] ?? '');
         });
         $sprints = array_slice($sprints, 0, $numSprints);
-
-        // Candidate story-points field names in priority order.
+// Candidate story-points field names in priority order.
         // Jira Cloud almost always stores story points in customfield_10016;
         // some instances use customfield_10028 or customfield_10004.
         // We request all of them in one call and take the first non-zero value per issue.
@@ -506,7 +480,6 @@ class JiraService
             'story_points',
         ]));
         $fieldsParam = implode(',', $candidateFields);
-
         $totals = [];
         foreach ($sprints as $sprint) {
             $sprintId = (int) ($sprint['id'] ?? 0);
@@ -514,14 +487,11 @@ class JiraService
                 continue;
             }
             try {
-                $issueResult = $this->makeAuthenticatedRequest(
-                    'GET',
-                    "/rest/agile/1.0/sprint/{$sprintId}/issue?jql=status%3DDone&fields={$fieldsParam}&maxResults=200"
-                );
+                $issueResult = $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/sprint/{$sprintId}/issue?jql=status%3DDone&fields={$fieldsParam}&maxResults=200");
                 $pts = 0;
                 foreach ($issueResult['issues'] ?? [] as $issue) {
                     $fields = $issue['fields'] ?? [];
-                    // Take the first non-null, non-zero value across all candidate fields
+                // Take the first non-null, non-zero value across all candidate fields
                     foreach ($candidateFields as $f) {
                         $val = isset($fields[$f]) ? (float) $fields[$f] : 0.0;
                         if ($val > 0) {
@@ -532,7 +502,7 @@ class JiraService
                 }
                 $totals[] = $pts;
             } catch (\Throwable) {
-                // skip this sprint
+    // skip this sprint
             }
         }
 
@@ -561,7 +531,6 @@ class JiraService
             'next_sprint_number' => null,
             'suggested_capacity' => null,
         ];
-
         try {
             $closed  = $this->makeAuthenticatedRequest('GET', "/rest/agile/1.0/board/{$boardId}/sprint?state=closed&maxResults=10");
             $sprints = $closed['values'] ?? [];
@@ -570,10 +539,9 @@ class JiraService
         }
 
         if (!empty($sprints)) {
-            // Sort by end date descending — most recent sprint first
+// Sort by end date descending — most recent sprint first
             usort($sprints, static fn($a, $b) => strcmp($b['endDate'] ?? '', $a['endDate'] ?? ''));
-
-            // Suggested start: day after last sprint end
+// Suggested start: day after last sprint end
             $lastEnd = substr($sprints[0]['endDate'] ?? '', 0, 10);
             if ($lastEnd) {
                 $next = new \DateTime($lastEnd);
@@ -589,7 +557,7 @@ class JiraService
                 if ($start && $end) {
                     $days = (int) (new \DateTime($start))->diff(new \DateTime($end))->days;
                     if ($days > 0) {
-                        $lengths[] = $days;
+                            $lengths[] = $days;
                     }
                 }
             }
@@ -633,10 +601,7 @@ class JiraService
     public function getVelocityFromChart(int $boardId, int $numSprints = 3): ?int
     {
         try {
-            $data = $this->makeAuthenticatedRequest(
-                'GET',
-                "/rest/greenhopper/1.0/rapid/charts/velocity?rapidViewId={$boardId}"
-            );
+            $data = $this->makeAuthenticatedRequest('GET', "/rest/greenhopper/1.0/rapid/charts/velocity?rapidViewId={$boardId}");
         } catch (\Throwable) {
             return null;
         }
@@ -650,7 +615,6 @@ class JiraService
         // Sort by sprint ID descending so we get the most recent sprints first.
         krsort($entries, SORT_NUMERIC);
         $recent = array_slice($entries, 0, $numSprints);
-
         $totals = [];
         foreach ($recent as $entry) {
             $completed = (float) ($entry['completed']['value'] ?? 0);
@@ -676,8 +640,12 @@ class JiraService
             'name'          => $name,
             'originBoardId' => $boardId,
         ];
-        if ($startDate) $body['startDate'] = $startDate;
-        if ($endDate)   $body['endDate']   = $endDate;
+        if ($startDate) {
+            $body['startDate'] = $startDate;
+        }
+        if ($endDate) {
+            $body['endDate']   = $endDate;
+        }
 
         return $this->makeAuthenticatedRequest('POST', '/rest/agile/1.0/sprint', $body);
     }
@@ -687,7 +655,9 @@ class JiraService
      */
     public function moveIssuesToSprint(int $sprintId, array $issueKeys): void
     {
-        if (empty($issueKeys)) return;
+        if (empty($issueKeys)) {
+            return;
+        }
 
         $this->makeAuthenticatedRequest('POST', "/rest/agile/1.0/sprint/{$sprintId}/issue", [
             'issues' => $issueKeys,
@@ -702,7 +672,6 @@ class JiraService
         // Get existing webhook IDs from config_json
         $config = json_decode($this->integration['config_json'] ?? '{}', true);
         $webhookIds = $config['webhook_ids'] ?? [];
-
         if (!empty($webhookIds)) {
             $this->makeAuthenticatedRequest('PUT', '/rest/api/3/webhook/refresh', [
                 'webhookIds' => $webhookIds,
@@ -735,7 +704,7 @@ class JiraService
                 try {
                     $this->refreshAccessToken();
                 } catch (\Throwable $e) {
-                    // Will fail on 401 below and retry there
+    // Will fail on 401 below and retry there
                 }
             }
         }
@@ -746,7 +715,6 @@ class JiraService
 
         $cloudId = $this->integration['cloud_id'];
         $url = self::API_BASE . '/ex/jira/' . $cloudId . $path;
-
         $maxRetries = 2;
         for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
             $ch = curl_init($url);
@@ -755,14 +723,12 @@ class JiraService
                 'Accept: application/json',
                 'Content-Type: application/json',
             ];
-
             $opts = [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => $headers,
                 CURLOPT_TIMEOUT        => 15,
                 CURLOPT_CUSTOMREQUEST  => $method,
             ];
-
             if ($body !== null && in_array($method, ['POST', 'PUT'], true)) {
                 $opts[CURLOPT_POSTFIELDS] = json_encode($body);
             }
@@ -772,7 +738,6 @@ class JiraService
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
             curl_close($ch);
-
             if ($curlError) {
                 if ($this->db && $this->integration) {
                     Integration::recordError($this->db, (int) $this->integration['id'], 'cURL error: ' . $curlError);
@@ -841,10 +806,8 @@ class JiraService
                 $errorParts[] = $errorDetail['message'];
             }
             $errorMsg = !empty($errorParts) ? implode('; ', $errorParts) : ('HTTP ' . $httpCode);
-
             \StratFlow\Services\Logger::warn("[StratFlow] Jira API error ($httpCode): $errorMsg");
             \StratFlow\Services\Logger::warn("[StratFlow] Jira request body: " . ($body ? json_encode($body) : 'none'));
-
             if ($this->db && $this->integration) {
                 Integration::recordError($this->db, (int) $this->integration['id'], $errorMsg);
             }
@@ -871,7 +834,6 @@ class JiraService
     {
         $paragraphs = [];
         $lines = explode("\n", $text);
-
         foreach ($lines as $line) {
             $trimmed = trim($line);
             if ($trimmed === '') {
@@ -881,13 +843,13 @@ class JiraService
                 ];
             } else {
                 $paragraphs[] = [
-                    'type'    => 'paragraph',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => $trimmed,
-                        ],
+                'type'    => 'paragraph',
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => $trimmed,
                     ],
+                ],
                 ];
             }
         }
@@ -921,7 +883,6 @@ class JiraService
     private function extractTextFromNode(array $node): string
     {
         $text = '';
-
         if (($node['type'] ?? '') === 'text') {
             return $node['text'] ?? '';
         }
@@ -964,12 +925,10 @@ class JiraService
             ],
             CURLOPT_TIMEOUT => 15,
         ]);
-
         $body = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
-
         if ($curlError) {
             throw new \RuntimeException('Jira OAuth cURL error: ' . $curlError);
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * JiraSyncService — Push & Pull Sync Engine
  *
@@ -31,8 +32,7 @@ class JiraSyncService
     private JiraService $jira;
     private array $integration;
     private array $fieldMapping;
-
-    // ===========================
+// ===========================
     // CONSTRUCTOR
     // ===========================
 
@@ -46,7 +46,6 @@ class JiraSyncService
         $this->db          = $db;
         $this->jira        = $jira;
         $this->integration = $integration;
-
         $config = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $this->fieldMapping = $config['field_mapping'] ?? [];
     }
@@ -58,12 +57,10 @@ class JiraSyncService
     {
         $integrationId = (int) $this->integration['id'];
         $preview = ['push' => [], 'pull' => [], 'conflicts' => []];
-
-        // Check what would be pushed
+// Check what would be pushed
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $stories = UserStory::findByProjectId($this->db, $projectId);
         $risks = Risk::findByProjectId($this->db, $projectId);
-
         foreach ($workItems as $item) {
             $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'hl_work_item', (int) $item['id']);
             $hash = $this->computeSyncHash($item);
@@ -95,7 +92,6 @@ class JiraSyncService
             $result = $this->jira->searchIssues("project = {$jiraProjectKey}", ['summary', 'issuetype', 'status'], 100);
             $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
             $mappedExtIds = array_column($mappings, 'external_id');
-
             foreach ($result['issues'] ?? [] as $issue) {
                 $externalId = (string) $issue['id'];
                 if (!in_array($externalId, $mappedExtIds)) {
@@ -108,7 +104,7 @@ class JiraSyncService
                 }
             }
         } catch (\Throwable $e) {
-            // Can't preview pull if Jira unreachable
+        // Can't preview pull if Jira unreachable
         }
 
         return $preview;
@@ -130,6 +126,7 @@ class JiraSyncService
     {
         $mappings = $this->fieldMapping['custom_mappings'] ?? [];
         return array_filter($mappings, function (array $m) use ($direction): bool {
+
             return $m['direction'] === $direction || $m['direction'] === 'both';
         });
     }
@@ -150,7 +147,6 @@ class JiraSyncService
             $sfField = $cm['stratflow_field'];
             $jfField = $cm['jira_field'];
             $value   = $item[$sfField] ?? null;
-
             if ($value === null || $value === '') {
                 continue;
             }
@@ -180,14 +176,12 @@ class JiraSyncService
         foreach ($this->customMappingsForDirection('pull') as $cm) {
             $sfField = $cm['stratflow_field'];
             $jfField = $cm['jira_field'];
-
             if (!isset($jiraFields[$jfField])) {
                 continue;
             }
 
             $val = $jiraFields[$jfField];
-
-            // Handle Jira object fields (e.g. {value: "X"} or {name: "X"})
+// Handle Jira object fields (e.g. {value: "X"} or {name: "X"})
             if (is_array($val)) {
                 $val = $val['value'] ?? $val['name'] ?? $val['displayName'] ?? null;
             }
@@ -238,13 +232,10 @@ class JiraSyncService
     {
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
-
-        // Bulk-validate existing mappings in one API call
+// Bulk-validate existing mappings in one API call
         $validKeys = $this->validateMappedKeys($integrationId, 'hl_work_item');
-
         foreach ($workItems as $item) {
             if ($consecutiveErrors >= 3) {
                 $counts['errors'] += count($workItems) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
@@ -253,9 +244,8 @@ class JiraSyncService
             try {
                 $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'hl_work_item', (int) $item['id']);
                 $currentHash = $this->computeSyncHash($item);
-
                 if ($mapping) {
-                    // Check if Jira issue still exists (from bulk check)
+                // Check if Jira issue still exists (from bulk check)
                     if (!isset($validKeys[$mapping['external_key']])) {
                         SyncMapping::delete($this->db, (int) $mapping['id']);
                         $mapping = null;
@@ -263,98 +253,93 @@ class JiraSyncService
                         $counts['skipped']++;
                         continue;
                     } else {
-                        // Update changed item
+    // Update changed item
                         $description = $this->buildWorkItemDescription($item);
                         $updateFields = [
-                            'summary'     => $item['title'],
-                            'description' => $this->jira->textToAdf($description),
-                            'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
+                        'summary'     => $item['title'],
+                        'description' => $this->jira->textToAdf($description),
+                        'priority'    => ['name' => $this->mapPriority((int) ($item['priority_number'] ?? 5))],
                         ];
-                        // Push owner as assignee if configured
+    // Push owner as assignee if configured
                         if (!empty($item['owner'])) {
                             $updateFields['assignee'] = ['displayName' => $item['owner']];
                         }
-                        // Apply additional custom field mappings (push direction)
+                    // Apply additional custom field mappings (push direction)
                         $updateFields = $this->applyCustomPushFields($updateFields, $item);
                         $this->jira->updateIssue($mapping['external_key'], $updateFields);
-
                         SyncMapping::update($this->db, (int) $mapping['id'], [
-                            'sync_hash'     => $currentHash,
-                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        'sync_hash'     => $currentHash,
+                        'last_synced_at' => date('Y-m-d H:i:s'),
                         ]);
-
                         $counts['updated']++;
                         $consecutiveErrors = 0;
                         continue;
                     }
                 }
 
-                // Create new Epic
+        // Create new Epic
                 {
-                    // Create new Epic
-                    $description = $this->buildWorkItemDescription($item);
-                    $fields = [
-                        'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => $this->mapping('epic_type', 'Epic')],
-                        'summary'     => $item['title'],
-                        'description' => $this->jira->textToAdf($description),
-                    ];
+            // Create new Epic
+                $description = $this->buildWorkItemDescription($item);
+                $fields = [
+                'project'     => ['key' => $jiraProjectKey],
+                'issuetype'   => ['name' => $this->mapping('epic_type', 'Epic')],
+                'summary'     => $item['title'],
+                'description' => $this->jira->textToAdf($description),
+                ];
+// Epic Name field (required for company-managed projects)
+                $epicNameField = $this->mapping('epic_name_field', 'customfield_10011');
+                if ($epicNameField) {
+                    $fields[$epicNameField] = $item['title'];
+                }
 
-                    // Epic Name field (required for company-managed projects)
-                    $epicNameField = $this->mapping('epic_name_field', 'customfield_10011');
+            // Apply additional custom field mappings (push direction)
+                $fields = $this->applyCustomPushFields($fields, $item);
+// Try to create — if it fails, retry without optional fields
+                try {
+                    $result = $this->jira->createIssue($fields);
+                } catch (\RuntimeException $e) {
                     if ($epicNameField) {
-                        $fields[$epicNameField] = $item['title'];
+                        unset($fields[$epicNameField]);
                     }
+                    $result = $this->jira->createIssue($fields);
+                }
 
-                    // Apply additional custom field mappings (push direction)
-                    $fields = $this->applyCustomPushFields($fields, $item);
-
-                    // Try to create — if it fails, retry without optional fields
-                    try {
-                        $result = $this->jira->createIssue($fields);
-                    } catch (\RuntimeException $e) {
-                        if ($epicNameField) unset($fields[$epicNameField]);
-                        $result = $this->jira->createIssue($fields);
-                    }
-
-                    $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
-                    $externalUrl = $siteUrl . '/browse/' . $result['key'];
-
-                    SyncMapping::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'local_type'     => 'hl_work_item',
-                        'local_id'       => (int) $item['id'],
-                        'external_id'    => $result['id'],
-                        'external_key'   => $result['key'],
-                        'external_url'   => $externalUrl,
-                        'sync_hash'      => $currentHash,
-                    ]);
-
-                    SyncLog::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'direction'      => 'push',
-                        'action'         => 'create',
-                        'local_type'     => 'hl_work_item',
-                        'local_id'       => (int) $item['id'],
-                        'external_id'    => $result['key'],
-                        'details_json'   => json_encode(['title' => $item['title'], 'key' => $result['key']]),
-                        'status'         => 'success',
-                    ]);
-
-                    $counts['created']++;
+                $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
+                $externalUrl = $siteUrl . '/browse/' . $result['key'];
+                SyncMapping::create($this->db, [
+                'integration_id' => $integrationId,
+                'local_type'     => 'hl_work_item',
+                'local_id'       => (int) $item['id'],
+                'external_id'    => $result['id'],
+                'external_key'   => $result['key'],
+                'external_url'   => $externalUrl,
+                'sync_hash'      => $currentHash,
+                ]);
+                SyncLog::create($this->db, [
+                'integration_id' => $integrationId,
+                'direction'      => 'push',
+                'action'         => 'create',
+                'local_type'     => 'hl_work_item',
+                'local_id'       => (int) $item['id'],
+                'external_id'    => $result['key'],
+                'details_json'   => json_encode(['title' => $item['title'], 'key' => $result['key']]),
+                'status'         => 'success',
+                ]);
+                $counts['created']++;
                 }
                 $consecutiveErrors = 0;
             } catch (\Throwable $e) {
                 $consecutiveErrors++;
                 SyncLog::create($this->db, [
-                    'integration_id' => $integrationId,
-                    'direction'      => 'push',
-                    'action'         => 'create',
-                    'local_type'     => 'hl_work_item',
-                    'local_id'       => (int) $item['id'],
-                    'external_id'    => null,
-                    'details_json'   => json_encode(['error' => $e->getMessage()]),
-                    'status'         => 'error',
+                'integration_id' => $integrationId,
+                'direction'      => 'push',
+                'action'         => 'create',
+                'local_type'     => 'hl_work_item',
+                'local_id'       => (int) $item['id'],
+                'external_id'    => null,
+                'details_json'   => json_encode(['error' => $e->getMessage()]),
+                'status'         => 'error',
                 ]);
                 $counts['errors']++;
             }
@@ -380,13 +365,10 @@ class JiraSyncService
     {
         $stories = UserStory::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
-
-        // Bulk-validate existing mappings in one API call
+// Bulk-validate existing mappings in one API call
         $validKeys = $this->validateMappedKeys($integrationId, 'user_story');
-
         foreach ($stories as $story) {
             if ($consecutiveErrors >= 3) {
                 $counts['errors'] += count($stories) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
@@ -395,7 +377,6 @@ class JiraSyncService
             try {
                 $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'user_story', (int) $story['id']);
                 $currentHash = $this->computeSyncHash($story);
-
                 if ($mapping) {
                     if (!isset($validKeys[$mapping['external_key']])) {
                         SyncMapping::delete($this->db, (int) $mapping['id']);
@@ -405,23 +386,21 @@ class JiraSyncService
                         continue;
                     } else {
                         $updateFields = [
-                            'summary'     => $story['title'],
-                            'description' => $this->jira->textToAdf($this->buildStoryDescription($story)),
-                            'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
+                        'summary'     => $story['title'],
+                        'description' => $this->jira->textToAdf($this->buildStoryDescription($story)),
+                        'priority'    => ['name' => $this->mapPriority((int) ($story['priority_number'] ?? 5))],
                         ];
                         $spField = $this->mapping('story_points_field', 'customfield_10016');
                         if (!empty($story['size']) && $spField) {
-                            $updateFields[$spField] = (float) $story['size'];
+                                $updateFields[$spField] = (float) $story['size'];
                         }
-                        // Apply additional custom field mappings (push direction)
+    // Apply additional custom field mappings (push direction)
                         $updateFields = $this->applyCustomPushFields($updateFields, $story);
                         $this->jira->updateIssue($mapping['external_key'], $updateFields);
-
                         SyncMapping::update($this->db, (int) $mapping['id'], [
-                            'sync_hash'     => $currentHash,
-                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        'sync_hash'     => $currentHash,
+                        'last_synced_at' => date('Y-m-d H:i:s'),
                         ]);
-
                         $counts['updated']++;
                         $consecutiveErrors = 0;
                         continue;
@@ -432,13 +411,12 @@ class JiraSyncService
                 {
                     // Build fields for new Story — minimal fields to avoid 400s
                     $fields = [
-                        'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => $this->mapping('story_type', 'Story')],
-                        'summary'     => $story['title'],
-                        'description' => $this->jira->textToAdf($story['description'] ?? ''),
+                'project'     => ['key' => $jiraProjectKey],
+                'issuetype'   => ['name' => $this->mapping('story_type', 'Story')],
+                'summary'     => $story['title'],
+                'description' => $this->jira->textToAdf($story['description'] ?? ''),
                     ];
-
-                    // Story points
+        // Story points
                     $spField = $this->mapping('story_points_field', 'customfield_10016');
                     if (!empty($story['size']) && $spField) {
                         $fields[$spField] = (float) $story['size'];
@@ -452,15 +430,9 @@ class JiraSyncService
 
                     // Apply additional custom field mappings (push direction)
                     $fields = $this->applyCustomPushFields($fields, $story);
-
-                    // Link to parent Epic if available
+        // Link to parent Epic if available
                     if (!empty($story['parent_hl_item_id'])) {
-                        $parentMapping = SyncMapping::findByLocalItem(
-                            $this->db,
-                            $integrationId,
-                            'hl_work_item',
-                            (int) $story['parent_hl_item_id']
-                        );
+                        $parentMapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'hl_work_item', (int) $story['parent_hl_item_id']);
                         if ($parentMapping) {
                             $fields['parent'] = ['key' => $parentMapping['external_key']];
                         }
@@ -476,7 +448,6 @@ class JiraSyncService
 
                     $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
                     $externalUrl = $siteUrl . '/browse/' . $result['key'];
-
                     SyncMapping::create($this->db, [
                         'integration_id' => $integrationId,
                         'local_type'     => 'user_story',
@@ -486,8 +457,7 @@ class JiraSyncService
                         'external_url'   => $externalUrl,
                         'sync_hash'      => $currentHash,
                     ]);
-
-                    SyncLog::create($this->db, [
+                SyncLog::create($this->db, [
                         'integration_id' => $integrationId,
                         'direction'      => 'push',
                         'action'         => 'create',
@@ -497,8 +467,7 @@ class JiraSyncService
                         'details_json'   => json_encode(['title' => $story['title'], 'key' => $result['key']]),
                         'status'         => 'success',
                     ]);
-
-                    $counts['created']++;
+                $counts['created']++;
                 }
                 $consecutiveErrors = 0;
             } catch (\Throwable $e) {
@@ -540,14 +509,17 @@ class JiraSyncService
     {
         $integrationId = (int) $this->integration['id'];
         $counts = ['created' => 0, 'updated' => 0, 'conflicts' => 0, 'skipped' => 0, 'errors' => 0];
-
         try {
-            // Build pull field list
+        // Build pull field list
             $spField = $this->mapping('story_points_field', 'customfield_10016');
             $teamField = $this->mapping('team_field', '');
             $pullFields = ['summary', 'description', 'status', 'priority', 'assignee', 'issuetype', 'parent'];
-            if ($spField) $pullFields[] = $spField;
-            if ($teamField) $pullFields[] = $teamField;
+            if ($spField) {
+                $pullFields[] = $spField;
+            }
+            if ($teamField) {
+                $pullFields[] = $teamField;
+            }
 
             // Add custom mapping fields to pull query
             foreach ($this->customPullFieldIds() as $cfId) {
@@ -567,7 +539,8 @@ class JiraSyncService
                 $page = $result['issues'] ?? [];
                 $allIssues = array_merge($allIssues, $page);
                 $startAt += $pageSize;
-            } while (count($page) === $pageSize && $startAt < 2000); // Safety cap
+            } while (count($page) === $pageSize && $startAt < 2000);
+// Safety cap
 
             // Get existing mappings indexed by external_id
             $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
@@ -583,38 +556,37 @@ class JiraSyncService
                     $mapping = $mappingsByExtId[$externalId] ?? null;
                     $fields = $issue['fields'] ?? [];
                     $issueType = strtolower($fields['issuetype']['name'] ?? '');
-
-                    // Extract common fields from Jira
+        // Extract common fields from Jira
                     $jiraData = $this->extractJiraFields($fields, $spField, $teamField);
-
                     if (!$mapping) {
                         // NEW: Create local item from unmapped Jira issue
                         $localType = $this->inferLocalType($issueType);
-                        if (!$localType) continue; // Skip subtasks etc.
+                        if (!$localType) {
+                            continue;
+                        } // Skip subtasks etc.
 
                         $localId = $this->createLocalItemFromJira($projectId, $localType, $jiraData, $fields);
                         if ($localId) {
                             $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
                             SyncMapping::create($this->db, [
-                                'integration_id' => $integrationId,
-                                'local_type'     => $localType,
-                                'local_id'       => $localId,
-                                'external_id'    => $externalId,
-                                'external_key'   => $issueKey,
-                                'external_url'   => $siteUrl . '/browse/' . $issueKey,
-                                'sync_hash'      => '',
+                            'integration_id' => $integrationId,
+                            'local_type'     => $localType,
+                            'local_id'       => $localId,
+                            'external_id'    => $externalId,
+                            'external_key'   => $issueKey,
+                            'external_url'   => $siteUrl . '/browse/' . $issueKey,
+                            'sync_hash'      => '',
                             ]);
-
                             SyncLog::create($this->db, [
-                                'integration_id' => $integrationId,
-                                'direction'      => 'pull',
-                                'action'         => 'create',
-                                'local_type'     => $localType,
-                                'local_id'       => $localId,
-                                'external_id'    => $issueKey,
-                                'details_json'   => json_encode(['title' => $jiraData['title'], 'source' => 'jira']),
-                                'status'         => 'success',
-                            ]);
+                                    'integration_id' => $integrationId,
+                                    'direction'      => 'pull',
+                                    'action'         => 'create',
+                                    'local_type'     => $localType,
+                                    'local_id'       => $localId,
+                                    'external_id'    => $issueKey,
+                                    'details_json'   => json_encode(['title' => $jiraData['title'], 'source' => 'jira']),
+                                    'status'         => 'success',
+                                ]);
                             $counts['created']++;
                         }
                         continue;
@@ -624,7 +596,6 @@ class JiraSyncService
                     $localItem = $mapping['local_type'] === 'hl_work_item'
                         ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
                         : UserStory::findById($this->db, (int) $mapping['local_id']);
-
                     if (!$localItem) {
                         continue;
                     }
@@ -632,7 +603,6 @@ class JiraSyncService
                     // Build update data + track field-level changes for audit
                     $updateData = [];
                     $changedFields = [];
-
                     if ($jiraData['title'] !== '' && $jiraData['title'] !== ($localItem['title'] ?? '')) {
                         $changedFields['title'] = ['old' => $localItem['title'] ?? '', 'new' => $jiraData['title']];
                         $updateData['title'] = $jiraData['title'];
@@ -680,9 +650,8 @@ class JiraSyncService
                     $currentLocalHash = $this->computeSyncHash($localItem);
                     $lastSyncHash = $mapping['sync_hash'] ?? '';
                     $localChanged = ($lastSyncHash !== '' && $currentLocalHash !== $lastSyncHash);
-
                     if ($localChanged) {
-                        // Both sides changed — flag conflict, DON'T overwrite
+                    // Both sides changed — flag conflict, DON'T overwrite
                         if ($mapping['local_type'] === 'hl_work_item') {
                             HLWorkItem::update($this->db, (int) $mapping['local_id'], ['requires_review' => 1]);
                         } else {
@@ -718,7 +687,6 @@ class JiraSyncService
                     $updatedItem = $mapping['local_type'] === 'hl_work_item'
                         ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
                         : UserStory::findById($this->db, (int) $mapping['local_id']);
-
                     if ($updatedItem) {
                         SyncMapping::update($this->db, (int) $mapping['id'], [
                             'sync_hash'      => $this->computeSyncHash($updatedItem),
@@ -736,18 +704,17 @@ class JiraSyncService
                         'details_json'   => json_encode(['title' => $newTitle]),
                         'status'         => 'success',
                     ]);
-
                     $counts['updated']++;
                 } catch (\Throwable $e) {
                     SyncLog::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'direction'      => 'pull',
-                        'action'         => 'update',
-                        'local_type'     => null,
-                        'local_id'       => null,
-                        'external_id'    => $issue['key'] ?? null,
-                        'details_json'   => json_encode(['error' => $e->getMessage()]),
-                        'status'         => 'error',
+                    'integration_id' => $integrationId,
+                    'direction'      => 'pull',
+                    'action'         => 'update',
+                    'local_type'     => null,
+                    'local_id'       => null,
+                    'external_id'    => $issue['key'] ?? null,
+                    'details_json'   => json_encode(['error' => $e->getMessage()]),
+                    'status'         => 'error',
                     ]);
                     $counts['errors']++;
                 }
@@ -785,7 +752,6 @@ class JiraSyncService
     private function mapJiraStatusName(string $jiraStatusName): ?string
     {
         $name = strtolower(trim($jiraStatusName));
-
         $statusMap = [
             'to do'         => 'backlog',
             'backlog'       => 'backlog',
@@ -799,7 +765,6 @@ class JiraSyncService
             'closed'        => 'done',
             'resolved'      => 'done',
         ];
-
         return $statusMap[$name] ?? null;
     }
 
@@ -817,7 +782,6 @@ class JiraSyncService
     public function pullStatus(string $issueKey, array $issueData): bool
     {
         $integrationId = (int) $this->integration['id'];
-
         $mapping = SyncMapping::findByExternalKey($this->db, $integrationId, $issueKey);
         if (!$mapping) {
             return false;
@@ -826,7 +790,6 @@ class JiraSyncService
         $statusField = $issueData['fields']['status'] ?? null;
         $jiraStatusName = is_array($statusField) ? (string) ($statusField['name'] ?? '') : '';
         $newStatus = $this->mapJiraStatusName($jiraStatusName);
-
         if ($newStatus === null) {
             \StratFlow\Services\Logger::warn("[JiraStatusPull] Unknown Jira status '{$jiraStatusName}' for {$issueKey} — skipping");
             return false;
@@ -836,14 +799,12 @@ class JiraSyncService
         $localItem = $mapping['local_type'] === 'hl_work_item'
             ? HLWorkItem::findById($this->db, (int) $mapping['local_id'])
             : UserStory::findById($this->db, (int) $mapping['local_id']);
-
         if (!$localItem) {
             return false;
         }
 
         $currentStatus = $localItem['status'] ?? 'backlog';
         $now = date('Y-m-d H:i:s');
-
         if ($currentStatus === $newStatus) {
             return false;
         }
@@ -870,7 +831,6 @@ class JiraSyncService
             ]),
             'status'         => 'success',
         ]);
-
         return true;
     }
 
@@ -891,11 +851,9 @@ class JiraSyncService
         }
 
         $updated = 0;
-
-        // Fetch all issues in a single JQL query to minimise API calls
+// Fetch all issues in a single JQL query to minimise API calls
         $keyList = implode(',', array_map(fn($k) => '"' . addslashes($k) . '"', $issueKeys));
         $jql = "issueKey in ({$keyList})";
-
         try {
             $pageSize = 100;
             $startAt  = 0;
@@ -905,7 +863,7 @@ class JiraSyncService
                 foreach ($page as $issue) {
                     try {
                         if ($this->pullStatus($issue['key'], $issue)) {
-                            $updated++;
+                                $updated++;
                         }
                     } catch (\Throwable $e) {
                         \StratFlow\Services\Logger::warn("[JiraStatusBulk] Error pulling status for {$issue['key']}: " . $e->getMessage());
@@ -944,7 +902,6 @@ class JiraSyncService
             $item['acceptance_criteria'] ?? '',
             $item['kr_hypothesis'] ?? '',
         ];
-
         return hash('sha256', implode('|', $parts));
     }
 
@@ -964,13 +921,24 @@ class JiraSyncService
             $medium  = (int) ($ranges['medium'] ?? 6);
             $low     = (int) ($ranges['low'] ?? 8);
         } else {
-            $highest = 2; $high = 4; $medium = 6; $low = 8;
+            $highest = 2;
+            $high = 4;
+            $medium = 6;
+            $low = 8;
         }
 
-        if ($priorityNumber <= $highest) return 'Highest';
-        if ($priorityNumber <= $high)    return 'High';
-        if ($priorityNumber <= $medium)  return 'Medium';
-        if ($priorityNumber <= $low)     return 'Low';
+        if ($priorityNumber <= $highest) {
+            return 'Highest';
+        }
+        if ($priorityNumber <= $high) {
+            return 'High';
+        }
+        if ($priorityNumber <= $medium) {
+            return 'Medium';
+        }
+        if ($priorityNumber <= $low) {
+            return 'Low';
+        }
         return 'Lowest';
     }
 
@@ -985,7 +953,6 @@ class JiraSyncService
     private function buildWorkItemDescription(array $item): string
     {
         $description = $item['description'] ?? '';
-
         if (!empty($item['okr_title']) || !empty($item['okr_description'])) {
             $description .= "\n\nOKR: " . ($item['okr_title'] ?? '');
             if (!empty($item['okr_description'])) {
@@ -1014,7 +981,6 @@ class JiraSyncService
     private function buildStoryDescription(array $story): string
     {
         $description = $story['description'] ?? '';
-
         if (!empty($story['acceptance_criteria'])) {
             $description .= "\n\nAcceptance Criteria:\n" . $story['acceptance_criteria'];
         }
@@ -1080,11 +1046,18 @@ class JiraSyncService
         $epicType  = strtolower($this->mapping('epic_type', 'Epic'));
         $storyType = strtolower($this->mapping('story_type', 'Story'));
         $riskType  = strtolower($this->mapping('risk_type', 'Risk'));
-
-        if ($jiraIssueType === $epicType)  return 'hl_work_item';
-        if ($jiraIssueType === $storyType) return 'user_story';
-        if ($jiraIssueType === $riskType)  return 'risk';
-        if ($jiraIssueType === 'task')     return 'user_story'; // Common fallback
+        if ($jiraIssueType === $epicType) {
+            return 'hl_work_item';
+        }
+        if ($jiraIssueType === $storyType) {
+            return 'user_story';
+        }
+        if ($jiraIssueType === $riskType) {
+            return 'risk';
+        }
+        if ($jiraIssueType === 'task') {
+            return 'user_story';
+        } // Common fallback
         return null;
     }
 
@@ -1106,18 +1079,18 @@ class JiraSyncService
         }
 
         if ($localType === 'user_story') {
-            // Try to link to parent epic
+// Try to link to parent epic
             $parentHlId = null;
             $parentKey = $jiraFields['parent']['key'] ?? null;
             if ($parentKey) {
                 $integrationId = (int) $this->integration['id'];
                 $parentMapping = null;
-                // Look up by external_key
+            // Look up by external_key
                 $allMappings = SyncMapping::findByIntegration($this->db, $integrationId);
                 foreach ($allMappings as $m) {
                     if ($m['external_key'] === $parentKey && $m['local_type'] === 'hl_work_item') {
-                        $parentHlId = (int) $m['local_id'];
-                        break;
+                            $parentHlId = (int) $m['local_id'];
+                            break;
                     }
                 }
             }
@@ -1161,12 +1134,10 @@ class JiraSyncService
     {
         $sprints = Sprint::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'allocated' => 0, 'errors' => 0];
-
         foreach ($sprints as $sprint) {
             try {
-                // Use team's board ID if sprint has a team, otherwise default
+        // Use team's board ID if sprint has a team, otherwise default
                 $boardId = $defaultBoardId;
                 if (!empty($sprint['team_id'])) {
                     $team = \StratFlow\Models\Team::findById($this->db, (int) $sprint['team_id']);
@@ -1176,15 +1147,12 @@ class JiraSyncService
                 }
 
                 $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'sprint', (int) $sprint['id']);
-
                 if ($mapping) {
                     $counts['skipped']++;
                 } else {
                     $startDate = $sprint['start_date'] ? date('c', strtotime($sprint['start_date'])) : null;
                     $endDate   = $sprint['end_date']   ? date('c', strtotime($sprint['end_date']))   : null;
-
                     $result = $this->jira->createSprint($boardId, $sprint['name'], $startDate, $endDate);
-
                     SyncMapping::create($this->db, [
                         'integration_id' => $integrationId,
                         'local_type'     => 'sprint',
@@ -1194,7 +1162,6 @@ class JiraSyncService
                         'external_url'   => null,
                         'sync_hash'      => hash('sha256', $sprint['name'] . '|' . ($sprint['start_date'] ?? '') . '|' . ($sprint['end_date'] ?? '')),
                     ]);
-
                     $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'sprint', (int) $sprint['id']);
                     $counts['created']++;
                 }
@@ -1203,7 +1170,6 @@ class JiraSyncService
                 if ($mapping) {
                     $stories = SprintStory::findBySprintId($this->db, (int) $sprint['id']);
                     $issueKeys = [];
-
                     foreach ($stories as $story) {
                         $storyMapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'user_story', (int) $story['id']);
                         if ($storyMapping && !empty($storyMapping['external_key'])) {
@@ -1255,7 +1221,7 @@ class JiraSyncService
             }
             return $validKeys;
         } catch (\Throwable $e) {
-            // If search fails, assume all exist (will catch 404 individually as fallback)
+        // If search fails, assume all exist (will catch 404 individually as fallback)
             return array_fill_keys($keys, true);
         }
     }
@@ -1271,12 +1237,9 @@ class JiraSyncService
     {
         $risks = Risk::findByProjectId($this->db, $projectId);
         $integrationId = (int) $this->integration['id'];
-
         $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => 0];
         $consecutiveErrors = 0;
-
         $validKeys = $this->validateMappedKeys($integrationId, 'risk');
-
         foreach ($risks as $risk) {
             if ($consecutiveErrors >= 3) {
                 $counts['errors'] += count($risks) - $counts['created'] - $counts['updated'] - $counts['skipped'] - $counts['errors'];
@@ -1285,7 +1248,6 @@ class JiraSyncService
             try {
                 $mapping = SyncMapping::findByLocalItem($this->db, $integrationId, 'risk', (int) $risk['id']);
                 $currentHash = hash('sha256', strtolower($risk['title'] ?? '') . '|' . ($risk['description'] ?? '') . '|' . ($risk['likelihood'] ?? 0) . '|' . ($risk['impact'] ?? 0));
-
                 if ($mapping) {
                     if (!isset($validKeys[$mapping['external_key']])) {
                         SyncMapping::delete($this->db, (int) $mapping['id']);
@@ -1299,12 +1261,12 @@ class JiraSyncService
                         $rpn        = $likelihood * $impact;
                         $riskLevel  = $rpn >= 15 ? 'critical' : ($rpn >= 9 ? 'high' : ($rpn >= 5 ? 'medium' : 'low'));
                         $this->jira->updateIssue($mapping['external_key'], [
-                            'summary'     => $risk['title'],
-                            'description' => $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel),
+                        'summary'     => $risk['title'],
+                        'description' => $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel),
                         ]);
                         SyncMapping::update($this->db, (int) $mapping['id'], [
-                            'sync_hash'     => $currentHash,
-                            'last_synced_at' => date('Y-m-d H:i:s'),
+                        'sync_hash'     => $currentHash,
+                        'last_synced_at' => date('Y-m-d H:i:s'),
                         ]);
                         $counts['updated']++;
                         $consecutiveErrors = 0;
@@ -1315,50 +1277,45 @@ class JiraSyncService
                 // Create new Risk issue
                 {
                     $likelihood = (int) ($risk['likelihood'] ?? 3);
-                    $impact     = (int) ($risk['impact'] ?? 3);
-                    $rpn        = $likelihood * $impact;
-                    $riskLevel  = $rpn >= 15 ? 'critical' : ($rpn >= 9 ? 'high' : ($rpn >= 5 ? 'medium' : 'low'));
-                    $priority   = $rpn >= 15 ? 'Highest' : ($rpn >= 9 ? 'High' : ($rpn >= 5 ? 'Medium' : 'Low'));
-
-                    $adfDesc = $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel);
-                    $labels  = ['stratflow', 'risk', "risk-{$riskLevel}", "rpn-{$rpn}"];
-
-                    $fields = [
-                        'project'     => ['key' => $jiraProjectKey],
-                        'issuetype'   => ['name' => $this->mapping('risk_type', 'Risk')],
-                        'summary'     => $risk['title'],
-                        'description' => $adfDesc,
-                        'priority'    => ['name' => $priority],
-                        'labels'      => $labels,
+                $impact     = (int) ($risk['impact'] ?? 3);
+                $rpn        = $likelihood * $impact;
+                $riskLevel  = $rpn >= 15 ? 'critical' : ($rpn >= 9 ? 'high' : ($rpn >= 5 ? 'medium' : 'low'));
+                $priority   = $rpn >= 15 ? 'Highest' : ($rpn >= 9 ? 'High' : ($rpn >= 5 ? 'Medium' : 'Low'));
+                $adfDesc = $this->buildRiskAdf($risk, $likelihood, $impact, $rpn, $riskLevel);
+                $labels  = ['stratflow', 'risk', "risk-{$riskLevel}", "rpn-{$rpn}"];
+                $fields = [
+                'project'     => ['key' => $jiraProjectKey],
+                'issuetype'   => ['name' => $this->mapping('risk_type', 'Risk')],
+                'summary'     => $risk['title'],
+                'description' => $adfDesc,
+                'priority'    => ['name' => $priority],
+                'labels'      => $labels,
                     ];
-
-                    // Fallback: try without labels, then without configured type
+        // Fallback: try without labels, then without configured type
+                try {
+                    $result = $this->jira->createIssue($fields);
+                } catch (\RuntimeException $e) {
+                    unset($fields['labels']);
                     try {
+                                    $result = $this->jira->createIssue($fields);
+                    } catch (\RuntimeException $e2) {
+                        $fields['issuetype'] = ['name' => 'Task'];
                         $result = $this->jira->createIssue($fields);
-                    } catch (\RuntimeException $e) {
-                        unset($fields['labels']);
-                        try {
-                            $result = $this->jira->createIssue($fields);
-                        } catch (\RuntimeException $e2) {
-                            $fields['issuetype'] = ['name' => 'Task'];
-                            $result = $this->jira->createIssue($fields);
-                        }
                     }
+                }
 
-                    $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
-                    $externalUrl = $siteUrl . '/browse/' . $result['key'];
-
-                    SyncMapping::create($this->db, [
-                        'integration_id' => $integrationId,
-                        'local_type'     => 'risk',
-                        'local_id'       => (int) $risk['id'],
-                        'external_id'    => $result['id'],
-                        'external_key'   => $result['key'],
-                        'external_url'   => $externalUrl,
-                        'sync_hash'      => $currentHash,
+                $siteUrl = rtrim($this->integration['site_url'] ?? '', '/');
+                $externalUrl = $siteUrl . '/browse/' . $result['key'];
+                SyncMapping::create($this->db, [
+                'integration_id' => $integrationId,
+                'local_type'     => 'risk',
+                'local_id'       => (int) $risk['id'],
+                'external_id'    => $result['id'],
+                'external_key'   => $result['key'],
+                'external_url'   => $externalUrl,
+                'sync_hash'      => $currentHash,
                     ]);
-
-                    $counts['created']++;
+                $counts['created']++;
                 }
                 $consecutiveErrors = 0;
             } catch (\Throwable $e) {
@@ -1376,8 +1333,7 @@ class JiraSyncService
     private function buildRiskAdf(array $risk, int $likelihood, int $impact, int $rpn, string $level): array
     {
         $content = [];
-
-        // Description paragraph
+// Description paragraph
         if (!empty($risk['description'])) {
             $content[] = [
                 'type' => 'paragraph',
@@ -1391,8 +1347,7 @@ class JiraSyncService
             'attrs' => ['level' => 3],
             'content' => [['type' => 'text', 'text' => 'Risk Assessment']],
         ];
-
-        // Risk matrix table
+// Risk matrix table
         $content[] = [
             'type' => 'table',
             'attrs' => ['isNumberColumnEnabled' => false, 'layout' => 'default'],
@@ -1404,8 +1359,7 @@ class JiraSyncService
                 $this->adfTableRow(['Risk Level', strtoupper($level), 'Low / Medium / High / Critical']),
             ],
         ];
-
-        // Mitigation section
+// Mitigation section
         if (!empty($risk['mitigation'])) {
             $content[] = [
                 'type' => 'heading',
@@ -1459,7 +1413,6 @@ class JiraSyncService
     public function pushOkrsToGoals(int $projectId): array
     {
         $counts = ['created' => 0, 'skipped' => 0, 'errors' => 0];
-
         $siteUrl = $this->integration['site_url'] ?? '';
         $cloudId = $this->integration['cloud_id'] ?? '';
         if (!$cloudId || !$siteUrl) {
@@ -1468,15 +1421,11 @@ class JiraSyncService
 
         // Collect OKRs from both diagram nodes AND work items
         $okrs = [];
-
-        // 1. From diagram nodes (primary source — the strategy map)
-        $stmt = $this->db->query(
-            "SELECT dn.okr_title, dn.okr_description, dn.label
+// 1. From diagram nodes (primary source — the strategy map)
+        $stmt = $this->db->query("SELECT dn.okr_title, dn.okr_description, dn.label
              FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
-             WHERE sd.project_id = :pid AND dn.okr_title IS NOT NULL AND dn.okr_title != ''",
-            [':pid' => $projectId]
-        );
+             WHERE sd.project_id = :pid AND dn.okr_title IS NOT NULL AND dn.okr_title != ''", [':pid' => $projectId]);
         foreach ($stmt->fetchAll() as $node) {
             $title = trim($node['okr_title']);
             if ($title !== '' && !isset($okrs[$title])) {
@@ -1516,10 +1465,8 @@ class JiraSyncService
         // Get existing goals to avoid duplicates
         $existingGoals = $this->getAtlassianGoals($cloudId, $siteUrl);
         $existingNames = array_map(fn($g) => strtolower($g['name']), $existingGoals);
-
-        // Get goal type ID from an existing goal, or skip if none exist
+// Get goal type ID from an existing goal, or skip if none exist
         $goalTypeId = $this->getGoalTypeId($cloudId, $siteUrl, $existingGoals);
-
         foreach ($okrs as $okr) {
             try {
                 if (in_array(strtolower($okr['title']), $existingNames)) {
@@ -1540,37 +1487,20 @@ class JiraSyncService
                 if ($result) {
                     $counts['created']++;
                     $newGoalId = $result['id'] ?? null;
-
-                    // Push KRs as child goals under this OKR goal
-                    $krRows = $this->db->query(
-                        "SELECT kr.id, kr.title, kr.baseline_value, kr.target_value, kr.unit
+                // Push KRs as child goals under this OKR goal
+                    $krRows = $this->db->query("SELECT kr.id, kr.title, kr.baseline_value, kr.target_value, kr.unit
                            FROM key_results kr
                            JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
                           WHERE hwi.project_id = :pid
-                            AND hwi.okr_title = :okr_title",
-                        [':pid' => $projectId, ':okr_title' => $okr['title']]
-                    )->fetchAll();
-
+                            AND hwi.okr_title = :okr_title", [':pid' => $projectId, ':okr_title' => $okr['title']])->fetchAll();
                     foreach ($krRows as $kr) {
                         try {
                             $krDesc = $kr['unit']
-                                ? "Target: {$kr['target_value']} {$kr['unit']} (baseline: {$kr['baseline_value']} {$kr['unit']})"
-                                : ($kr['target_value'] ? "Target: {$kr['target_value']}" : '');
-
-                            $krGoalResult = $this->createAtlassianGoal(
-                                $cloudId,
-                                $siteUrl,
-                                $kr['title'],
-                                $krDesc,
-                                $goalTypeId,
-                                $newGoalId
-                            );
-
+                                    ? "Target: {$kr['target_value']} {$kr['unit']} (baseline: {$kr['baseline_value']} {$kr['unit']})"
+                                    : ($kr['target_value'] ? "Target: {$kr['target_value']}" : '');
+                            $krGoalResult = $this->createAtlassianGoal($cloudId, $siteUrl, $kr['title'], $krDesc, $goalTypeId, $newGoalId);
                             if ($krGoalResult !== null) {
-                                $this->db->query(
-                                    "UPDATE key_results SET jira_goal_id = :gid WHERE id = :id",
-                                    [':gid' => $krGoalResult['id'], ':id' => $kr['id']]
-                                );
+                                $this->db->query("UPDATE key_results SET jira_goal_id = :gid WHERE id = :id", [':gid' => $krGoalResult['id'], ':id' => $kr['id']]);
                             }
                         } catch (\Throwable $e) {
                             \StratFlow\Services\Logger::warn('[JiraSyncService] KR child goal error: ' . $e->getMessage());
@@ -1604,9 +1534,7 @@ class JiraSyncService
     {
         $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
         $containerId = "ari:cloud:townsquare::site/{$cloudId}";
-
         $query = 'query ListGoals { goals_search(containerId: "' . $containerId . '", first: 50) { edges { node { id name key url } } } }';
-
         $response = $this->graphqlRequest($graphqlUrl, $query);
         $goals = [];
         foreach ($response['data']['goals_search']['edges'] ?? [] as $edge) {
@@ -1626,7 +1554,6 @@ class JiraSyncService
 
         $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
         $goalId = $existingGoals[0]['id'];
-
         $query = 'query GT { goals_byId(goalId: "' . $goalId . '") { goalType @optIn(to: "Townsquare") { id } } }';
         $response = $this->graphqlRequest($graphqlUrl, $query);
         return $response['data']['goals_byId']['goalType']['id'] ?? null;
@@ -1647,7 +1574,6 @@ class JiraSyncService
     {
         $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
         $containerId = "ari:cloud:townsquare::site/{$cloudId}";
-
         $input = 'containerId: "' . $containerId . '", name: "' . addslashes($name) . '"';
         if ($goalTypeId) {
             $input .= ', goalTypeId: "' . $goalTypeId . '"';
@@ -1657,11 +1583,9 @@ class JiraSyncService
         }
 
         $mutation = 'mutation CG { goals_create(input: { ' . $input . ' }) { goal { id name url key } } }';
-
         $response = $this->graphqlRequest($graphqlUrl, $mutation);
         $goal = $response['data']['goals_create']['goal'] ?? null;
-
-        // If created, update description
+// If created, update description
         if ($goal && $description !== '') {
             $adfDesc = json_encode([
                 'type' => 'doc', 'version' => 1,
@@ -1671,7 +1595,7 @@ class JiraSyncService
             try {
                 $this->graphqlRequest($graphqlUrl, $editMutation);
             } catch (\Throwable $e) {
-                // Description update failed — goal still created
+            // Description update failed — goal still created
             }
         }
 
@@ -1697,20 +1621,15 @@ class JiraSyncService
         $counts  = ['updated' => 0, 'skipped' => 0, 'errors' => 0];
         $siteUrl = $this->integration['site_url'] ?? '';
         $cloudId = $this->integration['cloud_id'] ?? '';
-
         if (!$cloudId || !$siteUrl) {
             return $counts;
         }
 
-        $krs = $this->db->query(
-            "SELECT kr.id, kr.jira_goal_id, kr.status
+        $krs = $this->db->query("SELECT kr.id, kr.jira_goal_id, kr.status
                FROM key_results kr
                JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
               WHERE hwi.project_id = :pid
-                AND kr.jira_goal_id IS NOT NULL",
-            [':pid' => $projectId]
-        )->fetchAll();
-
+                AND kr.jira_goal_id IS NOT NULL", [':pid' => $projectId])->fetchAll();
         $stateMap = [
             'ON_TRACK'    => 'on_track',
             'AT_RISK'     => 'at_risk',
@@ -1718,7 +1637,6 @@ class JiraSyncService
             'DONE'        => 'achieved',
             'NOT_STARTED' => 'not_started',
         ];
-
         foreach ($krs as $kr) {
             try {
                 $goalState = $this->fetchAtlassianGoalState($cloudId, $siteUrl, $kr['jira_goal_id']);
@@ -1731,10 +1649,7 @@ class JiraSyncService
                     $counts['skipped']++;
                     continue;
                 }
-                $this->db->query(
-                    "UPDATE key_results SET status = :s WHERE id = :id",
-                    [':s' => $newStatus, ':id' => $kr['id']]
-                );
+                $this->db->query("UPDATE key_results SET status = :s WHERE id = :id", [':s' => $newStatus, ':id' => $kr['id']]);
                 $counts['updated']++;
             } catch (\Throwable $e) {
                 \StratFlow\Services\Logger::warn('[JiraSyncService] pullKrStatus error for kr_id=' . $kr['id'] . ': ' . $e->getMessage());
@@ -1759,7 +1674,6 @@ class JiraSyncService
     {
         $graphqlUrl = rtrim($siteUrl, '/') . '/gateway/api/graphql';
         $query = 'query GS { goals_byId(goalId: "' . addslashes($goalId) . '") { state } }';
-
         try {
             $response = $this->graphqlRequest($graphqlUrl, $query);
         } catch (\Throwable $e) {
@@ -1777,7 +1691,6 @@ class JiraSyncService
     {
         // Use OAuth Bearer token from the integration record (per-org, no global credentials)
         $accessToken = $this->integration['access_token'] ?? '';
-
         if ($accessToken === '') {
             throw new \RuntimeException('No OAuth access token available for Goals API');
         }
@@ -1793,12 +1706,10 @@ class JiraSyncService
             ],
             CURLOPT_TIMEOUT => 15,
         ]);
-
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
-        // If OAuth fails (Goals may need different scopes), fall back to API token
+// If OAuth fails (Goals may need different scopes), fall back to API token
         if ($httpCode === 401 || $httpCode === 403) {
             $apiToken = $_ENV['JIRA_API_TOKEN'] ?? '';
             $email    = $_ENV['JIRA_EMAIL'] ?? '';

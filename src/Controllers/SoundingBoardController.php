@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SoundingBoardController
  *
@@ -30,12 +31,11 @@ class SoundingBoardController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -72,8 +72,7 @@ class SoundingBoardController
             ],
         ],
     ];
-
-    // ===========================
+// ===========================
     // ACTIONS
     // ===========================
 
@@ -93,7 +92,6 @@ class SoundingBoardController
 
         $user      = $this->auth->user();
         $projectId = (int) ($body['project_id'] ?? 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Project not found'], 404);
@@ -110,7 +108,6 @@ class SoundingBoardController
         $evaluationLevel = $body['evaluation_level'] ?? 'devils_advocate';
         $screenContext   = $body['screen_context'] ?? '';
         $screenContent   = $body['screen_content'] ?? '';
-
         if (empty($screenContent)) {
             $this->response->json(['error' => 'No screen content provided'], 400);
             return;
@@ -125,8 +122,7 @@ class SoundingBoardController
         // Load panel members: try org-specific first, then system defaults
         $panel   = $this->findPanel($orgId, $panelType);
         $members = $panel ? PersonaMember::findByPanelId($this->db, (int) $panel['id']) : [];
-
-        // If no panel or members exist, seed system defaults
+// If no panel or members exist, seed system defaults
         if (empty($members)) {
             $panel   = $this->seedDefaultPanel($panelType);
             $members = PersonaMember::findByPanelId($this->db, (int) $panel['id']);
@@ -148,8 +144,7 @@ class SoundingBoardController
         $gemini  = new GeminiService($this->config);
         $service = new SoundingBoardService($gemini);
         $results = $service->evaluate($members, $evaluationLevel, $screenContent, $customLevels);
-
-        // Store results
+// Store results
         $evalId = EvaluationResult::create($this->db, [
             'project_id'       => $projectId,
             'panel_id'         => (int) $panel['id'],
@@ -158,7 +153,6 @@ class SoundingBoardController
             'results_json'     => json_encode($results),
             'status'           => 'pending',
         ]);
-
         $this->response->json([
             'id'      => $evalId,
             'results' => $results,
@@ -176,7 +170,6 @@ class SoundingBoardController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $eval = EvaluationResult::findById($this->db, (int) $id);
         if ($eval === null) {
             $this->response->json(['error' => 'Evaluation not found'], 404);
@@ -192,7 +185,6 @@ class SoundingBoardController
 
         $eval['results'] = json_decode($eval['results_json'], true);
         unset($eval['results_json']);
-
         $this->response->json($eval);
     }
 
@@ -214,7 +206,6 @@ class SoundingBoardController
 
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $eval = EvaluationResult::findById($this->db, (int) $id);
         if ($eval === null) {
             $this->response->json(['error' => 'Evaluation not found'], 404);
@@ -230,7 +221,6 @@ class SoundingBoardController
 
         $memberIndex = (int) ($body['member_index'] ?? -1);
         $action      = $body['action'] ?? '';
-
         if (!in_array($action, ['accept', 'reject'], true)) {
             $this->response->json(['error' => 'Invalid action — must be accept or reject'], 400);
             return;
@@ -244,20 +234,14 @@ class SoundingBoardController
 
         // Update the individual response status
         $results[$memberIndex]['status'] = $action . 'ed';
-
-        // Update the stored JSON
-        $this->db->query(
-            "UPDATE evaluation_results SET results_json = :results_json WHERE id = :id",
-            [
+// Update the stored JSON
+        $this->db->query("UPDATE evaluation_results SET results_json = :results_json WHERE id = :id", [
                 ':results_json' => json_encode($results),
                 ':id'           => $id,
-            ]
-        );
-
-        // Determine overall status
+            ]);
+// Determine overall status
         $statuses = array_column($results, 'status');
         $allResolved = !in_array('pending', $statuses, true) && !in_array('error', $statuses, true);
-
         if ($allResolved) {
             $allAccepted = array_unique($statuses) === ['accepted'];
             $overallStatus = $allAccepted ? 'accepted' : 'partial';
@@ -281,7 +265,6 @@ class SoundingBoardController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->json(['error' => 'Project not found'], 404);
@@ -289,8 +272,7 @@ class SoundingBoardController
         }
 
         $evaluations = EvaluationResult::findByProjectId($this->db, $projectId);
-
-        // Decode results_json for each evaluation
+// Decode results_json for each evaluation
         foreach ($evaluations as &$eval) {
             $eval['results'] = json_decode($eval['results_json'], true);
             unset($eval['results_json']);
@@ -340,13 +322,11 @@ class SoundingBoardController
     private function seedDefaultPanel(string $panelType): array
     {
         $definition = self::DEFAULT_PANELS[$panelType] ?? self::DEFAULT_PANELS['executive'];
-
         $panelId = PersonaPanel::create($this->db, [
             'org_id'     => null,
             'panel_type' => $panelType,
             'name'       => $definition['name'],
         ]);
-
         foreach ($definition['members'] as $member) {
             PersonaMember::create($this->db, [
                 'panel_id'           => $panelId,

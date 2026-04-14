@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitLinkController
  *
@@ -28,12 +29,11 @@ class GitLinkController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -57,12 +57,10 @@ class GitLinkController
     public function index(): void
     {
         header('Content-Type: application/json');
-
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $localType = $this->request->get('local_type', '');
         $localId   = (int) $this->request->get('local_id', 0);
-
         if (!$this->verifyOwnership($localType, $localId, $orgId)) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
@@ -70,7 +68,6 @@ class GitLinkController
         }
 
         $links = StoryGitLink::findByLocalItem($this->db, $localType, $localId);
-
         echo json_encode(['ok' => true, 'links' => $links]);
     }
 
@@ -85,13 +82,11 @@ class GitLinkController
     public function create(): void
     {
         header('Content-Type: application/json');
-
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $localType = $this->request->post('local_type', '');
         $localId   = (int) $this->request->post('local_id', 0);
         $refUrl    = trim($this->request->post('ref_url', ''));
-
         if (!in_array($localType, ['user_story', 'hl_work_item'], true) || $localId <= 0) {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid local_type or local_id']);
@@ -112,7 +107,6 @@ class GitLinkController
 
         $service = new GitLinkService($this->db);
         $classified = $service->classifyRef($refUrl);
-
         try {
             $newId = StoryGitLink::create($this->db, [
                 'local_type' => $localType,
@@ -131,7 +125,7 @@ class GitLinkController
         }
 
         if ($newId === 0) {
-            // Unique constraint triggered — link already exists for this (local_type, local_id, ref_url)
+// Unique constraint triggered — link already exists for this (local_type, local_id, ref_url)
             http_response_code(409);
             echo json_encode(['error' => 'This ref is already linked']);
             return;
@@ -140,7 +134,6 @@ class GitLinkController
         // Load by primary key so we cannot accidentally return a row from a different
         // (local_type, local_id) that happens to share the same URL.
         $link = StoryGitLink::findById($this->db, $newId);
-
         echo json_encode(['ok' => true, 'link' => $link]);
     }
 
@@ -155,12 +148,10 @@ class GitLinkController
     public function delete($id): void
     {
         header('Content-Type: application/json');
-
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $localType = $this->request->post('local_type', '');
         $localId   = (int) $this->request->post('local_id', 0);
-
         if (!$this->verifyOwnership($localType, $localId, $orgId)) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
@@ -168,7 +159,6 @@ class GitLinkController
         }
 
         $deleted = StoryGitLink::deleteById($this->db, (int) $id, $localType, $localId);
-
         if (!$deleted) {
             http_response_code(404);
             echo json_encode(['error' => 'Link not found or already deleted']);

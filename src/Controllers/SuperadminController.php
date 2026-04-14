@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SuperadminController
  *
@@ -27,12 +28,11 @@ use StratFlow\Services\AuditLogger;
 
 class SuperadminController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -75,8 +75,7 @@ class SuperadminController
             'prompt'   => 'You are an Enterprise Business Strategist. Your role is to analyse strategic documents and produce concise executive summaries that highlight key themes, opportunities, and recommended actions.',
         ],
     ];
-
-    // =========================================================================
+// =========================================================================
     // DASHBOARD
     // =========================================================================
 
@@ -88,11 +87,9 @@ class SuperadminController
     public function index(): void
     {
         $user = $this->auth->user();
-
         $orgCount = $this->countAll('organisations');
         $userCount = $this->countAll('users', 'is_active = 1');
         $subCount = $this->countAll('subscriptions', "status = 'active'");
-
         $this->response->render('superadmin/index', [
             'user'               => $user,
             'org_count'          => $orgCount,
@@ -102,7 +99,6 @@ class SuperadminController
             'flash_message'      => $_SESSION['flash_message'] ?? null,
             'flash_error'        => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -117,8 +113,7 @@ class SuperadminController
     {
         $user = $this->auth->user();
         $orgs = Organisation::findAll($this->db);
-
-        // Load subscription for each org
+// Load subscription for each org
         $orgSubs = [];
         foreach ($orgs as $org) {
             $orgSubs[(int) $org['id']] = Subscription::findByOrgId($this->db, (int) $org['id']);
@@ -126,7 +121,6 @@ class SuperadminController
 
         // Load all users for the assign-superadmin dropdown
         $allUsers = $this->getAllUsers();
-
         $this->response->render('superadmin/organisations', [
             'user'          => $user,
             'orgs'          => $orgs,
@@ -136,7 +130,6 @@ class SuperadminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -146,14 +139,11 @@ class SuperadminController
     public function users(): void
     {
         $user = $this->auth->user();
-        $stmt = $this->db->query(
-            "SELECT u.*, o.name AS org_name
+        $stmt = $this->db->query("SELECT u.*, o.name AS org_name
              FROM users u
              LEFT JOIN organisations o ON o.id = u.org_id
-             ORDER BY u.created_at DESC"
-        );
+             ORDER BY u.created_at DESC");
         $allUsers = $stmt->fetchAll();
-
         $this->response->render('superadmin/users', [
             'user'        => $user,
             'all_users'   => $allUsers,
@@ -167,14 +157,11 @@ class SuperadminController
     public function subscriptions(): void
     {
         $user = $this->auth->user();
-        $stmt = $this->db->query(
-            "SELECT s.*, o.name AS org_name
+        $stmt = $this->db->query("SELECT s.*, o.name AS org_name
              FROM subscriptions s
              LEFT JOIN organisations o ON o.id = s.org_id
-             ORDER BY s.id DESC"
-        );
+             ORDER BY s.id DESC");
         $allSubscriptions = $stmt->fetchAll();
-
         $this->response->render('superadmin/subscriptions', [
             'user'              => $user,
             'all_subscriptions' => $allSubscriptions,
@@ -189,7 +176,6 @@ class SuperadminController
     {
         $name = trim((string) $this->request->post('org_name', ''));
         $planType = trim((string) $this->request->post('plan_type', 'product'));
-
         if ($name === '') {
             $_SESSION['flash_error'] = 'Organisation name is required.';
             $this->response->redirect('/superadmin/organisations');
@@ -201,13 +187,11 @@ class SuperadminController
             'stripe_customer_id' => '',
             'is_active' => 1,
         ]);
-
         $billingMethod   = $this->request->post('billing_method', 'invoiced') === 'stripe' ? '' : 'manual_' . time();
         $seatLimit       = max(1, (int) $this->request->post('seat_limit', 5));
         $billingPeriod   = (int) $this->request->post('billing_period_months', 1) === 12 ? 12 : 1;
         $pricePerSeat    = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
         $nextInvoiceDate = $this->request->post('next_invoice_date', '') ?: null;
-
         if (in_array($planType, ['product', 'consultancy'], true)) {
             \StratFlow\Models\Subscription::create($this->db, [
                 'org_id'                 => $orgId,
@@ -217,26 +201,27 @@ class SuperadminController
                 'started_at'             => date('Y-m-d H:i:s'),
             ]);
             \StratFlow\Models\Subscription::updateSeatLimit($this->db, $orgId, $seatLimit);
-            $this->db->query(
-                "UPDATE subscriptions
+            $this->db->query("UPDATE subscriptions
                  SET billing_method = :bmethod, billing_period_months = :bperiod,
                      price_per_seat_cents = :price, next_invoice_date = :next_inv
-                 WHERE org_id = :org ORDER BY id DESC LIMIT 1",
-                [
+                 WHERE org_id = :org ORDER BY id DESC LIMIT 1", [
                     ':bmethod' => $billingMethod === '' ? 'stripe' : 'invoice',
                     ':bperiod' => $billingPeriod,
                     ':price'   => $pricePerSeat,
-                    ':next_inv'=> $nextInvoiceDate,
+                    ':next_inv' => $nextInvoiceDate,
                     ':org'     => $orgId,
-                ]
-            );
+                ]);
         }
 
         $user = $this->auth->user();
-        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'org_created', 'org_id' => $orgId, 'org_name' => $name]);
-
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::ADMIN_ACTION,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'org_created', 'org_id' => $orgId, 'org_name' => $name]
+        );
         $_SESSION['flash_message'] = "Organisation \"{$name}\" created.";
         $this->response->redirect('/superadmin/organisations');
     }
@@ -257,22 +242,21 @@ class SuperadminController
         // Get or create integration record
         $integration = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         $action = (string) $this->request->post('action', '');
-
         if ($action === 'enable') {
             if ($integration) {
                 \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], ['status' => 'disconnected']);
             } else {
                 \StratFlow\Models\Integration::create($this->db, [
-                    'org_id' => $orgId,
-                    'provider' => 'jira',
-                    'display_name' => 'Jira Cloud',
-                    'status' => 'disconnected',
+                'org_id' => $orgId,
+                'provider' => 'jira',
+                'display_name' => 'Jira Cloud',
+                'status' => 'disconnected',
                 ]);
             }
             $_SESSION['flash_message'] = "Jira integration enabled for \"{$org['name']}\". They can now connect from their admin panel.";
         } elseif ($action === 'disable') {
             if ($integration) {
-                // Delete sync mappings and the integration record entirely
+        // Delete sync mappings and the integration record entirely
                 \StratFlow\Models\SyncMapping::deleteByIntegration($this->db, (int) $integration['id']);
                 \StratFlow\Models\Integration::delete($this->db, (int) $integration['id']);
             }
@@ -280,10 +264,14 @@ class SuperadminController
         }
 
         $user = $this->auth->user();
-        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'jira_toggle', 'org_id' => $orgId, 'jira_action' => $action]);
-
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::ADMIN_ACTION,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'jira_toggle', 'org_id' => $orgId, 'jira_action' => $action]
+        );
         $this->response->redirect('/superadmin/organisations');
     }
 
@@ -296,7 +284,6 @@ class SuperadminController
     {
         $orgId  = (int) $id;
         $action = (string) $this->request->post('action', '');
-
         $org = Organisation::findById($this->db, $orgId);
         if (!$org) {
             $_SESSION['flash_error'] = 'Organisation not found.';
@@ -307,99 +294,93 @@ class SuperadminController
         $user = $this->auth->user();
         $ip   = $this->request->ip();
         $ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
         switch ($action) {
             case 'suspend':
-                Organisation::suspend($this->db, $orgId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Organisation::suspend($this->db, $orgId);
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
                     'action' => 'org_suspended', 'org_id' => $orgId, 'org_name' => $org['name'],
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" suspended.';
-                break;
 
+                break;
             case 'enable':
-                Organisation::enable($this->db, $orgId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Organisation::enable($this->db, $orgId);
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
-                    'action' => 'org_enabled', 'org_id' => $orgId, 'org_name' => $org['name'],
+                'action' => 'org_enabled', 'org_id' => $orgId, 'org_name' => $org['name'],
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" enabled.';
-                break;
 
+                break;
             case 'delete':
-                Organisation::delete($this->db, $orgId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Organisation::delete($this->db, $orgId);
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
-                    'action' => 'org_deleted', 'org_id' => $orgId, 'org_name' => $org['name'],
+                'action' => 'org_deleted', 'org_id' => $orgId, 'org_name' => $org['name'],
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . $org['name'] . '" deleted.';
-                break;
 
+                break;
             case 'edit':
-                $newName       = trim((string) $this->request->post('org_name', ''));
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              $newName       = trim((string) $this->request->post('org_name', ''));
                 $newPlanType   = in_array($this->request->post('plan_type'), ['product', 'consultancy'], true)
-                                 ? $this->request->post('plan_type') : 'product';
+                             ? $this->request->post('plan_type') : 'product';
                 $newSeats      = max(1, (int) $this->request->post('seat_limit', 5));
                 $billingMethod = $this->request->post('billing_method', 'invoiced') === 'stripe' ? 'stripe' : 'invoice';
                 $billingPeriod = (int) $this->request->post('billing_period_months', 1) === 12 ? 12 : 1;
                 $pricePerSeat  = max(0, (int) round((float) $this->request->post('price_per_seat', 0) * 100));
                 $nextInvoice   = $this->request->post('next_invoice_date', '') ?: null;
-
                 if ($newName !== '') {
                     Organisation::update($this->db, $orgId, ['name' => $newName]);
                 }
 
-                // Derive new stripe_subscription_id from billing method:
-                // invoice → manual_ prefix; stripe → empty (Stripe connects separately)
+            // Derive new stripe_subscription_id from billing method:
+            // invoice → manual_ prefix; stripe → empty (Stripe connects separately)
                 $newSubId = $billingMethod === 'invoice' ? 'manual_' . time() : '';
-
                 $sub = Subscription::findByOrgId($this->db, $orgId);
                 if ($sub) {
-                    $this->db->query(
-                        "UPDATE subscriptions
+                    $this->db->query("UPDATE subscriptions
                          SET plan_type = :plan, user_seat_limit = :seats, stripe_subscription_id = :sub_id,
                              billing_method = :bmethod, billing_period_months = :bperiod,
                              price_per_seat_cents = :price, next_invoice_date = :next_inv
                          WHERE org_id = :org
-                         ORDER BY id DESC LIMIT 1",
-                        [
-                            ':plan'     => $newPlanType,
-                            ':seats'    => $newSeats,
-                            ':sub_id'   => $newSubId,
-                            ':bmethod'  => $billingMethod,
-                            ':bperiod'  => $billingPeriod,
-                            ':price'    => $pricePerSeat,
-                            ':next_inv' => $nextInvoice,
-                            ':org'      => $orgId,
-                        ]
-                    );
+                         ORDER BY id DESC LIMIT 1", [
+                    ':plan'     => $newPlanType,
+                    ':seats'    => $newSeats,
+                    ':sub_id'   => $newSubId,
+                    ':bmethod'  => $billingMethod,
+                    ':bperiod'  => $billingPeriod,
+                    ':price'    => $pricePerSeat,
+                    ':next_inv' => $nextInvoice,
+                    ':org'      => $orgId,
+                    ]);
                 } else {
                     Subscription::create($this->db, [
-                        'org_id'                 => $orgId,
-                        'stripe_subscription_id' => $newSubId,
-                        'plan_type'              => $newPlanType,
-                        'status'                 => 'active',
-                        'started_at'             => date('Y-m-d H:i:s'),
+                                'org_id'                 => $orgId,
+                                'stripe_subscription_id' => $newSubId,
+                                'plan_type'              => $newPlanType,
+                                'status'                 => 'active',
+                                'started_at'             => date('Y-m-d H:i:s'),
                     ]);
                     Subscription::updateSeatLimit($this->db, $orgId, $newSeats);
                 }
 
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
-                    'action'    => 'org_edited', 'org_id' => $orgId, 'org_name' => $newName ?: $org['name'],
-                    'plan_type' => $newPlanType, 'seats' => $newSeats, 'billing' => $billingMethod,
+                'action'    => 'org_edited', 'org_id' => $orgId, 'org_name' => $newName ?: $org['name'],
+                'plan_type' => $newPlanType, 'seats' => $newSeats, 'billing' => $billingMethod,
                 ]);
                 $_SESSION['flash_message'] = 'Organisation "' . ($newName ?: $org['name']) . '" updated.';
-                break;
 
+                break;
             case 'update_seats':
-                $newLimit = max(1, (int) $this->request->post('seat_limit', 5));
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              $newLimit = max(1, (int) $this->request->post('seat_limit', 5));
                 Subscription::updateSeatLimit($this->db, $orgId, $newLimit);
                 AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
-                    'action' => 'seat_limit_changed', 'org_id' => $orgId, 'org_name' => $org['name'], 'new_limit' => $newLimit,
+                'action' => 'seat_limit_changed', 'org_id' => $orgId, 'org_name' => $org['name'], 'new_limit' => $newLimit,
                 ]);
                 $_SESSION['flash_message'] = 'Seat limit for "' . $org['name'] . '" updated to ' . $newLimit . '.';
-                break;
 
+                break;
             case 'rename':
-                $newName = trim((string) $this->request->post('org_name', ''));
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              $newName = trim((string) $this->request->post('org_name', ''));
                 if ($newName !== '') {
                     Organisation::update($this->db, $orgId, ['name' => $newName]);
                     AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $ip, $ua, [
@@ -407,10 +388,10 @@ class SuperadminController
                     ]);
                     $_SESSION['flash_message'] = 'Organisation renamed to "' . $newName . '".';
                 }
-                break;
 
+                break;
             default:
-                $_SESSION['flash_error'] = 'Unknown action.';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              $_SESSION['flash_error'] = 'Unknown action.';
         }
 
         $this->response->redirect('/superadmin/organisations');
@@ -425,7 +406,6 @@ class SuperadminController
     {
         $orgId = (int) $id;
         $data  = Organisation::exportData($this->db, $orgId);
-
         if (!$data) {
             $_SESSION['flash_error'] = 'Organisation not found.';
             $this->response->redirect('/superadmin/organisations');
@@ -437,10 +417,8 @@ class SuperadminController
             'org_id' => $orgId,
             'type'   => 'org_export',
         ]);
-
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $filename = 'org_' . $orgId . '_export_' . date('Y-m-d') . '.json';
-
         header('Content-Type: application/json');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($json));
@@ -469,20 +447,18 @@ class SuperadminController
     {
         $user     = $this->auth->user();
         $settings = SystemSettings::get($this->db);
-
         $maskKey = static function (string $key): string {
+
             if ($key === '') {
                 return '';
             }
             return '•••••••••' . substr($key, -4);
         };
-
         $apiKeys = [
             'google'    => $maskKey($_ENV['GEMINI_API_KEY']    ?? ''),
             'openai'    => $maskKey($_ENV['OPENAI_API_KEY']    ?? ''),
             'anthropic' => $maskKey($_ENV['ANTHROPIC_API_KEY'] ?? ''),
         ];
-
         $this->response->render('superadmin/defaults', [
             'user'          => $user,
             'settings'      => $settings,
@@ -491,7 +467,6 @@ class SuperadminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -501,7 +476,6 @@ class SuperadminController
     public function saveDefaults(): void
     {
         $user = $this->auth->user();
-
         $data = [
             'ai_provider'            => trim((string) $this->request->post('ai_provider', 'google')),
             'ai_model'               => trim((string) $this->request->post('ai_model', 'gemini-3-flash-preview')),
@@ -525,13 +499,16 @@ class SuperadminController
             'billing_rate_monthly_cents'   => max(0, (int) round((float) $this->request->post('billing_rate_monthly', 0) * 100)),
             'billing_rate_annual_cents'    => max(0, (int) round((float) $this->request->post('billing_rate_annual', 0) * 100)),
         ];
-
         SystemSettings::save($this->db, $data);
 
-        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'system_defaults_updated']);
-
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::ADMIN_ACTION,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'system_defaults_updated']
+        );
         $_SESSION['flash_message'] = 'App-wide defaults saved.';
         $this->response->redirect('/superadmin/defaults');
     }
@@ -545,14 +522,12 @@ class SuperadminController
     {
         $provider = trim((string) $this->request->post('provider', 'google'));
         $model    = trim((string) $this->request->post('model', ''));
-
         if ($model === '') {
             $this->response->json(['success' => false, 'error' => 'Model identifier is required.']);
             return;
         }
 
         $start = microtime(true);
-
         try {
             $snippet = match ($provider) {
                 'google'    => $this->testGemini($model),
@@ -560,7 +535,6 @@ class SuperadminController
                 'anthropic' => $this->testAnthropic($model),
                 default     => throw new \RuntimeException("Unknown provider: {$provider}"),
             };
-
             $this->response->json([
                 'success'     => true,
                 'provider'    => $provider,
@@ -591,7 +565,6 @@ class SuperadminController
             'contents' => [['parts' => [['text' => 'Reply with just the word: OK']]]],
             'generationConfig' => ['maxOutputTokens' => 10],
         ]);
-
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -605,7 +578,9 @@ class SuperadminController
         $err  = curl_error($ch);
         curl_close($ch);
 
-        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        if ($err) {
+            throw new \RuntimeException('cURL error: ' . $err);
+        }
         $data = json_decode($raw, true) ?? [];
         if ($code !== 200) {
             throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
@@ -625,7 +600,6 @@ class SuperadminController
             'messages'    => [['role' => 'user', 'content' => 'Reply with just the word: OK']],
             'max_tokens'  => 10,
         ]);
-
         $ch = curl_init('https://api.openai.com/v1/chat/completions');
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -639,7 +613,9 @@ class SuperadminController
         $err  = curl_error($ch);
         curl_close($ch);
 
-        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        if ($err) {
+            throw new \RuntimeException('cURL error: ' . $err);
+        }
         $data = json_decode($raw, true) ?? [];
         if ($code !== 200) {
             throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
@@ -659,7 +635,6 @@ class SuperadminController
             'max_tokens' => 10,
             'messages'   => [['role' => 'user', 'content' => 'Reply with just the word: OK']],
         ]);
-
         $ch = curl_init('https://api.anthropic.com/v1/messages');
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -677,7 +652,9 @@ class SuperadminController
         $err  = curl_error($ch);
         curl_close($ch);
 
-        if ($err) { throw new \RuntimeException('cURL error: ' . $err); }
+        if ($err) {
+            throw new \RuntimeException('cURL error: ' . $err);
+        }
         $data = json_decode($raw, true) ?? [];
         if ($code !== 200) {
             throw new \RuntimeException($data['error']['message'] ?? "HTTP {$code}");
@@ -689,8 +666,7 @@ class SuperadminController
     {
         $user   = $this->auth->user();
         $panels = PersonaPanel::findDefaults($this->db);
-
-        // Seed defaults if none exist
+// Seed defaults if none exist
         if (empty($panels)) {
             $this->seedDefaultPersonas();
             $panels = PersonaPanel::findDefaults($this->db);
@@ -732,7 +708,6 @@ class SuperadminController
             'flash_message'      => $_SESSION['flash_message'] ?? null,
             'flash_error'        => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -746,8 +721,7 @@ class SuperadminController
     public function savePersona(): void
     {
         $post = $_POST;
-
-        // Save sounding panel member prompts
+// Save sounding panel member prompts
         foreach ($post as $key => $value) {
             if (strpos($key, 'member_') === 0) {
                 $memberId = (int) str_replace('member_', '', $key);
@@ -834,7 +808,6 @@ class SuperadminController
         $panelId         = (int) ($body['panel_id'] ?? 0);
         $evaluationLevel = $body['evaluation_level'] ?? 'devils_advocate';
         $content         = $body['content'] ?? '';
-
         if (empty($content)) {
             $this->response->json(['status' => 'error', 'message' => 'No content provided'], 400);
             return;
@@ -862,16 +835,8 @@ class SuperadminController
 
         $gemini  = new \StratFlow\Services\GeminiService($this->config);
         $results = [];
-
         foreach ($members as $member) {
-            $prompt = \StratFlow\Services\Prompts\PersonaPrompt::buildPrompt(
-                $member['role_title'],
-                $member['prompt_description'] ?? '',
-                $evaluationLevel,
-                $content,
-                $customLevels
-            );
-
+            $prompt = \StratFlow\Services\Prompts\PersonaPrompt::buildPrompt($member['role_title'], $member['prompt_description'] ?? '', $evaluationLevel, $content, $customLevels);
             try {
                 $response = $gemini->generate($prompt, '');
                 $results[] = [
@@ -880,8 +845,8 @@ class SuperadminController
                 ];
             } catch (\Throwable $e) {
                 $results[] = [
-                    'role_title' => $member['role_title'],
-                    'response'   => 'Error: ' . $e->getMessage(),
+                'role_title' => $member['role_title'],
+                'response'   => 'Error: ' . $e->getMessage(),
                 ];
             }
         }
@@ -901,7 +866,6 @@ class SuperadminController
     public function assignSuperadmin(): void
     {
         $userId = (int) $this->request->post('user_id', '0');
-
         if ($userId <= 0) {
             $_SESSION['flash_error'] = 'Please select a user.';
             $this->response->redirect('/superadmin/organisations');
@@ -917,14 +881,12 @@ class SuperadminController
 
         $oldRole = $target['role'];
         User::update($this->db, $userId, ['role' => 'superadmin']);
-
         $user = $this->auth->user();
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'target_user_id' => $userId,
             'old_role'       => $oldRole,
             'new_role'       => 'superadmin',
         ]);
-
         $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" is now a superadmin.';
         $this->response->redirect('/superadmin/organisations');
     }
@@ -944,7 +906,6 @@ class SuperadminController
         $user       = $this->auth->user();
         $filterType = $this->request->get('type', '');
         $filterType = is_string($filterType) && $filterType !== '' ? $filterType : null;
-
         if ($filterType !== null) {
             $logs = AuditLog::findByEventType($this->db, $filterType, 200);
         } else {
@@ -967,7 +928,6 @@ class SuperadminController
             AuditLogger::PROJECT_CREATED,
             AuditLogger::DOCUMENT_UPLOADED,
         ];
-
         $this->response->render('superadmin/audit-logs', [
             'user'        => $user,
             'logs'        => $logs,
@@ -986,14 +946,16 @@ class SuperadminController
         $filterType = $this->request->get('type', '') ?: null;
         $dateFrom   = $this->request->get('from', '') ?: null;
         $dateTo     = $this->request->get('to', '') ?: null;
-
         $logs = AuditLog::findFiltered($this->db, null, $filterType, $dateFrom, $dateTo);
 
-        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::DATA_EXPORT,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
             ['type' => 'audit_logs', 'count' => count($logs)]
         );
-
         $csv = fopen('php://temp', 'r+');
         fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details']);
         foreach ($logs as $log) {
@@ -1009,7 +971,6 @@ class SuperadminController
         rewind($csv);
         $content = stream_get_contents($csv);
         fclose($csv);
-
         $this->response->download($content, 'audit-logs-' . date('Y-m-d') . '.csv', 'text/csv');
     }
 
@@ -1042,13 +1003,11 @@ class SuperadminController
      */
     private function getAllUsers(): array
     {
-        $stmt = $this->db->query(
-            "SELECT u.*, o.name AS org_name
+        $stmt = $this->db->query("SELECT u.*, o.name AS org_name
              FROM users u
              LEFT JOIN organisations o ON o.id = u.org_id
              WHERE u.is_active = 1
-             ORDER BY u.full_name ASC"
-        );
+             ORDER BY u.full_name ASC");
         return $stmt->fetchAll();
     }
 
@@ -1062,11 +1021,9 @@ class SuperadminController
     {
         // Ensure review_scope column exists (inline migration for Railway)
         try {
-            $this->db->query(
-                "ALTER TABLE persona_panels ADD COLUMN review_scope VARCHAR(50) DEFAULT NULL AFTER name"
-            );
+            $this->db->query("ALTER TABLE persona_panels ADD COLUMN review_scope VARCHAR(50) DEFAULT NULL AFTER name");
         } catch (\Throwable) {
-            // Column already exists — ignore
+        // Column already exists — ignore
         }
 
         // Executive Panel
@@ -1075,7 +1032,6 @@ class SuperadminController
             'name'         => 'Executive Panel',
             'review_scope' => 'strategy_okrs',
         ]);
-
         $execMembers = [
             ['CEO',                           'You are a CEO focused on strategic vision, market positioning, and ROI'],
             ['CFO',                           'You are a CFO focused on financial viability, cost control, and risk management'],
@@ -1083,7 +1039,6 @@ class SuperadminController
             ['CMO',                           'You are a CMO focused on market fit, customer value, and competitive positioning'],
             ['Enterprise Business Strategist', 'You are a Business Strategist focused on long-term growth and competitive advantage'],
         ];
-
         foreach ($execMembers as [$role, $prompt]) {
             PersonaMember::create($this->db, [
                 'panel_id'           => $execId,
@@ -1098,14 +1053,12 @@ class SuperadminController
             'name'         => 'Product Management Panel',
             'review_scope' => 'hl_items_stories',
         ]);
-
         $pmMembers = [
             ['Agile Product Manager',  'You are a PM focused on backlog prioritisation, stakeholder alignment, and delivery velocity'],
             ['Product Owner',          'You are a PO focused on user value, acceptance criteria, and sprint goals'],
             ['Expert System Architect', 'You are an Architect focused on technical feasibility, scalability, and system design'],
             ['Senior Developer',       'You are a Senior Dev focused on implementation complexity, technical debt, and code quality'],
         ];
-
         foreach ($pmMembers as [$role, $prompt]) {
             PersonaMember::create($this->db, [
                 'panel_id'           => $pmId,

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CheckoutController
  *
@@ -25,7 +26,6 @@ class CheckoutController
     protected Auth $auth;
     protected Database $db;
     protected array $config;
-
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -48,8 +48,7 @@ class CheckoutController
         $stripe      = new StripeService($this->config['stripe']);
         $productType = (string) $this->request->post('product_type', '');
         $priceId     = (string) $this->request->post('price_id', '');
-
-        // Resolve price_id and mode from product_type when provided
+// Resolve price_id and mode from product_type when provided
         $mode = 'subscription';
         if ($productType !== '') {
             [$priceId, $mode] = $this->resolveProductType($productType);
@@ -58,7 +57,6 @@ class CheckoutController
         }
 
         $validPriceIds = $stripe->validPriceIds();
-
         if ($priceId === '' || !in_array($priceId, $validPriceIds, true)) {
             $this->response->render('pricing', [
                 'stripe_key'        => $this->config['stripe']['publishable_key'],
@@ -79,7 +77,6 @@ class CheckoutController
             $appUrl     = rtrim($this->config['app']['url'], '/');
             $successUrl = $appUrl . '/success';
             $cancelUrl  = $appUrl . '/pricing';
-
             $session = $stripe->createCheckoutSession($priceId, $successUrl, $cancelUrl, null, $mode);
             $this->response->redirect($session->url);
         } catch (\Stripe\Exception\ApiErrorException $e) {
@@ -103,11 +100,9 @@ class CheckoutController
     private function handleDevCheckout(string $priceId): void
     {
         $planType = ($priceId === ($this->config['stripe']['price_consultancy'] ?? '')) ? 'consultancy' : 'product';
-
-        // If user is logged in, use their org. Otherwise create a dev subscription for the seed org.
+// If user is logged in, use their org. Otherwise create a dev subscription for the seed org.
         $orgId = $this->auth->check() ? $this->auth->orgId() : 1;
-
-        // Create or update subscription
+// Create or update subscription
         $existing = \StratFlow\Models\Subscription::findByOrgId($this->db, $orgId);
         if (!$existing) {
             \StratFlow\Models\Subscription::create($this->db, [

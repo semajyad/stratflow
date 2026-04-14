@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ProjectRepoLink Model
  *
@@ -38,19 +39,15 @@ class ProjectRepoLink
      */
     public static function create(Database $db, int $projectId, int $integrationRepoId, int $orgId, ?int $createdBy = null): int
     {
-        $db->query(
-            "INSERT IGNORE INTO project_repo_links
+        $db->query("INSERT IGNORE INTO project_repo_links
                 (project_id, integration_repo_id, org_id, created_by)
              VALUES
-                (:project_id, :integration_repo_id, :org_id, :created_by)",
-            [
+                (:project_id, :integration_repo_id, :org_id, :created_by)", [
                 ':project_id'           => $projectId,
                 ':integration_repo_id'  => $integrationRepoId,
                 ':org_id'               => $orgId,
                 ':created_by'           => $createdBy,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -68,12 +65,8 @@ class ProjectRepoLink
      */
     public static function findRepoIdsByProject(Database $db, int $projectId, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT integration_repo_id FROM project_repo_links
-             WHERE project_id = :project_id AND org_id = :org_id",
-            [':project_id' => $projectId, ':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT integration_repo_id FROM project_repo_links
+             WHERE project_id = :project_id AND org_id = :org_id", [':project_id' => $projectId, ':org_id' => $orgId]);
         return array_column($stmt->fetchAll(), 'integration_repo_id');
     }
 
@@ -87,12 +80,8 @@ class ProjectRepoLink
      */
     public static function findProjectIdsByRepo(Database $db, int $integrationRepoId, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT project_id FROM project_repo_links
-             WHERE integration_repo_id = :integration_repo_id AND org_id = :org_id",
-            [':integration_repo_id' => $integrationRepoId, ':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT project_id FROM project_repo_links
+             WHERE integration_repo_id = :integration_repo_id AND org_id = :org_id", [':integration_repo_id' => $integrationRepoId, ':org_id' => $orgId]);
         return array_column($stmt->fetchAll(), 'project_id');
     }
 
@@ -110,17 +99,14 @@ class ProjectRepoLink
      */
     public static function delete(Database $db, int $projectId, int $integrationRepoId, int $orgId): void
     {
-        $db->query(
-            "DELETE FROM project_repo_links
+        $db->query("DELETE FROM project_repo_links
              WHERE project_id = :project_id
                AND integration_repo_id = :integration_repo_id
-               AND org_id = :org_id",
-            [
+               AND org_id = :org_id", [
                 ':project_id'           => $projectId,
                 ':integration_repo_id'  => $integrationRepoId,
                 ':org_id'               => $orgId,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -135,10 +121,7 @@ class ProjectRepoLink
      */
     public static function deleteAllForProject(Database $db, int $projectId, int $orgId): void
     {
-        $db->query(
-            "DELETE FROM project_repo_links
-             WHERE project_id = :project_id AND org_id = :org_id",
-            [':project_id' => $projectId, ':org_id' => $orgId]
-        );
+        $db->query("DELETE FROM project_repo_links
+             WHERE project_id = :project_id AND org_id = :org_id", [':project_id' => $projectId, ':org_id' => $orgId]);
     }
 }

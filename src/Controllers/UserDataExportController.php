@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UserDataExportController — DSAR (Data Subject Access Request) Export
  *
@@ -30,11 +31,11 @@ use StratFlow\Services\AuditLogger;
 
 class UserDataExportController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
+    protected array $config;
 
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
@@ -126,12 +127,13 @@ class UserDataExportController
         $zip     = new \ZipArchive();
         $zip->open($tmpFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
-        $zip->addFromString('profile.json',      json_encode($profile,   JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $zip->addFromString('projects.json',     json_encode($projects,  JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $zip->addFromString('user_stories.json', json_encode($stories,   JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $zip->addFromString('work_items.json',   json_encode($workItems, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $zip->addFromString('audit_log.json',    json_encode($auditLog,  JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $zip->addFromString('README.txt',
+        $zip->addFromString('profile.json', json_encode($profile, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $zip->addFromString('projects.json', json_encode($projects, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $zip->addFromString('user_stories.json', json_encode($stories, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $zip->addFromString('work_items.json', json_encode($workItems, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $zip->addFromString('audit_log.json', json_encode($auditLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $zip->addFromString(
+            'README.txt',
             "StratFlow data export\n" .
             "User: {$user['email']}\n" .
             "Generated: " . date('c') . "\n\n" .

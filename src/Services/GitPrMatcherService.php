@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitPrMatcherService
  *
@@ -13,6 +14,7 @@
  *   $service = new GitPrMatcherService($db, $gemini);
  *   $linked  = $service->matchAndLink($prTitle, $prBody, $branch, $prUrl, $orgId);
  */
+
 declare(strict_types=1);
 
 namespace StratFlow\Services;
@@ -33,10 +35,9 @@ class GitPrMatcherService
      * @param Database            $db     Database instance
      * @param GeminiService|null  $gemini Gemini service; pass null to disable AI matching
      */
-    public function __construct(
-        private readonly Database       $db,
-        private readonly ?GeminiService $gemini
-    ) {}
+    public function __construct(private readonly Database $db, private readonly ?GeminiService $gemini)
+    {
+    }
 
     // ===========================
     // PUBLIC API
@@ -54,13 +55,8 @@ class GitPrMatcherService
      * @param int    $orgId   Organisation ID for tenancy scoping
      * @return int            Number of new links inserted
      */
-    public function matchAndLink(
-        string $prTitle,
-        string $prBody,
-        string $branch,
-        string $prUrl,
-        int    $orgId
-    ): int {
+    public function matchAndLink(string $prTitle, string $prBody, string $branch, string $prUrl, int $orgId): int
+    {
         if ($this->gemini === null) {
             return 0;
         }
@@ -76,7 +72,6 @@ class GitPrMatcherService
             'branch'     => $branch,
             'candidates' => $candidates,
         ], JSON_UNESCAPED_UNICODE);
-
         try {
             $matches = $this->gemini->generateJson(GitPrMatchPrompt::PROMPT, $input);
         } catch (\Throwable $e) {
@@ -124,17 +119,12 @@ class GitPrMatcherService
     private function loadCandidates(int $orgId): array
     {
         $candidates = [];
-
-        $stories = $this->db->query(
-            "SELECT us.id, us.title, us.description
+        $stories = $this->db->query("SELECT us.id, us.title, us.description
                FROM user_stories us
                JOIN projects p ON us.project_id = p.id
               WHERE p.org_id = :oid
                 AND us.status NOT IN ('done')
-              LIMIT 100",
-            [':oid' => $orgId]
-        )->fetchAll();
-
+              LIMIT 100", [':oid' => $orgId])->fetchAll();
         foreach ($stories as $s) {
             $candidates[] = [
                 'id'          => (int) $s['id'],
@@ -144,17 +134,13 @@ class GitPrMatcherService
             ];
         }
 
-        $items = $this->db->query(
-            "SELECT hwi.id, hwi.title, hwi.description
+        $items = $this->db->query("SELECT hwi.id, hwi.title, hwi.description
                FROM hl_work_items hwi
                JOIN projects p ON hwi.project_id = p.id
               WHERE p.org_id = :oid
                 AND hwi.status NOT IN ('done')
                 AND hwi.okr_title IS NOT NULL
-              LIMIT 50",
-            [':oid' => $orgId]
-        )->fetchAll();
-
+              LIMIT 50", [':oid' => $orgId])->fetchAll();
         foreach ($items as $item) {
             $candidates[] = [
                 'id'          => (int) $item['id'],

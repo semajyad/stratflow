@@ -1,4 +1,5 @@
 <?php
+
 /**
  * EmailService
  *
@@ -13,7 +14,6 @@ namespace StratFlow\Services;
 class EmailService
 {
     private array $config;
-
     public function __construct(array $config)
     {
         $this->config = $config;
@@ -35,21 +35,9 @@ class EmailService
         $smtpEncryption = strtolower(trim((string)($this->config['mail']['smtp_encryption'] ?? 'auto')));
         $smtpUser = trim((string)($this->config['mail']['smtp_user'] ?? ''));
         $smtpPass = (string)($this->config['mail']['smtp_pass'] ?? '');
-
         if ($smtpHost !== '' && $smtpUser !== '' && $smtpPass !== '' && $fromEmail !== '') {
             try {
-                $sent = $this->sendViaSmtp(
-                    $smtpHost,
-                    $smtpPort,
-                    $smtpEncryption,
-                    $smtpUser,
-                    $smtpPass,
-                    $fromName,
-                    $fromEmail,
-                    $to,
-                    $subject,
-                    $htmlBody
-                );
+                $sent = $this->sendViaSmtp($smtpHost, $smtpPort, $smtpEncryption, $smtpUser, $smtpPass, $fromName, $fromEmail, $to, $subject, $htmlBody);
                 if ($sent) {
                     \StratFlow\Services\Logger::warn("[StratFlow] Email sent via SMTP to {$to}");
                     return true;
@@ -75,7 +63,6 @@ class EmailService
 
         $mailerSendKey = $this->config['mail']['mailersend_api_key'] ?? '';
         $mailerSendFrom = $this->config['mail']['mailersend_from'] ?? '';
-
         if ($mailerSendKey !== '' && $mailerSendFrom !== '') {
             try {
                 $sent = $this->sendViaMailerSend($mailerSendKey, $fromName, $mailerSendFrom, $to, $subject, $htmlBody);
@@ -105,7 +92,6 @@ class EmailService
             'html' => $htmlBody,
             'reply_to' => $fromEmail,
         ]);
-
         $ch = curl_init('https://api.resend.com/emails');
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
@@ -117,12 +103,10 @@ class EmailService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 15,
         ]);
-
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
-
         if ($curlError) {
             throw new \RuntimeException("Resend cURL error: {$curlError}");
         }
@@ -144,7 +128,6 @@ class EmailService
             'subject' => $subject,
             'html' => $htmlBody,
         ]);
-
         $ch = curl_init('https://api.mailersend.com/v1/email');
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
@@ -156,12 +139,10 @@ class EmailService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 15,
         ]);
-
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
-
         if ($curlError) {
             throw new \RuntimeException("MailerSend cURL error: {$curlError}");
         }
@@ -180,18 +161,7 @@ class EmailService
     // SMTP
     // =========================================================================
 
-    protected function sendViaSmtp(
-        string $host,
-        int $port,
-        string $encryption,
-        string $user,
-        string $pass,
-        string $fromName,
-        string $fromEmail,
-        string $to,
-        string $subject,
-        string $htmlBody
-    ): bool
+    protected function sendViaSmtp(string $host, int $port, string $encryption, string $user, string $pass, string $fromName, string $fromEmail, string $to, string $subject, string $htmlBody): bool
     {
         $mode = $this->resolveSmtpEncryptionMode($port, $encryption);
         $transport = $mode === 'ssl' ? 'ssl://' : '';
@@ -200,9 +170,9 @@ class EmailService
             throw new \RuntimeException("SMTP connect failed: {$errstr} ({$errno})");
         }
 
-        $this->smtpRead($socket); // 220 greeting
+        $this->smtpRead($socket);
+// 220 greeting
         $this->smtpCommand($socket, "EHLO stratflow.app", 250);
-
         if ($mode === 'tls') {
             $this->smtpCommand($socket, "STARTTLS", 220);
             $cryptoEnabled = stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
@@ -216,16 +186,12 @@ class EmailService
         $this->smtpCommand($socket, "AUTH LOGIN", 334);
         $this->smtpCommand($socket, base64_encode($user), 334);
         $this->smtpCommand($socket, base64_encode($pass), 235);
-
-        // Envelope
+// Envelope
         $this->smtpCommand($socket, "MAIL FROM:<{$fromEmail}>", 250);
         $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
-
-        // Message
+// Message
         $this->smtpCommand($socket, "DATA", 354);
-
         $safeSubject = str_replace(["\r", "\n"], '', $subject);
-
         $message = "From: {$fromName} <{$fromEmail}>\r\n";
         $message .= "To: {$to}\r\n";
         $message .= "Reply-To: {$fromName} <{$fromEmail}>\r\n";
@@ -234,13 +200,12 @@ class EmailService
         $message .= "Content-Type: text/html; charset=UTF-8\r\n";
         $message .= "\r\n";
         $message .= $htmlBody;
-
         fwrite($socket, $message . "\r\n.\r\n");
-        $this->smtpRead($socket); // 250 OK
+        $this->smtpRead($socket);
+// 250 OK
 
         $this->smtpCommand($socket, "QUIT", 221);
         fclose($socket);
-
         return true;
     }
 
@@ -287,40 +252,22 @@ class EmailService
     public function sendWelcome(string $to, string $name, string $setPasswordUrl): bool
     {
         $subject = 'Welcome to StratFlow — Set Your Password';
-        $htmlBody = $this->buildEmailHtml(
-            "Welcome to StratFlow, {$name}!",
-            '<p>Your account has been created. Click the button below to set your password and get started.</p>',
-            'Set Your Password',
-            $setPasswordUrl,
-            'This link expires in 24 hours. If you didn\'t expect this email, you can safely ignore it.'
-        );
+        $htmlBody = $this->buildEmailHtml("Welcome to StratFlow, {$name}!", '<p>Your account has been created. Click the button below to set your password and get started.</p>', 'Set Your Password', $setPasswordUrl, 'This link expires in 24 hours. If you didn\'t expect this email, you can safely ignore it.');
         return $this->send($to, $subject, $htmlBody);
     }
 
     public function sendPasswordReset(string $to, string $name, string $resetUrl): bool
     {
         $subject = 'StratFlow — Reset Your Password';
-        $htmlBody = $this->buildEmailHtml(
-            "Reset Your Password",
-            "<p>Hi {$name}, we received a request to reset your password. Click the button below to choose a new one.</p>",
-            'Reset Password',
-            $resetUrl,
-            'This link expires in 24 hours. If you didn\'t request a password reset, you can safely ignore this email.'
-        );
+        $htmlBody = $this->buildEmailHtml("Reset Your Password", "<p>Hi {$name}, we received a request to reset your password. Click the button below to choose a new one.</p>", 'Reset Password', $resetUrl, 'This link expires in 24 hours. If you didn\'t request a password reset, you can safely ignore this email.');
         return $this->send($to, $subject, $htmlBody);
     }
 
     public function sendConsultancyAlert(string $to, string $orgName): bool
     {
         $subject = 'StratFlow — New Consultancy Subscription';
-        $htmlBody = $this->buildEmailHtml(
-            "Consultancy Plan Activated",
-            "<p>A new consultancy subscription has been created for <strong>{$orgName}</strong>. "
-            . "Please reach out to the customer to begin onboarding.</p>",
-            '',
-            '',
-            'This is an automated notification from StratFlow.'
-        );
+        $htmlBody = $this->buildEmailHtml("Consultancy Plan Activated", "<p>A new consultancy subscription has been created for <strong>{$orgName}</strong>. "
+            . "Please reach out to the customer to begin onboarding.</p>", '', '', 'This is an automated notification from StratFlow.');
         return $this->send($to, $subject, $htmlBody);
     }
 
@@ -351,7 +298,6 @@ class EmailService
         $logoBlock = $logoUrl !== ''
             ? '<img src="' . $logoUrl . '" alt="StratFlow" style="display:inline-block; width:auto; height:56px; max-width:220px;">'
             : '<span style="color:#ffffff; font-size:24px; font-weight:700;">StratFlow</span>';
-
         return <<<HTML
         <!DOCTYPE html>
         <html lang="en">

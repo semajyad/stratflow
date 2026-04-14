@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AuditLog Model
  *
@@ -26,15 +27,12 @@ class AuditLog
      */
     public static function findByUserId(Database $db, int $userId, int $limit = 100): array
     {
-        $stmt = $db->query(
-            "SELECT al.*, u.full_name, u.email
+        $stmt = $db->query("SELECT al.*, u.full_name, u.email
              FROM audit_logs al
              LEFT JOIN users u ON u.id = al.user_id
              WHERE al.user_id = :uid
              ORDER BY al.created_at DESC
-             LIMIT :lim",
-            ['uid' => $userId, 'lim' => $limit]
-        );
+             LIMIT :lim", ['uid' => $userId, 'lim' => $limit]);
         return $stmt->fetchAll();
     }
 
@@ -48,15 +46,12 @@ class AuditLog
      */
     public static function findByEventType(Database $db, string $type, int $limit = 100): array
     {
-        $stmt = $db->query(
-            "SELECT al.*, u.full_name, u.email
+        $stmt = $db->query("SELECT al.*, u.full_name, u.email
              FROM audit_logs al
              LEFT JOIN users u ON u.id = al.user_id
              WHERE al.event_type = :type
              ORDER BY al.created_at DESC
-             LIMIT :lim",
-            ['type' => $type, 'lim' => $limit]
-        );
+             LIMIT :lim", ['type' => $type, 'lim' => $limit]);
         return $stmt->fetchAll();
     }
 
@@ -69,14 +64,11 @@ class AuditLog
      */
     public static function findRecent(Database $db, int $limit = 200): array
     {
-        $stmt = $db->query(
-            "SELECT al.*, u.full_name, u.email
+        $stmt = $db->query("SELECT al.*, u.full_name, u.email
              FROM audit_logs al
              LEFT JOIN users u ON u.id = al.user_id
              ORDER BY al.created_at DESC
-             LIMIT :lim",
-            ['lim' => $limit]
-        );
+             LIMIT :lim", ['lim' => $limit]);
         return $stmt->fetchAll();
     }
 
@@ -90,7 +82,6 @@ class AuditLog
                 LEFT JOIN users u ON u.id = al.user_id
                 WHERE 1=1";
         $params = [];
-
         if ($orgId !== null) {
             $sql .= " AND (u.org_id = :org_id OR al.user_id IS NULL)";
             $params[':org_id'] = $orgId;
@@ -109,7 +100,6 @@ class AuditLog
         }
 
         $sql .= " ORDER BY al.created_at DESC";
-
         $stmt = $db->query($sql, $params);
         return $stmt->fetchAll();
     }

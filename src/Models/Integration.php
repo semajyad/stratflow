@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Integration Model
  *
@@ -27,8 +28,7 @@ class Integration
         'refresh_token',
         'webhook_secret',
     ];
-
-    // ===========================
+// ===========================
     // UPDATABLE COLUMNS
     // ===========================
 
@@ -40,8 +40,7 @@ class Integration
         'token_iv', 'token_tag',
         'installation_id', 'account_login',
     ];
-
-    /**
+/**
      * Encrypt a token value using AES-256-GCM.
      * Returns null if no encryption key is configured.
      */
@@ -95,16 +94,14 @@ class Integration
     public static function create(Database $db, array $data): int
     {
         $protected = self::prepareForStorage($data);
-        $db->query(
-            "INSERT INTO integrations
+        $db->query("INSERT INTO integrations
                 (org_id, provider, display_name, cloud_id, access_token,
                  refresh_token, token_expires_at, site_url, config_json, status,
                  installation_id, account_login)
              VALUES
                 (:org_id, :provider, :display_name, :cloud_id, :access_token,
                  :refresh_token, :token_expires_at, :site_url, :config_json, :status,
-                 :installation_id, :account_login)",
-            [
+                 :installation_id, :account_login)", [
                 ':org_id'           => $protected['org_id'],
                 ':provider'         => $protected['provider'],
                 ':display_name'     => $protected['display_name'] ?? '',
@@ -117,9 +114,7 @@ class Integration
                 ':status'           => $protected['status'] ?? 'disconnected',
                 ':installation_id'  => $protected['installation_id'] ?? null,
                 ':account_login'    => $protected['account_login'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -137,12 +132,9 @@ class Integration
      */
     public static function findByOrgAndProvider(Database $db, int $orgId, string $provider): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integrations
+        $stmt = $db->query("SELECT * FROM integrations
              WHERE org_id = :org_id AND provider = :provider
-             LIMIT 1",
-            [':org_id' => $orgId, ':provider' => $provider]
-        );
+             LIMIT 1", [':org_id' => $orgId, ':provider' => $provider]);
         $row = $stmt->fetch();
         return $row !== false ? self::hydrateRow($db, $row) : null;
     }
@@ -156,15 +148,8 @@ class Integration
      */
     public static function findByOrg(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integrations WHERE org_id = :org_id ORDER BY provider ASC",
-            [':org_id' => $orgId]
-        );
-
-        return array_map(
-            static fn(array $row): array => self::hydrateRow($db, $row),
-            $stmt->fetchAll() ?: []
-        );
+        $stmt = $db->query("SELECT * FROM integrations WHERE org_id = :org_id ORDER BY provider ASC", [':org_id' => $orgId]);
+        return array_map(static fn(array $row): array => self::hydrateRow($db, $row), $stmt->fetchAll() ?: []);
     }
 
     /**
@@ -180,16 +165,12 @@ class Integration
      */
     public static function findActiveByInstallationId(Database $db, int $installationId): ?array
     {
-        $stmt = $db->query(
-            "SELECT id, org_id, account_login, installation_id FROM integrations
+        $stmt = $db->query("SELECT id, org_id, account_login, installation_id FROM integrations
              WHERE provider = 'github'
                AND installation_id = :installation_id
                AND status = 'active'
-             LIMIT 1",
-            [':installation_id' => $installationId]
-        );
+             LIMIT 1", [':installation_id' => $installationId]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -204,22 +185,15 @@ class Integration
      */
     public static function findActiveGithubByOrg(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT i.*, COUNT(ir.id) AS repo_count
+        $stmt = $db->query("SELECT i.*, COUNT(ir.id) AS repo_count
              FROM integrations i
              LEFT JOIN integration_repos ir ON ir.integration_id = i.id
              WHERE i.org_id = :org_id
                AND i.provider = 'github'
                AND i.status = 'active'
              GROUP BY i.id
-             ORDER BY i.id DESC",
-            [':org_id' => $orgId]
-        );
-
-        return array_map(
-            static fn(array $row): array => self::hydrateRow($db, $row),
-            $stmt->fetchAll() ?: []
-        );
+             ORDER BY i.id DESC", [':org_id' => $orgId]);
+        return array_map(static fn(array $row): array => self::hydrateRow($db, $row), $stmt->fetchAll() ?: []);
     }
 
     /**
@@ -231,10 +205,7 @@ class Integration
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM integrations WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM integrations WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
         return $row !== false ? self::hydrateRow($db, $row) : null;
     }
@@ -258,18 +229,12 @@ class Integration
         }
 
         $data = self::prepareForStorage($data);
-
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE integrations SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -286,23 +251,20 @@ class Integration
     {
         $protectedAccess = self::encryptToken($accessToken);
         $protectedRefresh = self::encryptToken($refreshToken);
-        $db->query(
-            "UPDATE integrations
+        $db->query("UPDATE integrations
              SET access_token = :access_token,
                   refresh_token = :refresh_token,
                   token_iv = :token_iv,
                   token_tag = :token_tag,
                   token_expires_at = :expires_at
-              WHERE id = :id",
-             [
+              WHERE id = :id", [
                 ':access_token'  => $protectedAccess['ciphertext'],
                 ':refresh_token' => $protectedRefresh['ciphertext'],
                 ':token_iv'      => $protectedAccess['iv'],
                 ':token_tag'     => $protectedAccess['tag'],
                 ':expires_at'    => $expiresAt,
                 ':id'            => $id,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -317,14 +279,11 @@ class Integration
      */
     public static function recordError(Database $db, int $id, string $message): void
     {
-        $db->query(
-            "UPDATE integrations
+        $db->query("UPDATE integrations
              SET error_count = error_count + 1,
                  error_message = :message,
                  status = CASE WHEN error_count + 1 >= 5 THEN 'error' ELSE status END
-             WHERE id = :id",
-            [':message' => $message, ':id' => $id]
-        );
+             WHERE id = :id", [':message' => $message, ':id' => $id]);
     }
 
     /**
@@ -337,12 +296,9 @@ class Integration
      */
     public static function clearError(Database $db, int $id): void
     {
-        $db->query(
-            "UPDATE integrations
+        $db->query("UPDATE integrations
              SET error_count = 0, error_message = NULL
-             WHERE id = :id",
-            [':id' => $id]
-        );
+             WHERE id = :id", [':id' => $id]);
     }
 
     // ===========================
@@ -396,7 +352,6 @@ class Integration
     private static function hydrateRow(Database $db, array $row): array
     {
         $needsBackfill = false;
-
         if (SecretManager::isConfigured()) {
             if (!empty($row['access_token']) && json_decode((string) $row['access_token'], true) === null && empty($row['token_iv']) && empty($row['token_tag'])) {
                 $needsBackfill = true;
@@ -412,19 +367,11 @@ class Integration
         }
 
         if (!empty($row['access_token'])) {
-            $row['access_token'] = self::decryptToken(
-                (string) $row['access_token'],
-                $row['token_iv'] ?? null,
-                $row['token_tag'] ?? null
-            );
+            $row['access_token'] = self::decryptToken((string) $row['access_token'], $row['token_iv'] ?? null, $row['token_tag'] ?? null);
         }
 
         if (!empty($row['refresh_token'])) {
-            $row['refresh_token'] = self::decryptToken(
-                (string) $row['refresh_token'],
-                $row['token_iv'] ?? null,
-                $row['token_tag'] ?? null
-            );
+            $row['refresh_token'] = self::decryptToken((string) $row['refresh_token'], $row['token_iv'] ?? null, $row['token_tag'] ?? null);
         }
 
         if (!empty($row['config_json']) && is_string($row['config_json'])) {
@@ -471,7 +418,6 @@ class Integration
     {
         $segments = explode('.', $path);
         $node = $payload;
-
         foreach ($segments as $segment) {
             if (!is_array($node) || !array_key_exists($segment, $node)) {
                 return null;

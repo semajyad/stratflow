@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RiskController
  *
@@ -31,12 +32,11 @@ class RiskController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -61,7 +61,6 @@ class RiskController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -71,8 +70,7 @@ class RiskController
         $risks     = Risk::findByProjectId($this->db, $projectId);
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $orgUsers  = User::findByOrgId($this->db, $orgId);
-
-        // Build work item lookup by ID for display
+// Build work item lookup by ID for display
         $workItemMap = [];
         foreach ($workItems as $wi) {
             $workItemMap[(int) $wi['id']] = $wi;
@@ -90,8 +88,7 @@ class RiskController
             }
         }
         unset($risk);
-
-        // Build 5x5 heatmap grid: [likelihood][impact] => count
+// Build 5x5 heatmap grid: [likelihood][impact] => count
         $heatmap = [];
         for ($l = 1; $l <= 5; $l++) {
             for ($i = 1; $i <= 5; $i++) {
@@ -117,7 +114,6 @@ class RiskController
             'flash_message'        => $_SESSION['flash_message'] ?? null,
             'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -132,7 +128,6 @@ class RiskController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -155,7 +150,6 @@ class RiskController
             $lines[] = "- {$wi['title']}{$desc}";
         }
         $input = "## Work Items\n" . implode("\n", $lines);
-
         try {
             $gemini    = new GeminiService($this->config);
             $generated = $gemini->generateJson(RiskPrompt::GENERATE_PROMPT, $input);
@@ -191,9 +185,8 @@ class RiskController
                 'impact'      => max(1, min(5, (int) ($riskData['impact'] ?? 3))),
                 'priority'    => ($riskData['likelihood'] ?? 3) * ($riskData['impact'] ?? 3),
             ]);
-
-            // Match linked_items titles to work item IDs
-            $linkedItemIds = [];
+        // Match linked_items titles to work item IDs
+                    $linkedItemIds = [];
             foreach (($riskData['linked_items'] ?? []) as $linkedTitle) {
                 $key = mb_strtolower(trim($linkedTitle));
                 if (isset($titleMap[$key])) {
@@ -223,7 +216,6 @@ class RiskController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -236,7 +228,6 @@ class RiskController
         $impact      = max(1, min(5, (int) $this->request->post('impact', 3)));
         $ownerRaw    = $this->request->post('owner_user_id', '');
         $ownerUserId = $ownerRaw !== '' ? (int) $ownerRaw : null;
-
         if ($title === '') {
             $_SESSION['flash_error'] = 'Risk title is required.';
             $this->response->redirect('/app/risks?project_id=' . $projectId);
@@ -252,8 +243,7 @@ class RiskController
             'priority'     => $likelihood * $impact,
             'owner_user_id' => $ownerUserId,
         ]);
-
-        // Link work items
+// Link work items
         $workItemIds = $this->request->post('work_item_ids', []);
         if (is_array($workItemIds) && !empty($workItemIds)) {
             RiskItemLink::createLinks($this->db, $riskId, array_map('intval', $workItemIds));
@@ -274,7 +264,6 @@ class RiskController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->redirect('/app/home');
@@ -294,7 +283,6 @@ class RiskController
         $impact      = max(1, min(5, (int) $this->request->post('impact', 3)));
         $ownerRaw    = $this->request->post('owner_user_id', '');
         $ownerUserId = $ownerRaw !== '' ? (int) $ownerRaw : null;
-
         if ($title === '') {
             $_SESSION['flash_error'] = 'Risk title is required.';
             $this->response->redirect('/app/risks?project_id=' . $projectId);
@@ -304,7 +292,6 @@ class RiskController
         $allowedRoam = ['resolved', 'owned', 'accepted', 'mitigated'];
         $roamRaw     = strtolower(trim((string) $this->request->post('roam_status', '')));
         $roamStatus  = in_array($roamRaw, $allowedRoam, true) ? $roamRaw : null;
-
         Risk::update($this->db, $id, [
             'title'         => $title,
             'description'   => $description ?: null,
@@ -314,8 +301,7 @@ class RiskController
             'owner_user_id' => $ownerUserId,
             'roam_status'   => $roamStatus,
         ]);
-
-        // Re-create links
+// Re-create links
         RiskItemLink::deleteByRiskId($this->db, $id);
         $workItemIds = $this->request->post('work_item_ids', []);
         if (is_array($workItemIds) && !empty($workItemIds)) {
@@ -335,7 +321,6 @@ class RiskController
         $orgId     = (int) $user['org_id'];
         $riskId    = (int) $id;
         $projectId = (int) $this->request->post('project_id', 0);
-
         $risk = Risk::findById($this->db, $riskId);
         if ($risk === null || (int) $risk['project_id'] !== $projectId) {
             $this->response->redirect('/app/risks?project_id=' . $projectId);
@@ -362,10 +347,8 @@ class RiskController
         $orgId     = (int) $user['org_id'];
         $riskId    = (int) $id;
         $projectId = (int) $this->request->post('project_id', 0);
-
         $allowed = ['resolved', 'owned', 'accepted', 'mitigated'];
         $roam    = strtolower(trim((string) $this->request->post('roam_status', '')));
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -388,7 +371,6 @@ class RiskController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->redirect('/app/home');
@@ -403,7 +385,6 @@ class RiskController
         }
 
         Risk::delete($this->db, (int) $id);
-
         $_SESSION['flash_message'] = 'Risk deleted.';
         $this->response->redirect('/app/risks?project_id=' . $projectId);
     }
@@ -420,7 +401,6 @@ class RiskController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $risk = Risk::findById($this->db, (int) $id);
         if ($risk === null) {
             $this->response->json(['status' => 'error', 'message' => 'Risk not found'], 404);
@@ -444,18 +424,13 @@ class RiskController
         }
 
         // Build prompt with substitutions
-        $prompt = str_replace(
-            ['{title}', '{description}', '{likelihood}', '{impact}', '{linked_items}'],
-            [
+        $prompt = str_replace(['{title}', '{description}', '{likelihood}', '{impact}', '{linked_items}'], [
                 $risk['title'],
                 $risk['description'] ?? 'No description',
                 (string) $risk['likelihood'],
                 (string) $risk['impact'],
                 !empty($linkedNames) ? implode(', ', $linkedNames) : 'None',
-            ],
-            RiskPrompt::MITIGATION_PROMPT
-        );
-
+            ], RiskPrompt::MITIGATION_PROMPT);
         try {
             $gemini     = new GeminiService($this->config);
             $mitigation = $gemini->generate($prompt, '');
@@ -467,7 +442,6 @@ class RiskController
 
         // Save mitigation to the risk
         Risk::update($this->db, $id, ['mitigation' => $mitigation]);
-
         $this->response->json(['status' => 'ok', 'mitigation' => $mitigation]);
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitLinkService
  *
@@ -24,15 +25,13 @@ class GitLinkService
     // and the number of distinct IDs we'll actually write to the database.
     private const MAX_BODY_LENGTH = 65536;
     private const MAX_MATCHES     = 20;
-
-    // ===========================
+// ===========================
     // PROPERTIES
     // ===========================
 
     private Database $db;
     private ?int $orgId;
-
-    /**
+/**
      * @param Database $db    Database instance
      * @param int|null $orgId Organisation ID for tenancy scoping.
      *                        Pass null only for GitLab (which still uses the legacy
@@ -67,14 +66,8 @@ class GitLinkService
      * @param string|null $author   PR author login
      * @return int                  Number of links created or updated
      */
-    public function linkFromPrBody(
-        string  $body,
-        string  $prUrl,
-        string  $provider,
-        string  $prTitle = '',
-        string  $status = 'open',
-        ?string $author = null
-    ): int {
+    public function linkFromPrBody(string $body, string $prUrl, string $provider, string $prTitle = '', string $status = 'open', ?string $author = null): int
+    {
         // Guard against pathological inputs — an adversarial or bot-generated
         // PR body should never cause unbounded regex work or DB writes.
         if ($body === '' || strlen($body) > self::MAX_BODY_LENGTH) {
@@ -83,7 +76,6 @@ class GitLinkService
 
         $matches = [];
         preg_match_all('/\b(SF|StratFlow)[-_\s]?(\d+)\b/i', $body, $matches);
-
         if (empty($matches[2])) {
             return 0;
         }
@@ -94,7 +86,6 @@ class GitLinkService
         }
 
         $affected = 0;
-
         foreach ($ids as $numericId) {
             try {
                 [$localType, $localId] = $this->resolveLocalItem($numericId);
@@ -104,7 +95,6 @@ class GitLinkService
 
                 $refLabel = $this->buildRefLabel($prUrl, $prTitle);
                 $existing = $this->findExistingLink($localType, $localId, $prUrl);
-
                 if ($existing !== null) {
                     if ($existing['status'] !== $status) {
                         StoryGitLink::updateStatus($this->db, (int) $existing['id'], $status);
@@ -123,12 +113,11 @@ class GitLinkService
                     'status'     => $status,
                     'author'     => $author,
                 ]);
-
                 if ($id > 0) {
-                    $affected++;
+                            $affected++;
                 }
             } catch (\Throwable $e) {
-                // Don't let a transient DB error abort the whole webhook —
+    // Don't let a transient DB error abort the whole webhook —
                 // log and keep processing the remaining matches. The webhook
                 // handler still returns 200 so the provider doesn't retry.
                 \StratFlow\Services\Logger::warn('[GitLink] linkFromPrBody per-id failure (id=' . $numericId . '): ' . $e->getMessage());
@@ -155,16 +144,11 @@ class GitLinkService
      */
     public function updateStatusByRefUrl(string $refUrl, string $status): int
     {
-        $stmt = $this->db->query(
-            "SELECT id, status, local_type, local_id FROM story_git_links WHERE ref_url = :ref_url",
-            [':ref_url' => $refUrl]
-        );
-
+        $stmt = $this->db->query("SELECT id, status, local_type, local_id FROM story_git_links WHERE ref_url = :ref_url", [':ref_url' => $refUrl]);
         $rows    = $stmt->fetchAll();
         $updated = 0;
-
         foreach ($rows as $row) {
-            // Org tenancy check — only update links whose local item belongs to this org.
+        // Org tenancy check — only update links whose local item belongs to this org.
             // story_git_links has no org_id column (MVP deferred), so we resolve via the
             // local item. Skip items we cannot confirm belong to this org.
             if ($this->orgId !== null && !$this->localItemBelongsToOrg((string) $row['local_type'], (int) $row['local_id'])) {
@@ -200,18 +184,13 @@ class GitLinkService
             'hl_work_item' => 'hl_work_items',
             default        => null,
         };
-
         if ($table === null) {
             return false;
         }
 
-        $stmt = $this->db->query(
-            "SELECT 1 FROM `{$table}` t
+        $stmt = $this->db->query("SELECT 1 FROM `{$table}` t
                JOIN projects p ON p.id = t.project_id
-              WHERE t.id = :id AND p.org_id = :org_id LIMIT 1",
-            [':id' => $localId, ':org_id' => $this->orgId]
-        );
-
+              WHERE t.id = :id AND p.org_id = :org_id LIMIT 1", [':id' => $localId, ':org_id' => $this->orgId]);
         return $stmt->fetch() !== false;
     }
 
@@ -232,8 +211,7 @@ class GitLinkService
     public function classifyRef(string $input): array
     {
         $input = trim($input);
-
-        // GitHub PR
+// GitHub PR
         if (preg_match('#github\.com/.+/pull/(\d+)#i', $input, $m)) {
             return ['ref_type' => 'pr', 'ref_label' => 'PR #' . $m[1]];
         }
@@ -282,7 +260,6 @@ class GitLinkService
         foreach ($items as $item) {
             $localType = (string) ($item['local_type'] ?? '');
             $localId   = (int) ($item['local_id'] ?? 0);
-
             if ($localId === 0) {
                 continue;
             }
@@ -297,19 +274,16 @@ class GitLinkService
             }
 
             $refLabel = $this->buildRefLabel($refUrl, $refTitle);
-            $this->db->query(
-                "INSERT INTO story_git_links
+            $this->db->query("INSERT INTO story_git_links
                     (local_type, local_id, provider, ref_type, ref_url, ref_label, status, ai_matched)
                  VALUES
-                    (:lt, :lid, :prov, 'pr', :ref_url, :ref_label, 'open', 1)",
-                [
+                    (:lt, :lid, :prov, 'pr', :ref_url, :ref_label, 'open', 1)", [
                     ':lt'        => $localType,
                     ':lid'       => $localId,
                     ':prov'      => $provider,
                     ':ref_url'   => $refUrl,
                     ':ref_label' => $refLabel,
-                ]
-            );
+                ]);
             $count++;
         }
         return $count;
@@ -359,18 +333,14 @@ class GitLinkService
      */
     private function findExistingLink(string $localType, int $localId, string $refUrl): ?array
     {
-        $stmt = $this->db->query(
-            "SELECT * FROM story_git_links
+        $stmt = $this->db->query("SELECT * FROM story_git_links
              WHERE local_type = :local_type AND local_id = :local_id AND ref_url = :ref_url
-             LIMIT 1",
-            [
+             LIMIT 1", [
                 ':local_type' => $localType,
                 ':local_id'   => $localId,
                 ':ref_url'    => $refUrl,
-            ]
-        );
+            ]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 

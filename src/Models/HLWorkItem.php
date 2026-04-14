@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HLWorkItem Model
  *
@@ -36,16 +37,14 @@ class HLWorkItem
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO hl_work_items
+        $db->query("INSERT INTO hl_work_items
                 (project_id, diagram_id, priority_number, title, description,
                  strategic_context, okr_title, okr_description, owner, estimated_sprints,
                  acceptance_criteria, kr_hypothesis, quality_score, quality_breakdown, status)
              VALUES
                 (:project_id, :diagram_id, :priority_number, :title, :description,
                  :strategic_context, :okr_title, :okr_description, :owner, :estimated_sprints,
-                 :acceptance_criteria, :kr_hypothesis, :quality_score, :quality_breakdown, :status)",
-            [
+                 :acceptance_criteria, :kr_hypothesis, :quality_score, :quality_breakdown, :status)", [
                 ':project_id'          => $data['project_id'],
                 ':diagram_id'          => $data['diagram_id'] ?? null,
                 ':priority_number'     => $data['priority_number'],
@@ -61,9 +60,7 @@ class HLWorkItem
                 ':quality_score'       => $data['quality_score'] ?? null,
                 ':quality_breakdown'   => $data['quality_breakdown'] ?? null,
                 ':status'              => $data['status'] ?? 'backlog',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -80,15 +77,11 @@ class HLWorkItem
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
+        $stmt = $db->query("SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
              FROM hl_work_items hw
              LEFT JOIN sync_mappings sm ON sm.local_type = 'hl_work_item' AND sm.local_id = hw.id
              WHERE hw.project_id = :project_id
-             ORDER BY hw.priority_number ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY hw.priority_number ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -101,12 +94,8 @@ class HLWorkItem
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM hl_work_items WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM hl_work_items WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -132,7 +121,6 @@ class HLWorkItem
         'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
         'final_score', 'requires_review', 'status', 'last_jira_sync_at',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -141,17 +129,12 @@ class HLWorkItem
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE hl_work_items SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -165,16 +148,12 @@ class HLWorkItem
     {
         $pdo = $db->getPdo();
         $pdo->beginTransaction();
-
         try {
             foreach ($items as $item) {
-                $db->query(
-                    "UPDATE hl_work_items SET priority_number = :priority_number WHERE id = :id",
-                    [
+                $db->query("UPDATE hl_work_items SET priority_number = :priority_number WHERE id = :id", [
                         ':priority_number' => $item['priority_number'],
                         ':id'              => $item['id'],
-                    ]
-                );
+                    ]);
             }
             $pdo->commit();
         } catch (\Exception $e) {
@@ -202,7 +181,6 @@ class HLWorkItem
             'wsjf_business_value', 'wsjf_time_criticality', 'wsjf_risk_reduction', 'wsjf_job_size',
             'final_score',
         ];
-
         $filtered = array_intersect_key($scores, array_flip($allowed));
         if (empty($filtered)) {
             return;
@@ -222,15 +200,11 @@ class HLWorkItem
      */
     public static function findByProjectIdRankedByScore(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
+        $stmt = $db->query("SELECT hw.*, sm.external_key AS jira_key, sm.external_url AS jira_url
              FROM hl_work_items hw
              LEFT JOIN sync_mappings sm ON sm.local_type = 'hl_work_item' AND sm.local_id = hw.id
              WHERE hw.project_id = :project_id
-             ORDER BY COALESCE(hw.final_score, 0) DESC, hw.priority_number ASC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY COALESCE(hw.final_score, 0) DESC, hw.priority_number ASC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -244,7 +218,6 @@ class HLWorkItem
     {
         $pdo = $db->getPdo();
         $pdo->beginTransaction();
-
         try {
             foreach ($items as $item) {
                 self::updateScores($db, (int) $item['id'], $item['scores']);
@@ -279,10 +252,7 @@ class HLWorkItem
      */
     public static function deleteByProjectId(Database $db, int $projectId): void
     {
-        $db->query(
-            "DELETE FROM hl_work_items WHERE project_id = :project_id",
-            [':project_id' => $projectId]
-        );
+        $db->query("DELETE FROM hl_work_items WHERE project_id = :project_id", [':project_id' => $projectId]);
     }
 
     // ===========================

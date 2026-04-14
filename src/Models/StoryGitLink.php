@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StoryGitLink Model
  *
@@ -33,16 +34,12 @@ class StoryGitLink
      */
     public static function findByLocalItem(Database $db, string $localType, int $localId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM story_git_links
+        $stmt = $db->query("SELECT * FROM story_git_links
              WHERE local_type = :local_type AND local_id = :local_id
-             ORDER BY created_at DESC",
-            [
+             ORDER BY created_at DESC", [
                 ':local_type' => $localType,
                 ':local_id'   => $localId,
-            ]
-        );
-
+            ]);
         return $stmt->fetchAll();
     }
 
@@ -58,12 +55,8 @@ class StoryGitLink
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM story_git_links WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM story_git_links WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -76,12 +69,8 @@ class StoryGitLink
      */
     public static function findByRefUrl(Database $db, string $refUrl): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM story_git_links WHERE ref_url = :ref_url LIMIT 1",
-            [':ref_url' => $refUrl]
-        );
+        $stmt = $db->query("SELECT * FROM story_git_links WHERE ref_url = :ref_url LIMIT 1", [':ref_url' => $refUrl]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -97,15 +86,11 @@ class StoryGitLink
      */
     public static function countByLocalItem(Database $db, string $localType, int $localId): int
     {
-        $stmt = $db->query(
-            "SELECT COUNT(*) FROM story_git_links
-             WHERE local_type = :local_type AND local_id = :local_id",
-            [
+        $stmt = $db->query("SELECT COUNT(*) FROM story_git_links
+             WHERE local_type = :local_type AND local_id = :local_id", [
                 ':local_type' => $localType,
                 ':local_id'   => $localId,
-            ]
-        );
-
+            ]);
         return (int) $stmt->fetchColumn();
     }
 
@@ -128,15 +113,11 @@ class StoryGitLink
         }
 
         $placeholders = implode(',', array_fill(0, count($localIds), '?'));
-        $stmt = $db->getPdo()->prepare(
-            "SELECT * FROM story_git_links
+        $stmt = $db->getPdo()->prepare("SELECT * FROM story_git_links
              WHERE local_type = ? AND local_id IN ({$placeholders})
-             ORDER BY created_at DESC"
-        );
-
+             ORDER BY created_at DESC");
         $params = array_merge([$localType], array_values($localIds));
         $stmt->execute($params);
-
         $map = [];
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $map[(int) $row['local_id']][] = $row;
@@ -163,16 +144,12 @@ class StoryGitLink
         }
 
         $placeholders = implode(',', array_fill(0, count($localIds), '?'));
-        $stmt = $db->getPdo()->prepare(
-            "SELECT local_id, COUNT(*) AS cnt
+        $stmt = $db->getPdo()->prepare("SELECT local_id, COUNT(*) AS cnt
              FROM story_git_links
              WHERE local_type = ? AND local_id IN ({$placeholders})
-             GROUP BY local_id"
-        );
-
+             GROUP BY local_id");
         $params = array_merge([$localType], array_values($localIds));
         $stmt->execute($params);
-
         $counts = [];
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $counts[(int) $row['local_id']] = (int) $row['cnt'];
@@ -198,12 +175,10 @@ class StoryGitLink
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT IGNORE INTO story_git_links
+        $db->query("INSERT IGNORE INTO story_git_links
                 (local_type, local_id, provider, ref_type, ref_url, ref_label, status, author)
              VALUES
-                (:local_type, :local_id, :provider, :ref_type, :ref_url, :ref_label, :status, :author)",
-            [
+                (:local_type, :local_id, :provider, :ref_type, :ref_url, :ref_label, :status, :author)", [
                 ':local_type' => $data['local_type'],
                 ':local_id'   => $data['local_id'],
                 ':provider'   => $data['provider'],
@@ -212,9 +187,7 @@ class StoryGitLink
                 ':ref_label'  => $data['ref_label'] ?? null,
                 ':status'     => $data['status'] ?? 'unknown',
                 ':author'     => $data['author'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -232,11 +205,7 @@ class StoryGitLink
      */
     public static function updateStatus(Database $db, int $id, string $status): bool
     {
-        $stmt = $db->query(
-            "UPDATE story_git_links SET status = :status, updated_at = NOW() WHERE id = :id",
-            [':status' => $status, ':id' => $id]
-        );
-
+        $stmt = $db->query("UPDATE story_git_links SET status = :status, updated_at = NOW() WHERE id = :id", [':status' => $status, ':id' => $id]);
         return $stmt->rowCount() > 0;
     }
 
@@ -258,16 +227,12 @@ class StoryGitLink
      */
     public static function deleteById(Database $db, int $id, string $localType, int $localId): bool
     {
-        $stmt = $db->query(
-            "DELETE FROM story_git_links
-             WHERE id = :id AND local_type = :local_type AND local_id = :local_id",
-            [
+        $stmt = $db->query("DELETE FROM story_git_links
+             WHERE id = :id AND local_type = :local_type AND local_id = :local_id", [
                 ':id'         => $id,
                 ':local_type' => $localType,
                 ':local_id'   => $localId,
-            ]
-        );
-
+            ]);
         return $stmt->rowCount() > 0;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * User Model
  *
@@ -26,11 +27,7 @@ class User
      */
     public static function findByEmail(Database $db, string $email): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM users WHERE email = :email LIMIT 1",
-            [':email' => $email]
-        );
-
+        $stmt = $db->query("SELECT * FROM users WHERE email = :email LIMIT 1", [':email' => $email]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -44,11 +41,7 @@ class User
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM users WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
-
+        $stmt = $db->query("SELECT * FROM users WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -78,20 +71,16 @@ class User
             ':has_executive_access' => $data['has_executive_access'] ?? 0,
             ':password_changed_at' => $data['password_changed_at'] ?? null,
         ];
-
         if ($db->tableExists('users')) {
             try {
-                $cols = $db->query(
-                    "SELECT column_name
+                $cols = $db->query("SELECT column_name
                      FROM information_schema.columns
                      WHERE table_schema = DATABASE()
                        AND table_name = 'users'
-                       AND column_name IN ('account_type','jira_account_id','jira_display_name')"
-                )->fetchAll(\PDO::FETCH_COLUMN);
-
+                       AND column_name IN ('account_type','jira_account_id','jira_display_name')")->fetchAll(\PDO::FETCH_COLUMN);
                 if (in_array('account_type', $cols)) {
-                    $columns[] = 'account_type';
-                    $params[':account_type'] = $data['account_type']
+                            $columns[] = 'account_type';
+                            $params[':account_type'] = $data['account_type']
                         ?? PermissionService::accountTypeFor(['role' => $data['role'] ?? 'user']);
                 }
                 if (in_array('jira_account_id', $cols) && isset($data['jira_account_id'])) {
@@ -103,16 +92,12 @@ class User
                     $params[':jira_display_name'] = $data['jira_display_name'];
                 }
             } catch (\Throwable) {
-                // Keep create() backward-compatible on pre-migration databases.
+    // Keep create() backward-compatible on pre-migration databases.
             }
         }
 
-        $db->query(
-            "INSERT INTO users (" . implode(', ', $columns) . ")
-             VALUES (" . implode(', ', array_keys($params)) . ")",
-            $params
-        );
-
+        $db->query("INSERT INTO users (" . implode(', ', $columns) . ")
+             VALUES (" . implode(', ', array_keys($params)) . ")", $params);
         return (int) $db->lastInsertId();
     }
 
@@ -129,23 +114,20 @@ class User
         'is_project_admin', 'has_billing_access', 'has_executive_access', 'password_changed_at', 'account_type',
         'jira_account_id', 'jira_display_name',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
         $data = array_intersect_key($data, array_flip(self::UPDATABLE_COLUMNS));
         if (array_key_exists('account_type', $data)) {
             try {
-                $hasAccountType = (bool) $db->query(
-                    "SELECT 1
+                $hasAccountType = (bool) $db->query("SELECT 1
                      FROM information_schema.columns
                      WHERE table_schema = DATABASE()
                        AND table_name = 'users'
                        AND column_name = 'account_type'
-                     LIMIT 1"
-                )->fetch();
+                     LIMIT 1")->fetch();
                 if (!$hasAccountType) {
-                    unset($data['account_type']);
+                        unset($data['account_type']);
                 }
             } catch (\Throwable) {
                 unset($data['account_type']);
@@ -153,14 +135,12 @@ class User
         }
         if (array_key_exists('jira_display_name', $data)) {
             try {
-                $hasCol = (bool) $db->query(
-                    "SELECT 1
+                $hasCol = (bool) $db->query("SELECT 1
                      FROM information_schema.columns
                      WHERE table_schema = DATABASE()
                        AND table_name = 'users'
                        AND column_name = 'jira_display_name'
-                     LIMIT 1"
-                )->fetch();
+                     LIMIT 1")->fetch();
                 if (!$hasCol) {
                     unset($data['jira_display_name']);
                 }
@@ -172,21 +152,13 @@ class User
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
-        $db->query(
-            "UPDATE users SET {$setClauses} WHERE id = :id",
-            $bound
-        );
+        $db->query("UPDATE users SET {$setClauses} WHERE id = :id", $bound);
     }
 
     /**
@@ -198,11 +170,7 @@ class User
      */
     public static function findByOrgId(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM users WHERE org_id = :org_id ORDER BY full_name ASC",
-            [':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT * FROM users WHERE org_id = :org_id ORDER BY full_name ASC", [':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -215,11 +183,7 @@ class User
      */
     public static function countByOrgId(Database $db, int $orgId): int
     {
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM users WHERE org_id = :org_id AND is_active = 1 AND role != 'developer'",
-            [':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT COUNT(*) AS cnt FROM users WHERE org_id = :org_id AND is_active = 1 AND role != 'developer'", [':org_id' => $orgId]);
         $row = $stmt->fetch();
         return (int) ($row['cnt'] ?? 0);
     }
@@ -234,17 +198,11 @@ class User
      */
     public static function deactivate(Database $db, int $id): void
     {
-        $db->query(
-            "UPDATE users SET is_active = 0 WHERE id = :id",
-            [':id' => $id]
-        );
+        $db->query("UPDATE users SET is_active = 0 WHERE id = :id", [':id' => $id]);
     }
 
     public static function reactivate(\StratFlow\Core\Database $db, int $id): void
     {
-        $db->query(
-            "UPDATE users SET is_active = 1 WHERE id = :id",
-            [':id' => $id]
-        );
+        $db->query("UPDATE users SET is_active = 1 WHERE id = :id", [':id' => $id]);
     }
 }

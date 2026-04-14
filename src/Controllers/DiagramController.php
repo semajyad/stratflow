@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DiagramController
  *
@@ -25,12 +26,11 @@ use StratFlow\Services\Prompts\DiagramPrompt;
 
 class DiagramController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -55,7 +55,6 @@ class DiagramController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -64,8 +63,7 @@ class DiagramController
 
         $diagram  = StrategyDiagram::findByProjectId($this->db, $projectId);
         $nodes    = $diagram ? DiagramNode::findByDiagramId($this->db, (int) $diagram['id']) : [];
-
-        // Load latest document summary for context display
+// Load latest document summary for context display
         $documents      = Document::findByProjectId($this->db, $projectId);
         $documentSummary = null;
         foreach ($documents as $doc) {
@@ -92,7 +90,6 @@ class DiagramController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -107,7 +104,6 @@ class DiagramController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -125,7 +121,6 @@ class DiagramController
         }
 
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
         if ($aiSummary === null) {
             $msg = 'No AI summary found. Upload a document and generate a summary first.';
             if ($isAjax) {
@@ -147,10 +142,8 @@ class DiagramController
                 $prompt = $attempt === 1
                     ? DiagramPrompt::PROMPT
                     : DiagramPrompt::PROMPT . "\n\nIMPORTANT: Your previous response was invalid. You MUST output ONLY valid Mermaid.js code starting with 'graph TD'. No explanations, no markdown fences, no extra text.";
-
                 $raw = $gemini->generate($prompt, $aiSummary);
                 $cleaned = $this->cleanMermaidCode($raw);
-
                 if (stripos($cleaned, 'graph') !== false) {
                     $mermaidCode = $cleaned;
                     break;
@@ -188,8 +181,7 @@ class DiagramController
             'mermaid_code' => $mermaidCode,
             'created_by'   => (int) $user['id'],
         ]);
-
-        // Parse nodes and create records
+// Parse nodes and create records
         $nodes = $this->parseNodes($mermaidCode);
         if (!empty($nodes)) {
             DiagramNode::createBatch($this->db, $diagramId, $nodes);
@@ -199,7 +191,6 @@ class DiagramController
         $msg = $nodeCount === 0
             ? 'Diagram generated but no nodes could be parsed. You may need to edit the Mermaid code.'
             : "Strategy diagram generated with {$nodeCount} nodes.";
-
         if ($isAjax) {
             $this->response->json([
                 'success'      => true,
@@ -225,7 +216,6 @@ class DiagramController
         $user        = $this->auth->user();
         $projectId   = (int) $this->request->post('project_id', 0);
         $mermaidCode = trim((string) $this->request->post('mermaid_code', ''));
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -243,8 +233,7 @@ class DiagramController
         StrategyDiagram::update($this->db, (int) $diagram['id'], [
             'mermaid_code' => $mermaidCode,
         ]);
-
-        // Re-parse nodes from updated code
+// Re-parse nodes from updated code
         DiagramNode::deleteByDiagramId($this->db, (int) $diagram['id']);
         $nodes = $this->parseNodes($mermaidCode);
         if (!empty($nodes)) {
@@ -254,7 +243,6 @@ class DiagramController
         // Save OKR data if submitted
         $okrTitles       = $this->request->post('okr_title', []);
         $okrDescriptions = $this->request->post('okr_description', []);
-
         if (is_array($okrTitles)) {
             $freshNodes = DiagramNode::findByDiagramId($this->db, (int) $diagram['id']);
             foreach ($freshNodes as $node) {
@@ -284,15 +272,10 @@ class DiagramController
         $nodeId         = (int) $this->request->post('node_id', 0);
         $okrTitle       = trim((string) $this->request->post('okr_title', ''));
         $okrDescription = trim((string) $this->request->post('okr_description', ''));
-
-        $row = $this->db->query(
-            "SELECT dn.id, sd.project_id FROM diagram_nodes dn
+        $row = $this->db->query("SELECT dn.id, sd.project_id FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
              WHERE dn.id = :node_id
-             LIMIT 1",
-            [':node_id' => $nodeId]
-        )->fetch();
-
+             LIMIT 1", [':node_id' => $nodeId])->fetch();
         if (!$row || ProjectPolicy::findEditableProject($this->db, $user, (int) $row['project_id']) === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -302,7 +285,6 @@ class DiagramController
             'okr_title'       => $okrTitle,
             'okr_description' => $okrDescription,
         ]);
-
         $this->response->json(['status' => 'ok']);
     }
 
@@ -313,7 +295,6 @@ class DiagramController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -398,7 +379,6 @@ class DiagramController
         $user      = $this->auth->user();
         $projectId = (int) $this->request->post('project_id', 0);
         $nodeId    = (int) $this->request->post('node_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -413,26 +393,17 @@ class DiagramController
 
         $okrTitle       = trim((string) $this->request->post('okr_title', ''));
         $okrDescription = trim((string) $this->request->post('okr_description', ''));
-
-        // Confirm node belongs to a diagram in this project (org-scoped)
-        $row = $this->db->query(
-            "SELECT dn.id FROM diagram_nodes dn
+// Confirm node belongs to a diagram in this project (org-scoped)
+        $row = $this->db->query("SELECT dn.id FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
-             WHERE dn.id = :node_id AND sd.project_id = :project_id LIMIT 1",
-            [':node_id' => $nodeId, ':project_id' => $projectId]
-        )->fetch();
-
+             WHERE dn.id = :node_id AND sd.project_id = :project_id LIMIT 1", [':node_id' => $nodeId, ':project_id' => $projectId])->fetch();
         if (!$row) {
             $_SESSION['flash_message'] = 'Initiative not found.';
             $this->response->redirect('/app/diagram?project_id=' . $projectId);
             return;
         }
 
-        $this->db->query(
-            "UPDATE diagram_nodes SET okr_title = :okr_title, okr_description = :okr_description WHERE id = :id",
-            [':okr_title' => $okrTitle ?: null, ':okr_description' => $okrDescription ?: null, ':id' => $nodeId]
-        );
-
+        $this->db->query("UPDATE diagram_nodes SET okr_title = :okr_title, okr_description = :okr_description WHERE id = :id", [':okr_title' => $okrTitle ?: null, ':okr_description' => $okrDescription ?: null, ':id' => $nodeId]);
         $_SESSION['flash_message'] = 'OKR saved.';
         $this->response->redirect('/app/diagram?project_id=' . $projectId);
     }
@@ -448,21 +419,16 @@ class DiagramController
         $user      = $this->auth->user();
         $nodeId    = (int) $this->request->post('node_id', 0);
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
         }
 
-        $stmt = $this->db->query(
-            "SELECT dn.id FROM diagram_nodes dn
+        $stmt = $this->db->query("SELECT dn.id FROM diagram_nodes dn
              JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
              WHERE dn.id = :node_id AND sd.project_id = :project_id
-             LIMIT 1",
-            [':node_id' => $nodeId, ':project_id' => $projectId]
-        );
-
+             LIMIT 1", [':node_id' => $nodeId, ':project_id' => $projectId]);
         if (!$stmt->fetch()) {
             $_SESSION['flash_message'] = 'OKR not found.';
             $this->response->redirect('/app/diagram?project_id=' . $projectId);
@@ -470,7 +436,6 @@ class DiagramController
         }
 
         DiagramNode::delete($this->db, $nodeId);
-
         $_SESSION['flash_message'] = 'OKR deleted.';
         $this->response->redirect('/app/diagram?project_id=' . $projectId);
     }
@@ -479,7 +444,6 @@ class DiagramController
     {
         $user      = $this->auth->user();
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -494,17 +458,15 @@ class DiagramController
         $updated = 0;
         foreach ($nodes as $nodeData) {
             $nodeId = (int) ($nodeData['id'] ?? 0);
-            if ($nodeId <= 0) continue;
+            if ($nodeId <= 0) {
+                continue;
+            }
 
-            $row = $this->db->query(
-                "SELECT dn.id
+            $row = $this->db->query("SELECT dn.id
                    FROM diagram_nodes dn
                    JOIN strategy_diagrams sd ON dn.diagram_id = sd.id
                   WHERE dn.id = :node_id AND sd.project_id = :project_id
-                  LIMIT 1",
-                [':node_id' => $nodeId, ':project_id' => $projectId]
-            )->fetch();
-
+                  LIMIT 1", [':node_id' => $nodeId, ':project_id' => $projectId])->fetch();
             if (!$row) {
                 continue;
             }
@@ -533,32 +495,28 @@ class DiagramController
     private function cleanMermaidCode(string $code): string
     {
         $code = trim($code);
-
-        // Remove markdown fences (```mermaid ... ``` or ``` ... ```)
+// Remove markdown fences (```mermaid ... ``` or ``` ... ```)
         $code = preg_replace('/^```(?:mermaid)?\s*\n?/im', '', $code);
         $code = preg_replace('/\n?\s*```\s*$/m', '', $code);
-
-        // Remove any text before the first "graph" line (AI sometimes adds preamble)
+// Remove any text before the first "graph" line (AI sometimes adds preamble)
         if (preg_match('/(graph\s+(?:TD|TB|LR|RL|BT))/i', $code, $m, PREG_OFFSET_CAPTURE)) {
             $code = substr($code, $m[0][1]);
         }
 
         // Clean labels in square brackets: remove chars that break Mermaid
         $code = preg_replace_callback('/\[([^\]]*)\]/', function ($m) {
+
             $label = $m[1];
             $label = str_replace(['(', ')', '&', '<', '>', '"', "'", '#', ';'], [' - ', '', 'and', '', '', '', '', '', ''], $label);
             $label = preg_replace('/\s+/', ' ', trim($label));
             return '[' . $label . ']';
         }, $code);
-
-        // Fix common AI mistakes: "--->" should be "-->"
+// Fix common AI mistakes: "--->" should be "-->"
         $code = str_replace('--->', '-->', $code);
-        // Fix "-- text -->" link labels that sometimes break
+// Fix "-- text -->" link labels that sometimes break
         $code = preg_replace('/--\s*\|[^|]*\|\s*>/', '-->', $code);
-
-        // Remove empty lines
+// Remove empty lines
         $code = preg_replace('/\n{3,}/', "\n", $code);
-
         return trim($code);
     }
 
@@ -574,15 +532,13 @@ class DiagramController
     {
         $nodes = [];
         $seen  = [];
-
-        // Match node definitions: A[Label], B(Label), C{Label}, node_1[Label], etc.
+// Match node definitions: A[Label], B(Label), C{Label}, node_1[Label], etc.
         // Supports: single letters, multi-char IDs, IDs with underscores/numbers
         if (preg_match_all('/\b([A-Za-z][A-Za-z0-9_]*)\s*[\[\(\{]([^\]\)\}]+)[\]\)\}]/', $code, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $key   = $match[1];
                 $label = trim($match[2]);
-
-                // Skip keywords and duplicates
+            // Skip keywords and duplicates
                 $lower = strtolower($key);
                 if (in_array($lower, ['graph', 'subgraph', 'end', 'style', 'class', 'click', 'td', 'tb', 'lr', 'rl', 'bt']) || isset($seen[$key])) {
                     continue;

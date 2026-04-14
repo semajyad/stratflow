@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TraceabilityController
  *
@@ -25,12 +26,11 @@ class TraceabilityController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -56,10 +56,8 @@ class TraceabilityController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', $_SESSION['_last_project_id'] ?? 0);
-
         $service = new TraceabilityService($this->db);
         $tree    = $service->forProject($projectId, $orgId);
-
         if ($tree === null) {
             $this->response->redirect('/app/home');
             return;

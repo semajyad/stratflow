@@ -1,4 +1,5 @@
 <?php
+
 /**
  * WorkItemController
  *
@@ -38,12 +39,11 @@ class WorkItemController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -68,7 +68,6 @@ class WorkItemController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -77,40 +76,33 @@ class WorkItemController
 
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $diagram   = StrategyDiagram::findByProjectId($this->db, $projectId);
-
-        // Attach dependency data to each work item for the template
+// Attach dependency data to each work item for the template
         foreach ($workItems as &$item) {
             $deps = HLItemDependency::findByItemId($this->db, (int) $item['id']);
             $item['dependencies']       = $deps;
             $item['dependency_titles']  = implode(', ', array_column($deps, 'depends_on_title'));
         }
         unset($item);
-
-        // Inject git link counts in bulk to avoid N+1 queries
+// Inject git link counts in bulk to avoid N+1 queries
         $itemIds   = array_column($workItems, 'id');
         $gitCounts = StoryGitLink::countsByLocalIds($this->db, 'hl_work_item', array_map('intval', $itemIds));
         foreach ($workItems as &$item) {
             $item['git_link_count'] = $gitCounts[(int) $item['id']] ?? 0;
         }
         unset($item);
-
-        // Build KR map: item_id => [kr rows] — single bulk query to avoid N+1
+// Build KR map: item_id => [kr rows] — single bulk query to avoid N+1
         $workItemIds = array_map('intval', array_column($workItems, 'id'));
         try {
             $krsByItemId = KeyResult::findByWorkItemIds($this->db, $workItemIds, $orgId);
         } catch (\Throwable $e) {
-            // Graceful degradation if key_results table is missing (pending migration)
+        // Graceful degradation if key_results table is missing (pending migration)
             $krsByItemId = [];
             \StratFlow\Services\Logger::warn('[WorkItems] KR lookup failed: ' . $e->getMessage());
         }
 
         // Distinct non-empty OKR titles for the modal datalist
-        $distinctOkrTitles = array_values(array_filter(
-            array_unique(array_column($workItems, 'okr_title')),
-            fn($t) => $t !== null && $t !== ''
-        ));
-
-        // Load org settings (field order, sizing method, sprint length)
+        $distinctOkrTitles = array_values(array_filter(array_unique(array_column($workItems, 'okr_title')), fn($t) => $t !== null && $t !== ''));
+// Load org settings (field order, sizing method, sprint length)
         $orgRow = \StratFlow\Models\Organisation::findById($this->db, $orgId);
         $orgSettings = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
@@ -118,14 +110,11 @@ class WorkItemController
         $fieldOrderWi       = $orgSettings['field_order_work_item'] ?? $defaultWiOrder;
         $hlSizingMethod     = $orgSettings['hl_item_sizing_method'] ?? 'sprints';
         $sprintLengthWeeks  = (int) ($orgSettings['sprint_length_weeks'] ?? 2);
-
-        // Quality visibility: off when disabled at system level OR at org level
+// Quality visibility: off when disabled at system level OR at org level
         $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
         $showQuality    = !empty($systemSettings['feature_story_quality'])
                           && ($orgSettings['quality']['enabled'] ?? false);
-
         $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
-
         $this->response->render('work-items', [
             'user'                 => $user,
             'project'              => $project,
@@ -143,7 +132,6 @@ class WorkItemController
             'flash_message'        => $_SESSION['flash_message'] ?? null,
             'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -159,7 +147,6 @@ class WorkItemController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -175,8 +162,7 @@ class WorkItemController
         }
 
         $nodes = DiagramNode::findByDiagramId($this->db, (int) $diagram['id']);
-
-        // Load document summary
+// Load document summary
         $documents      = Document::findByProjectId($this->db, $projectId);
         $documentSummary = '';
         foreach ($documents as $doc) {
@@ -188,25 +174,20 @@ class WorkItemController
 
         // Build combined input for AI
         $input = $this->buildGenerationInput($diagram, $nodes, $documentSummary);
-
-        // Inject org quality rules (splitting patterns + mandatory conditions)
+// Inject org quality rules (splitting patterns + mandatory conditions)
         $qualityBlock = '';
         try {
             $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
         } catch (\Throwable) {
-            // Table may not exist on a fresh deploy — proceed without config
+        // Table may not exist on a fresh deploy — proceed without config
         }
         $input .= $qualityBlock;
-
-        // Inject KR data so AI can generate accurate kr_hypothesis values
+// Inject KR data so AI can generate accurate kr_hypothesis values
         try {
-            $krRows = $this->db->query(
-                "SELECT kr.title, kr.current_value, kr.target_value, kr.unit
+            $krRows = $this->db->query("SELECT kr.title, kr.current_value, kr.target_value, kr.unit
                    FROM key_results kr
                    JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
-                  WHERE hwi.project_id = :pid",
-                [':pid' => $projectId]
-            )->fetchAll();
+                  WHERE hwi.project_id = :pid", [':pid' => $projectId])->fetchAll();
             if (!empty($krRows)) {
                 $input .= "\n--- KEY RESULTS ---\n";
                 foreach ($krRows as $kr) {
@@ -215,7 +196,7 @@ class WorkItemController
                 $input .= "-------------------\n";
             }
         } catch (\Throwable) {
-            // key_results table may not exist on a fresh deploy — proceed without KR data
+        // key_results table may not exist on a fresh deploy — proceed without KR data
         }
 
         // Generate work items via Gemini
@@ -237,13 +218,12 @@ class WorkItemController
 
         // Delete existing work items and create new ones
         HLWorkItem::deleteByProjectId($this->db, $projectId);
-
-        // First pass: create all items and build a map of priority_number => new DB id
+// First pass: create all items and build a map of priority_number => new DB id
         // Quality scoring is deferred — scores are null until first update or "Improve with AI"
         $priorityToId = [];
         foreach ($itemsData as $index => $item) {
             $priorityNumber = (int) ($item['priority_number'] ?? ($index + 1));
-            // Normalise acceptance_criteria: AI may return array or newline-delimited string
+        // Normalise acceptance_criteria: AI may return array or newline-delimited string
             $acRaw = $item['acceptance_criteria'] ?? null;
             $ac = null;
             if (is_array($acRaw)) {
@@ -267,7 +247,6 @@ class WorkItemController
                                          ? mb_substr((string) $item['kr_hypothesis'], 0, 500)
                                          : null,
             ]);
-
             $priorityToId[$priorityNumber] = $newId;
         }
 
@@ -276,7 +255,6 @@ class WorkItemController
             $priorityNumber  = (int) ($item['priority_number'] ?? ($index + 1));
             $itemId          = $priorityToId[$priorityNumber] ?? null;
             $depPriorities   = $item['dependencies'] ?? [];
-
             if ($itemId === null || empty($depPriorities) || !is_array($depPriorities)) {
                 continue;
             }
@@ -308,7 +286,6 @@ class WorkItemController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -325,7 +302,6 @@ class WorkItemController
         $existing         = HLWorkItem::findByProjectId($this->db, $projectId);
         $maxPriority      = count($existing);
         $estimatedSprints = $this->request->post('estimated_sprints', '');
-
         HLWorkItem::create($this->db, [
             'project_id'        => $projectId,
             'priority_number'   => $maxPriority + 1,
@@ -336,7 +312,6 @@ class WorkItemController
             'owner'             => trim((string) $this->request->post('owner', '')) ?: null,
             'estimated_sprints' => $estimatedSprints !== '' ? (int) $estimatedSprints : 2,
         ]);
-
         $_SESSION['flash_message'] = 'Work item created.';
         $this->response->redirect('/app/work-items?project_id=' . $projectId);
     }
@@ -352,7 +327,6 @@ class WorkItemController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -376,7 +350,6 @@ class WorkItemController
             $itemLines[] = $line;
         }
         $input = implode("\n", $itemLines);
-
         try {
             $gemini  = new GeminiService($this->config);
             $results = $gemini->generateJson(WorkItemPrompt::SIZING_PROMPT, $input);
@@ -394,11 +367,9 @@ class WorkItemController
 
         // Build a lookup of allowed IDs for security
         $allowedIds = array_column($workItems, 'id');
-
         foreach ($results as $result) {
             $itemId           = (int) ($result['id'] ?? 0);
             $estimatedSprints = max(1, min(6, (int) ($result['estimated_sprints'] ?? 2)));
-
             if (in_array($itemId, $allowedIds, true)) {
                 HLWorkItem::update($this->db, $itemId, ['estimated_sprints' => $estimatedSprints]);
             }
@@ -417,7 +388,6 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
@@ -442,11 +412,11 @@ class WorkItemController
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $item['acceptance_criteria'] ?? '')) ?: null,
             'kr_hypothesis'       => mb_substr(
                 trim((string) $this->request->post('kr_hypothesis', $item['kr_hypothesis'] ?? '')),
-                0, 500
+                0,
+                500
             ) ?: null,
         ];
-
-        // Only update team_assigned if the column exists on this deployment
+// Only update team_assigned if the column exists on this deployment
         if (array_key_exists('team_assigned', $item)) {
             $updateData['team_assigned'] = trim((string) $this->request->post('team_assigned', $item['team_assigned'] ?? '')) ?: null;
         }
@@ -456,11 +426,9 @@ class WorkItemController
         }
 
         HLWorkItem::update($this->db, (int) $id, $updateData);
-
-        // Enqueue for async quality scoring — the background worker will score shortly
+// Enqueue for async quality scoring — the background worker will score shortly
         HLWorkItem::markQualityPending($this->db, (int) $id);
-
-        // Flag for review if description or sprint estimate changed
+// Flag for review if description or sprint estimate changed
         $descChanged    = $newDescription !== ($item['description'] ?? '');
         $sprintChanged  = $newEstimatedSprints !== '' && (int) $newEstimatedSprints !== (int) $item['estimated_sprints'];
         if ($descChanged || $sprintChanged) {
@@ -481,7 +449,6 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
@@ -497,7 +464,8 @@ class WorkItemController
         $qualityBlock = '';
         try {
             $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
 
         // Score first if not yet scored — improvement needs the breakdown
         if ($item['quality_score'] === null) {
@@ -507,12 +475,7 @@ class WorkItemController
                 HLWorkItem::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
                 $item = HLWorkItem::findById($this->db, (int) $id);
             } else {
-                HLWorkItem::markQualityFailed(
-                    $this->db,
-                    (int) $id,
-                    (int) ($item['quality_attempts'] ?? 0) + 1,
-                    $scored['error'] ?? 'unknown'
-                );
+                HLWorkItem::markQualityFailed($this->db, (int) $id, (int) ($item['quality_attempts'] ?? 0) + 1, $scored['error'] ?? 'unknown');
             }
         }
 
@@ -530,17 +493,15 @@ class WorkItemController
         // Improve fields that score below 80% of their max
         $improver       = new StoryImprovementService(new GeminiService($this->config));
         $improvedFields = $improver->improveWorkItem($item, $breakdown, $qualityBlock);
-
         if (empty($improvedFields)) {
             $this->response->redirect('/app/work-items?project_id=' . (int) $item['project_id'] . '&improved=0');
             return;
         }
 
         HLWorkItem::update($this->db, (int) $id, $improvedFields);
-
-        // Re-score with the improved content — failure is non-fatal
+// Re-score with the improved content — failure is non-fatal
         $itemForScore = array_merge($item, $improvedFields);
-        // Re-score with the improved content — enqueue if Gemini is unavailable
+// Re-score with the improved content — enqueue if Gemini is unavailable
         $scorer       = new StoryQualityScorer(new GeminiService($this->config));
         $scored       = $scorer->scoreWorkItem($itemForScore, $qualityBlock);
         if ($scored['score'] !== null) {
@@ -559,7 +520,6 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
@@ -585,25 +545,20 @@ class WorkItemController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
         }
 
-        $rows = $this->db->query(
-            "SELECT wi.id FROM hl_work_items wi
+        $rows = $this->db->query("SELECT wi.id FROM hl_work_items wi
              JOIN projects p ON p.id = wi.project_id
              WHERE wi.project_id = :pid
                AND p.org_id = :oid
                AND wi.quality_status = 'scored'
                AND wi.quality_score < 80
              ORDER BY wi.quality_score ASC
-             LIMIT 50",
-            [':pid' => $projectId, ':oid' => $orgId]
-        )->fetchAll();
-
+             LIMIT 50", [':pid' => $projectId, ':oid' => $orgId])->fetchAll();
         $refined = 0;
         foreach ($rows as $item) {
             HLWorkItem::markQualityPending($this->db, (int) $item['id']);
@@ -627,7 +582,6 @@ class WorkItemController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $item   = HLWorkItem::findById($this->db, (int) $id);
-
         if ($item === null) {
             $this->response->redirect('/app/home');
             return;
@@ -641,7 +595,6 @@ class WorkItemController
         }
 
         HLWorkItem::update($this->db, (int) $id, ['status' => 'closed']);
-
         $this->response->redirect('/app/work-items?project_id=' . $projectId);
     }
 
@@ -654,7 +607,6 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
@@ -669,8 +621,7 @@ class WorkItemController
         }
 
         HLWorkItem::delete($this->db, (int) $id);
-
-        // Re-number remaining items
+// Re-number remaining items
         $remaining = HLWorkItem::findByProjectId($this->db, $projectId);
         $updates   = [];
         foreach ($remaining as $index => $wi) {
@@ -694,10 +645,8 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $body  = json_decode($this->request->body(), true);
         $order = $body['order'] ?? [];
-
         if (empty($order)) {
             $this->response->json(['status' => 'error', 'message' => 'No order data provided'], 400);
             return;
@@ -725,7 +674,6 @@ class WorkItemController
         }
 
         HLWorkItem::batchUpdatePriority($this->db, $updates);
-
         $this->response->json(['status' => 'ok']);
     }
 
@@ -741,7 +689,6 @@ class WorkItemController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = HLWorkItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->json(['status' => 'error', 'message' => 'Item not found'], 404);
@@ -765,12 +712,7 @@ class WorkItemController
         }
 
         // Build prompt with placeholders replaced
-        $prompt = str_replace(
-            ['{title}', '{context}', '{summary}'],
-            [$item['title'], $item['strategic_context'] ?? '', $documentSummary],
-            WorkItemPrompt::DESCRIPTION_PROMPT
-        );
-
+        $prompt = str_replace(['{title}', '{context}', '{summary}'], [$item['title'], $item['strategic_context'] ?? '', $documentSummary], WorkItemPrompt::DESCRIPTION_PROMPT);
         try {
             $gemini      = new GeminiService($this->config);
             $description = $gemini->generate($prompt, '');
@@ -781,7 +723,6 @@ class WorkItemController
 
         // Update the work item's description
         HLWorkItem::update($this->db, $id, ['description' => $description]);
-
         $this->response->json(['status' => 'ok', 'description' => $description]);
     }
 
@@ -795,7 +736,6 @@ class WorkItemController
         $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = \StratFlow\Models\HLWorkItem::findById($this->db, $id);
         if ($item === null) {
             $this->response->json(['status' => 'error', 'message' => 'Work item not found'], 404);
@@ -813,10 +753,8 @@ class WorkItemController
         $orgRow         = \StratFlow\Models\Organisation::findById($this->db, $orgId);
         $orgSettings    = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
-        
         $showQuality = !empty($systemSettings['feature_story_quality'])
                        && ($orgSettings['quality']['enabled'] ?? false);
-
         if (!$showQuality) {
             $this->response->json(['status' => 'error', 'message' => 'Quality scoring is disabled'], 403);
             return;
@@ -825,14 +763,13 @@ class WorkItemController
         $qualityBlock = '';
         try {
             $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
 
         $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
         $scored = $scorer->scoreWorkItem($item, $qualityBlock);
-
         if ($scored['score'] !== null) {
             \StratFlow\Models\HLWorkItem::markQualityScored($this->db, $id, $scored['score'], $scored['breakdown']);
-
             $html = '';
             ob_start();
             $breakdownData = $scored['breakdown'];
@@ -841,7 +778,6 @@ class WorkItemController
             $csrf_token    = $this->request->post('_csrf_token');
             require __DIR__ . '/../../templates/partials/quality-breakdown.php';
             $html = ob_get_clean();
-
             $this->response->json([
                 'status'    => 'ok',
                 'score'     => $scored['score'],
@@ -853,15 +789,9 @@ class WorkItemController
 
         // Scoring failed — update state and surface the error
         $errorKey = $scored['error'] ?? 'unknown';
-        \StratFlow\Models\HLWorkItem::markQualityFailed(
-            $this->db,
-            $id,
-            (int) ($item['quality_attempts'] ?? 0) + 1,
-            $errorKey
-        );
+        \StratFlow\Models\HLWorkItem::markQualityFailed($this->db, $id, (int) ($item['quality_attempts'] ?? 0) + 1, $errorKey);
         \StratFlow\Services\Logger::warn('[StratFlow] WorkItem score error: ' . $errorKey);
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
-
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed']);
     }
 
@@ -877,7 +807,6 @@ class WorkItemController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
         $format    = strtolower((string) $this->request->get('format', 'csv'));
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -886,15 +815,14 @@ class WorkItemController
 
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $safeName  = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project['name']);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'project_id' => $projectId,
             'format'     => $format,
             'type'       => 'work_items_export',
         ]);
-
         if ($format === 'json') {
             $exportData = array_map(function ($item) {
+
                 return [
                     'priority'          => (int) $item['priority_number'],
                     'title'             => $item['title'],
@@ -906,7 +834,6 @@ class WorkItemController
                     'estimated_sprints' => (int) $item['estimated_sprints'],
                 ];
             }, $workItems);
-
             $content = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             $this->response->download($content, $safeName . '_work_items.json', 'application/json');
             return;
@@ -915,7 +842,6 @@ class WorkItemController
         // Default: CSV
         $handle = fopen('php://temp', 'r+');
         fputcsv($handle, ['Priority', 'Title', 'Description', 'Strategic Context', 'OKR Title', 'Owner', 'Estimated Sprints']);
-
         foreach ($workItems as $item) {
             fputcsv($handle, [
                 $item['priority_number'],
@@ -931,7 +857,6 @@ class WorkItemController
         rewind($handle);
         $content = stream_get_contents($handle);
         fclose($handle);
-
         $this->response->download($content, $safeName . '_work_items.csv', 'text/csv');
     }
 
@@ -953,9 +878,7 @@ class WorkItemController
     private function buildGenerationInput(array $diagram, array $nodes, string $documentSummary): string
     {
         $parts = [];
-
         $parts[] = "## Mermaid Strategy Diagram\n```\n" . $diagram['mermaid_code'] . "\n```";
-
         if (!empty($nodes)) {
             $parts[] = "## Node OKR Data";
             foreach ($nodes as $node) {

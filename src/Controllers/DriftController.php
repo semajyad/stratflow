@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DriftController
  *
@@ -32,12 +33,11 @@ class DriftController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -62,7 +62,6 @@ class DriftController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -72,9 +71,9 @@ class DriftController
         $alerts          = DriftAlert::findActiveByProjectId($this->db, $projectId);
         $governanceItems = GovernanceItem::findPendingByProjectId($this->db, $projectId);
         $baselines       = StrategicBaseline::findByProjectId($this->db, $projectId);
-
-        // Decode baseline snapshots for display
+// Decode baseline snapshots for display
         $baselineData = array_map(function ($b) {
+
             $snapshot = json_decode($b['snapshot_json'], true);
             return [
                 'id'              => $b['id'],
@@ -84,7 +83,6 @@ class DriftController
                 'story_count'     => $snapshot['stories']['total_count'] ?? 0,
             ];
         }, $baselines);
-
         $this->response->render('governance', [
             'user'             => $user,
             'project'          => $project,
@@ -96,7 +94,6 @@ class DriftController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -111,7 +108,6 @@ class DriftController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -120,7 +116,6 @@ class DriftController
 
         $service = new DriftDetectionService($this->db);
         $service->createBaseline($projectId);
-
         $_SESSION['flash_message'] = 'Strategic baseline created successfully.';
         $this->response->redirect('/app/governance?project_id=' . $projectId);
     }
@@ -137,7 +132,6 @@ class DriftController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -148,18 +142,16 @@ class DriftController
         $org = Organisation::findById($this->db, $orgId);
         $settings = json_decode($org['settings_json'] ?? '{}', true);
         $threshold = ((int) ($settings['capacity_tripwire_percent'] ?? 20)) / 100;
-
-        // Create service with Gemini for alignment checks
+// Create service with Gemini for alignment checks
         $gemini = null;
         try {
             $gemini = new GeminiService($this->config);
         } catch (\Exception $e) {
-            // Continue without AI alignment checks
+        // Continue without AI alignment checks
         }
 
         $service = new DriftDetectionService($this->db, $gemini);
         $drifts = $service->detectDrift($projectId, $threshold);
-
         $count = count($drifts);
         if ($count > 0) {
             $_SESSION['flash_message'] = "{$count} drift issue(s) detected.";
@@ -181,7 +173,6 @@ class DriftController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $alert = DriftAlert::findById($this->db, (int) $id);
         if ($alert === null) {
             $this->response->redirect('/app/home');
@@ -197,9 +188,7 @@ class DriftController
         $action     = $this->request->post('action', 'acknowledge');
         $status     = $action === 'resolve' ? 'resolved' : 'acknowledged';
         $redirectTo = $this->request->post('redirect_to', '');
-
         DriftAlert::updateStatus($this->db, (int) $id, $status);
-
         $_SESSION['flash_message'] = 'Alert ' . $status . '.';
         $dest = ($redirectTo !== '' && str_starts_with($redirectTo, '/app/'))
             ? $redirectTo
@@ -219,7 +208,6 @@ class DriftController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $item = GovernanceItem::findById($this->db, (int) $id);
         if ($item === null) {
             $this->response->redirect('/app/home');
@@ -235,10 +223,8 @@ class DriftController
         $action     = $this->request->post('action', 'approve');
         $status     = $action === 'reject' ? 'rejected' : 'approved';
         $redirectTo = $this->request->post('redirect_to', '');
-
         GovernanceItem::updateStatus($this->db, (int) $id, $status, (int) $user['id']);
-
-        // If approved and it's a scope change, clear requires_review on the related item
+// If approved and it's a scope change, clear requires_review on the related item
         if ($status === 'approved') {
             $details = json_decode($item['proposed_change_json'], true);
             $relatedItemId = $details['parent_item_id'] ?? $details['work_item_id'] ?? null;

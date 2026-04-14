@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic Rate Limiter
  *
@@ -27,8 +28,7 @@ class RateLimiter
     public const API_GEMINI     = 'api_gemini';
     public const FILE_UPLOAD    = 'file_upload';
     public const ADMIN_ACTION   = 'admin_action';
-
-    // ===========================
+// ===========================
     // CORE METHODS
     // ===========================
 
@@ -50,16 +50,14 @@ class RateLimiter
             }
 
             $since = date('Y-m-d H:i:s', time() - $windowSecs);
-            $stmt = $db->query(
-                "SELECT COUNT(*) as cnt FROM rate_limits
-                 WHERE rate_key = :key AND identifier = :id AND created_at > :since",
-                ['key' => $key, 'id' => $identifier, 'since' => $since]
-            );
+            $stmt = $db->query("SELECT COUNT(*) as cnt FROM rate_limits
+                 WHERE rate_key = :key AND identifier = :id AND created_at > :since", ['key' => $key, 'id' => $identifier, 'since' => $since]);
             $row = $stmt->fetch();
             return ((int) ($row['cnt'] ?? 0)) < $maxAttempts;
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[RateLimiter] Check failed: ' . $e->getMessage());
-            return true; // Fail open rather than locking out users
+            return true;
+        // Fail open rather than locking out users
         }
     }
 
@@ -77,10 +75,7 @@ class RateLimiter
                 return;
             }
 
-            $db->query(
-                "INSERT INTO rate_limits (rate_key, identifier) VALUES (:key, :id)",
-                ['key' => $key, 'id' => $identifier]
-            );
+            $db->query("INSERT INTO rate_limits (rate_key, identifier) VALUES (:key, :id)", ['key' => $key, 'id' => $identifier]);
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[RateLimiter] Record failed: ' . $e->getMessage());
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * FileProcessor Service
  *
@@ -32,14 +33,11 @@ class FileProcessor
 
     /** @var int Maximum file size enforced at PHP level (50 MB) */
     private const MAX_FILE_SIZE = 52428800;
-
-    /** @var int Maximum file size for video/audio uploads (200 MB) */
+/** @var int Maximum file size for video/audio uploads (200 MB) */
     private const MAX_MEDIA_FILE_SIZE = 209715200;
-
-    /** @var array Extensions treated as media (skip text scan, use media size limit) */
+/** @var array Extensions treated as media (skip text scan, use media size limit) */
     private const MEDIA_EXTENSIONS = ['mp4', 'mov', 'avi', 'webm', 'mkv', 'mp3', 'm4a', 'wav', 'ogg', 'aac'];
-
-    /** @var array Dangerous byte signatures to scan for in uploads */
+/** @var array Dangerous byte signatures to scan for in uploads */
     private const DANGEROUS_SIGNATURES = [
         '<?php',
         '<?=',
@@ -47,8 +45,7 @@ class FileProcessor
         '<%',
         '#!/',
     ];
-
-    /** @var array Map of allowed extensions to expected MIME types */
+/** @var array Map of allowed extensions to expected MIME types */
     private const EXTENSION_MIME_MAP = [
         'txt'  => ['text/plain'],
         'csv'  => ['text/csv', 'text/plain', 'application/csv'],
@@ -72,8 +69,7 @@ class FileProcessor
         'ogg'  => ['audio/ogg'],
         'aac'  => ['audio/aac', 'audio/x-aac'],
     ];
-
-    // ===========================
+// ===========================
     // VALIDATION
     // ===========================
 
@@ -91,7 +87,6 @@ class FileProcessor
     public function validateFile(array $file, array $config): array
     {
         $uploadConfig = $config['upload'];
-
         if ($file['error'] !== UPLOAD_ERR_OK) {
             return ['valid' => false, 'error' => $this->uploadErrorMessage($file['error'])];
         }
@@ -100,7 +95,6 @@ class FileProcessor
         $isMedia   = in_array($ext, self::MEDIA_EXTENSIONS, true);
         $hardLimit = $isMedia ? self::MAX_MEDIA_FILE_SIZE : self::MAX_FILE_SIZE;
         $hardLabel = $isMedia ? '200 MB' : '50 MB';
-
         if ($file['size'] > $hardLimit) {
             return ['valid' => false, 'error' => "File exceeds the maximum allowed size of {$hardLabel}."];
         }
@@ -159,17 +153,14 @@ class FileProcessor
         $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $filename = bin2hex(random_bytes(16)) . '.' . $ext;
         $dest     = rtrim($uploadDir, '/') . '/' . $filename;
-
         if (!move_uploaded_file($file['tmp_name'], $dest)) {
             throw new \RuntimeException("Failed to move uploaded file to storage.");
         }
 
         // Set file to read-only (prevents modification after upload)
         @chmod($dest, 0444);
-
-        // Strip EXIF data from images if applicable
+// Strip EXIF data from images if applicable
         $this->stripExifData($dest, $ext);
-
         return $filename;
     }
 
@@ -192,7 +183,6 @@ class FileProcessor
      */
     /** @var array App config, set via setConfig() for AI-powered extraction */
     private array $appConfig = [];
-
     public function setConfig(array $config): void
     {
         $this->appConfig = $config;
@@ -202,8 +192,7 @@ class FileProcessor
     {
         // Also check by file extension as a fallback
         $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-
-        // MIME type takes strict priority. Extension fallbacks only apply when no
+// MIME type takes strict priority. Extension fallbacks only apply when no
         // specific MIME handler matched (i.e. MIME is empty or genuinely unknown).
         // This prevents a .txt extension from overriding an explicit non-text MIME
         // type such as application/octet-stream or application/msword.
@@ -280,7 +269,8 @@ class FileProcessor
     private function verifyMimeType(string $tmpPath, string $ext): ?string
     {
         if (!function_exists('finfo_open')) {
-            return null; // Graceful degradation if finfo unavailable
+            return null;
+// Graceful degradation if finfo unavailable
         }
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -290,7 +280,6 @@ class FileProcessor
 
         $detectedMime = finfo_file($finfo, $tmpPath);
         finfo_close($finfo);
-
         if ($detectedMime === false) {
             return null;
         }
@@ -349,14 +338,15 @@ class FileProcessor
         }
 
         if (!function_exists('imagecreatefromjpeg')) {
-            return; // GD library not available
+            return;
+// GD library not available
         }
 
         try {
             if ($ext === 'png') {
                 $img = @imagecreatefrompng($filePath);
                 if ($img !== false) {
-                    // Make writable temporarily to overwrite
+        // Make writable temporarily to overwrite
                     @chmod($filePath, 0644);
                     imagepng($img, $filePath);
                     imagedestroy($img);
@@ -372,7 +362,7 @@ class FileProcessor
                 }
             }
         } catch (\Throwable $e) {
-            // Non-critical — log and continue
+        // Non-critical — log and continue
             \StratFlow\Services\Logger::warn('[FileProcessor] EXIF strip failed: ' . $e->getMessage());
         }
     }
@@ -409,11 +399,9 @@ class FileProcessor
     {
         $prevMemory = ini_get('memory_limit');
         ini_set('memory_limit', '512M');
-
         try {
             $parser = new \Smalot\PdfParser\Parser();
             $pdf    = $parser->parseFile($filePath);
-
             $text = '';
             $pages = $pdf->getPages();
             foreach ($pages as $page) {
@@ -452,7 +440,6 @@ class FileProcessor
                ?? $_ENV['GEMINI_API_KEY']
                ?? getenv('GEMINI_API_KEY')
                ?: '';
-
         if ($apiKey === '') {
             \StratFlow\Services\Logger::warn("[FileProcessor] No Gemini API key available for PDF fallback");
             return '';
@@ -461,18 +448,17 @@ class FileProcessor
         try {
             $fileSize = filesize($filePath);
             \StratFlow\Services\Logger::warn("[FileProcessor] Attempting Gemini PDF extraction for " . basename($filePath) . " ({$fileSize} bytes)");
-
             $pdfData = file_get_contents($filePath);
-            if ($pdfData === false) return '';
+            if ($pdfData === false) {
+                return '';
+            }
 
             $base64 = base64_encode($pdfData);
             $model  = $this->appConfig['gemini']['model']
                    ?? $_ENV['GEMINI_MODEL']
                    ?? getenv('GEMINI_MODEL')
                    ?: 'gemini-3-flash-preview';
-
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-
             $body = json_encode([
                 'contents' => [[
                     'parts' => [
@@ -482,7 +468,6 @@ class FileProcessor
                 ]],
                 'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 65536],
             ]);
-
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_POST           => true,
@@ -491,32 +476,28 @@ class FileProcessor
                 CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
                 CURLOPT_TIMEOUT        => 120,
             ]);
-
             $response  = curl_exec($ch);
             $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
             curl_close($ch);
-
             if ($response === false) {
                 \StratFlow\Services\Logger::warn("[FileProcessor] Gemini PDF extraction: curl failed - " . $curlError);
                 return '';
             }
 
             if ($httpCode !== 200) {
-                // Response body intentionally excluded — may contain extracted document text (PII).
+// Response body intentionally excluded — may contain extracted document text (PII).
                 \StratFlow\Services\Logger::warn('[FileProcessor] Gemini PDF extraction failed', ['http_code' => $httpCode]);
                 return '';
             }
 
             $data = json_decode($response, true);
-
             if (!empty($data['error'])) {
                 \StratFlow\Services\Logger::warn("[FileProcessor] Gemini API error: " . ($data['error']['message'] ?? json_encode($data['error'])));
                 return '';
             }
 
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
             if (trim($text) !== '') {
                 \StratFlow\Services\Logger::warn("[FileProcessor] Gemini extracted " . strlen($text) . " chars from PDF");
                 return trim($text);
@@ -536,10 +517,14 @@ class FileProcessor
      */
     private function extractPptxText(string $filePath): string
     {
-        if (!class_exists('ZipArchive')) return '';
+        if (!class_exists('ZipArchive')) {
+            return '';
+        }
 
         $zip = new \ZipArchive();
-        if ($zip->open($filePath) !== true) return '';
+        if ($zip->open($filePath) !== true) {
+            return '';
+        }
 
         $text = '';
         $i = 1;
@@ -567,10 +552,14 @@ class FileProcessor
      */
     private function extractXlsxText(string $filePath): string
     {
-        if (!class_exists('ZipArchive')) return '';
+        if (!class_exists('ZipArchive')) {
+            return '';
+        }
 
         $zip = new \ZipArchive();
-        if ($zip->open($filePath) !== true) return '';
+        if ($zip->open($filePath) !== true) {
+            return '';
+        }
 
         // Read shared strings
         $strings = [];
@@ -595,7 +584,7 @@ class FileProcessor
                     foreach ($row->c ?? [] as $cell) {
                         $val = (string) $cell->v;
                         if ((string) ($cell['t'] ?? '') === 's' && isset($strings[(int) $val])) {
-                            $rowTexts[] = $strings[(int) $val];
+                                $rowTexts[] = $strings[(int) $val];
                         } else {
                             $rowTexts[] = $val;
                         }
@@ -615,14 +604,15 @@ class FileProcessor
     private function extractRtfText(string $filePath): string
     {
         $content = file_get_contents($filePath);
-        if ($content === false) return '';
+        if ($content === false) {
+            return '';
+        }
 
         // Strip RTF control words and groups
         $text = preg_replace('/\{[^}]*\}/', '', $content);
         $text = preg_replace('/\\\\[a-z]+\d*\s?/i', '', $text ?? '');
         $text = preg_replace('/[{}]/', '', $text ?? '');
         $text = preg_replace('/\s+/', ' ', trim($text ?? ''));
-
         return $text;
     }
 
@@ -637,14 +627,12 @@ class FileProcessor
     private function extractDocxText(string $filePath): string
     {
         $zip = new \ZipArchive();
-
         if ($zip->open($filePath) !== true) {
             return '';
         }
 
         $xml = $zip->getFromName('word/document.xml');
         $zip->close();
-
         if ($xml === false) {
             return '';
         }
@@ -652,7 +640,6 @@ class FileProcessor
         // Replace paragraph/break tags with spaces before stripping to preserve word boundaries
         $xml = preg_replace('/<w:p[ >]/', ' ', $xml) ?? $xml;
         $xml = preg_replace('/<w:br[ >]/', ' ', $xml) ?? $xml;
-
         return trim(strip_tags($xml));
     }
 
@@ -678,7 +665,6 @@ class FileProcessor
                ?? $_ENV['GEMINI_API_KEY']
                ?? getenv('GEMINI_API_KEY')
                ?: '';
-
         if ($apiKey === '') {
             \StratFlow\Services\Logger::warn('[FileProcessor] No Gemini API key for media transcription');
             return '';
@@ -688,11 +674,9 @@ class FileProcessor
               ?? $_ENV['GEMINI_MODEL']
               ?? getenv('GEMINI_MODEL')
               ?: 'gemini-3-flash-preview';
-
         try {
             $fileUri  = $this->geminiFilesUpload($filePath, $mimeType, $apiKey);
             $fileName = $this->geminiFileUriToName($fileUri);
-
             if (!$this->geminiFilesPollActive($fileName, $apiKey)) {
                 \StratFlow\Services\Logger::warn('[FileProcessor] Gemini file did not become ACTIVE within timeout');
                 $this->geminiFilesDelete($fileName, $apiKey);
@@ -701,7 +685,6 @@ class FileProcessor
 
             $transcript = $this->geminiTranscribe($fileUri, $mimeType, $model, $apiKey);
             $this->geminiFilesDelete($fileName, $apiKey);
-
             return $transcript;
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[FileProcessor] Media transcription failed: ' . $e->getMessage());
@@ -719,10 +702,8 @@ class FileProcessor
     {
         $displayName = basename($filePath);
         $fileSize    = filesize($filePath);
-
         $boundary = bin2hex(random_bytes(8));
         $metadata = json_encode(['file' => ['display_name' => $displayName, 'mime_type' => $mimeType]]);
-
         $body  = "--{$boundary}\r\n";
         $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
         $body .= $metadata . "\r\n";
@@ -731,9 +712,7 @@ class FileProcessor
         $body .= "Content-Length: {$fileSize}\r\n\r\n";
         $body .= file_get_contents($filePath);
         $body .= "\r\n--{$boundary}--\r\n";
-
         $url = "https://generativelanguage.googleapis.com/upload/v1beta/files?key={$apiKey}";
-
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -745,12 +724,10 @@ class FileProcessor
             ],
             CURLOPT_TIMEOUT        => 300,
         ]);
-
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
-
         if ($curlError !== '') {
             throw new \RuntimeException("Gemini Files upload cURL error: {$curlError}");
         }
@@ -784,10 +761,8 @@ class FileProcessor
     {
         $url      = "https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}";
         $deadline = time() + 120;
-
         while (time() < $deadline) {
             sleep(2);
-
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
@@ -795,10 +770,8 @@ class FileProcessor
             ]);
             $response = curl_exec($ch);
             curl_close($ch);
-
             $data  = json_decode((string)$response, true);
             $state = $data['state'] ?? '';
-
             if ($state === 'ACTIVE') {
                 return true;
             }
@@ -828,7 +801,6 @@ class FileProcessor
             ]],
             'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 65536],
         ]);
-
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -837,12 +809,10 @@ class FileProcessor
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
             CURLOPT_TIMEOUT        => 120,
         ]);
-
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
-
         if ($curlError !== '') {
             throw new \RuntimeException("Gemini transcribe cURL error: {$curlError}");
         }

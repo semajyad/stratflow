@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Subscription Model
  *
@@ -25,18 +26,14 @@ class Subscription
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO subscriptions (org_id, stripe_subscription_id, plan_type, status, started_at)
-             VALUES (:org_id, :stripe_subscription_id, :plan_type, :status, :started_at)",
-            [
+        $db->query("INSERT INTO subscriptions (org_id, stripe_subscription_id, plan_type, status, started_at)
+             VALUES (:org_id, :stripe_subscription_id, :plan_type, :status, :started_at)", [
                 ':org_id'                  => $data['org_id'],
                 ':stripe_subscription_id'  => $data['stripe_subscription_id'],
                 ':plan_type'               => $data['plan_type'],
                 ':status'                  => $data['status'] ?? 'active',
                 ':started_at'              => $data['started_at'] ?? date('Y-m-d H:i:s'),
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -49,11 +46,7 @@ class Subscription
      */
     public static function findByOrgId(Database $db, int $orgId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM subscriptions WHERE org_id = :org_id ORDER BY id DESC LIMIT 1",
-            [':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT * FROM subscriptions WHERE org_id = :org_id ORDER BY id DESC LIMIT 1", [':org_id' => $orgId]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -67,11 +60,7 @@ class Subscription
      */
     public static function findByStripeId(Database $db, string $stripeSubId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM subscriptions WHERE stripe_subscription_id = :stripe_sub_id LIMIT 1",
-            [':stripe_sub_id' => $stripeSubId]
-        );
-
+        $stmt = $db->query("SELECT * FROM subscriptions WHERE stripe_subscription_id = :stripe_sub_id LIMIT 1", [':stripe_sub_id' => $stripeSubId]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -85,13 +74,10 @@ class Subscription
      */
     public static function updateStatus(Database $db, int $id, string $status): void
     {
-        $db->query(
-            "UPDATE subscriptions SET status = :status WHERE id = :id",
-            [
+        $db->query("UPDATE subscriptions SET status = :status WHERE id = :id", [
                 ':status' => $status,
                 ':id'     => $id,
-            ]
-        );
+            ]);
     }
 
     /**
@@ -99,10 +85,7 @@ class Subscription
      */
     public static function updateSeatLimit(Database $db, int $orgId, int $seatLimit): void
     {
-        $db->query(
-            "UPDATE subscriptions SET user_seat_limit = :limit WHERE org_id = :org_id AND status = 'active' ORDER BY id DESC LIMIT 1",
-            [':limit' => $seatLimit, ':org_id' => $orgId]
-        );
+        $db->query("UPDATE subscriptions SET user_seat_limit = :limit WHERE org_id = :org_id AND status = 'active' ORDER BY id DESC LIMIT 1", [':limit' => $seatLimit, ':org_id' => $orgId]);
     }
 
     /**
@@ -116,13 +99,9 @@ class Subscription
      */
     public static function getSeatLimit(Database $db, int $orgId): int
     {
-        $stmt = $db->query(
-            "SELECT user_seat_limit FROM subscriptions
+        $stmt = $db->query("SELECT user_seat_limit FROM subscriptions
              WHERE org_id = :org_id AND status = 'active'
-             ORDER BY id DESC LIMIT 1",
-            [':org_id' => $orgId]
-        );
-
+             ORDER BY id DESC LIMIT 1", [':org_id' => $orgId]);
         $row = $stmt->fetch();
         return ($row && $row['user_seat_limit']) ? (int) $row['user_seat_limit'] : 5;
     }
@@ -136,13 +115,9 @@ class Subscription
      */
     public static function hasEvaluationBoard(Database $db, int $orgId): bool
     {
-        $stmt = $db->query(
-            "SELECT has_evaluation_board FROM subscriptions
+        $stmt = $db->query("SELECT has_evaluation_board FROM subscriptions
              WHERE org_id = :org_id AND status = 'active'
-             ORDER BY id DESC LIMIT 1",
-            [':org_id' => $orgId]
-        );
-
+             ORDER BY id DESC LIMIT 1", [':org_id' => $orgId]);
         $row = $stmt->fetch();
         return $row && (bool) $row['has_evaluation_board'];
     }

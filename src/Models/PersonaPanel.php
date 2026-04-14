@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PersonaPanel Model
  *
@@ -29,16 +30,12 @@ class PersonaPanel
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO persona_panels (org_id, panel_type, name)
-             VALUES (:org_id, :panel_type, :name)",
-            [
+        $db->query("INSERT INTO persona_panels (org_id, panel_type, name)
+             VALUES (:org_id, :panel_type, :name)", [
                 ':org_id'     => $data['org_id'] ?? null,
                 ':panel_type' => $data['panel_type'],
                 ':name'       => $data['name'],
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -55,11 +52,7 @@ class PersonaPanel
      */
     public static function findByOrgId(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM persona_panels WHERE org_id = :org_id ORDER BY created_at DESC",
-            [':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT * FROM persona_panels WHERE org_id = :org_id ORDER BY created_at DESC", [':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -71,10 +64,7 @@ class PersonaPanel
      */
     public static function findDefaults(Database $db): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM persona_panels WHERE org_id IS NULL ORDER BY created_at DESC"
-        );
-
+        $stmt = $db->query("SELECT * FROM persona_panels WHERE org_id IS NULL ORDER BY created_at DESC");
         return $stmt->fetchAll();
     }
 
@@ -87,11 +77,7 @@ class PersonaPanel
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM persona_panels WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
-
+        $stmt = $db->query("SELECT * FROM persona_panels WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
@@ -111,7 +97,6 @@ class PersonaPanel
     private const UPDATABLE_COLUMNS = [
         'panel_type', 'name', 'review_scope',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -120,17 +105,12 @@ class PersonaPanel
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE persona_panels SET {$setClauses} WHERE id = :id", $bound);
     }
 

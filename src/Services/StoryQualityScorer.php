@@ -1,4 +1,5 @@
 <?php
+
 /**
  * StoryQualityScorer
  *
@@ -25,7 +26,9 @@ class StoryQualityScorer
         'invest', 'acceptance_criteria', 'value', 'kr_linkage', 'smart', 'splitting',
     ];
 
-    public function __construct(private GeminiService $gemini) {}
+    public function __construct(private GeminiService $gemini)
+    {
+    }
 
     // ===========================
     // PUBLIC INTERFACE
@@ -91,10 +94,8 @@ class StoryQualityScorer
         }
 
         $overall = (int) ($result['overall'] ?? 0);
-
-        // Remove overall from breakdown — it's stored separately as quality_score
+// Remove overall from breakdown — it's stored separately as quality_score
         $breakdown = array_intersect_key($result, array_flip(self::REQUIRED_DIMENSIONS));
-
         return ['score' => $overall, 'breakdown' => $breakdown, 'error' => null];
     }
 
@@ -104,7 +105,6 @@ class StoryQualityScorer
     private function buildWorkItemInput(array $item): string
     {
         $parts = ['Title: ' . ($item['title'] ?? '')];
-
         if (!empty($item['description'])) {
             $parts[] = 'Description: ' . $item['description'];
         }
@@ -124,7 +124,6 @@ class StoryQualityScorer
     private function buildStoryInput(array $story): string
     {
         $parts = ['Title: ' . ($story['title'] ?? '')];
-
         if (!empty($story['description'])) {
             $parts[] = 'Description: ' . $story['description'];
         }

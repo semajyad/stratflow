@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ExecutiveController
  *
@@ -24,12 +25,11 @@ use StratFlow\Models\KeyResult;
 
 class ExecutiveController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -49,51 +49,35 @@ class ExecutiveController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // ── 1. Portfolio status ───────────────────────────────────────────────
-        $portfolioRows = $this->db->query(
-            'SELECT status, COUNT(*) AS cnt FROM projects WHERE org_id = :oid GROUP BY status',
-            [':oid' => $orgId]
-        )->fetchAll();
-
+// ── 1. Portfolio status ───────────────────────────────────────────────
+        $portfolioRows = $this->db->query('SELECT status, COUNT(*) AS cnt FROM projects WHERE org_id = :oid GROUP BY status', [':oid' => $orgId])->fetchAll();
         $portfolio = ['draft' => 0, 'active' => 0, 'completed' => 0];
         foreach ($portfolioRows as $row) {
             $portfolio[$row['status']] = (int) $row['cnt'];
         }
         $portfolio['total'] = array_sum($portfolio);
-
-        // ── 2. Backlog health (work items across all org projects) ────────────
-        $backlogRows = $this->db->query(
-            'SELECT hwi.status, COUNT(*) AS cnt
+// ── 2. Backlog health (work items across all org projects) ────────────
+        $backlogRows = $this->db->query('SELECT hwi.status, COUNT(*) AS cnt
                FROM hl_work_items hwi
                JOIN projects p ON hwi.project_id = p.id
               WHERE p.org_id = :oid
-              GROUP BY hwi.status',
-            [':oid' => $orgId]
-        )->fetchAll();
-
+              GROUP BY hwi.status', [':oid' => $orgId])->fetchAll();
         $backlog = ['backlog' => 0, 'in_progress' => 0, 'in_review' => 0, 'done' => 0];
         foreach ($backlogRows as $row) {
             $key = $row['status'];
             $backlog[$key] = (int) $row['cnt'];
         }
         $backlog['total'] = array_sum($backlog);
-
-        // ── 3. Top 5 highest-priority work items ──────────────────────────────
-        $topItems = $this->db->query(
-            'SELECT hwi.title, hwi.final_score, hwi.priority_number, hwi.status, p.name AS project_name
+// ── 3. Top 5 highest-priority work items ──────────────────────────────
+        $topItems = $this->db->query('SELECT hwi.title, hwi.final_score, hwi.priority_number, hwi.status, p.name AS project_name
                FROM hl_work_items hwi
                JOIN projects p ON hwi.project_id = p.id
               WHERE p.org_id = :oid
                 AND hwi.status != \'done\'
               ORDER BY hwi.final_score DESC
-              LIMIT 5',
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // ── 4. Sprint velocity (last 4 completed sprints) ─────────────────────
-        $velocityRows = $this->db->query(
-            'SELECT s.name AS sprint_name, s.end_date,
+              LIMIT 5', [':oid' => $orgId])->fetchAll();
+// ── 4. Sprint velocity (last 4 completed sprints) ─────────────────────
+        $velocityRows = $this->db->query('SELECT s.name AS sprint_name, s.end_date,
                     COALESCE(SUM(us.size), 0) AS total_points
                FROM sprints s
                JOIN projects p ON s.project_id = p.id
@@ -103,15 +87,11 @@ class ExecutiveController
                 AND s.status = \'completed\'
               GROUP BY s.id, s.name, s.end_date
               ORDER BY s.end_date DESC
-              LIMIT 4',
-            [':oid' => $orgId]
-        )->fetchAll();
-        // Reverse so chart reads oldest → newest
+              LIMIT 4', [':oid' => $orgId])->fetchAll();
+// Reverse so chart reads oldest → newest
         $velocity = array_reverse($velocityRows);
-
-        // ── 5. Active sprint capacity ─────────────────────────────────────────
-        $activeSprints = $this->db->query(
-            'SELECT s.name AS sprint_name, s.team_capacity AS capacity,
+// ── 5. Active sprint capacity ─────────────────────────────────────────
+        $activeSprints = $this->db->query('SELECT s.name AS sprint_name, s.team_capacity AS capacity,
                     p.name AS project_name,
                     COALESCE(SUM(us.size), 0) AS allocated_points
                FROM sprints s
@@ -121,95 +101,65 @@ class ExecutiveController
               WHERE p.org_id = :oid
                 AND s.status = \'active\'
               GROUP BY s.id, s.name, s.team_capacity, p.name
-              ORDER BY p.name, s.name',
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // ── 6. Risk summary by priority band ──────────────────────────────────
+              ORDER BY p.name, s.name', [':oid' => $orgId])->fetchAll();
+// ── 6. Risk summary by priority band ──────────────────────────────────
         // Priority stored as likelihood * impact (1–25); bands: low <5, medium 5–14, high ≥15
-        $riskSummaryRows = $this->db->query(
-            'SELECT
+        $riskSummaryRows = $this->db->query('SELECT
                 SUM(CASE WHEN (likelihood * impact) >= 15 THEN 1 ELSE 0 END) AS high,
                 SUM(CASE WHEN (likelihood * impact) BETWEEN 5 AND 14 THEN 1 ELSE 0 END) AS medium,
                 SUM(CASE WHEN (likelihood * impact) < 5 THEN 1 ELSE 0 END) AS low
                FROM risks r
                JOIN projects p ON r.project_id = p.id
-              WHERE p.org_id = :oid',
-            [':oid' => $orgId]
-        )->fetch();
-
+              WHERE p.org_id = :oid', [':oid' => $orgId])->fetch();
         $riskSummary = [
             'high'   => (int) ($riskSummaryRows['high']   ?? 0),
             'medium' => (int) ($riskSummaryRows['medium'] ?? 0),
             'low'    => (int) ($riskSummaryRows['low']    ?? 0),
         ];
         $riskSummary['total'] = array_sum($riskSummary);
-
-        // ── 7. Drift alert counts by severity (active only) ───────────────────
-        $driftRows = $this->db->query(
-            'SELECT da.severity, COUNT(*) AS cnt
+// ── 7. Drift alert counts by severity (active only) ───────────────────
+        $driftRows = $this->db->query('SELECT da.severity, COUNT(*) AS cnt
                FROM drift_alerts da
                JOIN projects p ON da.project_id = p.id
               WHERE p.org_id = :oid
                 AND da.status = \'active\'
-              GROUP BY da.severity',
-            [':oid' => $orgId]
-        )->fetchAll();
-
+              GROUP BY da.severity', [':oid' => $orgId])->fetchAll();
         $driftAlerts = ['info' => 0, 'warning' => 0, 'critical' => 0];
         foreach ($driftRows as $row) {
             $driftAlerts[$row['severity']] = (int) $row['cnt'];
         }
         $driftAlerts['total'] = array_sum($driftAlerts);
-
-        // ── 8. Governance queue depth + items ─────────────────────────────────
-        $govItems = $this->db->query(
-            'SELECT gq.id, gq.change_type, gq.proposed_change_json, gq.created_at,
+// ── 8. Governance queue depth + items ─────────────────────────────────
+        $govItems = $this->db->query('SELECT gq.id, gq.change_type, gq.proposed_change_json, gq.created_at,
                     gq.project_id, p.name AS project_name
                FROM governance_queue gq
                JOIN projects p ON gq.project_id = p.id
               WHERE p.org_id = :oid
                 AND gq.status = \'pending\'
               ORDER BY gq.created_at DESC
-              LIMIT 20',
-            [':oid' => $orgId]
-        )->fetchAll();
+              LIMIT 20', [':oid' => $orgId])->fetchAll();
         $governanceQueueDepth = count($govItems);
-
-        // ── 9. Integration health ─────────────────────────────────────────────
-        $integrations = $this->db->query(
-            'SELECT display_name AS name, provider, status, last_sync_at, error_count
+// ── 9. Integration health ─────────────────────────────────────────────
+        $integrations = $this->db->query('SELECT display_name AS name, provider, status, last_sync_at, error_count
                FROM integrations
               WHERE org_id = :oid
-              ORDER BY display_name',
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // ── 10. Subscription / seat usage ────────────────────────────────────
-        $subscription = $this->db->query(
-            'SELECT plan_type, status, expires_at, user_seat_limit
+              ORDER BY display_name', [':oid' => $orgId])->fetchAll();
+// ── 10. Subscription / seat usage ────────────────────────────────────
+        $subscription = $this->db->query('SELECT plan_type, status, expires_at, user_seat_limit
                FROM subscriptions
               WHERE org_id = :oid
-              LIMIT 1',
-            [':oid' => $orgId]
-        )->fetch() ?: [];
-
-        $seatUsedRow = $this->db->query(
-            'SELECT COUNT(*) AS cnt FROM users WHERE org_id = :oid AND is_active = 1',
-            [':oid' => $orgId]
-        )->fetch();
+              LIMIT 1', [':oid' => $orgId])->fetch() ?: [];
+        $seatUsedRow = $this->db->query('SELECT COUNT(*) AS cnt FROM users WHERE org_id = :oid AND is_active = 1', [':oid' => $orgId])->fetch();
         $seatsUsed  = (int) ($seatUsedRow['cnt'] ?? 0);
         $seatLimit  = (int) ($subscription['user_seat_limit'] ?? 0);
-
-        // ── OKR / KR health across all projects ──────────────────────────────
+// ── OKR / KR health across all projects ──────────────────────────────
         // Source: diagram_nodes — these are the OKRs set on the strategy roadmap.
         // The KR text lines (KR1:, KR2:...) are stored in okr_description as free text.
         // We count KR lines per node to show a "X KRs" badge, and also try to enrich
         // with structured key_results rows if they exist.
         $okrItems = [];
         try {
-            $okrItems = $this->db->query(
-                "SELECT dn.id AS item_id, dn.node_key, dn.okr_title, dn.okr_description,
+            $okrItems = $this->db->query("SELECT dn.id AS item_id, dn.node_key, dn.okr_title, dn.okr_description,
                         p.id AS project_id, p.name AS project_name,
                         0 AS on_track, 0 AS at_risk, 0 AS off_track,
                         0 AS not_started, 0 AS achieved, 0 AS kr_count
@@ -219,9 +169,7 @@ class ExecutiveController
                   WHERE p.org_id = :oid
                     AND dn.okr_title IS NOT NULL
                     AND TRIM(dn.okr_title) != ''
-                  ORDER BY p.name ASC, dn.id ASC",
-                [':oid' => $orgId]
-            )->fetchAll();
+                  ORDER BY p.name ASC, dn.id ASC", [':oid' => $orgId])->fetchAll();
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[Executive] diagram_nodes OKR query failed: ' . $e->getMessage());
         }
@@ -236,7 +184,7 @@ class ExecutiveController
                 foreach (preg_split('/\r?\n/', trim($okr['okr_description'])) as $line) {
                     $line = trim($line);
                     if ($line === '') {
-                        continue;
+                            continue;
                     }
                     if (preg_match('/^\s*KR\d*[\s:]/i', $line)) {
                         $okr['kr_lines'][] = $line;
@@ -246,24 +194,22 @@ class ExecutiveController
                 }
             }
             $okr['kr_count'] = count($okr['kr_lines']);
-            // Attach structured KRs for per-KR progress display
+// Attach structured KRs for per-KR progress display
             $okrKey = strtolower(trim($okr['okr_title'])) . '::' . (int) $okr['project_id'];
             $okr['structured_krs'] = $structuredKrsByKey[$okrKey] ?? [];
         }
         unset($okr);
-
-        // Index by item_id so we can optionally merge structured key_results below.
+// Index by item_id so we can optionally merge structured key_results below.
         $okrIndex = [];
         foreach ($okrItems as $i => $okr) {
             $okrIndex[(int) $okr['item_id']] = $i;
         }
 
         $okrHealth = ['on_track' => 0, 'at_risk' => 0, 'off_track' => 0];
-        // Optionally enrich with structured KR status counts from key_results.
+// Optionally enrich with structured KR status counts from key_results.
         // Degrades silently if table is absent or no rows exist.
         try {
-            $krCounts = $this->db->query(
-                "SELECT kr.hl_work_item_id AS item_id,
+            $krCounts = $this->db->query("SELECT kr.hl_work_item_id AS item_id,
                         COALESCE(SUM(CASE WHEN kr.status = 'on_track'    THEN 1 ELSE 0 END), 0) AS on_track,
                         COALESCE(SUM(CASE WHEN kr.status = 'at_risk'     THEN 1 ELSE 0 END), 0) AS at_risk,
                         COALESCE(SUM(CASE WHEN kr.status = 'off_track'   THEN 1 ELSE 0 END), 0) AS off_track,
@@ -274,10 +220,7 @@ class ExecutiveController
                    JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
                    JOIN projects p ON hwi.project_id = p.id
                   WHERE p.org_id = :oid
-                  GROUP BY kr.hl_work_item_id",
-                [':oid' => $orgId]
-            )->fetchAll();
-
+                  GROUP BY kr.hl_work_item_id", [':oid' => $orgId])->fetchAll();
             foreach ($krCounts as $kc) {
                 $okrHealth['on_track']  += (int) $kc['on_track'];
                 $okrHealth['at_risk']   += (int) $kc['at_risk'];
@@ -290,8 +233,7 @@ class ExecutiveController
         // ── Structured KR detail per OKR (for per-KR progress in expanded rows) ──
         $structuredKrsByKey = [];
         try {
-            $krDetailRows = $this->db->query(
-                "SELECT LOWER(TRIM(hwi.okr_title)) AS okr_key,
+            $krDetailRows = $this->db->query("SELECT LOWER(TRIM(hwi.okr_title)) AS okr_key,
                         hwi.project_id,
                         kr.title       AS kr_title,
                         kr.baseline_value,
@@ -304,9 +246,7 @@ class ExecutiveController
                    JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
                    JOIN projects p ON hwi.project_id = p.id
                   WHERE p.org_id = :oid
-                  ORDER BY kr.display_order ASC, kr.id ASC",
-                [':oid' => $orgId]
-            )->fetchAll();
+                  ORDER BY kr.display_order ASC, kr.id ASC", [':oid' => $orgId])->fetchAll();
             foreach ($krDetailRows as $row) {
                 $key = $row['okr_key'] . '::' . (int) $row['project_id'];
                 $structuredKrsByKey[$key][] = $row;
@@ -320,8 +260,7 @@ class ExecutiveController
         // Used on the OKR section of the dashboard to show "X% complete" bars.
         $storyProgressByProject = [];
         try {
-            $spRows = $this->db->query(
-                "SELECT p.id AS project_id,
+            $spRows = $this->db->query("SELECT p.id AS project_id,
                         COUNT(us.id)                                          AS total,
                         SUM(CASE WHEN us.status = 'done'        THEN 1 ELSE 0 END) AS done,
                         SUM(CASE WHEN us.status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress
@@ -329,15 +268,13 @@ class ExecutiveController
                    LEFT JOIN hl_work_items hwi ON hwi.project_id = p.id
                    LEFT JOIN user_stories  us  ON us.parent_hl_item_id = hwi.id
                   WHERE p.org_id = :oid
-                  GROUP BY p.id",
-                [':oid' => $orgId]
-            )->fetchAll();
+                  GROUP BY p.id", [':oid' => $orgId])->fetchAll();
             foreach ($spRows as $row) {
                 $storyProgressByProject[(int) $row['project_id']] = [
-                    'total'       => (int) $row['total'],
-                    'done'        => (int) $row['done'],
-                    'in_progress' => (int) $row['in_progress'],
-                    'pct'         => $row['total'] > 0
+                                'total'       => (int) $row['total'],
+                                'done'        => (int) $row['done'],
+                                'in_progress' => (int) $row['in_progress'],
+                                'pct'         => $row['total'] > 0
                         ? (int) round($row['done'] / $row['total'] * 100)
                         : 0,
                 ];
@@ -349,8 +286,7 @@ class ExecutiveController
         // ── Merged PR count per project (activity indicator) ─────────────────
         $mergedPrByProject = [];
         try {
-            $prRows = $this->db->query(
-                "SELECT p.id AS project_id, COUNT(DISTINCT sgl.id) AS merged_prs
+            $prRows = $this->db->query("SELECT p.id AS project_id, COUNT(DISTINCT sgl.id) AS merged_prs
                    FROM projects p
                    JOIN hl_work_items hwi ON hwi.project_id = p.id
                    JOIN user_stories  us  ON us.parent_hl_item_id = hwi.id
@@ -359,9 +295,7 @@ class ExecutiveController
                     AND sgl.local_id   = us.id
                     AND sgl.status     = 'merged'
                   WHERE p.org_id = :oid
-                  GROUP BY p.id",
-                [':oid' => $orgId]
-            )->fetchAll();
+                  GROUP BY p.id", [':oid' => $orgId])->fetchAll();
             foreach ($prRows as $row) {
                 $mergedPrByProject[(int) $row['project_id']] = (int) $row['merged_prs'];
             }
@@ -370,21 +304,16 @@ class ExecutiveController
         }
 
         // ── Table A: Top 10 active risks ──────────────────────────────────────
-        $topRisks = $this->db->query(
-            'SELECT r.id, r.title, r.description, r.mitigation,
+        $topRisks = $this->db->query('SELECT r.id, r.title, r.description, r.mitigation,
                     r.likelihood, r.impact, (r.likelihood * r.impact) AS priority,
                     p.name AS project_name
                FROM risks r
                JOIN projects p ON r.project_id = p.id
               WHERE p.org_id = :oid
               ORDER BY priority DESC
-              LIMIT 10',
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // ── Table B: Active critical drift alerts ─────────────────────────────
-        $criticalAlerts = $this->db->query(
-            'SELECT da.id, da.alert_type, da.details_json, da.created_at,
+              LIMIT 10', [':oid' => $orgId])->fetchAll();
+// ── Table B: Active critical drift alerts ─────────────────────────────
+        $criticalAlerts = $this->db->query('SELECT da.id, da.alert_type, da.details_json, da.created_at,
                     da.project_id, p.name AS project_name
                FROM drift_alerts da
                JOIN projects p ON da.project_id = p.id
@@ -392,22 +321,15 @@ class ExecutiveController
                 AND da.status = \'active\'
                 AND da.severity = \'critical\'
               ORDER BY da.created_at DESC
-              LIMIT 10',
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // ── Table C: Recent audit events ──────────────────────────────────────
-        $recentAudit = $this->db->query(
-            'SELECT al.event_type, al.created_at, al.ip_address,
+              LIMIT 10', [':oid' => $orgId])->fetchAll();
+// ── Table C: Recent audit events ──────────────────────────────────────
+        $recentAudit = $this->db->query('SELECT al.event_type, al.created_at, al.ip_address,
                     u.full_name AS actor_name, al.details_json
                FROM audit_logs al
                INNER JOIN users u ON al.user_id = u.id
               WHERE u.org_id = :oid
               ORDER BY al.created_at DESC
-              LIMIT 10',
-            [':oid' => $orgId]
-        )->fetchAll();
-
+              LIMIT 10', [':oid' => $orgId])->fetchAll();
         $this->response->render('executive', [
             'user'             => $user,
             'active_page'      => 'executive',
@@ -429,7 +351,6 @@ class ExecutiveController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -448,13 +369,8 @@ class ExecutiveController
         $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Verify project belongs to this org
-        $project = $this->db->query(
-            "SELECT id, name, updated_at FROM projects WHERE id = :id AND org_id = :oid LIMIT 1",
-            [':id' => $id, ':oid' => $orgId]
-        )->fetch();
-
+// Verify project belongs to this org
+        $project = $this->db->query("SELECT id, name, updated_at FROM projects WHERE id = :id AND org_id = :oid LIMIT 1", [':id' => $id, ':oid' => $orgId])->fetch();
         if ($project === false) {
             http_response_code(404);
             $this->response->render('errors/404', [], 'app');
@@ -462,24 +378,17 @@ class ExecutiveController
         }
 
         // Project selector (all active projects in org)
-        $projects = $this->db->query(
-            "SELECT id, name FROM projects WHERE org_id = :oid AND status != 'deleted' ORDER BY name ASC",
-            [':oid' => $orgId]
-        )->fetchAll();
-
-        // Source OKRs from diagram_nodes — same data as the Strategy Roadmap page.
+        $projects = $this->db->query("SELECT id, name FROM projects WHERE org_id = :oid AND status != 'deleted' ORDER BY name ASC", [':oid' => $orgId])->fetchAll();
+// Source OKRs from diagram_nodes — same data as the Strategy Roadmap page.
         $okrItems = [];
         try {
-            $okrItems = $this->db->query(
-                "SELECT dn.id, dn.okr_title, dn.okr_description
+            $okrItems = $this->db->query("SELECT dn.id, dn.okr_title, dn.okr_description
                    FROM diagram_nodes dn
                    JOIN strategy_diagrams sd ON sd.id = dn.diagram_id
                   WHERE sd.project_id = :pid
                     AND dn.okr_title IS NOT NULL
                     AND TRIM(dn.okr_title) != ''
-                  ORDER BY dn.id ASC",
-                [':pid' => $id]
-            )->fetchAll();
+                  ORDER BY dn.id ASC", [':pid' => $id])->fetchAll();
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[Executive] projectDashboard OKR query failed: ' . $e->getMessage());
         }
@@ -491,13 +400,12 @@ class ExecutiveController
                 foreach (preg_split('/\r?\n/', trim($okr['okr_description'])) as $line) {
                     $line = trim($line);
                     if ($line !== '') {
-                        $okr['kr_lines'][] = $line;
+                            $okr['kr_lines'][] = $line;
                     }
                 }
             }
         }
         unset($okr);
-
         $healthCounts = ['total_okrs' => count($okrItems), 'total_krs' => 0];
         foreach ($okrItems as $o) {
             $healthCounts['total_krs'] += count($o['kr_lines']);
@@ -505,11 +413,12 @@ class ExecutiveController
 
         // ── Story progress per OKR (matched by okr_title on hl_work_items) ────
         // Also pull kr_hypothesis breakdown so each KR text line can show progress.
-        $okrStoryProgress = [];   // keyed by okr_title (lower-trimmed)
-        $krHypothesisData = [];   // keyed by okr_title → kr_hypothesis → [done, total]
+        $okrStoryProgress = [];
+// keyed by okr_title (lower-trimmed)
+        $krHypothesisData = [];
+// keyed by okr_title → kr_hypothesis → [done, total]
         try {
-            $spRows = $this->db->query(
-                "SELECT hwi.okr_title,
+            $spRows = $this->db->query("SELECT hwi.okr_title,
                         us.kr_hypothesis,
                         COUNT(us.id)                                                AS total,
                         SUM(CASE WHEN us.status = 'done'        THEN 1 ELSE 0 END) AS done,
@@ -519,10 +428,7 @@ class ExecutiveController
                   WHERE hwi.project_id = :pid
                     AND hwi.okr_title IS NOT NULL
                     AND TRIM(hwi.okr_title) != ''
-                  GROUP BY hwi.okr_title, us.kr_hypothesis",
-                [':pid' => $id]
-            )->fetchAll();
-
+                  GROUP BY hwi.okr_title, us.kr_hypothesis", [':pid' => $id])->fetchAll();
             foreach ($spRows as $row) {
                 $key = strtolower(trim($row['okr_title']));
                 if (!isset($okrStoryProgress[$key])) {
@@ -531,8 +437,7 @@ class ExecutiveController
                 $okrStoryProgress[$key]['total']       += (int) $row['total'];
                 $okrStoryProgress[$key]['done']        += (int) $row['done'];
                 $okrStoryProgress[$key]['in_progress'] += (int) $row['in_progress'];
-
-                // KR hypothesis breakdown (may be null)
+            // KR hypothesis breakdown (may be null)
                 $krKey = trim((string) $row['kr_hypothesis']);
                 if ($krKey !== '') {
                     if (!isset($krHypothesisData[$key])) {
@@ -552,8 +457,7 @@ class ExecutiveController
         // ── Structured key_results for work items in this project ──────────
         $structuredKrsByOkrTitle = [];
         try {
-            $krRows = $this->db->query(
-                "SELECT hwi.okr_title,
+            $krRows = $this->db->query("SELECT hwi.okr_title,
                         kr.title       AS kr_title,
                         kr.baseline_value,
                         kr.target_value,
@@ -565,10 +469,7 @@ class ExecutiveController
                    JOIN hl_work_items hwi ON hwi.id = kr.hl_work_item_id
                   WHERE hwi.project_id = :pid
                     AND hwi.okr_title IS NOT NULL
-                  ORDER BY kr.display_order ASC, kr.id ASC",
-                [':pid' => $id]
-            )->fetchAll();
-
+                  ORDER BY kr.display_order ASC, kr.id ASC", [':pid' => $id])->fetchAll();
             foreach ($krRows as $row) {
                 $key = strtolower(trim($row['okr_title']));
                 $structuredKrsByOkrTitle[$key][] = $row;
@@ -588,7 +489,6 @@ class ExecutiveController
             $okr['structured_krs'] = $structuredKrsByOkrTitle[$key] ?? [];
         }
         unset($okr);
-
         $this->response->render('executive-project', [
             'user'          => $user,
             'active_page'   => 'executive',
@@ -599,7 +499,6 @@ class ExecutiveController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 }

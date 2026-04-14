@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Project Model
  *
@@ -30,17 +31,13 @@ class Project
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO projects (org_id, name, status, created_by)
-             VALUES (:org_id, :name, :status, :created_by)",
-            [
+        $db->query("INSERT INTO projects (org_id, name, status, created_by)
+             VALUES (:org_id, :name, :status, :created_by)", [
                 ':org_id'     => $data['org_id'],
                 ':name'       => $data['name'],
                 ':status'     => $data['status'] ?? 'draft',
                 ':created_by' => $data['created_by'],
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -57,11 +54,7 @@ class Project
      */
     public static function findByOrgId(Database $db, int $orgId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM projects WHERE org_id = :org_id ORDER BY created_at DESC",
-            [':org_id' => $orgId]
-        );
-
+        $stmt = $db->query("SELECT * FROM projects WHERE org_id = :org_id ORDER BY created_at DESC", [':org_id' => $orgId]);
         return $stmt->fetchAll();
     }
 
@@ -80,7 +73,6 @@ class Project
     {
         $orgId = (int) ($user['org_id'] ?? 0);
         $userId = (int) ($user['id'] ?? 0);
-
         if ($orgId <= 0 || $userId <= 0) {
             return [];
         }
@@ -100,14 +92,10 @@ class Project
                    SELECT 1 FROM {$membershipTable} pm
                    WHERE pm.project_id = p.id AND pm.user_id = :user_id
                )";
-        $stmt = $db->query(
-            "SELECT p.* FROM projects p
+        $stmt = $db->query("SELECT p.* FROM projects p
              WHERE p.org_id = :org_id
                AND ({$visibilityPredicate})
-             ORDER BY p.created_at DESC",
-            [':org_id' => $orgId, ':user_id' => $userId]
-        );
-
+             ORDER BY p.created_at DESC", [':org_id' => $orgId, ':user_id' => $userId]);
         return $stmt->fetchAll();
     }
 
@@ -127,31 +115,22 @@ class Project
     public static function setMembers(Database $db, int $projectId, array $members): void
     {
         $normalised = self::normaliseMembershipPayload($members);
-
         if ($db->tableExists('project_memberships')) {
             $db->query("DELETE FROM project_memberships WHERE project_id = :pid", [':pid' => $projectId]);
-
             foreach ($normalised as $member) {
-                $db->query(
-                    "INSERT INTO project_memberships (project_id, user_id, membership_role)
-                     VALUES (:pid, :uid, :membership_role)",
-                    [
+                $db->query("INSERT INTO project_memberships (project_id, user_id, membership_role)
+                     VALUES (:pid, :uid, :membership_role)", [
                         ':pid' => $projectId,
                         ':uid' => $member['user_id'],
                         ':membership_role' => $member['membership_role'],
-                    ]
-                );
+                    ]);
             }
         }
 
         if ($db->tableExists('project_members')) {
             $db->query("DELETE FROM project_members WHERE project_id = :pid", [':pid' => $projectId]);
-
             foreach ($normalised as $member) {
-                $db->query(
-                    "INSERT IGNORE INTO project_members (project_id, user_id) VALUES (:pid, :uid)",
-                    [':pid' => $projectId, ':uid' => $member['user_id']]
-                );
+                $db->query("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (:pid, :uid)", [':pid' => $projectId, ':uid' => $member['user_id']]);
             }
         }
     }
@@ -164,7 +143,6 @@ class Project
     public static function getMemberIds(Database $db, int $projectId): array
     {
         $rows = self::getMemberships($db, $projectId);
-
         return array_column($rows, 'user_id');
     }
 
@@ -176,35 +154,21 @@ class Project
     public static function getMemberships(Database $db, int $projectId): array
     {
         if ($db->tableExists('project_memberships')) {
-            $rows = $db->query(
-                "SELECT user_id, membership_role
+            $rows = $db->query("SELECT user_id, membership_role
                  FROM project_memberships
                  WHERE project_id = :pid
-                 ORDER BY user_id ASC",
-                [':pid' => $projectId]
-            )->fetchAll();
-
-            return array_map(
-                fn(array $row): array => [
+                 ORDER BY user_id ASC", [':pid' => $projectId])->fetchAll();
+            return array_map(fn(array $row): array => [
                     'user_id' => (int) $row['user_id'],
                     'membership_role' => (string) ($row['membership_role'] ?? 'viewer'),
-                ],
-                $rows
-            );
+                ], $rows);
         }
 
-        $rows = $db->query(
-            "SELECT user_id FROM project_members WHERE project_id = :pid",
-            [':pid' => $projectId]
-        )->fetchAll();
-
-        return array_map(
-            fn(array $row): array => [
+        $rows = $db->query("SELECT user_id FROM project_members WHERE project_id = :pid", [':pid' => $projectId])->fetchAll();
+        return array_map(fn(array $row): array => [
                 'user_id' => (int) $row['user_id'],
                 'membership_role' => 'editor',
-            ],
-            $rows
-        );
+            ], $rows);
     }
 
     /**
@@ -219,7 +183,6 @@ class Project
     {
         $sql    = "SELECT * FROM projects WHERE id = :id";
         $params = [':id' => $id];
-
         if ($orgId !== null) {
             $sql           .= " AND org_id = :org_id";
             $params[':org_id'] = $orgId;
@@ -227,7 +190,6 @@ class Project
 
         $stmt = $db->query($sql . " LIMIT 1", $params);
         $row  = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -247,7 +209,6 @@ class Project
     private const UPDATABLE_COLUMNS = [
         'name', 'status', 'selected_framework', 'jira_project_key', 'jira_board_id', 'visibility',
     ];
-
     public static function update(Database $db, int $id, array $data, ?int $orgId = null): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -256,17 +217,12 @@ class Project
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $where = "id = :id";
         if ($orgId !== null) {
             $where             .= " AND org_id = :org_id";
@@ -291,7 +247,6 @@ class Project
     {
         $sql    = "DELETE FROM projects WHERE id = :id";
         $params = [':id' => $id];
-
         if ($orgId !== null) {
             $sql           .= " AND org_id = :org_id";
             $params[':org_id'] = $orgId;
@@ -307,7 +262,6 @@ class Project
     private static function normaliseMembershipPayload(array $members): array
     {
         $normalised = [];
-
         foreach ($members as $key => $member) {
             if (is_array($member)) {
                 $userId = (int) ($member['user_id'] ?? $key);

@@ -241,7 +241,7 @@ final class SecretManager
             'aes-256-gcm',
             $key,
             0,
-            base64_decode((string) $envelope['iv'],  true) ?: '',
+            base64_decode((string) $envelope['iv'], true) ?: '',
             base64_decode((string) $envelope['tag'], true) ?: ''
         );
 

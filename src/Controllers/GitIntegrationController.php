@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitIntegrationController
  *
@@ -25,12 +26,11 @@ class GitIntegrationController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -63,12 +63,9 @@ class GitIntegrationController
 
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $secret = bin2hex(random_bytes(32));
         $config = json_encode(['webhook_secret' => $secret]);
-
         $existing = Integration::findByOrgAndProvider($this->db, $orgId, $provider);
-
         if ($existing) {
             $existingConfig = json_decode($existing['config_json'] ?? '{}', true) ?: [];
             $existingConfig['webhook_secret'] = $secret;
@@ -80,7 +77,7 @@ class GitIntegrationController
             Integration::create($this->db, [
                 'org_id'      => $orgId,
                 'provider'    => $provider,
-                'display_name'=> ucfirst($provider) . ' Webhook',
+                'display_name' => ucfirst($provider) . ' Webhook',
                 'status'      => 'active',
                 'config_json' => $config,
             ]);
@@ -108,9 +105,7 @@ class GitIntegrationController
 
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $existing = Integration::findByOrgAndProvider($this->db, $orgId, $provider);
-
         if ($existing) {
             Integration::update($this->db, (int) $existing['id'], ['status' => 'inactive']);
         }
@@ -137,9 +132,7 @@ class GitIntegrationController
 
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $existing = Integration::findByOrgAndProvider($this->db, $orgId, $provider);
-
         if (!$existing) {
             $_SESSION['flash_error'] = ucfirst($provider) . ' is not connected.';
             $this->response->redirect('/app/admin/integrations');
@@ -149,11 +142,9 @@ class GitIntegrationController
         $newSecret = bin2hex(random_bytes(32));
         $config    = json_decode($existing['config_json'] ?? '{}', true) ?: [];
         $config['webhook_secret'] = $newSecret;
-
         Integration::update($this->db, (int) $existing['id'], [
             'config_json' => json_encode($config),
         ]);
-
         $_SESSION['flash_message'] = ucfirst($provider) . ' webhook secret regenerated. Update your repository webhook settings with the new secret.';
         $this->response->redirect('/app/admin/integrations');
     }
@@ -176,9 +167,7 @@ class GitIntegrationController
 
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $existing = Integration::findByOrgAndProvider($this->db, $orgId, $provider);
-
         if (!$existing) {
             $this->response->json(['error' => ucfirst($provider) . ' is not connected.'], 404);
             return;
@@ -186,7 +175,6 @@ class GitIntegrationController
 
         $config = json_decode($existing['config_json'] ?? '{}', true) ?: [];
         $secret = $config['webhook_secret'] ?? '';
-
         if ($secret === '') {
             $this->response->json(['error' => 'No secret set.'], 404);
             return;

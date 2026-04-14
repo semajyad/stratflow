@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HealthController
  *
@@ -22,11 +23,11 @@ use StratFlow\Core\Response;
 
 class HealthController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
+    protected array $config;
 
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {

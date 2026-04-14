@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DriftDetectionService
  *
@@ -31,7 +32,6 @@ class DriftDetectionService
 
     private Database $db;
     private ?GeminiService $gemini;
-
     public function __construct(Database $db, ?GeminiService $gemini = null)
     {
         $this->db = $db;
@@ -55,7 +55,6 @@ class DriftDetectionService
     {
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $stories = UserStory::findByProjectId($this->db, $projectId);
-
         $snapshot = [
             'created_at' => date('Y-m-d H:i:s'),
             'work_items' => array_map(fn($item) => [
@@ -71,7 +70,6 @@ class DriftDetectionService
                 'by_parent' => $this->groupStoriesByParent($stories),
             ],
         ];
-
         return StrategicBaseline::create($this->db, [
             'project_id' => $projectId,
             'snapshot_json' => json_encode($snapshot),
@@ -102,16 +100,13 @@ class DriftDetectionService
 
         $snapshot = json_decode($baseline['snapshot_json'], true);
         $drifts = [];
-
-        // Check capacity tripwires
+// Check capacity tripwires
         $capacityDrifts = $this->checkCapacityTripwire($snapshot, $projectId, $capacityThreshold);
         $drifts = array_merge($drifts, $capacityDrifts);
-
-        // Check dependency tripwires
+// Check dependency tripwires
         $depDrifts = $this->checkDependencyTripwire($projectId);
         $drifts = array_merge($drifts, $depDrifts);
-
-        // Create alerts for each drift found
+// Create alerts for each drift found
         foreach ($drifts as $drift) {
             DriftAlert::create($this->db, [
                 'project_id' => $projectId,
@@ -145,18 +140,16 @@ class DriftDetectionService
         $currentStories = UserStory::findByProjectId($this->db, $projectId);
         $currentByParent = $this->groupStoriesByParent($currentStories);
         $baselineByParent = $snapshot['stories']['by_parent'] ?? [];
-
         $alerts = [];
-
         foreach ($currentByParent as $parentId => $current) {
             $baseline = $baselineByParent[$parentId] ?? null;
             if (!$baseline) {
-                continue; // New parent, not a drift
+                continue;
+        // New parent, not a drift
             }
 
             $baselineSize = $baseline['total_size'];
             $currentSize = $current['total_size'];
-
             if ($baselineSize > 0) {
                 $growth = ($currentSize - $baselineSize) / $baselineSize;
                 if ($growth > $threshold) {
@@ -171,8 +164,7 @@ class DriftDetectionService
                             'growth_percent' => round($growth * 100, 1),
                         ],
                     ];
-
-                    // Flag the parent work item for review
+                // Flag the parent work item for review
                     HLWorkItem::update($this->db, (int) $parentId, ['requires_review' => 1]);
                 }
             }
@@ -198,7 +190,6 @@ class DriftDetectionService
     {
         $stories = UserStory::findByProjectId($this->db, $projectId);
         $alerts = [];
-
         $storyMap = [];
         foreach ($stories as $story) {
             $storyMap[$story['id']] = $story;
@@ -254,16 +245,12 @@ class DriftDetectionService
             return null;
         }
 
-        $prompt = str_replace(
-            ['{okrs}', '{story_title}', '{story_description}'],
-            [$okrs, $storyTitle, $storyDescription],
-            DriftPrompt::ALIGNMENT_PROMPT
-        );
-
+        $prompt = str_replace(['{okrs}', '{story_title}', '{story_description}'], [$okrs, $storyTitle, $storyDescription], DriftPrompt::ALIGNMENT_PROMPT);
         try {
             return $this->gemini->generateJson($prompt, '');
         } catch (\RuntimeException $e) {
-            return null; // Don't block on AI failures
+            return null;
+        // Don't block on AI failures
         }
     }
 

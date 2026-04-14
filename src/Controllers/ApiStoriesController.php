@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ApiStoriesController
  *
@@ -33,13 +34,11 @@ class ApiStoriesController
 {
     /** Allowed status values (mirrors user_stories.status ENUM) */
     private const ALLOWED_STATUSES = ['backlog', 'in_progress', 'in_review', 'done'];
-
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -64,13 +63,8 @@ class ApiStoriesController
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
         $orgId  = (int) $user['org_id'];
-
-        // Read team fresh from DB — principal/session may predate migration 032
-        $teamRow = $this->db->query(
-            'SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
-            [':id' => $userId, ':org_id' => $orgId]
-        )->fetch();
-
+// Read team fresh from DB — principal/session may predate migration 032
+        $teamRow = $this->db->query('SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1', [':id' => $userId, ':org_id' => $orgId])->fetch();
         $this->json([
             'id'     => $userId,
             'name'   => $user['name'] ?? ($user['full_name'] ?? ''),
@@ -90,13 +84,10 @@ class ApiStoriesController
     {
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
-
         $body   = $this->request->json();
         $team   = isset($body['team']) ? trim((string) $body['team']) : null;
         $team   = ($team !== null && $team !== '') ? $team : null;
-
         User::update($this->db, $userId, ['team' => $team]);
-
         $this->json(['team' => $team]);
     }
 
@@ -118,17 +109,14 @@ class ApiStoriesController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $userId = (int) $user['id'];
-
         $mine      = $this->request->get('mine') === '1';
         $limitRaw  = (int) $this->request->get('limit', '50');
         $limit     = min(max($limitRaw, 1), 200);
         $projectId = (int) $this->request->get('project_id', '0');
-
-        // Build WHERE clauses
+// Build WHERE clauses
         $where  = ['p.org_id = :org_id'];
         $params = [':org_id' => $orgId];
         $this->appendProjectVisibilityConstraint($where, $params, $user, 'p');
-
         if ($mine) {
             $where[]          = 'us.assignee_user_id = :user_id';
             $params[':user_id'] = $userId;
@@ -160,19 +148,14 @@ class ApiStoriesController
         }
 
         $whereClause = implode(' AND ', $where);
-
-        $rows = $this->db->query(
-            "SELECT us.id, us.title, us.status, us.size, us.assignee_user_id,
+        $rows = $this->db->query("SELECT us.id, us.title, us.status, us.size, us.assignee_user_id,
                     p.id AS project_id, p.name AS project_name,
                     us.updated_at
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
              WHERE {$whereClause}
              ORDER BY us.priority_number ASC
-             LIMIT :lim",
-            array_merge($params, [':lim' => $limit])
-        )->fetchAll();
-
+             LIMIT :lim", array_merge($params, [':lim' => $limit]))->fetchAll();
         $data = array_map(fn($r) => [
             'id'         => (int) $r['id'],
             'sf_ref'     => 'SF-' . $r['id'],
@@ -182,7 +165,6 @@ class ApiStoriesController
             'project'    => ['id' => (int) $r['project_id'], 'name' => $r['project_name']],
             'updated_at' => $r['updated_at'],
         ], $rows);
-
         $this->json(['data' => $data, 'count' => count($data)]);
     }
 
@@ -205,9 +187,7 @@ class ApiStoriesController
         $user = $this->auth->user();
         $orgId = (int) $this->auth->orgId();
         $storyId = (int) $id;
-
-        $story = $this->db->query(
-            "SELECT us.*,
+        $story = $this->db->query("SELECT us.*,
                     p.name  AS project_name,
                     p.org_id AS project_org_id,
                     hw.title AS parent_title,
@@ -217,10 +197,7 @@ class ApiStoriesController
              JOIN projects p  ON p.id  = us.project_id
              LEFT JOIN hl_work_items hw ON hw.id = us.parent_hl_item_id
              LEFT JOIN users u ON u.id = us.assignee_user_id
-             WHERE us.id = :id",
-            [':id' => $storyId]
-        )->fetch();
-
+             WHERE us.id = :id", [':id' => $storyId])->fetch();
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
             return;
@@ -232,26 +209,18 @@ class ApiStoriesController
         }
 
         // Current sprint
-        $sprint = $this->db->query(
-            "SELECT sp.id, sp.name, sp.start_date, sp.end_date
+        $sprint = $this->db->query("SELECT sp.id, sp.name, sp.start_date, sp.end_date
              FROM sprint_stories ss
              JOIN sprints sp ON sp.id = ss.sprint_id
              WHERE ss.user_story_id = :sid
              ORDER BY sp.start_date DESC
-             LIMIT 1",
-            [':sid' => $storyId]
-        )->fetch() ?: null;
-
-        // Git links (last 10) — columns match migration 018 schema
-        $gitLinks = $this->db->query(
-            "SELECT ref_type, ref_url, ref_label, status, author, created_at
+             LIMIT 1", [':sid' => $storyId])->fetch() ?: null;
+// Git links (last 10) — columns match migration 018 schema
+        $gitLinks = $this->db->query("SELECT ref_type, ref_url, ref_label, status, author, created_at
              FROM story_git_links
              WHERE local_type = 'user_story' AND local_id = :sid
              ORDER BY created_at DESC
-             LIMIT 10",
-            [':sid' => $storyId]
-        )->fetchAll();
-
+             LIMIT 10", [':sid' => $storyId])->fetchAll();
         $this->json(['data' => [
             'id'                  => (int) $story['id'],
             'sf_ref'              => 'SF-' . $story['id'],
@@ -310,27 +279,18 @@ class ApiStoriesController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $storyId = (int) $id;
-
         $body      = $this->request->json();
         $newStatus = trim((string) ($body['status'] ?? ''));
-
         if (!in_array($newStatus, self::ALLOWED_STATUSES, true)) {
-            $this->jsonError(
-                'Invalid status. Allowed: ' . implode(', ', self::ALLOWED_STATUSES),
-                422
-            );
+            $this->jsonError('Invalid status. Allowed: ' . implode(', ', self::ALLOWED_STATUSES), 422);
             return;
         }
 
         // Verify story exists and belongs to this org
-        $story = $this->db->query(
-            "SELECT us.id, us.status, us.project_id, p.org_id AS project_org_id
+        $story = $this->db->query("SELECT us.id, us.status, us.project_id, p.org_id AS project_org_id
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
-             WHERE us.id = :id",
-            [':id' => $storyId]
-        )->fetch();
-
+             WHERE us.id = :id", [':id' => $storyId])->fetch();
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
             return;
@@ -342,19 +302,9 @@ class ApiStoriesController
         }
 
         UserStory::update($this->db, $storyId, ['status' => $newStatus]);
-
-        // Sync status transition to Jira non-fatally
+// Sync status transition to Jira non-fatally
         $this->syncToJira($storyId, null, $newStatus);
-
-        AuditLogger::log(
-            $this->db,
-            (int) $user['id'],
-            AuditLogger::ADMIN_ACTION,
-            $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-            $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'story_status_updated', 'story_id' => $storyId, 'from' => $story['status'], 'to' => $newStatus, 'source' => 'mcp']
-        );
-
+        AuditLogger::log($this->db, (int) $user['id'], AuditLogger::ADMIN_ACTION, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0', $_SERVER['HTTP_USER_AGENT'] ?? '', ['action' => 'story_status_updated', 'story_id' => $storyId, 'from' => $story['status'], 'to' => $newStatus, 'source' => 'mcp']);
         $this->json(['data' => [
             'id'     => $storyId,
             'sf_ref' => 'SF-' . $storyId,
@@ -377,33 +327,23 @@ class ApiStoriesController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $userId = (int) $user['id'];
-
-        // Always read team fresh from DB — the principal/session may be stale
+// Always read team fresh from DB — the principal/session may be stale
         // (e.g. session set before the team column was added, or cached before saveTeam ran).
-        $teamRow = $this->db->query(
-            'SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
-            [':id' => $userId, ':org_id' => $orgId]
-        )->fetch();
+        $teamRow = $this->db->query('SELECT team FROM users WHERE id = :id AND org_id = :org_id LIMIT 1', [':id' => $userId, ':org_id' => $orgId])->fetch();
         $team = trim((string) ($teamRow['team'] ?? ''));
-
         if ($team === '') {
-            $this->jsonError(
-                'No team set on your account. Set your team at /app/account/tokens.',
-                422
-            );
+            $this->jsonError('No team set on your account. Set your team at /app/account/tokens.', 422);
             return;
         }
 
         $limitRaw = (int) $this->request->get('limit', '50');
         $limit    = min(max($limitRaw, 1), 200);
-
-        // Optional status filter
+// Optional status filter
         $statusRaw = $this->request->get('status', '');
-        // Match team on the story directly OR inherited from parent work item
+// Match team on the story directly OR inherited from parent work item
         $where  = ['p.org_id = :org_id', 'COALESCE(us.team_assigned, hw.team_assigned) = :team'];
         $params = [':org_id' => $orgId, ':team' => $team];
         $this->appendProjectVisibilityConstraint($where, $params, $user, 'p');
-
         if ($statusRaw !== '') {
             $requested = array_filter(array_map('trim', explode(',', $statusRaw)));
             $valid = array_intersect($requested, self::ALLOWED_STATUSES);
@@ -417,9 +357,7 @@ class ApiStoriesController
         }
 
         $whereClause = implode(' AND ', $where);
-
-        $rows = $this->db->query(
-            "SELECT us.id, us.title, us.status, us.size, us.assignee_user_id,
+        $rows = $this->db->query("SELECT us.id, us.title, us.status, us.size, us.assignee_user_id,
                     u.full_name AS assignee_name,
                     p.id AS project_id, p.name AS project_name,
                     us.updated_at
@@ -429,10 +367,7 @@ class ApiStoriesController
              LEFT JOIN users u ON u.id = us.assignee_user_id
              WHERE {$whereClause}
              ORDER BY us.priority_number ASC
-             LIMIT :lim",
-            array_merge($params, [':lim' => $limit])
-        )->fetchAll();
-
+             LIMIT :lim", array_merge($params, [':lim' => $limit]))->fetchAll();
         $data = array_map(fn($r) => [
             'id'       => (int) $r['id'],
             'sf_ref'   => 'SF-' . $r['id'],
@@ -443,7 +378,6 @@ class ApiStoriesController
             'project'  => ['id' => (int) $r['project_id'], 'name' => $r['project_name']],
             'updated_at' => $r['updated_at'],
         ], $rows);
-
         $this->json(['team' => $team, 'data' => $data, 'count' => count($data)]);
     }
 
@@ -463,15 +397,10 @@ class ApiStoriesController
         $orgId   = (int) $user['org_id'];
         $userId  = (int) $user['id'];
         $storyId = (int) $id;
-
-        $story = $this->db->query(
-            "SELECT us.id, us.title, us.project_id, p.org_id AS project_org_id
+        $story = $this->db->query("SELECT us.id, us.title, us.project_id, p.org_id AS project_org_id
              FROM user_stories us
              JOIN projects p ON p.id = us.project_id
-             WHERE us.id = :id",
-            [':id' => $storyId]
-        )->fetch();
-
+             WHERE us.id = :id", [':id' => $storyId])->fetch();
         if (!$story || (int) $story['project_org_id'] !== $orgId) {
             $this->jsonError('Story not found or not in your organisation', 404);
             return;
@@ -484,10 +413,7 @@ class ApiStoriesController
 
         // Build update payload — guard columns that may not exist on all deployments
         $updateData = ['status' => 'in_progress'];
-        $storyRow = $this->db->query(
-            'SELECT * FROM user_stories WHERE id = :id LIMIT 1',
-            [':id' => $storyId]
-        )->fetch();
+        $storyRow = $this->db->query('SELECT * FROM user_stories WHERE id = :id LIMIT 1', [':id' => $storyId])->fetch();
         if ($storyRow && array_key_exists('assignee_user_id', $storyRow)) {
             $updateData['assignee_user_id'] = $userId;
         }
@@ -502,16 +428,7 @@ class ApiStoriesController
         // Sync assignee + status to Jira non-fatally
         $jiraAccountId = $user['jira_account_id'] ?? null;
         $this->syncToJira($storyId, $jiraAccountId, 'in_progress');
-
-        AuditLogger::log(
-            $this->db,
-            $userId,
-            AuditLogger::ADMIN_ACTION,
-            $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-            $_SERVER['HTTP_USER_AGENT'] ?? '',
-            ['action' => 'story_claimed', 'story_id' => $storyId, 'assignee_user_id' => $userId, 'source' => 'mcp']
-        );
-
+        AuditLogger::log($this->db, $userId, AuditLogger::ADMIN_ACTION, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0', $_SERVER['HTTP_USER_AGENT'] ?? '', ['action' => 'story_claimed', 'story_id' => $storyId, 'assignee_user_id' => $userId, 'source' => 'mcp']);
         $this->json(['data' => [
             'id'       => $storyId,
             'sf_ref'   => 'SF-' . $storyId,
@@ -584,12 +501,8 @@ class ApiStoriesController
      */
     private function storyJiraKey(int $storyId): ?string
     {
-        $row = $this->db->query(
-            "SELECT external_key FROM sync_mappings
-             WHERE local_type = 'user_story' AND local_id = :id LIMIT 1",
-            [':id' => $storyId]
-        )->fetch();
-
+        $row = $this->db->query("SELECT external_key FROM sync_mappings
+             WHERE local_type = 'user_story' AND local_id = :id LIMIT 1", [':id' => $storyId])->fetch();
         return ($row && $row['external_key'] !== '') ? $row['external_key'] : null;
     }
 
@@ -621,7 +534,6 @@ class ApiStoriesController
         try {
             $jira     = $this->jiraService();
             $jiraKey  = $this->storyJiraKey($storyId);
-
             if ($jira === null || $jiraKey === null) {
                 return;
             }
@@ -637,7 +549,7 @@ class ApiStoriesController
                 }
             }
         } catch (\Throwable) {
-            // Jira sync is best-effort — never block the MCP response
+        // Jira sync is best-effort — never block the MCP response
         }
     }
 }

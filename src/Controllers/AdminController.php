@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AdminController
  *
@@ -32,12 +33,11 @@ use StratFlow\Services\StripeService;
 
 class AdminController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -60,18 +60,18 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $userCount  = User::countByOrgId($this->db, $orgId);
         $seatLimit  = Subscription::getSeatLimit($this->db, $orgId);
         $teams      = Team::findByOrgId($this->db, $orgId);
         $sub        = Subscription::findByOrgId($this->db, $orgId);
-
-        // Recent activity for this org
+// Recent activity for this org
         $recentActivity = [];
         try {
             $recentActivity = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, null);
             $recentActivity = array_slice($recentActivity, 0, 8);
-        } catch (\Throwable $e) { /* non-critical */ }
+        } catch (\Throwable $e) {
+        /* non-critical */
+        }
 
         $this->response->render('admin/index', [
             'user'            => $user,
@@ -84,7 +84,6 @@ class AdminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -99,33 +98,25 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $users     = User::findByOrgId($this->db, $orgId);
         $seatLimit = Subscription::getSeatLimit($this->db, $orgId);
         $userCount = User::countByOrgId($this->db, $orgId);
         $membershipCounts = [];
-
         if ($this->db->tableExists('project_memberships')) {
-            $rows = $this->db->query(
-                "SELECT user_id, COUNT(*) AS membership_count
+            $rows = $this->db->query("SELECT user_id, COUNT(*) AS membership_count
                  FROM project_memberships pm
                  JOIN projects p ON p.id = pm.project_id
                  WHERE p.org_id = :org_id
-                 GROUP BY user_id",
-                [':org_id' => $orgId]
-            )->fetchAll();
+                 GROUP BY user_id", [':org_id' => $orgId])->fetchAll();
             foreach ($rows as $row) {
                 $membershipCounts[(int) $row['user_id']] = (int) $row['membership_count'];
             }
         } elseif ($this->db->tableExists('project_members')) {
-            $rows = $this->db->query(
-                "SELECT user_id, COUNT(*) AS membership_count
+            $rows = $this->db->query("SELECT user_id, COUNT(*) AS membership_count
                  FROM project_members pm
                  JOIN projects p ON p.id = pm.project_id
                  WHERE p.org_id = :org_id
-                 GROUP BY user_id",
-                [':org_id' => $orgId]
-            )->fetchAll();
+                 GROUP BY user_id", [':org_id' => $orgId])->fetchAll();
             foreach ($rows as $row) {
                 $membershipCounts[(int) $row['user_id']] = (int) $row['membership_count'];
             }
@@ -133,19 +124,16 @@ class AdminController
 
         foreach ($users as &$managedUser) {
             $managedUser['account_type'] = PermissionService::accountTypeFor($managedUser);
-            $managedUser['access_summary'] = PermissionService::describeAccessSummary(
-                $managedUser,
-                $this->db,
-                $membershipCounts[(int) $managedUser['id']] ?? 0
-            );
+            $managedUser['access_summary'] = PermissionService::describeAccessSummary($managedUser, $this->db, $membershipCounts[(int) $managedUser['id']] ?? 0);
         }
         unset($managedUser);
-
         $jiraConnected = false;
         try {
             $jiraInteg = \StratFlow\Models\Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
             $jiraConnected = $jiraInteg && ($jiraInteg['status'] ?? '') !== 'disconnected';
-        } catch (\Throwable) { /* non-critical */ }
+        } catch (\Throwable) {
+        /* non-critical */
+        }
 
         $this->response->render('admin/users', [
             'user'             => $user,
@@ -158,7 +146,6 @@ class AdminController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -173,11 +160,9 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Check seat limit
+// Check seat limit
         $currentCount = User::countByOrgId($this->db, $orgId);
         $seatLimit    = Subscription::getSeatLimit($this->db, $orgId);
-
         if ($currentCount >= $seatLimit) {
             $_SESSION['flash_error'] = "Seat limit reached ({$seatLimit}). Upgrade your plan to add more users.";
             $this->response->redirect('/app/admin/users');
@@ -187,8 +172,7 @@ class AdminController
         $email    = trim((string) $this->request->post('email', ''));
         $fullName = trim((string) $this->request->post('full_name', ''));
         $role     = (string) $this->request->post('role', 'user');
-
-        // Validate
+// Validate
         if ($fullName === '' || $email === '') {
             $_SESSION['flash_error'] = 'Name and email are required.';
             $this->response->redirect('/app/admin/users');
@@ -204,8 +188,7 @@ class AdminController
         $isProjectAdmin = ($role === 'org_admin')
             ? 1
             : ($this->request->post('is_project_admin') === '1' ? 1 : 0);
-
-        // Check email uniqueness
+// Check email uniqueness
         $existing = User::findByEmail($this->db, $email);
         if ($existing) {
             $_SESSION['flash_error'] = 'A user with that email already exists.';
@@ -215,10 +198,8 @@ class AdminController
 
         // Generate a random password hash (user will never know this password)
         $randomPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
-
         $jiraAccountId   = trim((string) $this->request->post('jira_account_id', '')) ?: null;
         $jiraDisplayName = trim((string) $this->request->post('jira_display_name', '')) ?: null;
-
         $newUserId = User::create($this->db, [
             'org_id'               => $orgId,
             'full_name'            => $fullName,
@@ -232,20 +213,16 @@ class AdminController
             'jira_account_id'      => $jiraAccountId,
             'jira_display_name'    => $jiraDisplayName,
         ]);
-
-        // Create set_password token and send welcome email
+// Create set_password token and send welcome email
         $token = PasswordToken::create($this->db, $newUserId, 'set_password');
         $setPasswordUrl = rtrim($this->config['app']['url'], '/') . '/set-password/' . $token;
-
         $emailService = new EmailService($this->config);
         $emailService->sendWelcome($email, $fullName, $setPasswordUrl);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_CREATED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'new_user_id' => $newUserId,
             'email'       => $email,
             'role'        => $role,
         ]);
-
         $_SESSION['flash_message'] = 'User created. A welcome email has been sent to ' . $email . '.';
         $this->response->redirect('/app/admin/users');
     }
@@ -262,7 +239,6 @@ class AdminController
         $user    = $this->auth->user();
         $orgId   = (int) $user['org_id'];
         $userId  = (int) $id;
-
         $target = User::findById($this->db, $userId);
         if (!$target || (int) $target['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'User not found.';
@@ -274,7 +250,6 @@ class AdminController
         $email    = trim((string) $this->request->post('email', ''));
         $role     = (string) $this->request->post('role', 'user');
         $password = (string) $this->request->post('password', '');
-
         if ($fullName === '' || $email === '') {
             $_SESSION['flash_error'] = 'Name and email are required.';
             $this->response->redirect('/app/admin/users');
@@ -298,10 +273,8 @@ class AdminController
         $isProjectAdmin = ($role === 'org_admin')
             ? 1
             : ($this->request->post('is_project_admin') === '1' ? 1 : 0);
-
         $jiraAccountId   = trim((string) $this->request->post('jira_account_id', '')) ?: null;
         $jiraDisplayName = trim((string) $this->request->post('jira_display_name', '')) ?: null;
-
         $data = [
             'full_name'            => $fullName,
             'email'                => $email,
@@ -313,8 +286,7 @@ class AdminController
             'jira_account_id'      => $jiraAccountId,
             'jira_display_name'    => $jiraDisplayName,
         ];
-
-        // Enforce password policy if a new password is provided
+// Enforce password policy if a new password is provided
         if ($password !== '') {
             $policyErrors = PasswordPolicy::validate($password);
             if (!empty($policyErrors)) {
@@ -328,10 +300,8 @@ class AdminController
 
         // Track role changes for audit
         $oldRole = $target['role'];
-
         User::update($this->db, $userId, $data);
-
-        // Audit log: role change
+// Audit log: role change
         if ($role !== $oldRole) {
             AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
                 'target_user_id' => $userId,
@@ -364,7 +334,6 @@ class AdminController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $userId = (int) $id;
-
         $target = User::findById($this->db, $userId);
         if (!$target || (int) $target['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'User not found.';
@@ -373,12 +342,10 @@ class AdminController
         }
 
         User::reactivate($this->db, $userId);
-
         \StratFlow\Services\AuditLogger::log($this->db, (int) $user['id'], \StratFlow\Services\AuditLogger::USER_ROLE_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'target_user_id' => $userId,
             'action'         => 'reactivated',
         ]);
-
         $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" has been reactivated.';
         $this->response->redirect('/app/admin/users');
     }
@@ -388,8 +355,7 @@ class AdminController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $userId = (int) $id;
-
-        // Prevent self-deletion
+// Prevent self-deletion
         if ($userId === (int) $user['id']) {
             $_SESSION['flash_error'] = 'You cannot deactivate your own account.';
             $this->response->redirect('/app/admin/users');
@@ -404,12 +370,10 @@ class AdminController
         }
 
         User::deactivate($this->db, $userId);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::USER_DELETED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'target_user_id' => $userId,
             'email'          => $target['email'],
         ]);
-
         $_SESSION['flash_message'] = 'User "' . $target['full_name'] . '" has been deactivated.';
         $this->response->redirect('/app/admin/users');
     }
@@ -425,11 +389,9 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $teams = Team::findByOrgId($this->db, $orgId);
         $users = User::findByOrgId($this->db, $orgId);
-
-        // Load members for each team
+// Load members for each team
         $teamMembers = [];
         foreach ($teams as $team) {
             $teamMembers[(int) $team['id']] = TeamMember::findByTeamId($this->db, (int) $team['id']);
@@ -444,7 +406,6 @@ class AdminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -455,11 +416,9 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $name        = trim((string) $this->request->post('name', ''));
         $description = trim((string) $this->request->post('description', ''));
         $capacity    = (int) $this->request->post('capacity', '0');
-
         if ($name === '') {
             $_SESSION['flash_error'] = 'Team name is required.';
             $this->response->redirect('/app/admin/teams');
@@ -472,7 +431,6 @@ class AdminController
             'description' => $description,
             'capacity'    => $capacity,
         ]);
-
         $_SESSION['flash_message'] = 'Team "' . $name . '" created successfully.';
         $this->response->redirect('/app/admin/teams');
     }
@@ -487,7 +445,6 @@ class AdminController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $teamId = (int) $id;
-
         $team = Team::findById($this->db, $teamId);
         if (!$team || (int) $team['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'Team not found.';
@@ -498,7 +455,6 @@ class AdminController
         $name        = trim((string) $this->request->post('name', ''));
         $description = trim((string) $this->request->post('description', ''));
         $capacity    = (int) $this->request->post('capacity', '0');
-
         if ($name === '') {
             $_SESSION['flash_error'] = 'Team name is required.';
             $this->response->redirect('/app/admin/teams');
@@ -510,7 +466,6 @@ class AdminController
             'description' => $description,
             'capacity'    => $capacity,
         ]);
-
         $_SESSION['flash_message'] = 'Team "' . $name . '" updated successfully.';
         $this->response->redirect('/app/admin/teams');
     }
@@ -525,7 +480,6 @@ class AdminController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $teamId = (int) $id;
-
         $team = Team::findById($this->db, $teamId);
         if (!$team || (int) $team['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'Team not found.';
@@ -534,7 +488,6 @@ class AdminController
         }
 
         Team::delete($this->db, $teamId);
-
         $_SESSION['flash_message'] = 'Team "' . $team['name'] . '" deleted.';
         $this->response->redirect('/app/admin/teams');
     }
@@ -548,8 +501,7 @@ class AdminController
         $orgId  = (int) $user['org_id'];
         $teamId = (int) $this->request->post('team_id', '0');
         $userId = (int) $this->request->post('user_id', '0');
-
-        // Verify team belongs to org
+// Verify team belongs to org
         $team = Team::findById($this->db, $teamId);
         if (!$team || (int) $team['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'Team not found.';
@@ -566,7 +518,6 @@ class AdminController
         }
 
         TeamMember::addMember($this->db, $teamId, $userId);
-
         $_SESSION['flash_message'] = $targetUser['full_name'] . ' added to ' . $team['name'] . '.';
         $this->response->redirect('/app/admin/teams');
     }
@@ -580,8 +531,7 @@ class AdminController
         $orgId  = (int) $user['org_id'];
         $teamId = (int) $this->request->post('team_id', '0');
         $userId = (int) $this->request->post('user_id', '0');
-
-        // Verify team belongs to org
+// Verify team belongs to org
         $team = Team::findById($this->db, $teamId);
         if (!$team || (int) $team['org_id'] !== $orgId) {
             $_SESSION['flash_error'] = 'Team not found.';
@@ -590,7 +540,6 @@ class AdminController
         }
 
         TeamMember::removeMember($this->db, $teamId, $userId);
-
         $_SESSION['flash_message'] = 'Member removed from ' . $team['name'] . '.';
         $this->response->redirect('/app/admin/teams');
     }
@@ -613,16 +562,13 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $org = Organisation::findById($this->db, $orgId);
         $sub = Subscription::findByOrgId($this->db, $orgId);
         $seatLimit = Subscription::getSeatLimit($this->db, $orgId);
-
-        // Count active users
+// Count active users
         $activeUsers = User::findByOrgId($this->db, $orgId);
         $activeCount = count(array_filter($activeUsers, fn($u) => (bool) $u['is_active']));
-
-        // Fetch live Stripe subscription details if available (only for Stripe-billed orgs)
+// Fetch live Stripe subscription details if available (only for Stripe-billed orgs)
         $stripeDetails = null;
         $isInvoiceBilling = ($sub === null || ($sub['billing_method'] ?? 'invoice') === 'invoice'
                              || str_starts_with($sub['stripe_subscription_id'] ?? '', 'manual_'));
@@ -631,24 +577,23 @@ class AdminController
                 $stripe = $this->makeStripe();
                 $stripeDetails = $stripe->getSubscription($sub['stripe_subscription_id']);
             } catch (\Throwable $e) {
-                // Non-critical — show local data
+    // Non-critical — show local data
             }
         }
 
         $hasStripeCustomer = !empty($org['stripe_customer_id']);
-
-        // Check whether a Stripe price is configured for this org's plan type
+// Check whether a Stripe price is configured for this org's plan type
         $planType = $sub['plan_type'] ?? 'product';
         $hasStripePriceConfig = !empty($this->config['stripe']['price_' . $planType] ?? '');
         if (!$hasStripePriceConfig && !empty($this->config['stripe']['price_product'] ?? '')) {
-            $hasStripePriceConfig = true; // fall back to product price
+            $hasStripePriceConfig = true;
+        // fall back to product price
         }
 
         // Billing contact from org settings_json
         $orgSettings    = json_decode($org['settings_json'] ?? '{}', true) ?? [];
         $billingContact = $orgSettings['billing_contact'] ?? [];
-
-        // Load Stripe invoices and subscriptions for inline display
+// Load Stripe invoices and subscriptions for inline display
         $stripeInvoices       = [];
         $stripeSubscriptions  = [];
         if ($hasStripeCustomer) {
@@ -656,7 +601,8 @@ class AdminController
                 $stripe = $this->makeStripe();
                 $stripeInvoices      = $stripe->listInvoices($org['stripe_customer_id']);
                 $stripeSubscriptions = $stripe->listSubscriptions($org['stripe_customer_id']);
-            } catch (\Throwable) {}
+            } catch (\Throwable) {
+            }
         }
 
         // Xero integration status for billing page
@@ -665,14 +611,10 @@ class AdminController
         $xeroTenantName  = $xeroConnected
             ? (json_decode($xeroIntegration['config_json'] ?? '{}', true)['tenant_name'] ?? 'Xero')
             : null;
-
-        // Track which Stripe invoice IDs have already been pushed to Xero
+// Track which Stripe invoice IDs have already been pushed to Xero
         $pushedToXero = [];
         if ($xeroConnected) {
-            $stmt = $this->db->query(
-                "SELECT reference FROM xero_invoices WHERE org_id = :org_id AND reference IS NOT NULL",
-                [':org_id' => $orgId]
-            );
+            $stmt = $this->db->query("SELECT reference FROM xero_invoices WHERE org_id = :org_id AND reference IS NOT NULL", [':org_id' => $orgId]);
             $pushedToXero = array_column($stmt->fetchAll(), 'reference');
         }
 
@@ -698,7 +640,6 @@ class AdminController
             'flash_message'       => $_SESSION['flash_message'] ?? null,
             'flash_error'         => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -710,7 +651,6 @@ class AdminController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $org   = Organisation::findById($this->db, $orgId);
-
         if (!$org || empty($org['stripe_customer_id'])) {
             $_SESSION['flash_error'] = 'No billing account linked. Contact support.';
             $this->response->redirect('/app/admin/billing');
@@ -720,18 +660,16 @@ class AdminController
         try {
             $stripe = $this->makeStripe();
             $appUrl = rtrim($this->config['app']['url'] ?? '', '/');
-            $portalUrl = $stripe->createPortalSession(
-                $org['stripe_customer_id'],
-                $appUrl . '/app/admin/billing'
-            );
+            $portalUrl = $stripe->createPortalSession($org['stripe_customer_id'], $appUrl . '/app/admin/billing');
 
             \StratFlow\Services\AuditLogger::log(
-                $this->db, (int) $user['id'],
+                $this->db,
+                (int) $user['id'],
                 \StratFlow\Services\AuditLogger::ADMIN_ACTION,
-                $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+                $this->request->ip(),
+                $_SERVER['HTTP_USER_AGENT'] ?? '',
                 ['action' => 'billing_portal_access']
             );
-
             $this->response->redirect($portalUrl);
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Could not open billing portal: ' . $e->getMessage();
@@ -747,18 +685,14 @@ class AdminController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $org   = Organisation::findById($this->db, $orgId);
-
         $name  = trim((string) $this->request->post('billing_contact_name', ''));
         $email = trim((string) $this->request->post('billing_contact_email', ''));
-
         $settings = json_decode($org['settings_json'] ?? '{}', true) ?? [];
         $settings['billing_contact'] = [
             'name'  => $name,
             'email' => $email,
         ];
-
         Organisation::update($this->db, $orgId, ['settings_json' => json_encode($settings)]);
-
         $_SESSION['flash_message'] = 'Billing contact saved.';
         $this->response->redirect('/app/admin/billing');
     }
@@ -773,7 +707,6 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $sub = Subscription::findByOrgId($this->db, $orgId);
         if (!$sub) {
             $_SESSION['flash_error'] = 'No active subscription found.';
@@ -793,18 +726,18 @@ class AdminController
         Subscription::updateSeatLimit($this->db, $orgId, $newLimit);
 
         \StratFlow\Services\AuditLogger::log(
-            $this->db, (int) $user['id'],
+            $this->db,
+            (int) $user['id'],
             \StratFlow\Services\AuditLogger::ADMIN_ACTION,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
             ['action' => 'seats_purchased_invoice', 'org_id' => $orgId,
              'seats_added' => $seatsToAdd, 'new_limit' => $newLimit]
         );
-
         $pricePerSeat = (int) ($sub['price_per_seat_cents'] ?? 0);
         $addedCost    = $pricePerSeat > 0
             ? ' Your next invoice will include an additional $' . number_format(($pricePerSeat * $seatsToAdd) / 100, 2) . '.'
             : '';
-
         $_SESSION['flash_message'] = "{$seatsToAdd} seat" . ($seatsToAdd > 1 ? 's' : '') .
             " added. New seat limit: {$newLimit}.{$addedCost}";
         $this->response->redirect('/app/admin/billing');
@@ -820,19 +753,15 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $org = Organisation::findById($this->db, $orgId);
         $sub = Subscription::findByOrgId($this->db, $orgId);
-
         $quantity = max(1, (int) $this->request->post('seat_quantity', 1));
         $planType = $sub['plan_type'] ?? 'product';
-
         $priceMap = [
             'product'     => $this->config['stripe']['price_product']     ?? '',
             'consultancy' => $this->config['stripe']['price_consultancy'] ?? '',
         ];
         $priceId = $priceMap[$planType] ?? ($priceMap['product'] ?? '');
-
         if ($priceId === '') {
             $_SESSION['flash_error'] = 'No Stripe price configured for this plan. Contact support.';
             $this->response->redirect('/app/admin/billing');
@@ -843,18 +772,18 @@ class AdminController
         $successUrl = $appUrl . '/app/admin/billing?seats_purchased=1';
         $cancelUrl  = $appUrl . '/app/admin/billing';
         $customerId = !empty($org['stripe_customer_id']) ? $org['stripe_customer_id'] : null;
-
         try {
             $stripe  = $this->makeStripe();
             $session = $stripe->createSeatCheckout($priceId, $quantity, $successUrl, $cancelUrl, $customerId);
 
             \StratFlow\Services\AuditLogger::log(
-                $this->db, (int) $user['id'],
+                $this->db,
+                (int) $user['id'],
                 \StratFlow\Services\AuditLogger::ADMIN_ACTION,
-                $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+                $this->request->ip(),
+                $_SERVER['HTTP_USER_AGENT'] ?? '',
                 ['action' => 'stripe_seat_checkout_started', 'org_id' => $orgId, 'quantity' => $quantity]
             );
-
             $this->response->redirect($session->url);
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Could not start checkout: ' . $e->getMessage();
@@ -866,10 +795,8 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $org      = Organisation::findById($this->db, $orgId);
         $invoices = [];
-
         if ($org && !empty($org['stripe_customer_id'])) {
             try {
                 $stripe   = $this->makeStripe();
@@ -886,7 +813,6 @@ class AdminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -899,8 +825,7 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Verify the invoice belongs to this org's Stripe customer
+// Verify the invoice belongs to this org's Stripe customer
         $org = Organisation::findById($this->db, $orgId);
         if (!$org || empty($org['stripe_customer_id'])) {
             $_SESSION['flash_error'] = 'No billing account configured.';
@@ -910,11 +835,9 @@ class AdminController
 
         try {
             $stripe  = $this->makeStripe();
-
-            // Verify the invoice belongs to this org's customer before redirecting
+// Verify the invoice belongs to this org's customer before redirecting
             \Stripe\Stripe::setApiKey($this->config['stripe']['secret_key']);
             $invoice = \Stripe\Invoice::retrieve($id);
-
             if ($invoice->customer !== $org['stripe_customer_id']) {
                 $_SESSION['flash_error'] = 'Invoice not found.';
                 $this->response->redirect('/app/admin/invoices');
@@ -991,9 +914,7 @@ class AdminController
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
         $filterType = $this->request->get('type', '') ?: null;
-
         $logs = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, $filterType);
-
         $eventTypes = [
             \StratFlow\Services\AuditLogger::LOGIN_SUCCESS,
             \StratFlow\Services\AuditLogger::LOGIN_FAILURE,
@@ -1006,7 +927,6 @@ class AdminController
             \StratFlow\Services\AuditLogger::DOCUMENT_UPLOADED,
             \StratFlow\Services\AuditLogger::INTEGRATION_SYNC,
         ];
-
         $this->response->render('admin/audit-logs', [
             'user'          => $user,
             'logs'          => $logs,
@@ -1016,7 +936,6 @@ class AdminController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error'] ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -1030,14 +949,16 @@ class AdminController
         $filterType = $this->request->get('type', '') ?: null;
         $dateFrom   = $this->request->get('from', '') ?: null;
         $dateTo     = $this->request->get('to', '') ?: null;
-
         $logs = \StratFlow\Models\AuditLog::findFiltered($this->db, $orgId, $filterType, $dateFrom, $dateTo);
 
-        \StratFlow\Services\AuditLogger::log($this->db, (int) $user['id'], \StratFlow\Services\AuditLogger::DATA_EXPORT,
-            $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '',
+        \StratFlow\Services\AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            \StratFlow\Services\AuditLogger::DATA_EXPORT,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
             ['type' => 'audit_logs', 'count' => count($logs)]
         );
-
         $csv = fopen('php://temp', 'r+');
         fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details']);
         foreach ($logs as $log) {
@@ -1053,7 +974,6 @@ class AdminController
         rewind($csv);
         $content = stream_get_contents($csv);
         fclose($csv);
-
         $this->response->download($content, 'audit-logs-' . date('Y-m-d') . '.csv', 'text/csv');
     }
 
@@ -1061,10 +981,8 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $org      = Organisation::findById($this->db, $orgId);
         $defaults = $this->getDefaultSettings();
-
         $settings = $defaults;
         if ($org && !empty($org['settings_json'])) {
             $saved = json_decode($org['settings_json'], true);
@@ -1074,7 +992,6 @@ class AdminController
         }
 
         $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
-
         $this->response->render('admin/settings', [
             'user'            => $user,
             'settings'        => $settings,
@@ -1083,7 +1000,6 @@ class AdminController
             'flash_message'   => $_SESSION['flash_message'] ?? null,
             'flash_error'     => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -1097,7 +1013,6 @@ class AdminController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $settings = [
             'personas' => [
                 'agile_product_manager'          => trim((string) $this->request->post('persona_agile_product_manager', '')),
@@ -1121,8 +1036,7 @@ class AdminController
                     ? $this->request->post('quality_enforcement') : 'warn',
             ],
         ];
-
-        // Preserve the existing API key if the form was submitted with a blank field
+// Preserve the existing API key if the form was submitted with a blank field
         // (password inputs render blank for security; blank = "keep current")
         $submittedKey = trim((string) $this->request->post('ai_api_key', ''));
         $org          = Organisation::findById($this->db, $orgId);
@@ -1135,34 +1049,31 @@ class AdminController
             'model'    => trim((string) $this->request->post('ai_model', '')),
             'api_key'  => $submittedKey !== '' ? $submittedKey : ($existing['ai']['api_key'] ?? ''),
         ];
-
-        // Field ordering — submitted as comma-separated key lists
+// Field ordering — submitted as comma-separated key lists
         $validWiFields = ['title','okr_title','okr_description','owner','estimated_sprints','description','acceptance_criteria','kr_hypothesis','git_links'];
         $validStFields = ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'];
-
-        $wiOrder = array_values(array_intersect(
-            array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_work_item', '')))),
-            $validWiFields
-        ));
-        $stOrder = array_values(array_intersect(
-            array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_story', '')))),
-            $validStFields
-        ));
+        $wiOrder = array_values(array_intersect(array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_work_item', '')))), $validWiFields));
+        $stOrder = array_values(array_intersect(array_filter(array_map('trim', explode(',', (string) $this->request->post('field_order_story', '')))), $validStFields));
         // Append any missing fields at the end (safety net)
-        foreach ($validWiFields as $f) { if (!in_array($f, $wiOrder, true)) { $wiOrder[] = $f; } }
-        foreach ($validStFields as $f) { if (!in_array($f, $stOrder, true)) { $stOrder[] = $f; } }
+        foreach ($validWiFields as $f) {
+            if (!in_array($f, $wiOrder, true)) {
+                        $wiOrder[] = $f;
+            }
+        }
+        foreach ($validStFields as $f) {
+            if (!in_array($f, $stOrder, true)) {
+                $stOrder[] = $f;
+            }
+        }
 
         $settings['field_order_work_item'] = $wiOrder;
         $settings['field_order_story']     = $stOrder;
-
         Organisation::update($this->db, $orgId, [
             'settings_json' => json_encode($settings),
         ]);
-
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::SETTINGS_CHANGED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'org_id' => $orgId,
         ]);
-
         $_SESSION['flash_message'] = 'Settings saved successfully.';
         $this->response->redirect('/app/admin/settings');
     }
@@ -1175,8 +1086,7 @@ class AdminController
         $provider = trim((string) $this->request->post('ai_provider', ''));
         $model    = trim((string) $this->request->post('ai_model', ''));
         $apiKey   = trim((string) $this->request->post('ai_api_key', ''));
-
-        // Fall back to org's saved key if none submitted
+// Fall back to org's saved key if none submitted
         if ($apiKey === '') {
             $user  = $this->auth->user();
             $org   = \StratFlow\Models\Organisation::findById($this->db, (int) $user['org_id']);
@@ -1203,7 +1113,6 @@ class AdminController
         }
 
         $resolvedModel = $model ?: 'gemini-3-flash-preview';
-
         try {
             $config = $this->config;
             $config['gemini']['api_key'] = $apiKey ?: ($config['gemini']['api_key'] ?? '');

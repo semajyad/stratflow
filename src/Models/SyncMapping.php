@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SyncMapping Model
  *
@@ -33,14 +34,12 @@ class SyncMapping
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO sync_mappings
+        $db->query("INSERT INTO sync_mappings
                 (integration_id, local_type, local_id, external_id,
                  external_key, external_url, sync_hash, last_synced_at)
              VALUES
                 (:integration_id, :local_type, :local_id, :external_id,
-                 :external_key, :external_url, :sync_hash, NOW())",
-            [
+                 :external_key, :external_url, :sync_hash, NOW())", [
                 ':integration_id' => $data['integration_id'],
                 ':local_type'     => $data['local_type'],
                 ':local_id'       => $data['local_id'],
@@ -48,9 +47,7 @@ class SyncMapping
                 ':external_key'   => $data['external_key'] ?? null,
                 ':external_url'   => $data['external_url'] ?? null,
                 ':sync_hash'      => $data['sync_hash'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -69,20 +66,16 @@ class SyncMapping
      */
     public static function findByLocalItem(Database $db, int $integrationId, string $localType, int $localId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sync_mappings
+        $stmt = $db->query("SELECT * FROM sync_mappings
              WHERE integration_id = :integration_id
                AND local_type = :local_type
                AND local_id = :local_id
-             LIMIT 1",
-            [
+             LIMIT 1", [
                 ':integration_id' => $integrationId,
                 ':local_type'     => $localType,
                 ':local_id'       => $localId,
-            ]
-        );
+            ]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -96,18 +89,14 @@ class SyncMapping
      */
     public static function findByExternalKey(Database $db, int $integrationId, string $externalKey): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sync_mappings
+        $stmt = $db->query("SELECT * FROM sync_mappings
              WHERE integration_id = :integration_id
                AND external_key = :external_key
-             LIMIT 1",
-            [
+             LIMIT 1", [
                 ':integration_id' => $integrationId,
                 ':external_key'   => $externalKey,
-            ]
-        );
+            ]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -121,18 +110,14 @@ class SyncMapping
      */
     public static function findByExternalId(Database $db, int $integrationId, string $externalId): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sync_mappings
+        $stmt = $db->query("SELECT * FROM sync_mappings
              WHERE integration_id = :integration_id
                AND external_id = :external_id
-             LIMIT 1",
-            [
+             LIMIT 1", [
                 ':integration_id' => $integrationId,
                 ':external_id'    => $externalId,
-            ]
-        );
+            ]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -145,13 +130,9 @@ class SyncMapping
      */
     public static function findByIntegration(Database $db, int $integrationId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sync_mappings
+        $stmt = $db->query("SELECT * FROM sync_mappings
              WHERE integration_id = :integration_id
-             ORDER BY created_at ASC",
-            [':integration_id' => $integrationId]
-        );
-
+             ORDER BY created_at ASC", [':integration_id' => $integrationId]);
         return $stmt->fetchAll();
     }
 
@@ -174,17 +155,12 @@ class SyncMapping
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE sync_mappings SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -211,9 +187,6 @@ class SyncMapping
      */
     public static function deleteByIntegration(Database $db, int $integrationId): void
     {
-        $db->query(
-            "DELETE FROM sync_mappings WHERE integration_id = :integration_id",
-            [':integration_id' => $integrationId]
-        );
+        $db->query("DELETE FROM sync_mappings WHERE integration_id = :integration_id", [':integration_id' => $integrationId]);
     }
 }

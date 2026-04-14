@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UserStoryController
  *
@@ -35,12 +36,11 @@ class UserStoryController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -65,7 +65,6 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -76,27 +75,23 @@ class UserStoryController
         $workItems = HLWorkItem::findByProjectId($this->db, $projectId);
         $teams     = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
         $orgUsers  = \StratFlow\Models\User::findByOrgId($this->db, $orgId);
-
-        // Inject git link counts in bulk to avoid N+1 queries
+// Inject git link counts in bulk to avoid N+1 queries
         $storyIds   = array_column($stories, 'id');
         $gitCounts  = StoryGitLink::countsByLocalIds($this->db, 'user_story', array_map('intval', $storyIds));
         foreach ($stories as &$story) {
             $story['git_link_count'] = $gitCounts[(int) $story['id']] ?? 0;
         }
         unset($story);
-
-        // Load field order preference from org settings
+// Load field order preference from org settings
         $orgRow = \StratFlow\Models\Organisation::findById($this->db, $orgId);
         $orgSettings = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
         $defaultStOrder = ['title','description','parent_hl_item_id','team_assigned','size','acceptance_criteria','kr_hypothesis','blocked_by','git_links'];
         $fieldOrderSt = $orgSettings['field_order_story'] ?? $defaultStOrder;
-
-        // Quality visibility: off when disabled at system level OR at org level
+// Quality visibility: off when disabled at system level OR at org level
         $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
         $showQuality    = !empty($systemSettings['feature_story_quality'])
                           && ($orgSettings['quality']['enabled'] ?? false);
-
         $this->response->render('user-stories', [
             'user'                 => $user,
             'project'              => $project,
@@ -111,7 +106,6 @@ class UserStoryController
             'flash_message'        => $_SESSION['flash_message'] ?? null,
             'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -126,7 +120,6 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -143,9 +136,7 @@ class UserStoryController
         // Determine starting priority number
         $existingCount = UserStory::countByProjectId($this->db, $projectId);
         $priorityNumber = $existingCount + 1;
-
         $totalCreated = 0;
-
         foreach ($hlItemIds as $hlItemId) {
             $hlItem = HLWorkItem::findById($this->db, (int) $hlItemId);
             if ($hlItem === null || (int) $hlItem['project_id'] !== $projectId) {
@@ -163,12 +154,9 @@ class UserStoryController
 
             // Inject KR data from the work item's key results
             try {
-                $krRows = $this->db->query(
-                    "SELECT title, current_value, target_value, unit
+                $krRows = $this->db->query("SELECT title, current_value, target_value, unit
                        FROM key_results
-                      WHERE hl_work_item_id = :wid",
-                    [':wid' => (int) $hlItemId]
-                )->fetchAll();
+                      WHERE hl_work_item_id = :wid", [':wid' => (int) $hlItemId])->fetchAll();
                 if (!empty($krRows)) {
                     $input .= "\n--- KEY RESULTS ---\n";
                     foreach ($krRows as $kr) {
@@ -177,7 +165,7 @@ class UserStoryController
                     $input .= "-------------------\n";
                 }
             } catch (\Throwable) {
-                // key_results may not exist on a fresh deploy
+            // key_results may not exist on a fresh deploy
             }
 
             // Inject org quality rules
@@ -185,10 +173,9 @@ class UserStoryController
             try {
                 $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
             } catch (\Throwable) {
-                // story_quality_config may not exist on a fresh deploy
+            // story_quality_config may not exist on a fresh deploy
             }
             $input .= $qualityBlock;
-
             try {
                 $gemini     = new GeminiService($this->config);
                 $storiesData = $gemini->generateJson(UserStoryPrompt::DECOMPOSE_PROMPT, $input);
@@ -203,7 +190,7 @@ class UserStoryController
             }
 
             foreach ($storiesData as $storyData) {
-                // Normalise acceptance_criteria to newline-delimited string
+            // Normalise acceptance_criteria to newline-delimited string
                 $acRaw = $storyData['acceptance_criteria'] ?? null;
                 $ac = null;
                 if (is_array($acRaw)) {
@@ -213,19 +200,18 @@ class UserStoryController
                 }
 
                 $newStoryId = UserStory::create($this->db, [
-                    'project_id'          => $projectId,
-                    'parent_hl_item_id'   => (int) $hlItemId,
-                    'priority_number'     => $priorityNumber++,
-                    'title'               => $storyData['title'] ?? 'Untitled Story',
-                    'description'         => $storyData['description'] ?? null,
-                    'team_assigned'       => $hlItem['team_assigned'] ?? null,
-                    'size'                => isset($storyData['size']) ? (int) $storyData['size'] : null,
-                    'acceptance_criteria' => $ac,
-                    'kr_hypothesis'       => isset($storyData['kr_hypothesis']) && $storyData['kr_hypothesis'] !== ''
-                                             ? mb_substr((string) $storyData['kr_hypothesis'], 0, 500)
-                                             : null,
+                'project_id'          => $projectId,
+                'parent_hl_item_id'   => (int) $hlItemId,
+                'priority_number'     => $priorityNumber++,
+                'title'               => $storyData['title'] ?? 'Untitled Story',
+                'description'         => $storyData['description'] ?? null,
+                'team_assigned'       => $hlItem['team_assigned'] ?? null,
+                'size'                => isset($storyData['size']) ? (int) $storyData['size'] : null,
+                'acceptance_criteria' => $ac,
+                'kr_hypothesis'       => isset($storyData['kr_hypothesis']) && $storyData['kr_hypothesis'] !== ''
+                             ? mb_substr((string) $storyData['kr_hypothesis'], 0, 500)
+                             : null,
                 ]);
-
                 $totalCreated++;
             }
         }
@@ -262,7 +248,6 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -277,12 +262,10 @@ class UserStoryController
         }
 
         $existingCount = UserStory::countByProjectId($this->db, $projectId);
-
         $parentHlItemId = $this->request->post('parent_hl_item_id', '');
         $blockedBy      = $this->request->post('blocked_by', '');
         $size           = $this->request->post('size', '');
-
-        // Inherit team from parent work item if one is selected
+// Inherit team from parent work item if one is selected
         $resolvedParentId = $parentHlItemId !== '' ? (int) $parentHlItemId : null;
         $teamAssigned = trim((string) $this->request->post('team_assigned', '')) ?: null;
         if ($resolvedParentId !== null) {
@@ -302,7 +285,6 @@ class UserStoryController
             'size'              => $size !== '' ? (int) $size : null,
             'blocked_by'        => $blockedBy !== '' ? (int) $blockedBy : null,
         ]);
-
         $_SESSION['flash_message'] = 'User story created.';
         $this->response->redirect('/app/user-stories?project_id=' . $projectId);
     }
@@ -316,7 +298,6 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
@@ -333,18 +314,13 @@ class UserStoryController
         $blockedBy      = $this->request->post('blocked_by', '');
         $size           = $this->request->post('size', '');
         $assigneeRaw    = $this->request->post('assignee_user_id', null);
-
         $oldSize = (int) ($story['size'] ?? 0);
         $newSize = $size !== '' ? (int) $size : 0;
-
-        // Validate assignee belongs to this org before accepting
+// Validate assignee belongs to this org before accepting
         $assigneeUserId = null;
         if ($assigneeRaw !== null && $assigneeRaw !== '') {
             $assigneeId = (int) $assigneeRaw;
-            $assigneeCheck = $this->db->query(
-                'SELECT id FROM users WHERE id = :id AND org_id = :org_id LIMIT 1',
-                [':id' => $assigneeId, ':org_id' => $orgId]
-            )->fetch();
+            $assigneeCheck = $this->db->query('SELECT id FROM users WHERE id = :id AND org_id = :org_id LIMIT 1', [':id' => $assigneeId, ':org_id' => $orgId])->fetch();
             if ($assigneeCheck) {
                 $assigneeUserId = $assigneeId;
             }
@@ -355,7 +331,6 @@ class UserStoryController
         $resolvedParentId = $parentHlItemId !== ''
             ? (int) $parentHlItemId
             : ((int) ($story['parent_hl_item_id'] ?? 0) ?: null);
-
         $inheritedTeam = null;
         if ($resolvedParentId !== null) {
             $parent = HLWorkItem::findById($this->db, $resolvedParentId);
@@ -373,11 +348,11 @@ class UserStoryController
             'acceptance_criteria' => trim((string) $this->request->post('acceptance_criteria', $story['acceptance_criteria'] ?? '')) ?: null,
             'kr_hypothesis'       => mb_substr(
                 trim((string) $this->request->post('kr_hypothesis', $story['kr_hypothesis'] ?? '')),
-                0, 500
+                0,
+                500
             ) ?: null,
         ];
-
-        // Only include columns that exist on this deployment
+// Only include columns that exist on this deployment
         if (array_key_exists('team_assigned', $story)) {
             $storyUpdateData['team_assigned'] = $inheritedTeam ?? trim((string) $this->request->post('team_assigned', $story['team_assigned'] ?? ''));
         }
@@ -386,11 +361,9 @@ class UserStoryController
         }
 
         UserStory::update($this->db, (int) $id, $storyUpdateData);
-
-        // Enqueue for async quality scoring — the background worker will score shortly
+// Enqueue for async quality scoring — the background worker will score shortly
         UserStory::markQualityPending($this->db, (int) $id);
-
-        // Flag parent work item for review if size changed significantly
+// Flag parent work item for review if size changed significantly
         if ($oldSize > 0 && $newSize > 0 && abs($newSize - $oldSize) >= 2 && $story['parent_hl_item_id']) {
             HLWorkItem::update($this->db, (int) $story['parent_hl_item_id'], ['requires_review' => 1]);
         }
@@ -409,7 +382,6 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
@@ -425,7 +397,8 @@ class UserStoryController
         $qualityBlock = '';
         try {
             $qualityBlock = StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
 
         // Score first if not yet scored — improvement needs the breakdown
         if ($story['quality_score'] === null) {
@@ -435,12 +408,7 @@ class UserStoryController
                 UserStory::markQualityScored($this->db, (int) $id, $scored['score'], $scored['breakdown']);
                 $story = UserStory::findById($this->db, (int) $id);
             } else {
-                UserStory::markQualityFailed(
-                    $this->db,
-                    (int) $id,
-                    (int) ($story['quality_attempts'] ?? 0) + 1,
-                    $scored['error'] ?? 'unknown'
-                );
+                UserStory::markQualityFailed($this->db, (int) $id, (int) ($story['quality_attempts'] ?? 0) + 1, $scored['error'] ?? 'unknown');
             }
         }
 
@@ -458,15 +426,13 @@ class UserStoryController
         // Improve fields that score below 80% of their max
         $improver       = new StoryImprovementService(new GeminiService($this->config));
         $improvedFields = $improver->improveStory($story, $breakdown, $qualityBlock);
-
         if (empty($improvedFields)) {
             $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id'] . '&improved=0');
             return;
         }
 
         UserStory::update($this->db, (int) $id, $improvedFields);
-
-        // Re-score with the improved content — enqueue if Gemini is unavailable
+// Re-score with the improved content — enqueue if Gemini is unavailable
         $storyForScore = array_merge($story, $improvedFields);
         $scorer        = new StoryQualityScorer(new GeminiService($this->config));
         $scored        = $scorer->scoreStory($storyForScore, $qualityBlock);
@@ -486,7 +452,6 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
@@ -512,25 +477,20 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
             return;
         }
 
-        $rows = $this->db->query(
-            "SELECT s.id FROM user_stories s
+        $rows = $this->db->query("SELECT s.id FROM user_stories s
              JOIN projects p ON p.id = s.project_id
              WHERE s.project_id = :pid
                AND p.org_id = :oid
                AND s.quality_status = 'scored'
                AND s.quality_score < 80
              ORDER BY s.quality_score ASC
-             LIMIT 50",
-            [':pid' => $projectId, ':oid' => $orgId]
-        )->fetchAll();
-
+             LIMIT 50", [':pid' => $projectId, ':oid' => $orgId])->fetchAll();
         $refined = 0;
         foreach ($rows as $story) {
             UserStory::markQualityPending($this->db, (int) $story['id']);
@@ -554,7 +514,6 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $storyId   = (int) $id;
-
         $story = UserStory::findById($this->db, $storyId);
         if ($story === null) {
             $this->response->redirect('/app/home');
@@ -568,7 +527,6 @@ class UserStoryController
         }
 
         UserStory::update($this->db, $storyId, ['status' => 'closed']);
-
         $this->response->redirect('/app/user-stories?project_id=' . (int) $story['project_id']);
     }
 
@@ -581,7 +539,6 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->redirect('/app/home');
@@ -596,8 +553,7 @@ class UserStoryController
         }
 
         UserStory::delete($this->db, (int) $id);
-
-        // Re-number remaining stories
+// Re-number remaining stories
         $remaining = UserStory::findByProjectId($this->db, $projectId);
         $updates   = [];
         foreach ($remaining as $index => $s) {
@@ -621,10 +577,8 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $body  = json_decode($this->request->body(), true);
         $order = $body['order'] ?? [];
-
         if (empty($order)) {
             $this->response->json(['status' => 'error', 'message' => 'No order data provided'], 400);
             return;
@@ -652,7 +606,6 @@ class UserStoryController
         }
 
         UserStory::batchUpdatePriority($this->db, $updates);
-
         $this->response->json(['status' => 'ok']);
     }
 
@@ -668,7 +621,6 @@ class UserStoryController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = UserStory::findById($this->db, (int) $id);
         if ($story === null) {
             $this->response->json(['status' => 'error', 'message' => 'Story not found'], 404);
@@ -681,12 +633,7 @@ class UserStoryController
             return;
         }
 
-        $prompt = str_replace(
-            ['{title}', '{description}'],
-            [$story['title'], $story['description'] ?? 'No description provided'],
-            UserStoryPrompt::SIZE_PROMPT
-        );
-
+        $prompt = str_replace(['{title}', '{description}'], [$story['title'], $story['description'] ?? 'No description provided'], UserStoryPrompt::SIZE_PROMPT);
         try {
             $gemini = new GeminiService($this->config);
             $result = $gemini->generateJson($prompt, '');
@@ -697,10 +644,8 @@ class UserStoryController
 
         $size      = (int) ($result['size'] ?? 3);
         $reasoning = $result['reasoning'] ?? '';
-
-        // Save the suggested size
+// Save the suggested size
         UserStory::update($this->db, (int) $id, ['size' => $size]);
-
         $this->response->json(['status' => 'ok', 'size' => $size, 'reasoning' => $reasoning]);
     }
 
@@ -715,7 +660,6 @@ class UserStoryController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -737,7 +681,6 @@ Return a JSON array where each element has: "id" (integer), "size" (integer from
 
 User stories:
 PROMPT;
-
         $itemLines = [];
         foreach ($stories as $story) {
             $line = "- ID {$story['id']}: {$story['title']}";
@@ -747,7 +690,6 @@ PROMPT;
             $itemLines[] = $line;
         }
         $input = implode("\n", $itemLines);
-
         try {
             $gemini  = new GeminiService($this->config);
             $results = $gemini->generateJson($sizingPrompt, $input);
@@ -767,12 +709,10 @@ PROMPT;
         $allowedIds    = array_column($stories, 'id');
         $validSizes    = [1, 2, 3, 5, 8, 13];
         $updatedCount  = 0;
-
         foreach ($results as $result) {
             $storyId = (int) ($result['id'] ?? 0);
             $size    = (int) ($result['size'] ?? 3);
-
-            // Snap to nearest valid Fibonacci value
+        // Snap to nearest valid Fibonacci value
             if (!in_array($size, $validSizes, true)) {
                 $closest = $validSizes[0];
                 foreach ($validSizes as $v) {
@@ -804,7 +744,6 @@ PROMPT;
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->get('project_id', 0);
         $format    = strtolower((string) $this->request->get('format', 'csv'));
-
         $project = ProjectPolicy::findViewableProject($this->db, $user, $projectId);
         if ($project === null) {
             $this->response->redirect('/app/home');
@@ -813,9 +752,9 @@ PROMPT;
 
         $stories  = UserStory::findByProjectId($this->db, $projectId);
         $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project['name']);
-
         if ($format === 'json') {
             $exportData = array_map(function ($story) {
+
                 return [
                     'priority'      => (int) $story['priority_number'],
                     'title'         => $story['title'],
@@ -826,17 +765,15 @@ PROMPT;
                     'blocked_by'    => $story['blocked_by'] !== null ? (int) $story['blocked_by'] : null,
                 ];
             }, $stories);
-
             $content = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             $this->response->download($content, $safeName . '_user_stories.json', 'application/json');
             return;
         }
 
         if ($format === 'jira') {
-            // Jira-compatible CSV
+// Jira-compatible CSV
             $handle = fopen('php://temp', 'r+');
             fputcsv($handle, ['Summary', 'Description', 'Issue Type', 'Epic Link', 'Story Points']);
-
             foreach ($stories as $story) {
                 fputcsv($handle, [
                     $story['title'],
@@ -850,7 +787,6 @@ PROMPT;
             rewind($handle);
             $content = stream_get_contents($handle);
             fclose($handle);
-
             $this->response->download($content, $safeName . '_user_stories_jira.csv', 'text/csv');
             return;
         }
@@ -858,7 +794,6 @@ PROMPT;
         // Default: CSV
         $handle = fopen('php://temp', 'r+');
         fputcsv($handle, ['Priority', 'Title', 'Description', 'Parent Work Item', 'Team', 'Size', 'Blocked By']);
-
         foreach ($stories as $story) {
             fputcsv($handle, [
                 $story['priority_number'],
@@ -874,7 +809,6 @@ PROMPT;
         rewind($handle);
         $content = stream_get_contents($handle);
         fclose($handle);
-
         $this->response->download($content, $safeName . '_user_stories.csv', 'text/csv');
     }
 
@@ -888,7 +822,6 @@ PROMPT;
         $id    = (int) $id;
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $story = \StratFlow\Models\UserStory::findById($this->db, $id);
         if ($story === null) {
             $this->response->json(['status' => 'error', 'message' => 'Story not found'], 404);
@@ -906,10 +839,8 @@ PROMPT;
         $orgRow         = \StratFlow\Models\Organisation::findById($this->db, $orgId);
         $orgSettings    = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
-        
         $showQuality = !empty($systemSettings['feature_story_quality'])
                        && ($orgSettings['quality']['enabled'] ?? false);
-
         if (!$showQuality) {
             $this->response->json(['status' => 'error', 'message' => 'Quality scoring is disabled'], 403);
             return;
@@ -918,14 +849,13 @@ PROMPT;
         $qualityBlock = '';
         try {
             $qualityBlock = \StratFlow\Models\StoryQualityConfig::buildPromptBlock($this->db, $orgId);
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
 
         $scorer = new \StratFlow\Services\StoryQualityScorer(new \StratFlow\Services\GeminiService($this->config));
         $scored = $scorer->scoreStory($story, $qualityBlock);
-
         if ($scored['score'] !== null) {
             \StratFlow\Models\UserStory::markQualityScored($this->db, $id, $scored['score'], $scored['breakdown']);
-
             $html = '';
             ob_start();
             $breakdownData = $scored['breakdown'];
@@ -934,7 +864,6 @@ PROMPT;
             $csrf_token    = $this->request->post('_csrf_token');
             require __DIR__ . '/../../templates/partials/quality-breakdown.php';
             $html = ob_get_clean();
-
             $this->response->json([
                 'status'    => 'ok',
                 'score'     => $scored['score'],
@@ -946,12 +875,7 @@ PROMPT;
 
         // Scoring failed — update state and surface the error
         $errorKey = $scored['error'] ?? 'unknown';
-        \StratFlow\Models\UserStory::markQualityFailed(
-            $this->db,
-            $id,
-            (int) ($story['quality_attempts'] ?? 0) + 1,
-            $errorKey
-        );
+        \StratFlow\Models\UserStory::markQualityFailed($this->db, $id, (int) ($story['quality_attempts'] ?? 0) + 1, $errorKey);
         \StratFlow\Services\Logger::warn('[StratFlow] UserStory score error: ' . $errorKey);
         $this->response->json(['status' => 'error', 'message' => 'Scoring failed: ' . $errorKey], 503);
     }
@@ -966,7 +890,6 @@ PROMPT;
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         if ($projectId === 0) {
             $this->response->redirect('/app/home');
             return;
@@ -979,7 +902,6 @@ PROMPT;
         }
 
         UserStory::deleteByProjectId($this->db, $projectId);
-
         $_SESSION['flash_message'] = 'All user stories deleted.';
         $this->response->redirect('/app/user-stories?project_id=' . $projectId);
     }

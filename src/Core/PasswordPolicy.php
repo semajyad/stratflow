@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Password Policy Enforcement
  *
@@ -22,8 +23,7 @@ class PasswordPolicy
     public const REQUIRE_LOWERCASE = true;
     public const REQUIRE_NUMBER = true;
     public const REQUIRE_SPECIAL = true;
-
-    /**
+/**
      * Validate a password against the policy and return any violations.
      *
      * @param string $password The password to validate
@@ -32,7 +32,6 @@ class PasswordPolicy
     public static function validate(string $password): array
     {
         $errors = [];
-
         if (strlen($password) < self::MIN_LENGTH) {
             $errors[] = 'Password must be at least ' . self::MIN_LENGTH . ' characters.';
         }

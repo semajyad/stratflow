@@ -1,4 +1,5 @@
 <?php
+
 /**
  * IntegrationController
  *
@@ -28,12 +29,11 @@ use StratFlow\Services\JiraSyncService;
 
 class IntegrationController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -57,10 +57,8 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integrations = Integration::findByOrg($this->db, $orgId);
-
-        // Index by provider for easy template access
+// Index by provider for easy template access
         $byProvider = [];
         foreach ($integrations as $integ) {
             $byProvider[$integ['provider']] = $integ;
@@ -73,7 +71,6 @@ class IntegrationController
             $integId = (int) $byProvider['jira']['id'];
             $mappings = SyncMapping::findByIntegration($this->db, $integId);
             $jiraSyncCount = count($mappings);
-
             foreach ($mappings as $m) {
                 match ($m['local_type']) {
                     'hl_work_item' => $syncHealth['epics']++,
@@ -84,8 +81,7 @@ class IntegrationController
                 };
             }
             $syncHealth['total'] = $jiraSyncCount;
-
-            // Count recent errors (last 24h)
+        // Count recent errors (last 24h)
             $recentLogs = SyncLog::findByIntegration($this->db, $integId, 50);
             foreach ($recentLogs as $log) {
                 if ($log['status'] === 'error' && strtotime($log['created_at']) > time() - 86400) {
@@ -96,16 +92,13 @@ class IntegrationController
 
         // GitHub App installations (multiple per org are allowed)
         $githubInstalls = Integration::findActiveGithubByOrg($this->db, $orgId);
-
-        // Attach repo names to each install for the hover tooltip
+// Attach repo names to each install for the hover tooltip
         foreach ($githubInstalls as &$install) {
             $repos = IntegrationRepo::findByIntegration($this->db, (int) $install['id']);
             $install['repo_names'] = array_column($repos, 'repo_full_name');
         }
         unset($install);
-
         $githubAppSlug = $_ENV['GITHUB_APP_SLUG'] ?? '';
-
         $this->response->render('admin/integrations', [
             'user'             => $user,
             'integrations'     => $byProvider,
@@ -118,7 +111,6 @@ class IntegrationController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -136,10 +128,8 @@ class IntegrationController
     {
         $state = bin2hex(random_bytes(16));
         $_SESSION['jira_oauth_state'] = $state;
-
         $jira = new JiraService($this->config['jira'] ?? []);
         $url = $jira->getAuthorizationUrl($state);
-
         $this->response->redirect($url);
     }
 
@@ -153,12 +143,10 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
-        // Verify state
+// Verify state
         $state = $_GET['state'] ?? '';
         $expectedState = $_SESSION['jira_oauth_state'] ?? '';
         unset($_SESSION['jira_oauth_state']);
-
         if ($state === '' || $state !== $expectedState) {
             $_SESSION['flash_error'] = 'Invalid OAuth state. Please try connecting again.';
             $this->response->redirect('/app/admin/integrations');
@@ -174,17 +162,14 @@ class IntegrationController
 
         try {
             $jira = new JiraService($this->config['jira'] ?? []);
-
-            // Exchange code for tokens
+// Exchange code for tokens
             $tokens = $jira->exchangeCode($code);
             $accessToken  = $tokens['access_token'];
             $refreshToken = $tokens['refresh_token'] ?? '';
             $expiresIn    = $tokens['expires_in'] ?? 3600;
             $expiresAt    = date('Y-m-d H:i:s', time() + $expiresIn);
-
-            // Get accessible resources (cloud sites)
+// Get accessible resources (cloud sites)
             $resources = $jira->getAccessibleResources($accessToken);
-
             if (empty($resources)) {
                 $_SESSION['flash_error'] = 'No Jira sites found for this account.';
                 $this->response->redirect('/app/admin/integrations');
@@ -196,10 +181,8 @@ class IntegrationController
             $cloudId  = $resource['id'];
             $siteUrl  = $resource['url'] ?? '';
             $siteName = $resource['name'] ?? 'Jira Cloud';
-
-            // Create or update integration record
+// Create or update integration record
             $existing = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
             if ($existing) {
                 Integration::update($this->db, (int) $existing['id'], [
                     'display_name'     => $siteName,
@@ -226,15 +209,7 @@ class IntegrationController
                 ]);
             }
 
-            AuditLogger::log(
-                $this->db,
-                (int) $user['id'],
-                AuditLogger::INTEGRATION_CONNECTED,
-                $this->request->ip(),
-                $_SERVER['HTTP_USER_AGENT'] ?? '',
-                ['provider' => 'jira', 'site' => $siteName]
-            );
-
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::INTEGRATION_CONNECTED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', ['provider' => 'jira', 'site' => $siteName]);
             $_SESSION['flash_message'] = 'Jira Cloud connected successfully to ' . $siteName . '.';
             $this->response->redirect('/app/admin/integrations/jira/configure');
         } catch (\Throwable $e) {
@@ -256,9 +231,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration || $integration['status'] === 'disconnected') {
             $_SESSION['flash_error'] = 'Jira is not connected. Please connect first.';
             $this->response->redirect('/app/admin/integrations');
@@ -267,25 +240,25 @@ class IntegrationController
 
         $projects = [];
         $error = null;
-
         $jiraFields   = [];
         $jiraIssueTypes = [];
         $jiraBoards   = [];
-
         try {
             $jira = $this->makeJira($integration);
             $projects = $jira->getProjects();
-
-            // Load fields and issue types for mapping configuration
+        // Load fields and issue types for mapping configuration
             try {
                 $jiraFields = $jira->getFields();
-                // Filter to custom fields + key standard fields
+// Filter to custom fields + key standard fields
                 $jiraFields = array_filter($jiraFields, function ($f) {
+
                     return ($f['custom'] ?? false)
                         || in_array($f['id'], ['summary', 'description', 'priority', 'labels', 'assignee', 'duedate']);
                 });
                 usort($jiraFields, fn($a, $b) => strcasecmp($a['name'], $b['name']));
-            } catch (\Throwable $e) { /* non-critical */ }
+            } catch (\Throwable $e) {
+        /* non-critical */
+            }
 
             // Load issue types for the selected project
             $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
@@ -293,18 +266,21 @@ class IntegrationController
             if ($selectedProject) {
                 try {
                     $jiraIssueTypes = $jira->getIssueTypes($selectedProject);
-                } catch (\Throwable $e) { /* non-critical */ }
+                } catch (\Throwable $e) {
+                /* non-critical */
+                }
                 try {
                     $boardsResult = $jira->getBoards($selectedProject);
                     $jiraBoards = $boardsResult['values'] ?? [];
-                } catch (\Throwable $e) { /* non-critical */ }
+                } catch (\Throwable $e) {
+                /* non-critical */
+                }
             }
         } catch (\Throwable $e) {
             $error = 'Could not load Jira projects: ' . $e->getMessage();
         }
 
         $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
-
         $this->response->render('admin/jira-configure', [
             'user'             => $user,
             'integration'      => $integration,
@@ -318,7 +294,6 @@ class IntegrationController
             'flash_message'    => $_SESSION['flash_message'] ?? null,
             'flash_error'      => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -329,9 +304,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration) {
             $_SESSION['flash_error'] = 'Jira integration not found.';
             $this->response->redirect('/app/admin/integrations');
@@ -339,7 +312,6 @@ class IntegrationController
         }
 
         $projectKey = trim((string) $this->request->post('jira_project_key', ''));
-
         if ($projectKey === '') {
             $_SESSION['flash_error'] = 'Please select a Jira project.';
             $this->response->redirect('/app/admin/integrations/jira/configure');
@@ -348,8 +320,7 @@ class IntegrationController
 
         $currentConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $currentConfig['project_key'] = $projectKey;
-
-        // Save field mappings
+// Save field mappings
         $currentConfig['field_mapping'] = [
             'epic_type'          => trim((string) $this->request->post('epic_type', 'Epic')),
             'story_type'         => trim((string) $this->request->post('story_type', 'Story')),
@@ -365,20 +336,17 @@ class IntegrationController
                 'low'     => (int) $this->request->post('priority_low', 8),
             ],
         ];
-
-        // Save additional custom field mappings
+// Save additional custom field mappings
         $rawMappings = $this->request->post('custom_mappings', []);
         $validFields = ['title', 'description', 'owner', 'status', 'priority_number',
                         'estimated_sprints', 'strategic_context', 'size', 'blocked_by'];
         $validDirections = ['push', 'pull', 'both'];
         $customMappings = [];
-
         if (is_array($rawMappings)) {
             foreach ($rawMappings as $raw) {
                 $sf   = trim((string) ($raw['stratflow_field'] ?? ''));
                 $jf   = trim((string) ($raw['jira_field'] ?? ''));
                 $dir  = trim((string) ($raw['direction'] ?? 'both'));
-
                 if ($sf !== '' && $jf !== '' && in_array($sf, $validFields, true) && in_array($dir, $validDirections, true)) {
                     $customMappings[] = [
                         'stratflow_field' => $sf,
@@ -390,24 +358,16 @@ class IntegrationController
         }
 
         $currentConfig['field_mapping']['custom_mappings'] = $customMappings;
-
         Integration::update($this->db, (int) $integration['id'], [
             'config_json' => json_encode($currentConfig),
         ]);
-
-        // Attempt to register webhook
+// Attempt to register webhook
         try {
             $jira = $this->makeJira($integration);
             $appUrl = rtrim($this->config['app']['url'] ?? '', '/');
             $webhookUrl = $appUrl . '/webhook/integration/jira';
-
-            $webhookResult = $jira->registerWebhook(
-                'project = ' . $projectKey . ' AND labels = stratflow',
-                ['jira:issue_updated', 'jira:issue_deleted'],
-                $webhookUrl
-            );
-
-            // Store webhook IDs for refresh
+            $webhookResult = $jira->registerWebhook('project = ' . $projectKey . ' AND labels = stratflow', ['jira:issue_updated', 'jira:issue_deleted'], $webhookUrl);
+// Store webhook IDs for refresh
             $webhookIds = [];
             foreach ($webhookResult['webhookRegistrationResult'] ?? [] as $reg) {
                 if (!empty($reg['createdWebhookId'])) {
@@ -422,7 +382,7 @@ class IntegrationController
                 ]);
             }
         } catch (\Throwable $e) {
-            // Webhook registration is best-effort; don't block configuration
+        // Webhook registration is best-effort; don't block configuration
             \StratFlow\Services\Logger::warn('[JiraIntegration] Webhook registration failed: ' . $e->getMessage());
         }
 
@@ -443,11 +403,9 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if ($integration) {
-            // Revoke OAuth token at Atlassian before clearing locally
+        // Revoke OAuth token at Atlassian before clearing locally
             if (!empty($integration['access_token'])) {
                 try {
                     $ch = curl_init('https://auth.atlassian.com/oauth/revoke');
@@ -475,15 +433,7 @@ class IntegrationController
                 'error_message' => null,
                 'error_count'   => 0,
             ]);
-
-            AuditLogger::log(
-                $this->db,
-                (int) $user['id'],
-                AuditLogger::INTEGRATION_DISCONNECTED,
-                $this->request->ip(),
-                $_SERVER['HTTP_USER_AGENT'] ?? '',
-                ['provider' => 'jira', 'token_revoked' => true]
-            );
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::INTEGRATION_DISCONNECTED, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', ['provider' => 'jira', 'token_revoked' => true]);
         }
 
         $_SESSION['flash_message'] = 'Jira Cloud disconnected.';
@@ -505,12 +455,9 @@ class IntegrationController
     public function jiraSearchUsers(): void
     {
         header('Content-Type: application/json');
-
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration || $integration['status'] === 'disconnected') {
             echo json_encode(['users' => [], 'error' => 'Jira not connected']);
             exit;
@@ -518,7 +465,6 @@ class IntegrationController
 
         $q          = trim((string) $this->request->get('q', ''));
         $projectKey = trim((string) $this->request->get('project_key', ''));
-
         if ($projectKey === '') {
             $cfg        = json_decode($integration['config_json'] ?? '{}', true) ?: [];
             $projectKey = $cfg['project_key'] ?? '';
@@ -529,14 +475,12 @@ class IntegrationController
             $users = $projectKey !== ''
                 ? $jira->getAssignableUsers($projectKey, $q)
                 : $jira->searchUsers($q ?: 'a');
-
             $mapped = array_map(fn($u) => [
                 'accountId'   => $u['accountId'] ?? '',
                 'displayName' => $u['displayName'] ?? '',
                 'email'       => $u['emailAddress'] ?? '',
                 'avatar'      => $u['avatarUrls']['24x24'] ?? '',
             ], $users);
-
             echo json_encode(['users' => array_values($mapped)]);
         } catch (\Throwable $e) {
             echo json_encode(['users' => [], 'error' => $e->getMessage()]);
@@ -556,9 +500,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration || $integration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Jira integration is not active.';
             $this->response->redirect('/app/admin/integrations');
@@ -574,7 +516,6 @@ class IntegrationController
 
         $config = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $jiraProjectKey = $config['project_key'] ?? '';
-
         if ($jiraProjectKey === '') {
             $_SESSION['flash_error'] = 'No Jira project configured. Please configure the integration first.';
             $this->response->redirect('/app/admin/integrations/jira/configure');
@@ -583,41 +524,37 @@ class IntegrationController
 
         try {
             [$jira, $sync] = $this->makeJiraSync($integration);
-
             $wiResult = $sync->pushWorkItems($projectId, $jiraProjectKey);
             $usResult = $sync->pushUserStories($projectId, $jiraProjectKey);
             $rkResult = $sync->pushRisks($projectId, $jiraProjectKey);
-
             Integration::update($this->db, (int) $integration['id'], [
                 'last_sync_at' => date('Y-m-d H:i:s'),
             ]);
-
             $totalCreated = $wiResult['created'] + $usResult['created'] + $rkResult['created'];
             $totalUpdated = $wiResult['updated'] + $usResult['updated'] + $rkResult['updated'];
             $totalSkipped = ($wiResult['skipped'] ?? 0) + ($usResult['skipped'] ?? 0) + ($rkResult['skipped'] ?? 0);
             $totalErrors  = $wiResult['errors']  + $usResult['errors'] + $rkResult['errors'];
-
-            AuditLogger::log(
-                $this->db,
-                (int) $user['id'],
-                AuditLogger::INTEGRATION_SYNC,
-                $this->request->ip(),
-                $_SERVER['HTTP_USER_AGENT'] ?? '',
-                [
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::INTEGRATION_SYNC, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
                     'provider'  => 'jira',
                     'direction' => 'push',
                     'created'   => $totalCreated,
                     'updated'   => $totalUpdated,
                     'skipped'   => $totalSkipped,
                     'errors'    => $totalErrors,
-                ]
-            );
-
+                ]);
             $parts = [];
-            if ($totalCreated > 0) $parts[] = "{$totalCreated} created";
-            if ($totalUpdated > 0) $parts[] = "{$totalUpdated} updated";
-            if ($totalSkipped > 0) $parts[] = "{$totalSkipped} already in sync";
-            if ($totalErrors > 0)  $parts[] = "{$totalErrors} errors";
+            if ($totalCreated > 0) {
+                $parts[] = "{$totalCreated} created";
+            }
+            if ($totalUpdated > 0) {
+                $parts[] = "{$totalUpdated} updated";
+            }
+            if ($totalSkipped > 0) {
+                $parts[] = "{$totalSkipped} already in sync";
+            }
+            if ($totalErrors > 0) {
+                $parts[] = "{$totalErrors} errors";
+            }
             $_SESSION['flash_message'] = 'Push complete: ' . (empty($parts) ? 'no items to push.' : implode(', ', $parts) . '.');
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Push failed: ' . $e->getMessage();
@@ -637,9 +574,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration || $integration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Jira integration is not active.';
             $this->response->redirect('/app/admin/integrations');
@@ -655,7 +590,6 @@ class IntegrationController
 
         $config = json_decode($integration['config_json'] ?? '{}', true) ?: [];
         $jiraProjectKey = $config['project_key'] ?? '';
-
         if ($jiraProjectKey === '') {
             $_SESSION['flash_error'] = 'No Jira project configured. Please configure the integration first.';
             $this->response->redirect('/app/admin/integrations/jira/configure');
@@ -664,27 +598,16 @@ class IntegrationController
 
         try {
             [$jira, $sync] = $this->makeJiraSync($integration);
-
             $result = $sync->pullChanges($projectId, $jiraProjectKey);
-
             Integration::update($this->db, (int) $integration['id'], [
                 'last_sync_at' => date('Y-m-d H:i:s'),
             ]);
-
-            AuditLogger::log(
-                $this->db,
-                (int) $user['id'],
-                AuditLogger::INTEGRATION_SYNC,
-                $this->request->ip(),
-                $_SERVER['HTTP_USER_AGENT'] ?? '',
-                [
+            AuditLogger::log($this->db, (int) $user['id'], AuditLogger::INTEGRATION_SYNC, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
                     'provider'  => 'jira',
                     'direction' => 'pull',
                     'updated'   => $result['updated'],
                     'errors'    => $result['errors'],
-                ]
-            );
-
+                ]);
             $_SESSION['flash_message'] = "Pull complete: {$result['updated']} updated, {$result['errors']} errors.";
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Pull failed: ' . $e->getMessage();
@@ -708,9 +631,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration || $integration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Jira integration is not active.';
             $this->response->redirect('/app/admin/integrations/sync-log');
@@ -719,8 +640,7 @@ class IntegrationController
 
         $integrationId = (int) $integration['id'];
         $mappings = SyncMapping::findByIntegration($this->db, $integrationId);
-
-        // Collect external keys for all hl_work_item and user_story mappings
+// Collect external keys for all hl_work_item and user_story mappings
         $issueKeys = [];
         foreach ($mappings as $m) {
             if (in_array($m['local_type'], ['hl_work_item', 'user_story'], true) && !empty($m['external_key'])) {
@@ -737,7 +657,6 @@ class IntegrationController
         try {
             [$jira, $sync] = $this->makeJiraSync($integration);
             $updated = $sync->pullStatusBulk($issueKeys);
-
             $_SESSION['flash_message'] = "Pulled status for " . count($issueKeys) . " items — {$updated} updated.";
         } catch (\Throwable $e) {
             \StratFlow\Services\Logger::warn('[BulkPullStatus] ' . $e->getMessage());
@@ -760,37 +679,24 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
-        // Parse filter / pagination query params
+// Parse filter / pagination query params
         $page      = max(1, (int) $this->request->get('page', 1));
         $perPage   = 50;
         $direction = $this->request->get('direction');
         $status    = $this->request->get('status');
-
-        // Normalise filters — only accept known values
+// Normalise filters — only accept known values
         $direction = in_array($direction, ['push', 'pull'], true) ? $direction : null;
         $status    = in_array($status, ['success', 'error'], true) ? $status : null;
-
         $logs       = [];
         $total      = 0;
         $totalPages = 1;
-
         if ($integration) {
-            $result     = SyncLog::findByIntegrationPaginated(
-                $this->db,
-                (int) $integration['id'],
-                $page,
-                $perPage,
-                $direction,
-                $status
-            );
+            $result     = SyncLog::findByIntegrationPaginated($this->db, (int) $integration['id'], $page, $perPage, $direction, $status);
             $logs       = $result['rows'];
             $total      = $result['total'];
             $totalPages = max(1, (int) ceil($total / $perPage));
-
-            // Clamp page to valid range
+        // Clamp page to valid range
             if ($page > $totalPages) {
                 $page = $totalPages;
             }
@@ -809,7 +715,6 @@ class IntegrationController
             'flash_message' => $_SESSION['flash_message'] ?? null,
             'flash_error'   => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -824,9 +729,7 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
-
         if (!$integration) {
             $this->response->redirect('/app/admin/integrations/sync-log');
             return;
@@ -837,24 +740,15 @@ class IntegrationController
         $status    = $this->request->get('status');
         $direction = in_array($direction, ['push', 'pull'], true) ? $direction : null;
         $status    = in_array($status, ['success', 'error'], true) ? $status : null;
-
-        $logs = SyncLog::findAllByIntegration(
-            $this->db,
-            (int) $integration['id'],
-            $direction,
-            $status
-        );
-
+        $logs = SyncLog::findAllByIntegration($this->db, (int) $integration['id'], $direction, $status);
         AuditLogger::log($this->db, (int) $user['id'], AuditLogger::DATA_EXPORT, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
             'type'       => 'sync_log_export',
             'row_count'  => count($logs),
             'filters'    => ['direction' => $direction, 'status' => $status],
         ]);
-
-        // Build CSV
+// Build CSV
         $handle = fopen('php://temp', 'r+');
         fputcsv($handle, ['Timestamp', 'Direction', 'Action', 'Type', 'Local ID', 'External ID', 'Status', 'Details']);
-
         foreach ($logs as $log) {
             $details = json_decode($log['details_json'] ?? '{}', true) ?: [];
             $detailStr = '';
@@ -881,7 +775,6 @@ class IntegrationController
         rewind($handle);
         $content = stream_get_contents($handle);
         fclose($handle);
-
         $filename = 'sync_log_export_' . date('Y-m-d_His') . '.csv';
         $this->response->download($content, $filename, 'text/csv');
     }
@@ -899,7 +792,6 @@ class IntegrationController
     public function jiraWebhook(): void
     {
         $rawBody = file_get_contents('php://input');
-
         if (empty($rawBody)) {
             http_response_code(400);
             echo json_encode(['error' => 'Empty body']);
@@ -910,7 +802,7 @@ class IntegrationController
         $signature = $_SERVER['HTTP_X_ATLASSIAN_SIGNATURE'] ?? $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? '';
         $webhookSecret = $this->config['jira']['webhook_secret'] ?? '';
         if ($webhookSecret !== '') {
-            // HMAC signature validation
+        // HMAC signature validation
             $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
             $providedHash = str_replace('sha256=', '', $signature);
             if (!hash_equals($expected, $providedHash)) {
@@ -920,7 +812,7 @@ class IntegrationController
                 return;
             }
         } else {
-            // No secret: verify basic Jira payload structure to prevent trivial spoofing
+        // No secret: verify basic Jira payload structure to prevent trivial spoofing
             $testPayload = json_decode($rawBody, true);
             if (!$testPayload || !isset($testPayload['webhookEvent']) || !isset($testPayload['issue'])) {
                 \StratFlow\Services\Logger::warn('[JiraWebhook] Malformed payload rejected');
@@ -940,7 +832,6 @@ class IntegrationController
         // Extract issue key and find the integration
         $issueKey = $payload['issue']['key'] ?? null;
         $event    = $payload['webhookEvent'] ?? 'unknown';
-
         if (!$issueKey) {
             http_response_code(200);
             echo json_encode(['status' => 'ignored', 'reason' => 'no issue key']);
@@ -950,43 +841,29 @@ class IntegrationController
         // Find integration by looking up the sync mapping for this external key
         // We need to search across all integrations since we don't have org context
         try {
-            $stmt = $this->db->query(
-                "SELECT sm.*, i.id AS integration_id, i.org_id, i.config_json
+            $stmt = $this->db->query("SELECT sm.*, i.id AS integration_id, i.org_id, i.config_json
                  FROM sync_mappings sm
                  JOIN integrations i ON sm.integration_id = i.id
                  WHERE sm.external_key = :key
-                 LIMIT 1",
-                [':key' => $issueKey]
-            );
+                 LIMIT 1", [':key' => $issueKey]);
             $mapping = $stmt->fetch();
-
             if ($mapping) {
                 $integrationId = (int) $mapping['integration_id'];
-
-                AuditLogger::log(
-                    $this->db,
-                    null,
-                    AuditLogger::INTEGRATION_WEBHOOK,
-                    $this->request->ip(),
-                    $_SERVER['HTTP_USER_AGENT'] ?? '',
-                    [
+                AuditLogger::log($this->db, null, AuditLogger::INTEGRATION_WEBHOOK, $this->request->ip(), $_SERVER['HTTP_USER_AGENT'] ?? '', [
                         'provider' => 'jira',
                         'event'    => $event,
                         'issue'    => $issueKey,
-                    ]
-                );
-
-                // Actually pull the changed fields from the webhook payload
-                $issueFields = $payload['issue']['fields'] ?? [];
+                    ]);
+            // Actually pull the changed fields from the webhook payload
+                            $issueFields = $payload['issue']['fields'] ?? [];
                 $newTitle = $issueFields['summary'] ?? null;
                 $action = 'update';
                 $updateData = [];
-
                 if ($event === 'jira:issue_deleted') {
                     $action = 'delete';
                 } else {
                     if ($newTitle !== null) {
-                        $updateData['title'] = $newTitle;
+                            $updateData['title'] = $newTitle;
                     }
                     if (!empty($issueFields['description'])) {
                         $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $mapping, $this->db);
@@ -1015,9 +892,8 @@ class IntegrationController
                     $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
                     if ($integration) {
                         [$jiraSvc, $syncSvc] = $this->makeJiraSync($integration);
-
                         if ($statusChangelog !== null) {
-                            // Changelog gives us the new status name directly — build a
+                        // Changelog gives us the new status name directly — build a
                             // minimal issue payload so pullStatus can do the mapping.
                             $syntheticIssue = [
                                 'fields' => [
@@ -1025,7 +901,7 @@ class IntegrationController
                                 ],
                             ];
                             try {
-                                $syncSvc->pullStatus($issueKey, $syntheticIssue);
+                                    $syncSvc->pullStatus($issueKey, $syntheticIssue);
                             } catch (\Throwable $statusEx) {
                                 \StratFlow\Services\Logger::warn('[JiraWebhook] Status pull failed for ' . $issueKey . ': ' . $statusEx->getMessage());
                             }
@@ -1033,7 +909,7 @@ class IntegrationController
                             in_array($event, ['jira:issue_updated', 'jira:issue_created'], true)
                             && !empty($issueFields['status'])
                         ) {
-                            // No changelog — use whatever status is in the full issue payload
+                        // No changelog — use whatever status is in the full issue payload
                             try {
                                 $syncSvc->pullStatus($issueKey, $payload['issue']);
                             } catch (\Throwable $statusEx) {
@@ -1075,7 +951,6 @@ class IntegrationController
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
         $syncType  = (string) $this->request->post('sync_type', 'all');
-
         $project = \StratFlow\Security\ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if (!$project || empty($project['jira_project_key'])) {
             $_SESSION['flash_error'] = 'Project has no Jira link. Set one on the Home page.';
@@ -1100,11 +975,9 @@ class IntegrationController
 
         try {
             [$jiraService, $syncService] = $this->makeJiraSync($integration);
-
             $results = [];
             $jiraKey = $project['jira_project_key'];
-
-            // Push local changes to Jira
+// Push local changes to Jira
             if ($syncType === 'work_items' || $syncType === 'all') {
                 $results['push_work_items'] = $syncService->pushWorkItems($projectId, $jiraKey);
             }
@@ -1115,7 +988,7 @@ class IntegrationController
                 $results['push_risks'] = $syncService->pushRisks($projectId, $jiraKey);
             }
             if ($syncType === 'sprints' || $syncType === 'all') {
-                // Get board ID: from integration config, project record, or auto-detect
+// Get board ID: from integration config, project record, or auto-detect
                 $intConfig = json_decode($integration['config_json'] ?? '{}', true) ?: [];
                 $boardId = (int) ($intConfig['field_mapping']['board_id'] ?? 0)
                         ?: (int) ($project['jira_board_id'] ?? 0);
@@ -1146,22 +1019,18 @@ class IntegrationController
             // Pull Jira changes back to StratFlow
             $pullResult = $syncService->pullChanges($projectId, $jiraKey);
             $results['pull'] = $pullResult;
-
             \StratFlow\Models\Integration::update($this->db, (int) $integration['id'], [
                 'last_sync_at' => date('Y-m-d H:i:s'),
             ]);
-
-            // Build a clear summary message
+// Build a clear summary message
             $totalCreated   = 0;
             $totalUpdated   = 0;
             $totalSkipped   = 0;
             $totalAllocated = 0;
             $totalErrors    = 0;
             $pullUpdated    = 0;
-
             $pullCreated    = 0;
             $totalConflicts = 0;
-
             foreach ($results as $type => $counts) {
                 if ($type === 'pull') {
                     $pullCreated    = $counts['created'] ?? 0;
@@ -1178,15 +1047,33 @@ class IntegrationController
             }
 
             $parts = [];
-            if ($totalCreated > 0)   $parts[] = "{$totalCreated} pushed to Jira";
-            if ($totalUpdated > 0)   $parts[] = "{$totalUpdated} updated in Jira";
-            if ($totalAllocated > 0) $parts[] = "{$totalAllocated} stories allocated to sprints";
-            if ($goalsCreated > 0)   $parts[] = "{$goalsCreated} OKRs synced to Goals";
-            if ($pullCreated > 0)    $parts[] = "{$pullCreated} imported from Jira";
-            if ($pullUpdated > 0)    $parts[] = "{$pullUpdated} pulled from Jira";
-            if ($totalConflicts > 0) $parts[] = "{$totalConflicts} conflicts (review required)";
-            if ($totalSkipped > 0)   $parts[] = "{$totalSkipped} already in sync";
-            if ($totalErrors > 0)    $parts[] = "{$totalErrors} errors";
+            if ($totalCreated > 0) {
+                $parts[] = "{$totalCreated} pushed to Jira";
+            }
+            if ($totalUpdated > 0) {
+                $parts[] = "{$totalUpdated} updated in Jira";
+            }
+            if ($totalAllocated > 0) {
+                $parts[] = "{$totalAllocated} stories allocated to sprints";
+            }
+            if ($goalsCreated > 0) {
+                $parts[] = "{$goalsCreated} OKRs synced to Goals";
+            }
+            if ($pullCreated > 0) {
+                $parts[] = "{$pullCreated} imported from Jira";
+            }
+            if ($pullUpdated > 0) {
+                $parts[] = "{$pullUpdated} pulled from Jira";
+            }
+            if ($totalConflicts > 0) {
+                $parts[] = "{$totalConflicts} conflicts (review required)";
+            }
+            if ($totalSkipped > 0) {
+                $parts[] = "{$totalSkipped} already in sync";
+            }
+            if ($totalErrors > 0) {
+                $parts[] = "{$totalErrors} errors";
+            }
 
             if (empty($parts)) {
                 $_SESSION['flash_message'] = 'Jira sync complete — no items to sync.';
@@ -1223,7 +1110,6 @@ class IntegrationController
         $user      = $this->auth->user();
         $orgId     = (int) $user['org_id'];
         $projectId = (int) $this->request->post('project_id', 0);
-
         $project = \StratFlow\Security\ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if (!$project || empty($project['jira_project_key'])) {
             $this->response->json(['error' => 'No Jira link'], 400);
@@ -1249,7 +1135,6 @@ class IntegrationController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $integration = Integration::findByOrgAndProvider($this->db, $orgId, 'jira');
         if (!$integration || $integration['status'] !== 'active') {
             $_SESSION['flash_error'] = 'Jira integration is not active.';
@@ -1269,31 +1154,27 @@ class IntegrationController
             $jira = $this->makeJira($integration);
             $created = 0;
             $skipped = 0;
-
-            // Load existing teams for dedup
+// Load existing teams for dedup
             $existingTeams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
             $existingNames = array_map(fn($t) => strtolower($t['name']), $existingTeams);
-
-            // 1. Import boards as teams (board = team in Jira)
+// 1. Import boards as teams (board = team in Jira)
             $boardCount = 0;
             $boards = [];
             try {
                 $boardsResult = $jira->getBoards($projectKey);
                 $boards = $boardsResult['values'] ?? [];
             } catch (\Throwable $e) {
-                // Board API may fail on team-managed projects or missing scopes.
+            // Board API may fail on team-managed projects or missing scopes.
                 // Fallback: create one team from the project itself.
                 \StratFlow\Services\Logger::warn('[JiraTeamImport] Board API failed, using project fallback: ' . $e->getMessage());
                 $boards = [['id' => 1, 'name' => $projectKey . ' Team', 'type' => 'project']];
             }
             $boardCount = count($boards);
-
             try {
                 foreach ($boards as $board) {
                     $teamName = $board['name'] ?? 'Board ' . $board['id'];
                     $boardId  = (int) $board['id'];
-
-                    // Check if a team already has this board_id linked
+        // Check if a team already has this board_id linked
                     $existsByBoardId = false;
                     foreach ($existingTeams as $et) {
                         if ((int) ($et['jira_board_id'] ?? 0) === $boardId) {
@@ -1302,11 +1183,13 @@ class IntegrationController
                             break;
                         }
                     }
-                    if ($existsByBoardId) continue;
+                    if ($existsByBoardId) {
+                        continue;
+                    }
 
                     // Check by name match
                     if (in_array(strtolower($teamName), $existingNames)) {
-                        // Link existing team to this board
+    // Link existing team to this board
                         foreach ($existingTeams as $et) {
                             if (strtolower($et['name']) === strtolower($teamName)) {
                                 \StratFlow\Models\Team::update($this->db, (int) $et['id'], [
@@ -1346,15 +1229,10 @@ class IntegrationController
             $teamField = $config['field_mapping']['team_field'] ?? '';
             if ($teamField) {
                 try {
-                    $result = $jira->searchIssues(
-                        "project = {$projectKey} AND {$teamField} IS NOT EMPTY",
-                        [$teamField],
-                        100
-                    );
-
+                    $result = $jira->searchIssues("project = {$projectKey} AND {$teamField} IS NOT EMPTY", [$teamField], 100);
                     foreach ($result['issues'] ?? [] as $issue) {
-                        $val = $issue['fields'][$teamField] ?? null;
-                        $name = null;
+                            $val = $issue['fields'][$teamField] ?? null;
+                            $name = null;
                         if (is_string($val) && $val !== '') {
                             $name = $val;
                         } elseif (is_array($val)) {
@@ -1363,25 +1241,32 @@ class IntegrationController
 
                         if ($name && !in_array(strtolower($name), $existingNames)) {
                             \StratFlow\Models\Team::create($this->db, [
-                                'org_id'      => $orgId,
-                                'name'        => $name,
-                                'description' => 'Discovered from Jira Team field',
-                                'capacity'    => 0,
+                            'org_id'      => $orgId,
+                            'name'        => $name,
+                            'description' => 'Discovered from Jira Team field',
+                            'capacity'    => 0,
                             ]);
                             $existingNames[] = strtolower($name);
                             $created++;
                         }
                     }
                 } catch (\Throwable $e) {
-                    // Non-critical
+    // Non-critical
                 }
             }
 
             $msg = "Jira import: found {$boardCount} board(s). ";
-            if ($created > 0) $msg .= "{$created} team(s) created. ";
-            if ($skipped > 0) $msg .= "{$skipped} already linked. ";
-            if ($created === 0 && $skipped === 0 && $boardCount === 0) $msg .= "No boards found in Jira project {$projectKey}.";
-            elseif ($created === 0 && $boardCount > 0) $msg .= "All boards already have matching teams.";
+            if ($created > 0) {
+                $msg .= "{$created} team(s) created. ";
+            }
+            if ($skipped > 0) {
+                $msg .= "{$skipped} already linked. ";
+            }
+            if ($created === 0 && $skipped === 0 && $boardCount === 0) {
+                $msg .= "No boards found in Jira project {$projectKey}.";
+            } elseif ($created === 0 && $boardCount > 0) {
+                $msg .= "All boards already have matching teams.";
+            }
             $_SESSION['flash_message'] = trim($msg);
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Failed to import teams: ' . $e->getMessage();

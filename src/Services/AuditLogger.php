@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AuditLogger Service — v2
  *
@@ -56,14 +57,12 @@ class AuditLogger
     public const QUALITY_REFINED          = 'quality_refined';
     public const STRIPE_PLAN_CHANGED      = 'stripe_plan_changed';
     public const DOCUMENT_DOWNLOADED      = 'document_downloaded';
-
-    // ===========================
+// ===========================
     // FALLBACK LOG
     // ===========================
 
     private const FALLBACK_LOG = __DIR__ . '/../../storage/logs/audit-fallback.jsonl';
-
-    // ===========================
+// ===========================
     // LOGGING
     // ===========================
 
@@ -80,17 +79,8 @@ class AuditLogger
      * @param string|null $resourceType Resource type (e.g. 'project', 'story', 'work_item')
      * @param int|null    $resourceId   Resource ID
      */
-    public static function log(
-        Database $db,
-        ?int $userId,
-        string $eventType,
-        string $ip,
-        string $userAgent,
-        array $details = [],
-        ?int $orgId = null,
-        ?string $resourceType = null,
-        ?int $resourceId = null
-    ): void {
+    public static function log(Database $db, ?int $userId, string $eventType, string $ip, string $userAgent, array $details = [], ?int $orgId = null, ?string $resourceType = null, ?int $resourceId = null): void
+    {
         $entry = [
             'user_id'       => $userId,
             'org_id'        => $orgId,
@@ -101,9 +91,8 @@ class AuditLogger
             'resource_type' => $resourceType,
             'resource_id'   => $resourceId,
         ];
-
         try {
-            // Guard against missing table during initial deployment
+        // Guard against missing table during initial deployment
             if (!$db->tableExists('audit_logs')) {
                 self::writeFallback($entry, 'table_missing');
                 return;
@@ -111,18 +100,14 @@ class AuditLogger
 
             // Fetch the last row_hash for the chain (org-scoped if org_id set)
             $prevHash = self::fetchLastHash($db, $orgId);
-
-            // Compute this row's HMAC over canonical JSON of event + prev_hash
+        // Compute this row's HMAC over canonical JSON of event + prev_hash
             $rowHash  = self::computeHash($prevHash, $entry);
-
-            $db->query(
-                "INSERT INTO audit_logs
+            $db->query("INSERT INTO audit_logs
                     (user_id, org_id, event_type, ip_address, user_agent, details_json,
                      resource_type, resource_id, prev_hash, row_hash)
                  VALUES
                     (:user_id, :org_id, :event_type, :ip, :ua, :details,
-                     :resource_type, :resource_id, :prev_hash, :row_hash)",
-                [
+                     :resource_type, :resource_id, :prev_hash, :row_hash)", [
                     'user_id'       => $entry['user_id'],
                     'org_id'        => $entry['org_id'],
                     'event_type'    => $entry['event_type'],
@@ -133,10 +118,9 @@ class AuditLogger
                     'resource_id'   => $entry['resource_id'],
                     'prev_hash'     => $prevHash,
                     'row_hash'      => $rowHash,
-                ]
-            );
+                ]);
         } catch (\Throwable $e) {
-            // Audit logging must never break the application flow, but failures
+        // Audit logging must never break the application flow, but failures
             // must themselves be recorded — write to fallback file.
             \StratFlow\Services\Logger::warn('[AuditLogger] Failed to write audit log: ' . $e->getMessage());
             self::writeFallback($entry, $e->getMessage());
@@ -162,19 +146,13 @@ class AuditLogger
         try {
             $where  = $orgId !== null ? 'WHERE org_id = :org_id' : '';
             $params = $orgId !== null ? ['org_id' => $orgId] : [];
-
-            $stmt = $db->query(
-                "SELECT id, user_id, org_id, event_type, ip_address, user_agent,
+            $stmt = $db->query("SELECT id, user_id, org_id, event_type, ip_address, user_agent,
                         details_json, resource_type, resource_id, prev_hash, row_hash
                  FROM audit_logs {$where}
-                 ORDER BY id ASC",
-                $params
-            );
-
+                 ORDER BY id ASC", $params);
             $rows     = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             $total    = count($rows);
             $prevHash = null;
-
             foreach ($rows as $row) {
                 $entry = [
                     'user_id'       => $row['user_id'],
@@ -186,9 +164,7 @@ class AuditLogger
                     'resource_type' => $row['resource_type'],
                     'resource_id'   => $row['resource_id'],
                 ];
-
                 $expected = self::computeHash($prevHash, $entry);
-
                 if (!hash_equals($expected, (string) $row['row_hash'])) {
                     return ['ok' => false, 'broken_at' => (int) $row['id'], 'total' => $total];
                 }
@@ -211,11 +187,7 @@ class AuditLogger
     {
         $where  = $orgId !== null ? 'WHERE org_id = :org_id' : '';
         $params = $orgId !== null ? ['org_id' => $orgId] : [];
-
-        $stmt = $db->query(
-            "SELECT row_hash FROM audit_logs {$where} ORDER BY id DESC LIMIT 1",
-            $params
-        );
+        $stmt = $db->query("SELECT row_hash FROM audit_logs {$where} ORDER BY id DESC LIMIT 1", $params);
         $row = $stmt->fetch();
         return $row ? (string) $row['row_hash'] : null;
     }
@@ -223,8 +195,7 @@ class AuditLogger
     private static function computeHash(?string $prevHash, array $entry): string
     {
         $key = (string) ($_ENV['AUDIT_HMAC_KEY'] ?? '');
-
-        // Canonical payload — consistent ordering, no extra keys
+// Canonical payload — consistent ordering, no extra keys
         $canonical = json_encode([
             'prev'          => $prevHash,
             'user_id'       => $entry['user_id'],
@@ -235,9 +206,8 @@ class AuditLogger
             'resource_type' => $entry['resource_type'],
             'resource_id'   => $entry['resource_id'],
         ], JSON_UNESCAPED_UNICODE);
-
         if ($key === '') {
-            // No key configured — use a plain SHA-256 hash instead of HMAC.
+        // No key configured — use a plain SHA-256 hash instead of HMAC.
             // Still detects accidental corruption; not cryptographically keyed.
             return hash('sha256', (string) $canonical);
         }
@@ -252,14 +222,13 @@ class AuditLogger
                 'fallback_reason' => $reason,
                 'ts'              => date('c'),
             ]), JSON_UNESCAPED_UNICODE) . PHP_EOL;
-
             $dir = dirname(self::FALLBACK_LOG);
             if (!is_dir($dir)) {
                 mkdir($dir, 0750, true);
             }
             file_put_contents(self::FALLBACK_LOG, $line, FILE_APPEND | LOCK_EX);
         } catch (\Throwable) {
-            // Last resort — nothing more we can do
+        // Last resort — nothing more we can do
         }
     }
 }

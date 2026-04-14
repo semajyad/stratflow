@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PersonaMember Model
  *
@@ -29,16 +30,12 @@ class PersonaMember
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO persona_members (panel_id, role_title, prompt_description)
-             VALUES (:panel_id, :role_title, :prompt_description)",
-            [
+        $db->query("INSERT INTO persona_members (panel_id, role_title, prompt_description)
+             VALUES (:panel_id, :role_title, :prompt_description)", [
                 ':panel_id'           => $data['panel_id'],
                 ':role_title'         => $data['role_title'],
                 ':prompt_description' => $data['prompt_description'],
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -55,11 +52,7 @@ class PersonaMember
      */
     public static function findByPanelId(Database $db, int $panelId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM persona_members WHERE panel_id = :panel_id ORDER BY id ASC",
-            [':panel_id' => $panelId]
-        );
-
+        $stmt = $db->query("SELECT * FROM persona_members WHERE panel_id = :panel_id ORDER BY id ASC", [':panel_id' => $panelId]);
         return $stmt->fetchAll();
     }
 
@@ -78,7 +71,6 @@ class PersonaMember
     private const UPDATABLE_COLUMNS = [
         'role_title', 'prompt_description',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -87,17 +79,12 @@ class PersonaMember
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE persona_members SET {$setClauses} WHERE id = :id", $bound);
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace StratFlow\Controllers;
@@ -11,12 +12,11 @@ use StratFlow\Models\KeyResult;
 
 class KrController
 {
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -27,8 +27,7 @@ class KrController
     }
 
     private const VALID_STATUSES = ['not_started', 'on_track', 'at_risk', 'off_track', 'achieved'];
-
-    // ===========================
+// ===========================
     // ACTIONS
     // ===========================
 
@@ -41,7 +40,6 @@ class KrController
         header('Content-Type: application/json');
         $orgId      = (int) $this->auth->user()['org_id'];
         $workItemId = (int) $this->request->post('hl_work_item_id', 0);
-
         if ($workItemId === 0) {
             http_response_code(400);
             echo json_encode(['error' => 'High Level Work Item ID required']);
@@ -78,7 +76,6 @@ class KrController
             'status'             => $this->sanitiseStatus((string) $statusRaw),
             'display_order'      => (int) $this->request->post('display_order', 0),
         ]);
-
         echo json_encode(['ok' => true, 'id' => $id]);
     }
 
@@ -90,7 +87,6 @@ class KrController
     {
         header('Content-Type: application/json');
         $orgId = (int) $this->auth->user()['org_id'];
-
         $kr = KeyResult::findById($this->db, $id, $orgId);
         if ($kr === null) {
             http_response_code(404);
@@ -99,8 +95,10 @@ class KrController
         }
 
         $data = [];
-        foreach (['title', 'metric_description', 'baseline_value', 'target_value',
-                  'current_value', 'unit', 'status', 'display_order'] as $field) {
+        foreach (
+            ['title', 'metric_description', 'baseline_value', 'target_value',
+                  'current_value', 'unit', 'status', 'display_order'] as $field
+        ) {
             $val = $this->request->post($field);
             if ($val !== null) {
                 $data[$field] = $val;
@@ -127,7 +125,6 @@ class KrController
     {
         header('Content-Type: application/json');
         $orgId = (int) $this->auth->user()['org_id'];
-
         $kr = KeyResult::findById($this->db, $id, $orgId);
         if ($kr === null) {
             http_response_code(404);
@@ -159,13 +156,10 @@ class KrController
 
     private function workItemBelongsToOrg(int $workItemId, int $orgId): bool
     {
-        $row = $this->db->query(
-            "SELECT p.org_id
+        $row = $this->db->query("SELECT p.org_id
                FROM hl_work_items hwi
                JOIN projects p ON hwi.project_id = p.id
-              WHERE hwi.id = :id LIMIT 1",
-            [':id' => $workItemId]
-        )->fetch();
+              WHERE hwi.id = :id LIMIT 1", [':id' => $workItemId])->fetch();
         return $row !== false && (int) $row['org_id'] === $orgId;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GitLabClient
  *
@@ -49,21 +50,18 @@ class GitLabClient
 
         $attrs  = $payload['object_attributes'] ?? [];
         $action = $attrs['action'] ?? '';
-
         if (!in_array($action, ['open', 'reopen', 'update', 'merge', 'close'], true)) {
             return null;
         }
 
         $merged = ($action === 'merge');
-
-        // Map GitLab action names to the shared vocabulary used by GitLinkService
-        $normalised = match($action) {
+// Map GitLab action names to the shared vocabulary used by GitLinkService
+        $normalised = match ($action) {
             'open', 'reopen' => 'opened',
             'merge'          => 'closed',
             'close'          => 'closed',
             default          => $action,
         };
-
         return [
             'action' => $normalised,
             'merged' => $merged,

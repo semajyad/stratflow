@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Document Model
  *
@@ -32,12 +33,10 @@ class Document
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO documents
+        $db->query("INSERT INTO documents
                 (project_id, filename, original_name, mime_type, file_size, extracted_text, ai_summary, uploaded_by)
              VALUES
-                (:project_id, :filename, :original_name, :mime_type, :file_size, :extracted_text, :ai_summary, :uploaded_by)",
-            [
+                (:project_id, :filename, :original_name, :mime_type, :file_size, :extracted_text, :ai_summary, :uploaded_by)", [
                 ':project_id'    => $data['project_id'],
                 ':filename'      => $data['filename'],
                 ':original_name' => $data['original_name'],
@@ -46,9 +45,7 @@ class Document
                 ':extracted_text' => $data['extracted_text'] ?? null,
                 ':ai_summary'    => $data['ai_summary'] ?? null,
                 ':uploaded_by'   => $data['uploaded_by'],
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -65,11 +62,7 @@ class Document
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM documents WHERE project_id = :project_id ORDER BY created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+        $stmt = $db->query("SELECT * FROM documents WHERE project_id = :project_id ORDER BY created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -82,12 +75,8 @@ class Document
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM documents WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM documents WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -106,7 +95,6 @@ class Document
     private const UPDATABLE_COLUMNS = [
         'extracted_text', 'ai_summary',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -115,17 +103,12 @@ class Document
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE documents SET {$setClauses} WHERE id = :id", $bound);
     }
 

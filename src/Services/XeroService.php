@@ -1,4 +1,5 @@
 <?php
+
 /**
  * XeroService
  *
@@ -32,7 +33,6 @@ class XeroService
     private const TOKEN_URL   = 'https://identity.xero.com/connect/token';
     private const API_BASE    = 'https://api.xero.com/api.xro/2.0';
     private const TENANTS_URL = 'https://api.xero.com/connections';
-
     private const SCOPES = [
         'openid',
         'profile',
@@ -41,16 +41,13 @@ class XeroService
         'accounting.contacts',
         'offline_access',
     ];
-
     private string $clientId;
     private string $clientSecret;
     private string $redirectUri;
-
     private ?string $accessToken   = null;
     private ?string $refreshToken  = null;
-    private int     $expiresAt     = 0;
+    private int $expiresAt     = 0;
     private ?string $tenantId      = null;
-
     public function __construct(array $config)
     {
         $this->clientId     = $config['xero']['client_id']     ?? '';
@@ -111,7 +108,6 @@ class XeroService
             'grant_type'    => 'refresh_token',
             'refresh_token' => $this->refreshToken,
         ]);
-
         $this->setTokens($tokens);
         return $tokens;
     }
@@ -196,10 +192,8 @@ class XeroService
     public function createInvoice(string $tenantId, array $invoice): array
     {
         $this->ensureValidToken();
-
         $url  = self::API_BASE . '/Invoices';
         $body = json_encode(['Invoices' => [$invoice]]);
-
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -213,11 +207,9 @@ class XeroService
                 'Accept: application/json',
             ],
         ]);
-
         $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
         if ($raw === false || $code < 200 || $code >= 300) {
             throw new \RuntimeException("Xero create invoice failed (HTTP {$code}): " . ($raw ?: 'no response'));
         }
@@ -238,7 +230,6 @@ class XeroService
     public function listInvoices(string $tenantId, ?string $status = null, int $page = 1): array
     {
         $this->ensureValidToken();
-
         $params = ['page' => $page, 'order' => 'Date DESC'];
         if ($status !== null) {
             $params['Statuses'] = $status;
@@ -259,7 +250,6 @@ class XeroService
     public function getInvoice(string $tenantId, string $invoiceId): ?array
     {
         $this->ensureValidToken();
-
         $url      = self::API_BASE . '/Invoices/' . urlencode($invoiceId);
         $response = $this->apiGet($url, $tenantId);
         $invoices = $response['Invoices'] ?? [];
@@ -276,13 +266,8 @@ class XeroService
      * @param string $reference    Optional reference (e.g. subscription ID)
      * @return array               Xero invoice payload array
      */
-    public static function buildInvoicePayload(
-        string $contactName,
-        string $description,
-        float  $amount,
-        string $currency  = 'NZD',
-        string $reference = ''
-    ): array {
+    public static function buildInvoicePayload(string $contactName, string $description, float $amount, string $currency = 'NZD', string $reference = ''): array
+    {
         return [
             'Type'         => 'ACCREC',
             'Contact'      => ['Name' => $contactName],
@@ -330,11 +315,9 @@ class XeroService
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_HTTPHEADER     => $headers,
         ]);
-
         $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
         if ($raw === false || $code < 200 || $code >= 300) {
             throw new \RuntimeException("Xero API GET failed (HTTP {$code}): " . ($raw ?: 'no response'));
         }
@@ -362,11 +345,9 @@ class XeroService
                 'Content-Type: application/x-www-form-urlencoded',
             ],
         ]);
-
         $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
         if ($raw === false || $code !== 200) {
             throw new \RuntimeException("Xero token request failed (HTTP {$code}): " . ($raw ?: 'no response'));
         }
@@ -378,7 +359,6 @@ class XeroService
 
         // Compute absolute expiry timestamp
         $data['expires_at'] = time() + (int) ($data['expires_in'] ?? 1800);
-
         return $data;
     }
 }

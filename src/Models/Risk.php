@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Risk Model
  *
@@ -32,12 +33,10 @@ class Risk
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO risks
+        $db->query("INSERT INTO risks
                 (project_id, title, description, likelihood, impact, mitigation, priority, owner_user_id)
              VALUES
-                (:project_id, :title, :description, :likelihood, :impact, :mitigation, :priority, :owner_user_id)",
-            [
+                (:project_id, :title, :description, :likelihood, :impact, :mitigation, :priority, :owner_user_id)", [
                 ':project_id'    => $data['project_id'],
                 ':title'         => $data['title'],
                 ':description'   => $data['description'] ?? null,
@@ -46,9 +45,7 @@ class Risk
                 ':mitigation'    => $data['mitigation'] ?? null,
                 ':priority'      => $data['priority'] ?? null,
                 ':owner_user_id' => $data['owner_user_id'] ?? null,
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -65,13 +62,9 @@ class Risk
      */
     public static function findByProjectId(Database $db, int $projectId): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM risks
+        $stmt = $db->query("SELECT * FROM risks
              WHERE project_id = :project_id
-             ORDER BY (likelihood * impact) DESC, created_at DESC",
-            [':project_id' => $projectId]
-        );
-
+             ORDER BY (likelihood * impact) DESC, created_at DESC", [':project_id' => $projectId]);
         return $stmt->fetchAll();
     }
 
@@ -84,12 +77,8 @@ class Risk
      */
     public static function findById(Database $db, int $id): ?array
     {
-        $stmt = $db->query(
-            "SELECT * FROM risks WHERE id = :id LIMIT 1",
-            [':id' => $id]
-        );
+        $stmt = $db->query("SELECT * FROM risks WHERE id = :id LIMIT 1", [':id' => $id]);
         $row = $stmt->fetch();
-
         return $row !== false ? $row : null;
     }
 
@@ -109,7 +98,6 @@ class Risk
         'title', 'description', 'likelihood', 'impact', 'mitigation', 'priority',
         'status', 'roam_status', 'owner_user_id',
     ];
-
     public static function update(Database $db, int $id, array $data): void
     {
         // Filter to allowed columns only to prevent SQL injection via column names
@@ -118,17 +106,12 @@ class Risk
             return;
         }
 
-        $setClauses = implode(
-            ', ',
-            array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data))
-        );
-
+        $setClauses = implode(', ', array_map(fn($col) => "`{$col}` = :{$col}", array_keys($data)));
         $bound = [];
         foreach ($data as $col => $val) {
             $bound[":{$col}"] = $val;
         }
         $bound[':id'] = $id;
-
         $db->query("UPDATE risks SET {$setClauses} WHERE id = :id", $bound);
     }
 
@@ -155,9 +138,6 @@ class Risk
      */
     public static function deleteByProjectId(Database $db, int $projectId): void
     {
-        $db->query(
-            "DELETE FROM risks WHERE project_id = :project_id",
-            [':project_id' => $projectId]
-        );
+        $db->query("DELETE FROM risks WHERE project_id = :project_id", [':project_id' => $projectId]);
     }
 }

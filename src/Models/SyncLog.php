@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SyncLog Model
  *
@@ -33,14 +34,12 @@ class SyncLog
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO sync_log
+        $db->query("INSERT INTO sync_log
                 (integration_id, direction, action, local_type,
                  local_id, external_id, details_json, status)
              VALUES
                 (:integration_id, :direction, :action, :local_type,
-                 :local_id, :external_id, :details_json, :status)",
-            [
+                 :local_id, :external_id, :details_json, :status)", [
                 ':integration_id' => $data['integration_id'],
                 ':direction'      => $data['direction'],
                 ':action'         => $data['action'],
@@ -49,9 +48,7 @@ class SyncLog
                 ':external_id'    => $data['external_id'] ?? null,
                 ':details_json'   => $data['details_json'] ?? null,
                 ':status'         => $data['status'] ?? 'success',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -69,17 +66,13 @@ class SyncLog
      */
     public static function findByIntegration(Database $db, int $integrationId, int $limit = 50): array
     {
-        $stmt = $db->query(
-            "SELECT * FROM sync_log
+        $stmt = $db->query("SELECT * FROM sync_log
              WHERE integration_id = :integration_id
              ORDER BY created_at DESC
-             LIMIT :lim",
-            [
+             LIMIT :lim", [
                 ':integration_id' => $integrationId,
                 ':lim'            => $limit,
-            ]
-        );
-
+            ]);
         return $stmt->fetchAll();
     }
 
@@ -94,17 +87,10 @@ class SyncLog
      * @param string|null $status        Filter by status ('success'/'error') or null for all
      * @return array{rows: array, total: int}  Log rows and total matching count
      */
-    public static function findByIntegrationPaginated(
-        Database $db,
-        int $integrationId,
-        int $page = 1,
-        int $perPage = 50,
-        ?string $direction = null,
-        ?string $status = null
-    ): array {
+    public static function findByIntegrationPaginated(Database $db, int $integrationId, int $page = 1, int $perPage = 50, ?string $direction = null, ?string $status = null): array
+    {
         $where  = 'WHERE integration_id = :integration_id';
         $params = [':integration_id' => $integrationId];
-
         if ($direction !== null) {
             $where .= ' AND direction = :direction';
             $params[':direction'] = $direction;
@@ -116,24 +102,15 @@ class SyncLog
         }
 
         // Total count for pagination
-        $countStmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM sync_log {$where}",
-            $params
-        );
+        $countStmt = $db->query("SELECT COUNT(*) AS cnt FROM sync_log {$where}", $params);
         $total = (int) $countStmt->fetch()['cnt'];
-
-        // Paginated rows
+// Paginated rows
         $offset = ($page - 1) * $perPage;
         $params[':lim']    = $perPage;
         $params[':offset'] = $offset;
-
-        $stmt = $db->query(
-            "SELECT * FROM sync_log {$where}
+        $stmt = $db->query("SELECT * FROM sync_log {$where}
              ORDER BY created_at DESC
-             LIMIT :lim OFFSET :offset",
-            $params
-        );
-
+             LIMIT :lim OFFSET :offset", $params);
         return [
             'rows'  => $stmt->fetchAll(),
             'total' => $total,
@@ -149,12 +126,8 @@ class SyncLog
      */
     public static function countByIntegration(Database $db, int $integrationId): int
     {
-        $stmt = $db->query(
-            "SELECT COUNT(*) AS cnt FROM sync_log
-             WHERE integration_id = :integration_id",
-            [':integration_id' => $integrationId]
-        );
-
+        $stmt = $db->query("SELECT COUNT(*) AS cnt FROM sync_log
+             WHERE integration_id = :integration_id", [':integration_id' => $integrationId]);
         return (int) $stmt->fetch()['cnt'];
     }
 
@@ -169,15 +142,10 @@ class SyncLog
      * @param string|null $status        Filter by status or null for all
      * @return array                     All matching log rows, newest first
      */
-    public static function findAllByIntegration(
-        Database $db,
-        int $integrationId,
-        ?string $direction = null,
-        ?string $status = null
-    ): array {
+    public static function findAllByIntegration(Database $db, int $integrationId, ?string $direction = null, ?string $status = null): array
+    {
         $where  = 'WHERE integration_id = :integration_id';
         $params = [':integration_id' => $integrationId];
-
         if ($direction !== null) {
             $where .= ' AND direction = :direction';
             $params[':direction'] = $direction;
@@ -188,12 +156,8 @@ class SyncLog
             $params[':status'] = $status;
         }
 
-        $stmt = $db->query(
-            "SELECT * FROM sync_log {$where}
-             ORDER BY created_at DESC",
-            $params
-        );
-
+        $stmt = $db->query("SELECT * FROM sync_log {$where}
+             ORDER BY created_at DESC", $params);
         return $stmt->fetchAll();
     }
 }

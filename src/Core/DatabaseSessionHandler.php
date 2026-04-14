@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace StratFlow\Core;
@@ -15,7 +16,6 @@ namespace StratFlow\Core;
 class DatabaseSessionHandler implements \SessionHandlerInterface
 {
     private \PDO $pdo;
-
     public function __construct(\PDO $pdo)
     {
         $this->pdo = $pdo;
@@ -33,22 +33,16 @@ class DatabaseSessionHandler implements \SessionHandlerInterface
 
     public function read(string $id): string|false
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT data FROM sessions WHERE id = :id LIMIT 1"
-        );
+        $stmt = $this->pdo->prepare("SELECT data FROM sessions WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
         return $row ? $row['data'] : '';
     }
 
     public function write(string $id, string $data): bool
     {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO sessions (id, data, last_accessed) VALUES (:id, :data, :time)
-             ON DUPLICATE KEY UPDATE data = :data2, last_accessed = :time2"
-        );
-
+        $stmt = $this->pdo->prepare("INSERT INTO sessions (id, data, last_accessed) VALUES (:id, :data, :time)
+             ON DUPLICATE KEY UPDATE data = :data2, last_accessed = :time2");
         $now = time();
         return $stmt->execute([
             ':id'    => $id,
@@ -67,11 +61,8 @@ class DatabaseSessionHandler implements \SessionHandlerInterface
 
     public function gc(int $max_lifetime): int|false
     {
-        $stmt = $this->pdo->prepare(
-            "DELETE FROM sessions WHERE last_accessed < :expire"
-        );
+        $stmt = $this->pdo->prepare("DELETE FROM sessions WHERE last_accessed < :expire");
         $stmt->execute([':expire' => time() - $max_lifetime]);
-
         return $stmt->rowCount();
     }
 }

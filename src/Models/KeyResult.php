@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace StratFlow\Models;
@@ -13,21 +14,18 @@ class KeyResult
         'current_value', 'unit', 'status', 'display_order',
         'jira_goal_id', 'jira_goal_url', 'ai_momentum',
     ];
-
-    // ===========================
+// ===========================
     // CREATE
     // ===========================
 
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO key_results
+        $db->query("INSERT INTO key_results
                 (org_id, hl_work_item_id, title, metric_description,
                  baseline_value, target_value, current_value, unit, status, display_order)
              VALUES
                 (:org_id, :hl_work_item_id, :title, :metric_description,
-                 :baseline_value, :target_value, :current_value, :unit, :status, :display_order)",
-            [
+                 :baseline_value, :target_value, :current_value, :unit, :status, :display_order)", [
                 ':org_id'             => $data['org_id'],
                 ':hl_work_item_id'    => $data['hl_work_item_id'],
                 ':title'              => $data['title'],
@@ -38,8 +36,7 @@ class KeyResult
                 ':unit'               => $data['unit'] ?? null,
                 ':status'             => $data['status'] ?? 'not_started',
                 ':display_order'      => $data['display_order'] ?? 0,
-            ]
-        );
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -49,12 +46,9 @@ class KeyResult
 
     public static function findByWorkItemId(Database $db, int $workItemId, int $orgId): array
     {
-        return $db->query(
-            "SELECT * FROM key_results
+        return $db->query("SELECT * FROM key_results
               WHERE hl_work_item_id = :wid AND org_id = :oid
-              ORDER BY display_order ASC, id ASC",
-            [':wid' => $workItemId, ':oid' => $orgId]
-        )->fetchAll();
+              ORDER BY display_order ASC, id ASC", [':wid' => $workItemId, ':oid' => $orgId])->fetchAll();
     }
 
     /**
@@ -76,14 +70,9 @@ class KeyResult
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $params       = [...$ids, $orgId];
-
-        $rows = $db->query(
-            "SELECT * FROM key_results
+        $rows = $db->query("SELECT * FROM key_results
               WHERE hl_work_item_id IN ({$placeholders}) AND org_id = ?
-              ORDER BY display_order ASC, id ASC",
-            $params
-        )->fetchAll();
-
+              ORDER BY display_order ASC, id ASC", $params)->fetchAll();
         $grouped = [];
         foreach ($rows as $row) {
             $grouped[(int) $row['hl_work_item_id']][] = $row;
@@ -93,10 +82,7 @@ class KeyResult
 
     public static function findById(Database $db, int $id, int $orgId): ?array
     {
-        $row = $db->query(
-            "SELECT * FROM key_results WHERE id = :id AND org_id = :oid LIMIT 1",
-            [':id' => $id, ':oid' => $orgId]
-        )->fetch();
+        $row = $db->query("SELECT * FROM key_results WHERE id = :id AND org_id = :oid LIMIT 1", [':id' => $id, ':oid' => $orgId])->fetch();
         return $row !== false ? $row : null;
     }
 
@@ -106,8 +92,7 @@ class KeyResult
      */
     public static function findByProjectOkrs(Database $db, int $projectId, int $orgId): array
     {
-        return $db->query(
-            "SELECT kr.*, hwi.title AS work_item_title, hwi.okr_title, hwi.id AS work_item_id,
+        return $db->query("SELECT kr.*, hwi.title AS work_item_title, hwi.okr_title, hwi.id AS work_item_id,
                     hwi.priority_number, hwi.status AS work_item_status
                FROM key_results kr
                JOIN hl_work_items hwi ON kr.hl_work_item_id = hwi.id
@@ -116,9 +101,7 @@ class KeyResult
                 AND kr.org_id = :oid
                 AND hwi.okr_title IS NOT NULL
                 AND hwi.okr_title != ''
-              ORDER BY hwi.priority_number ASC, kr.display_order ASC",
-            [':pid' => $projectId, ':oid' => $orgId]
-        )->fetchAll();
+              ORDER BY hwi.priority_number ASC, kr.display_order ASC", [':pid' => $projectId, ':oid' => $orgId])->fetchAll();
     }
 
     // ===========================
@@ -144,9 +127,6 @@ class KeyResult
 
     public static function delete(Database $db, int $id, int $orgId): void
     {
-        $db->query(
-            "DELETE FROM key_results WHERE id = :id AND org_id = :oid",
-            [':id' => $id, ':oid' => $orgId]
-        );
+        $db->query("DELETE FROM key_results WHERE id = :id AND org_id = :oid", [':id' => $id, ':oid' => $orgId]);
     }
 }

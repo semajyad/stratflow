@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ProjectGitHubController
  *
@@ -34,12 +35,11 @@ class ProjectGitHubController
     // PROPERTIES
     // ===========================
 
-    protected Request  $request;
+    protected Request $request;
     protected Response $response;
-    protected Auth     $auth;
+    protected Auth $auth;
     protected Database $db;
-    protected array    $config;
-
+    protected array $config;
     public function __construct(Request $request, Response $response, Auth $auth, Database $db, array $config)
     {
         $this->request  = $request;
@@ -66,7 +66,6 @@ class ProjectGitHubController
     {
         $user  = $this->auth->user();
         $orgId = (int) $user['org_id'];
-
         $project = ProjectPolicy::findManageableProject($this->db, $user, $id);
         if ($project === null) {
             $_SESSION['flash_error'] = 'Project not found.';
@@ -77,8 +76,7 @@ class ProjectGitHubController
         $allRepos    = IntegrationRepo::findAllForOrg($this->db, $orgId);
         $linkedIds   = ProjectRepoLink::findRepoIdsByProject($this->db, $id, $orgId);
         $linkedIdSet = array_flip($linkedIds);
-
-        // Group repos by GitHub account login for the template
+// Group repos by GitHub account login for the template
         $reposByAccount = [];
         foreach ($allRepos as $repo) {
             $account = $repo['account_login'] ?? 'Unknown account';
@@ -95,7 +93,6 @@ class ProjectGitHubController
             'flash_message'   => $_SESSION['flash_message'] ?? null,
             'flash_error'     => $_SESSION['flash_error']   ?? null,
         ], 'app');
-
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
 
@@ -113,7 +110,6 @@ class ProjectGitHubController
         $user   = $this->auth->user();
         $orgId  = (int) $user['org_id'];
         $userId = (int) $user['id'];
-
         $project = ProjectPolicy::findManageableProject($this->db, $user, $id);
         if ($project === null) {
             $_SESSION['flash_error'] = 'Project not found.';
@@ -127,8 +123,7 @@ class ProjectGitHubController
             $submitted = [];
         }
         $submittedIds = array_map('intval', $submitted);
-
-        // Validate each submitted ID belongs to this org (prevent cross-org tamper)
+// Validate each submitted ID belongs to this org (prevent cross-org tamper)
         $validatedIds = [];
         foreach ($submittedIds as $repoId) {
             if ($repoId > 0 && IntegrationRepo::findByIdForOrg($this->db, $repoId, $orgId) !== null) {
@@ -139,10 +134,8 @@ class ProjectGitHubController
         $currentIds   = ProjectRepoLink::findRepoIdsByProject($this->db, $id, $orgId);
         $currentSet   = array_flip($currentIds);
         $validatedSet = array_flip($validatedIds);
-
         $toAdd    = array_diff_key($validatedSet, $currentSet);
         $toRemove = array_diff_key($currentSet, $validatedSet);
-
         if (empty($toAdd) && empty($toRemove)) {
             $_SESSION['flash_message'] = 'No changes to save.';
             $this->response->redirect('/app/projects/' . $id . '/github/edit');
@@ -151,7 +144,6 @@ class ProjectGitHubController
 
         try {
             $this->db->getPdo()->beginTransaction();
-
             foreach (array_keys($toAdd) as $repoId) {
                 ProjectRepoLink::create($this->db, $id, (int) $repoId, $orgId, $userId);
             }
@@ -161,7 +153,6 @@ class ProjectGitHubController
             }
 
             $this->db->getPdo()->commit();
-
             $added   = count($toAdd);
             $removed = count($toRemove);
             $parts   = [];

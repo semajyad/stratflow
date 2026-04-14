@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HLItemDependency Model
  *
@@ -28,17 +29,13 @@ class HLItemDependency
      */
     public static function create(Database $db, array $data): int
     {
-        $db->query(
-            "INSERT INTO hl_item_dependencies (item_id, depends_on_id, dependency_type)
+        $db->query("INSERT INTO hl_item_dependencies (item_id, depends_on_id, dependency_type)
              VALUES (:item_id, :depends_on_id, :dependency_type)
-             ON DUPLICATE KEY UPDATE dependency_type = VALUES(dependency_type)",
-            [
+             ON DUPLICATE KEY UPDATE dependency_type = VALUES(dependency_type)", [
                 ':item_id'         => $data['item_id'],
                 ':depends_on_id'   => $data['depends_on_id'],
                 ':dependency_type' => $data['dependency_type'] ?? 'hard',
-            ]
-        );
-
+            ]);
         return (int) $db->lastInsertId();
     }
 
@@ -55,11 +52,9 @@ class HLItemDependency
     public static function createBatch(Database $db, int $itemId, array $dependsOnIds): void
     {
         self::deleteByItemId($db, $itemId);
-
         foreach ($dependsOnIds as $dependsOnId) {
             $dependsOnId = (int) $dependsOnId;
-
-            // Skip self-references
+        // Skip self-references
             if ($dependsOnId === $itemId || $dependsOnId === 0) {
                 continue;
             }
@@ -87,15 +82,11 @@ class HLItemDependency
      */
     public static function findByItemId(Database $db, int $itemId): array
     {
-        $stmt = $db->query(
-            "SELECT d.*, w.title AS depends_on_title, w.priority_number AS depends_on_priority
+        $stmt = $db->query("SELECT d.*, w.title AS depends_on_title, w.priority_number AS depends_on_priority
              FROM hl_item_dependencies d
              JOIN hl_work_items w ON w.id = d.depends_on_id
              WHERE d.item_id = :item_id
-             ORDER BY w.priority_number ASC",
-            [':item_id' => $itemId]
-        );
-
+             ORDER BY w.priority_number ASC", [':item_id' => $itemId]);
         return $stmt->fetchAll();
     }
 
@@ -110,15 +101,11 @@ class HLItemDependency
      */
     public static function findDependentsOf(Database $db, int $itemId): array
     {
-        $stmt = $db->query(
-            "SELECT d.*, w.title AS dependent_title, w.priority_number AS dependent_priority
+        $stmt = $db->query("SELECT d.*, w.title AS dependent_title, w.priority_number AS dependent_priority
              FROM hl_item_dependencies d
              JOIN hl_work_items w ON w.id = d.item_id
              WHERE d.depends_on_id = :item_id
-             ORDER BY w.priority_number ASC",
-            [':item_id' => $itemId]
-        );
-
+             ORDER BY w.priority_number ASC", [':item_id' => $itemId]);
         return $stmt->fetchAll();
     }
 
@@ -136,9 +123,6 @@ class HLItemDependency
      */
     public static function deleteByItemId(Database $db, int $itemId): void
     {
-        $db->query(
-            "DELETE FROM hl_item_dependencies WHERE item_id = :item_id",
-            [':item_id' => $itemId]
-        );
+        $db->query("DELETE FROM hl_item_dependencies WHERE item_id = :item_id", [':item_id' => $itemId]);
     }
 }
