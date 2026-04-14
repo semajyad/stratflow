@@ -48,7 +48,7 @@ reviews:
     - path: "src/Controllers/WebhookController.php"
       instructions: |
         Stripe webhook handler. Flag as CRITICAL:
-        - Signature verification via constructEvent() must be the very first action
+        - Signature verification via constructWebhookEvent() must be the very first action
         - Every event type must check stripe_events for idempotency before processing
         - This endpoint is exempt from CSRF (external POST from Stripe)
 
