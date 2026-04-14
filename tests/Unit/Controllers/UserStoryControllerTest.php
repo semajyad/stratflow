@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace StratFlow\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use StratFlow\Controllers\UserStoryController;
 use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
@@ -20,6 +21,19 @@ use StratFlow\Tests\Support\ControllerTestCase;
  * For simpler CRUD methods we also add happy-path tests.
  */
 #[CoversClass(UserStoryController::class)]
+#[UsesClass(\StratFlow\Security\ProjectPolicy::class)]
+#[UsesClass(\StratFlow\Security\PermissionService::class)]
+#[UsesClass(\StratFlow\Models\Project::class)]
+#[UsesClass(\StratFlow\Models\UserStory::class)]
+#[UsesClass(\StratFlow\Models\HLWorkItem::class)]
+#[UsesClass(\StratFlow\Models\StoryGitLink::class)]
+#[UsesClass(\StratFlow\Models\Subscription::class)]
+#[UsesClass(\StratFlow\Models\GovernanceItem::class)]
+#[UsesClass(\StratFlow\Models\StrategicBaseline::class)]
+#[UsesClass(\StratFlow\Models\StoryQualityConfig::class)]
+#[UsesClass(\StratFlow\Services\GeminiService::class)]
+#[UsesClass(\StratFlow\Services\StoryQualityScorer::class)]
+#[UsesClass(\StratFlow\Services\StoryImprovementService::class)]
 class UserStoryControllerTest extends ControllerTestCase
 {
     // ===========================
