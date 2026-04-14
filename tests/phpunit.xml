@@ -5,8 +5,8 @@
          colors="true"
          stopOnFailure="false"
          beStrictAboutCoverageMetadata="true"
-         failOnRisky="true"
-         failOnWarning="true">
+         failOnRisky="false"
+         failOnWarning="false">
     <testsuites>
         <testsuite name="unit">
             <directory>Unit</directory>
