@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace StratFlow\Tests\Unit\Services;
+namespace StratFlow\Tests\Integration;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
