@@ -37,6 +37,19 @@ class Logger
     private static string $route  = '';
     private static float  $startedAt = 0.0;
 
+    /** @var resource|null Override stream for testing (null = STDOUT) */
+    private static mixed $outputStream = null;
+
+    /**
+     * Override the output stream (for testing only).
+     *
+     * @param resource|null $stream A writable stream, or null to restore STDOUT
+     */
+    public static function setOutputStream(mixed $stream): void
+    {
+        self::$outputStream = $stream;
+    }
+
     // ===========================
     // LIFECYCLE
     // ===========================
@@ -128,6 +141,7 @@ class Logger
         }
 
         // Write to stdout — container platform captures this
-        fwrite(STDOUT, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+        $stream = self::$outputStream ?? STDOUT;
+        fwrite($stream, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
     }
 }
