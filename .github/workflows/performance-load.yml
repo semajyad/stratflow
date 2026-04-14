@@ -1,0 +1,122 @@
+name: Performance Load Test (weekly peak)
+
+# Weekly 50-VU peak scenario — Sunday 20:00 UTC.
+# This is separate from the daily baseline so the heavier run doesn't
+# interfere with nightly monitoring and has its own retention window.
+#
+# Also runnable on demand via workflow_dispatch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL (must NOT be production)"
+        required: false
+        default: ""
+        type: string
+  schedule:
+    # Sunday 20:00 UTC
+    - cron: "0 20 * * 0"
+
+concurrency:
+  group: performance-load
+  cancel-in-progress: true
+
+jobs:
+  k6-peak:
+    name: k6 50-VU peak load
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve and guard target URL
+        id: target
+        run: |
+          URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
+          PROD_HOSTNAMES=("stratflow.io" "app.stratflow.io" "stratflow-app-production.up.railway.app")
+          for PROD in "${PROD_HOSTNAMES[@]}"; do
+            if echo "$URL" | grep -qiF "$PROD"; then
+              echo "::error::Load test target '$URL' is a production hostname."
+              exit 1
+            fi
+          done
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Load test target: $URL"
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -q
+          sudo apt-get install -y k6
+
+      - name: Run 50-VU peak scenario
+        env:
+          BASE_URL: ${{ steps.target.outputs.url }}
+        run: |
+          k6 run \
+            --env BASE_URL="$BASE_URL" \
+            --summary-export tests/performance/summary-peak-latest.json \
+            tests/performance/k6-baseline-run.js
+        continue-on-error: true
+
+      - name: Check peak thresholds (p95 < 800ms, error < 1%)
+        run: |
+          if [ -f tests/performance/summary-peak-latest.json ]; then
+            python3 - <<'EOF'
+          import json, sys
+          summary = json.load(open('tests/performance/summary-peak-latest.json'))
+          metrics = summary.get('metrics', {})
+          p95 = metrics.get('http_req_duration', {}).get('values', {}).get('p(95)', None)
+          err = metrics.get('http_req_failed',   {}).get('values', {}).get('rate',   None)
+          ok = True
+          if p95 is not None:
+              print(f'Peak p95: {p95:.0f}ms (threshold: 800ms)')
+              if p95 > 800:
+                  print('::error::Peak p95 exceeds 800ms')
+                  ok = False
+          if err is not None:
+              print(f'Peak error rate: {err*100:.2f}% (threshold: 1%)')
+              if err > 0.01:
+                  print('::error::Peak error rate exceeds 1%')
+                  ok = False
+          sys.exit(0 if ok else 1)
+          EOF
+          else
+            echo "::warning::summary-peak-latest.json not found"
+            exit 1
+          fi
+
+      - name: Archive peak result to history
+        if: always()
+        run: |
+          DATE=$(date -u '+%Y-%m-%d')
+          mkdir -p tests/performance/history
+          if [ -f tests/performance/summary-peak-latest.json ]; then
+            cp tests/performance/summary-peak-latest.json \
+               "tests/performance/history/${DATE}-peak.json"
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/performance/history/ tests/performance/summary-peak-latest.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: k6 peak load history ${DATE}"
+            git push
+          fi
+
+      - name: Upload k6 peak results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-peak-${{ github.run_id }}
+          path: tests/performance/summary-peak-latest.json
+          retention-days: 90

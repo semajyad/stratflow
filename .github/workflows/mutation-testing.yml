@@ -1,8 +1,9 @@
 name: Mutation Testing (Infection)
 
-# Nightly mutation testing against security-critical packages.
-# Target: MSI >= 70% across src/Core and src/Services/AuditLogger.php
-# Too slow to run on every PR — nightly results are checked in morning review.
+# Nightly mutation testing across the full src/ tree.
+# Target: MSI >= 65%, covered MSI >= 75% (Wave 5 baseline).
+# Security-critical files are subject to the stricter minMsi in infection.json.
+# Too slow to run on every PR — nightly results surface in morning review.
 
 on:
   workflow_dispatch:
@@ -17,6 +18,8 @@ concurrency:
 jobs:
   mutation:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write  # to post MSI comment on PRs triggered via workflow_dispatch
 
     services:
       mysql:
@@ -65,13 +68,41 @@ jobs:
             mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
           done
 
-      - name: Run Infection mutation testing
+      - name: Run Infection mutation testing (full src/)
+        id: infection
         run: |
           vendor/bin/infection \
+            --configuration=infection.json \
             --threads=4 \
-            --min-msi=70 \
-            --min-covered-msi=80 \
             --only-covered \
             --show-mutations \
-            --no-progress \
-            --filter="src/Core/SecretManager.php,src/Core/RateLimiter.php,src/Core/CSRF.php,src/Services/AuditLogger.php,src/Services/StoryImprovementService.php"
+            --no-progress
+        continue-on-error: true  # capture exit code; we report below
+
+      - name: Extract MSI from infection log
+        id: msi
+        run: |
+          if [ -f var/infection.log ]; then
+            MSI=$(grep -oP 'Mutation Score Indicator \(MSI\): \K[\d.]+' var/infection.log | tail -1)
+            COVERED=$(grep -oP 'Covered Code MSI: \K[\d.]+' var/infection.log | tail -1)
+            echo "msi=${MSI:-unknown}" >> "$GITHUB_OUTPUT"
+            echo "covered_msi=${COVERED:-unknown}" >> "$GITHUB_OUTPUT"
+            echo "MSI: ${MSI:-unknown}%  |  Covered MSI: ${COVERED:-unknown}%"
+          else
+            echo "msi=unknown" >> "$GITHUB_OUTPUT"
+            echo "covered_msi=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Infection HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infection-report-${{ github.run_id }}
+          path: var/infection.html
+          retention-days: 30
+
+      - name: Fail if Infection exit code non-zero
+        if: steps.infection.outcome == 'failure'
+        run: |
+          echo "::error::Infection failed — MSI ${{ steps.msi.outputs.msi }}% below threshold. See artifact for surviving mutants."
+          exit 1

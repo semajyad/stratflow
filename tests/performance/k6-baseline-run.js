@@ -45,8 +45,11 @@ export const options = {
     },
   },
   thresholds: {
-    'http_req_duration{type:public}':         ['p(95)<2000'],
-    'http_req_duration{type:authenticated}':  ['p(95)<3000'],
+    // Single source of truth: p95 < 800ms, error rate < 1%
+    // Matches the gate in .github/workflows/performance.yml
+    'http_req_duration':                      ['p(95)<800'],
+    'http_req_duration{type:public}':         ['p(95)<800'],
+    'http_req_duration{type:authenticated}':  ['p(95)<800'],
     'http_req_failed':                        ['rate<0.01'],
     'errors':                                 ['rate<0.01'],
   },
@@ -57,7 +60,7 @@ export default function () {
     const home = http.get(`${BASE_URL}/`, { tags: { type: 'public' } });
     check(home, {
       'home 200': (r) => r.status === 200,
-      'home <2s': (r) => r.timings.duration < 2000,
+      'home <800ms': (r) => r.timings.duration < 800,
     });
     errorRate.add(home.status !== 200);
     sleep(0.5);

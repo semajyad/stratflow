@@ -110,17 +110,26 @@ jobs:
           path: tests/performance/
           retention-days: 30
 
-      - name: Commit updated summary-latest.json
+      - name: Append to performance history
         if: always()
         run: |
+          DATE=$(date -u '+%Y-%m-%d')
+          mkdir -p tests/performance/history
+          # Copy summary to a date-stamped file (never overwrite, append runs)
+          DEST="tests/performance/history/${DATE}.json"
+          if [ -f tests/performance/summary-latest.json ]; then
+            cp tests/performance/summary-latest.json "$DEST"
+            echo "Archived to $DEST"
+          fi
+
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add tests/performance/summary-latest.json
+          git add tests/performance/summary-latest.json tests/performance/history/ || true
           # Clean up per-run JSON file before commit (it's captured in the artifact)
           git rm --ignore-unmatch tests/performance/results-*.json
           if git diff --cached --quiet; then
-            echo "No changes to summary-latest.json"
+            echo "No changes to commit"
           else
-            git commit -m "chore: k6 performance summary $(date -u '+%Y-%m-%d')"
+            git commit -m "chore: k6 performance history ${DATE}"
             git push
           fi
