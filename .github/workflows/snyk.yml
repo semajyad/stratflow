@@ -41,6 +41,7 @@ jobs:
       - name: Upload SARIF to GitHub code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true   # GitHub Advanced Security not available on personal private repos
         with:
           sarif_file: snyk.sarif
 

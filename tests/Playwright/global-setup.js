@@ -3,6 +3,12 @@ const mysql = require('mysql2/promise');
 const { REGULAR_USER_EMAIL, REGULAR_USER_HASH, DB_CONFIG } = require('./test-constants');
 
 async function globalSetup() {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:8890';
+  if (!baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
+    console.log('[globalSetup] staging URL detected — skipping local DB setup');
+    return;
+  }
+
   let conn;
   try {
     conn = await mysql.createConnection(DB_CONFIG);
