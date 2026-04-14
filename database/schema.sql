@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS risks (
     priority DECIMAL(5,2) NULL,
     status ENUM('open','closed') NOT NULL DEFAULT 'open',
     roam_status ENUM('resolved','owned','accepted','mitigated') NULL,
-    owner_user_id BIGINT UNSIGNED NULL,
+    owner_user_id INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
