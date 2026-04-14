@@ -4,7 +4,14 @@ const { REGULAR_USER_EMAIL, REGULAR_USER_HASH, DB_CONFIG } = require('./test-con
 
 async function globalSetup() {
   const baseUrl = process.env.BASE_URL || 'http://localhost:8890';
-  if (!baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
+  let hostname;
+  try {
+    hostname = new URL(baseUrl).hostname;
+  } catch (err) {
+    throw new Error(`[globalSetup] Invalid BASE_URL: ${baseUrl}`);
+  }
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  if (!isLocal) {
     console.log('[globalSetup] staging URL detected — skipping local DB setup');
     return;
   }
