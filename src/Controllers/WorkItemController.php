@@ -775,7 +775,10 @@ class WorkItemController
             $breakdownData = $scored['breakdown'];
             $itemId        = $id;
             $itemType      = 'work-item';
-            $csrf_token    = $this->request->post('_csrf_token');
+            // CSRF is enforced by CSRFMiddleware at the router level for this route
+            // before this method is called. We read the current session token here
+            // only to pass it to the partial template for any forms it renders.
+            $csrf_token    = $_SESSION['_csrf_token'] ?? '';
             require __DIR__ . '/../../templates/partials/quality-breakdown.php';
             $html = ob_get_clean();
             $this->response->json([

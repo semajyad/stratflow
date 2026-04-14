@@ -861,7 +861,9 @@ PROMPT;
             $breakdownData = $scored['breakdown'];
             $itemId        = $id;
             $itemType      = 'story';
-            $csrf_token    = $this->request->post('_csrf_token');
+            // CSRF verified by middleware before this method is called.
+            // Read session token here only to pass it to the partial template.
+            $csrf_token    = $_SESSION['_csrf_token'] ?? '';
             require __DIR__ . '/../../templates/partials/quality-breakdown.php';
             $html = ob_get_clean();
             $this->response->json([
