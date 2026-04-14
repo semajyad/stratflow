@@ -1,0 +1,199 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Comparison operation "\<" between int\<1, max\> and 1 is always false\.$#'
+			identifier: smaller.alwaysFalse
+			count: 1
+			path: src/Controllers/AdminController.php
+
+		-
+			message: '#^Offset ''product'' on array\{product\: mixed, consultancy\: mixed\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Controllers/AdminController.php
+
+		-
+			message: '#^Offset ''_mfa_pending_user_id'' on non\-empty\-array\<mixed\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: src/Controllers/AuthController.php
+
+		-
+			message: '#^Variable \$structuredKrsByKey on left side of \?\? is never defined\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: src/Controllers/ExecutiveController.php
+
+		-
+			message: '#^Constant ASSET_VERSION not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Controllers/HealthController.php
+
+		-
+			message: '#^Offset ''completion'' does not exist on array\{next_url\: string, next_label\: string, steps_complete\: int, steps_total\: int\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Controllers/HomeController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Controllers/PrioritisationController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Controllers/RiskController.php
+
+		-
+			message: '#^Call to static method get\(\) on an unknown class StratFlow\\Controllers\\SystemSettings\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Controllers/SoundingBoardController.php
+
+		-
+			message: '#^Undefined variable\: \$orgId$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Controllers/SoundingBoardController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Controllers/SprintController.php
+
+		-
+			message: '#^Offset ''sprint_length_days'' on array\{suggested_start\: string\|null, sprint_length_days\: int, next_sprint_number\: int\|null, suggested_capacity\: int\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Controllers/SprintController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: src/Controllers/UserStoryController.php
+
+		-
+			message: '#^Call to static method findEditableProject\(\) on an unknown class StratFlow\\Models\\ProjectPolicy\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Controllers/UserStoryController.php
+
+		-
+			message: '#^PHPDoc tag @param for parameter \$id with type int is incompatible with native type string\.$#'
+			identifier: parameter.phpDocType
+			count: 1
+			path: src/Controllers/UserStoryController.php
+
+		-
+			message: '#^Access to an undefined property Stripe\\StripeObject\:\:\$object\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Controllers/WebhookController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: src/Controllers/WorkItemController.php
+
+		-
+			message: '#^Call to static method findEditableProject\(\) on an unknown class StratFlow\\Models\\ProjectPolicy\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Controllers/WorkItemController.php
+
+		-
+			message: '#^PHPDoc tag @param for parameter \$id with type int is incompatible with native type string\.$#'
+			identifier: parameter.phpDocType
+			count: 1
+			path: src/Controllers/WorkItemController.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 4
+			path: src/Core/PasswordPolicy.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-string and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/Core/Request.php
+
+		-
+			message: '#^Static method StratFlow\\Models\\Project\:\:findAccessibleByOrgId\(\) invoked with 5 parameters, 2 required\.$#'
+			identifier: arguments.count
+			count: 1
+			path: src/Core/Response.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$userIds$#'
+			identifier: parameter.notFound
+			count: 1
+			path: src/Models/Project.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Services/GitPrMatcherService.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 3
+			path: src/Services/JiraService.php
+
+		-
+			message: '#^Undefined variable\: \$newTitle$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Services/JiraSyncService.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: src/Services/KrScoringService.php
+
+		-
+			message: '#^Access to an undefined property Stripe\\StripeObject\:\:\$interval\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Services/StripeService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>interval" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Services/StripeService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Services/StripeService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Services/StripeService.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type Stripe\\SubscriptionItem\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Services/StripeService.php
+
+		-
+			message: '#^Variable \$response on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: src/Services/XeroService.php
