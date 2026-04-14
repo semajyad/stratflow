@@ -24,11 +24,7 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
-        # GitHub Advanced Security (GHAS) is required on private repos.
-        # Without it the action fails with "not supported on this repository".
-        # composer audit in tests.yml already covers CVEs at the tool level.
-        # Advisory only — visible but not blocking.
-        continue-on-error: true
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
+          config-file: .github/dependency-review-config.yml

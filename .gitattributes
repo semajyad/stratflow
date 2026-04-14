@@ -1,6 +1,15 @@
 *.sh text eol=lf
 Dockerfile text eol=lf
 
+# Generated / auto-managed files — prefer ours on merge conflict so self-heal
+# regenerates rather than creating a broken merged state
+composer.lock merge=ours
+package-lock.json merge=ours
+phpstan-baseline.neon merge=ours
+
+# Agent coordination ledger — serialized via session-start.py; never text-merged
+.github/agent-ledger.json merge=ours
+
 # Binary files — no CRLF conversion
 *.png binary
 *.jpg binary

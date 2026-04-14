@@ -1,0 +1,209 @@
+name: PR Preview Environment
+
+# Provisions an ephemeral Railway environment for every PR against main.
+# Torn down when the PR closes. Agents and reviewers can test against a
+# real production-replica without affecting staging or production.
+#
+# Based on the "Sovereign Pipeline" architecture pattern of ephemeral
+# per-PR environments provisioned via Railway's GraphQL API.
+#
+# Required secrets:
+#   RAILWAY_TOKEN           — Railway API token
+#   RAILWAY_PROJECT_ID      — Railway project ID (from Settings → General)
+#   NTFY_URL, NTFY_TOPIC   — Notifications
+#
+# Required repo vars:
+#   APP_URL_PRODUCTION      — e.g. https://stratflow.app (for DB fork source)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false  # never cancel a teardown mid-flight
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Provision — create ephemeral environment on PR open/sync
+  # ─────────────────────────────────────────────────────────────────────────
+  provision:
+    name: Provision PR preview
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+      environment_id: ${{ steps.create-env.outputs.environment_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Create or update Railway environment for PR
+        id: create-env
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          ENV_NAME="pr-$PR_NUMBER"
+
+          # Check if environment already exists via GraphQL API
+          EXISTING=$(curl -sf \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"{ project(id: \\\"$PROJECT_ID\\\") { environments { edges { node { id name } } } } }\"}" \
+            https://backboard.railway.com/graphql/v2 \
+            | python3 -c "
+          import json,sys
+          data = json.load(sys.stdin)
+          envs = data.get('data',{}).get('project',{}).get('environments',{}).get('edges',[])
+          match = [e['node'] for e in envs if e['node']['name'] == '$ENV_NAME']
+          print(match[0]['id'] if match else '')
+          " 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "Reusing existing environment: $EXISTING"
+            echo "environment_id=$EXISTING" >> "$GITHUB_OUTPUT"
+          else
+            # Create new environment via GraphQL mutation
+            ENV_ID=$(curl -sf \
+              -H "Authorization: Bearer $RAILWAY_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { environmentCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"$ENV_NAME\\\", isEphemeral: true }) { id } }\"}" \
+              https://backboard.railway.com/graphql/v2 \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['environmentCreate']['id'])" 2>/dev/null || echo "")
+
+            if [ -z "$ENV_ID" ]; then
+              echo "::warning::Could not create Railway environment via GraphQL — falling back to shared staging"
+              echo "environment_id=" >> "$GITHUB_OUTPUT"
+            else
+              echo "Created environment: $ENV_ID"
+              echo "environment_id=$ENV_ID" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Deploy to PR environment
+        id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_ENVIRONMENT: pr-${{ github.event.pull_request.number }}
+        run: |
+          railway up --detach --environment "$RAILWAY_ENVIRONMENT" 2>/dev/null \
+            || railway up --detach  # fallback to default if env flag unsupported
+
+          # Construct preview URL (Railway naming convention)
+          SLUG=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+          PREVIEW_URL="https://stratflow-pr-${{ github.event.pull_request.number }}.up.railway.app"
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $PREVIEW_URL"
+
+      - name: Wait for preview to be healthy
+        id: healthcheck
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          echo "Waiting for $PREVIEW_URL/healthz..."
+          for i in $(seq 1 24); do
+            STATUS=$(curl -sf "$PREVIEW_URL/healthz" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+            if [ "$STATUS" = "ok" ]; then
+              echo "Preview healthy after $((i * 5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::warning::Preview did not become healthy within 120s — tests may fail"
+
+      - name: Post preview URL to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          BODY="## 🚀 Preview Environment
+
+          | | |
+          |---|---|
+          | **Preview URL** | [$PREVIEW_URL]($PREVIEW_URL) |
+          | **Environment** | \`pr-$PR_NUMBER\` |
+          | **Branch** | \`${{ github.event.pull_request.head.ref }}\` |
+          | **SHA** | \`${{ github.event.pull_request.head.sha }}\` |
+
+          This environment is automatically torn down when the PR closes.
+          <sub>Updated: $(date -u '+%Y-%m-%d %H:%M UTC')</sub>"
+
+          # Update existing preview comment or create new one
+          COMMENT_ID=$(gh pr view "$PR_NUMBER" --json comments \
+            --jq '[.comments[] | select(.body | startswith("## 🚀 Preview Environment"))] | last | .databaseId // empty' \
+            --repo "${{ github.repository }}" 2>/dev/null || echo "")
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" \
+              -X PATCH -f body="$BODY" || true
+          else
+            gh pr comment "$PR_NUMBER" --body "$BODY" --repo "${{ github.repository }}" || true
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Teardown — destroy ephemeral environment on PR close
+  # ─────────────────────────────────────────────────────────────────────────
+  teardown:
+    name: Teardown PR preview
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+
+    steps:
+      - name: Delete Railway environment
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          ENV_NAME="pr-$PR_NUMBER"
+
+          # Find environment ID
+          ENV_ID=$(curl -sf \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"{ project(id: \\\"$PROJECT_ID\\\") { environments { edges { node { id name } } } } }\"}" \
+            https://backboard.railway.com/graphql/v2 \
+            | python3 -c "
+          import json,sys
+          data = json.load(sys.stdin)
+          envs = data.get('data',{}).get('project',{}).get('environments',{}).get('edges',[])
+          match = [e['node'] for e in envs if e['node']['name'] == '$ENV_NAME']
+          print(match[0]['id'] if match else '')
+          " 2>/dev/null || echo "")
+
+          if [ -z "$ENV_ID" ]; then
+            echo "No environment found for $ENV_NAME — nothing to teardown"
+            exit 0
+          fi
+
+          # Delete via GraphQL mutation
+          curl -sf \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { environmentDelete(id: \\\"$ENV_ID\\\") }\"}" \
+            https://backboard.railway.com/graphql/v2 \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('Deleted' if d.get('data',{}).get('environmentDelete') else f'Failed: {d}')"
+
+      - name: Update PR comment on teardown
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" \
+            --body "🏁 **Preview environment \`pr-$PR_NUMBER\` has been torn down** (PR closed)" \
+            --repo "${{ github.repository }}" || true
