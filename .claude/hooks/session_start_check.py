@@ -158,7 +158,7 @@ def check_nightly_ci(project_dir: str) -> list[str]:
         lines = [l for l in result.stdout.strip().splitlines() if l.strip()]
 
         if result.returncode == 0:
-            return ["[session-start] Nightly CI: all pass ✅"] + [f"  {l}" for l in lines]
+            return ["[session-start] Nightly CI: all pass ✅"]
 
         # Failures — output the report AND a hard mandate
         output = ["[session-start] Nightly CI: FAILURES DETECTED ❌"]
