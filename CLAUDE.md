@@ -28,6 +28,20 @@ If the task touches auth, permissions, sessions, secrets, uploads, billing, webh
 - Prefer delegated JS in shared bundles; do not introduce inline handlers or new CSP regressions.
 - Replace `error_log()` with `\StratFlow\Services\Logger::warn/error()` in all new code.
 
+## Morning CI Triage
+
+**Applies to the first code session each calendar day.**
+
+Run the nightly CI audit before any other work:
+
+```bash
+python scripts/ci/morning_audit.py
+```
+
+This fetches the latest `nightly-triage` artifact from GitHub Actions, prints a pass/fail table for every nightly job (tests, perf, mutation, Shannon, Snyk, ZAP, smoke), and shows any auto-opened GitHub issues. If a job failed, investigate and fix before starting other work.
+
+If the script is unavailable, read `docs/ci-nightly-history.md` for yesterday's row and check for open `ci-nightly` labelled issues on GitHub.
+
 ## Morning Security Check
 
 **Applies to the first code session each calendar day.** See `docs/SECURE_CODING.md` → "Morning Security Check" for the full procedure (read Shannon/ZAP reports, triage findings, promote to permanent rules).

@@ -2,8 +2,8 @@ name: Staging Smoke
 
 on:
   schedule:
-    # Nightly at 02:00 UTC
-    - cron: '0 2 * * *'
+    # Nightly at 12:00 UTC = 00:00 NZT (midnight)
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:

@@ -1,13 +1,12 @@
 name: Morning Summary
 
-# Runs at 05:30 UTC daily — 30min after nightly-triage completes.
+# Runs at 17:30 UTC = 05:30 NZT — 30min after nightly-triage completes.
 # Fetches the triage-report artifact from the most recent nightly-triage run
-# and posts a single ntfy digest. Designed to be the first notification
-# James sees in the morning (≈ 17:30 NZT).
+# and posts a single ntfy digest ready before James starts coding.
 
 on:
   schedule:
-    - cron: "30 5 * * *"
+    - cron: "30 17 * * *"
   workflow_dispatch:
 
 concurrency:

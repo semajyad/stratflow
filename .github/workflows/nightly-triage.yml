@@ -1,12 +1,12 @@
 name: Nightly Triage
 
-# Runs at 05:00 UTC every morning — after all nightly jobs have completed.
-# Downloads every nightly-status-* artifact from the past 12h, classifies
+# Runs at 17:00 UTC = 05:00 NZT — after all nightly jobs have completed (last job
+# finishes ~04:30 NZT). Downloads every nightly-status-* artifact, classifies
 # failures, opens GitHub issues (deduped by hash), and posts an ntfy digest.
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
 concurrency:
