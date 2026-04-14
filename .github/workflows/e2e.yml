@@ -89,6 +89,9 @@ jobs:
             mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
           done
 
+      - name: Seed test data
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/seed.sql
+
       - name: Start PHP dev server
         run: |
           php -S 0.0.0.0:8890 -t public public/index.php &
@@ -250,6 +253,9 @@ jobs:
           for f in database/migrations/*.sql; do
             mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
           done
+
+      - name: Seed test data
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/seed.sql
 
       - name: Start PHP dev server
         run: |
