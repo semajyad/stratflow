@@ -1715,7 +1715,7 @@ function getHomeOrgUsers() {
         return [];
     }
     try {
-        return JSON.parse(source.value || '[]');
+        return JSON.parse(source.textContent || '[]');
     } catch (e) {
         return [];
     }

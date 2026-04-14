@@ -165,7 +165,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
     'label' => $u['full_name'] . ' (' . $u['email'] . ')',
 ], $org_users ?? []), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
 ?>
-<textarea id="home-org-users-data" class="hidden" aria-hidden="true" aria-label="Organisation users data"><?= htmlspecialchars($orgUsersJson ?? '[]', ENT_QUOTES, 'UTF-8') ?></textarea>
+<script id="home-org-users-data" type="application/json"><?= $orgUsersJson ?? '[]' ?></script>
 
 <!-- New Project Modal -->
 <div id="new-project-modal" class="modal-overlay hidden js-project-modal home-project-modal">
