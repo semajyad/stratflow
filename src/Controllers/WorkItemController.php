@@ -742,7 +742,7 @@ class WorkItemController
             return;
         }
 
-        $project = \StratFlow\Models\ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
