@@ -8,6 +8,7 @@
     "test": "npx playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@playwright/test": "^1.52.0",
     "mysql2": "^3.11.0"
   }

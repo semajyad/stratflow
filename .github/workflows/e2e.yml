@@ -1,0 +1,244 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-fast:
+    name: Playwright (fast — Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create .env
+        run: |
+          echo "APP_ENV=testing" > .env
+          echo "APP_URL=http://localhost:8890" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+          echo "GEMINI_MODEL=gemini-2.0-flash" >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
+          echo "STRIPE_PRICE_PRODUCT=price_xxx" >> .env
+          echo "STRIPE_PRICE_CONSULTANCY=price_xxx" >> .env
+          echo "STRIPE_PRICE_USER_PACK=price_xxx" >> .env
+          echo "STRIPE_PRICE_EVAL_BOARD=price_xxx" >> .env
+          echo "MAIL_FROM_NAME=StratFlow" >> .env
+          echo "MAIL_FROM_EMAIL=test@example.com" >> .env
+          echo "MAIL_SMTP_HOST=localhost" >> .env
+          echo "MAIL_SMTP_PORT=587" >> .env
+          echo "MAIL_SMTP_USER=" >> .env
+          echo "MAIL_SMTP_PASS=" >> .env
+          echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "SESSION_DRIVER=file" >> .env
+
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
+      - name: Start PHP dev server
+        run: |
+          php -S 0.0.0.0:8890 -t public public/index.php &
+          echo "PHP_SERVER_PID=$!" >> $GITHUB_ENV
+          sleep 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/Playwright/package-lock.json
+
+      - name: Install Playwright
+        working-directory: tests/Playwright
+        run: npm ci
+
+      - name: Install Chromium browser
+        working-directory: tests/Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright fast suite
+        working-directory: tests/Playwright
+        env:
+          CI: 'true'
+          BASE_URL: 'http://localhost:8890'
+        run: npx playwright test --project=fast
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-fast-artifacts
+          path: |
+            tests/Playwright/test-results/
+          retention-days: 7
+
+  e2e-full:
+    name: Playwright (full — all browsers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run on merge to main, not on every PR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: e2e-fast
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create .env
+        run: |
+          echo "APP_ENV=testing" > .env
+          echo "APP_URL=http://localhost:8890" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+          echo "GEMINI_MODEL=gemini-2.0-flash" >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
+          echo "STRIPE_PRICE_PRODUCT=price_xxx" >> .env
+          echo "STRIPE_PRICE_CONSULTANCY=price_xxx" >> .env
+          echo "STRIPE_PRICE_USER_PACK=price_xxx" >> .env
+          echo "STRIPE_PRICE_EVAL_BOARD=price_xxx" >> .env
+          echo "MAIL_FROM_NAME=StratFlow" >> .env
+          echo "MAIL_FROM_EMAIL=test@example.com" >> .env
+          echo "MAIL_SMTP_HOST=localhost" >> .env
+          echo "MAIL_SMTP_PORT=587" >> .env
+          echo "MAIL_SMTP_USER=" >> .env
+          echo "MAIL_SMTP_PASS=" >> .env
+          echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "SESSION_DRIVER=file" >> .env
+
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
+      - name: Start PHP dev server
+        run: |
+          php -S 0.0.0.0:8890 -t public public/index.php &
+          sleep 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/Playwright/package-lock.json
+
+      - name: Install Playwright
+        working-directory: tests/Playwright
+        run: npm ci
+
+      - name: Install all browsers
+        working-directory: tests/Playwright
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright full suite (fast + full)
+        working-directory: tests/Playwright
+        env:
+          CI: 'true'
+          BASE_URL: 'http://localhost:8890'
+        run: npx playwright test --project=fast --project=full --project=firefox --project=webkit --project=mobile-chrome
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-full-artifacts
+          path: |
+            tests/Playwright/test-results/
+          retention-days: 7
