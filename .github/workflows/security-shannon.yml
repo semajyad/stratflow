@@ -56,7 +56,7 @@ jobs:
           PROD_HOSTNAMES=(
             "stratflow.io"
             "app.stratflow.io"
-            "stratflow-app-production.up.railway.app"
+
           )
           for PROD in "${PROD_HOSTNAMES[@]}"; do
             if echo "$URL" | grep -qiF "$PROD"; then

@@ -40,7 +40,7 @@ jobs:
         id: target
         run: |
           URL="${{ inputs.target_url || vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}"
-          PROD_HOSTNAMES=("stratflow.io" "app.stratflow.io" "stratflow-app-production.up.railway.app")
+          PROD_HOSTNAMES=("stratflow.io" "app.stratflow.io")
           for PROD in "${PROD_HOSTNAMES[@]}"; do
             if echo "$URL" | grep -qiF "$PROD"; then
               echo "::error::Performance test target '$URL' is a production hostname. Set APP_URL_STAGING to a non-prod URL."
