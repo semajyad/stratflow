@@ -1,0 +1,207 @@
+name: CodeRabbit autofix
+
+# When CodeRabbit submits a CHANGES_REQUESTED review, spin up a Claude Code
+# session that reads the review comments and pushes fixes to the PR branch.
+# Claude then re-requests a CodeRabbit review via a comment.
+#
+# Self-healing: if Claude makes no changes after 2 attempts, the PR is
+# labelled "autofix-failed" and a HIGH ntfy alert fires.
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  autofix:
+    # Only run when CodeRabbit requests changes on a non-Dependabot PR from this repo (not forks)
+    if: >
+      github.event.review.user.login == 'coderabbitai[bot]' &&
+      github.event.review.state == 'changes_requested' &&
+      !startsWith(github.event.pull_request.user.login, 'dependabot') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # A newer CodeRabbit review on the same PR supersedes an in-flight autofix
+    concurrency:
+      group: autofix-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Set up PHP (needed to lint fixes)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, curl
+
+      - name: Collect CodeRabbit review comments
+        id: comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+          CR_REVIEW_BODY: ${{ github.event.review.body }}
+        run: |
+          # Get only comments from THIS review (not stale ones from previous reviews)
+          # Use separate jq call (gh api --jq doesn't support --argjson)
+          gh api repos/$REPO/pulls/$PR/comments | \
+            jq --argjson rid "$REVIEW_ID" \
+            '[.[] | select(.user.login == "coderabbitai[bot]" and .pull_request_review_id == $rid) | {
+              path: .path,
+              line: (.line // .original_line),
+              body: .body
+            }]' > /tmp/cr-comments.json
+
+          # Write review body via env var to avoid bash quoting issues
+          printf '%s' "$CR_REVIEW_BODY" > /tmp/cr-review-body.txt
+
+          COMMENT_COUNT=$(jq length /tmp/cr-comments.json)
+          echo "Comment count: $COMMENT_COUNT"
+
+          if [ "$COMMENT_COUNT" -eq 0 ] && [ ! -s /tmp/cr-review-body.txt ]; then
+            echo "No inline comments and no review body — nothing to fix"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Claude Code to fix review findings (with retry)
+        if: steps.comments.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+        run: |
+          COMMENTS=$(cat /tmp/cr-comments.json)
+          REVIEW_BODY=$(cat /tmp/cr-review-body.txt)
+
+          build_prompt() {
+            local ATTEMPT=$1
+            local RETRY_NOTE=""
+            if [ "$ATTEMPT" -gt 1 ]; then
+              RETRY_NOTE="NOTE: This is retry attempt $ATTEMPT. The previous attempt made no changes. Please re-read the findings carefully and apply concrete code edits."
+            fi
+
+            cat <<PROMPT
+You are fixing CodeRabbit review findings on PR #${PR_NUMBER} (branch: ${PR_BRANCH}) of the StratFlow repository.
+${RETRY_NOTE}
+
+CodeRabbit review body:
+${REVIEW_BODY}
+
+Inline comments (JSON — path, line, body):
+${COMMENTS}
+
+Instructions:
+1. For each finding, read the relevant file and apply the fix CodeRabbit suggested.
+2. Only fix what CodeRabbit flagged — do not refactor unrelated code.
+3. After all fixes, run: php -l <file> on any changed PHP files to verify syntax.
+4. Do not commit — just make the file changes. The next step will commit and push.
+5. If a finding is a false positive that doesn't need a code change, skip it.
+
+Make the fixes now.
+PROMPT
+          }
+
+          MAX_ATTEMPTS=2
+          CHANGES_MADE=false
+
+          for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
+            echo ""
+            echo "=== Autofix attempt $ATTEMPT of $MAX_ATTEMPTS ==="
+
+            # Reset any partial changes from a failed attempt
+            git restore . 2>/dev/null || true
+
+            build_prompt $ATTEMPT | claude --print --no-markdown --max-turns 15 \
+              2>&1 | tee /tmp/claude-output-$ATTEMPT.txt
+
+            if ! git diff --quiet; then
+              echo "Changes detected — autofix succeeded on attempt $ATTEMPT"
+              CHANGES_MADE=true
+              break
+            else
+              echo "No changes made on attempt $ATTEMPT"
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                echo "Waiting 15s before retry..."
+                sleep 15
+              fi
+            fi
+          done
+
+          if [ "$CHANGES_MADE" = "false" ]; then
+            echo "Autofix exhausted $MAX_ATTEMPTS attempts with no changes — flagging PR"
+
+            # Label the PR
+            gh pr edit "$PR_NUMBER" --add-label "autofix-failed" --repo "$REPO" || true
+
+            # Notify via ntfy
+            if [ -n "${NTFY_URL:-}" ]; then
+              curl -s \
+                -H "Title: StratFlow autofix failed: PR #$PR_NUMBER" \
+                -H "Priority: high" \
+                -H "Tags: warning,robot" \
+                -H "Click: https://github.com/$REPO/pull/$PR_NUMBER" \
+                -d "CodeRabbit autofix exhausted $MAX_ATTEMPTS attempts with no changes on PR #$PR_NUMBER. Manual review needed." \
+                "$NTFY_URL/stratflow-ci" || true
+            fi
+
+            # Exit 0 so the workflow doesn't show as failed — it's been handled
+            exit 0
+          fi
+
+      - name: Commit and push fixes
+        if: steps.comments.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "claude-code[bot]"
+          git config user.email "claude-code[bot]@users.noreply.github.com"
+
+          git diff --quiet && { echo "No changes to commit"; exit 0; }
+
+          git add -A
+          git commit -m "fix: address CodeRabbit review findings (auto)
+
+          Automated fixes for CodeRabbit CHANGES_REQUESTED on PR #${{ github.event.pull_request.number }}.
+          Review: ${{ github.event.review.html_url }}
+
+          Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+
+          git push origin "$PR_BRANCH"
+
+      - name: Re-request CodeRabbit review
+        if: steps.comments.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Only re-request if we actually pushed changes
+          git log --oneline -1 | grep -q "address CodeRabbit" && \
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "@coderabbitai review
+
+          Automated fixes have been applied for the issues flagged in your review. Please re-review." || true
