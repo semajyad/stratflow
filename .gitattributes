@@ -1,6 +1,13 @@
 *.sh text eol=lf
 Dockerfile text eol=lf
 
+# Generated/lock files — on rebase conflicts, keep ours then regen.
+# The self-heal workflow regenerates these after any rebase automatically.
+# Never hand-resolve these; let the tooling do it.
+composer.lock merge=ours
+package-lock.json merge=ours
+phpstan-baseline.neon merge=ours
+
 # Binary files — no CRLF conversion
 *.png binary
 *.jpg binary
