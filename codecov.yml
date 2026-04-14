@@ -1,0 +1,34 @@
+coverage:
+  status:
+    project:
+      default:
+        # Allow no more than 0.5% drop from base (ratchets upward)
+        threshold: "0.5%"
+        target: auto
+    patch:
+      default:
+        # New code on the PR must have ≥80% coverage
+        target: "80%"
+        threshold: "5%"
+
+  # Only report on whitelisted source — matches <source> in phpunit.xml
+  paths:
+    - "src/"
+
+  # Excluded from coverage reporting
+  ignore:
+    - "src/Services/Prompts/"
+    - "src/Config/"
+    - "tests/"
+    - "vendor/"
+    - "public/"
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "vendor/**"
+  - "tests/**"
+  - "public/**"

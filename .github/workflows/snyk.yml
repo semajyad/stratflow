@@ -41,3 +41,51 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif
+
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          critical_count = 0
+          try:
+              sarif = json.load(open("snyk.sarif"))
+              for run in sarif.get("runs", []):
+                  for result in run.get("results", []):
+                      level = result.get("level", "")
+                      if level in ("error", "critical"):
+                          critical_count += 1
+          except Exception:
+              pass
+          failed = os.environ.get("JOB_STATUS") != "success"
+          status = "fail" if failed else "pass"
+          payload = {
+              "job": "snyk",
+              "status": status,
+              "metric": {"critical_count": critical_count} if critical_count else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-snyk
+          path: nightly-status.json
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — Snyk scan FAILED"
+          body: "Snyk found high/critical CVEs. Run ${{ github.run_id }}"
+          priority: urgent
+          tags: "warning,ci,security,snyk"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

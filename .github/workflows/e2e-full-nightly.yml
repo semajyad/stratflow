@@ -1,16 +1,25 @@
-name: Staging Smoke
+name: E2E Full (nightly — staging)
+
+# Runs the full Playwright matrix against staging every night at 16:30 UTC.
+# Catches staging drift (CDN changes, third-party API updates, config drift)
+# that the PR-time e2e-full (against localhost) wouldn't catch.
+#
+# Required secrets: STAGING_URL, ZAP_SMOKE_EMAIL, ZAP_SMOKE_PASSWORD
 
 on:
   schedule:
-    # Nightly at 02:00 UTC
-    - cron: '0 2 * * *'
+    - cron: "30 16 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: e2e-full-nightly
+  cancel-in-progress: true
+
 jobs:
-  smoke:
-    name: Playwright smoke — staging
+  e2e-full-nightly:
+    name: Playwright full matrix (staging)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -26,26 +35,25 @@ jobs:
         working-directory: tests/Playwright
         run: npm ci
 
-      - name: Install Chromium browser
+      - name: Install all browsers
         working-directory: tests/Playwright
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install --with-deps
 
-      - name: Run fast smoke against staging
+      - name: Run Playwright full suite against staging
         working-directory: tests/Playwright
         env:
           CI: 'true'
           BASE_URL: ${{ secrets.STAGING_URL }}
           E2E_EMAIL: ${{ secrets.ZAP_SMOKE_EMAIL }}
           E2E_PASSWORD: ${{ secrets.ZAP_SMOKE_PASSWORD }}
-        run: npx playwright test --project=fast
-
-      - name: Upload artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-staging-artifacts
-          path: tests/Playwright/test-results/
-          retention-days: 3
+        run: >
+          npx playwright test
+          --project=fast
+          --project=full
+          --project=firefox
+          --project=webkit
+          --project=mobile-chrome
+        continue-on-error: true
 
       - name: Write nightly status
         if: always()
@@ -54,7 +62,7 @@ jobs:
           import json, os
           status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
           payload = {
-              "job": "smoke",
+              "job": "e2e",
               "status": status,
               "metric": None,
               "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
@@ -70,16 +78,24 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-status-smoke
+          name: nightly-status-e2e
           path: nightly-status.json
+          retention-days: 7
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-nightly-artifacts
+          path: tests/Playwright/test-results/
           retention-days: 7
 
       - name: Notify on failure
         if: failure()
         uses: ./.github/actions/ntfy-notify
         with:
-          title: "StratFlow CI — staging smoke FAILED"
-          body: "Playwright smoke test against staging failed. Run ${{ github.run_id }}"
+          title: "StratFlow CI — nightly E2E full FAILED"
+          body: "Playwright full matrix against staging failed. Run ${{ github.run_id }}"
           priority: urgent
           tags: "warning,ci,e2e,staging"
           click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

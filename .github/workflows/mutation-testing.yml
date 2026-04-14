@@ -101,8 +101,49 @@ jobs:
           path: var/infection.html
           retention-days: 30
 
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          msi_raw = os.environ.get("MSI", "")
+          msi = float(msi_raw) if msi_raw and msi_raw != "unknown" else None
+          infection_failed = os.environ.get("INFECTION_OUTCOME") == "failure"
+          status = "fail" if infection_failed else "pass"
+          payload = {
+              "job": "mutation",
+              "status": status,
+              "metric": {"msi": msi} if msi is not None else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          MSI: ${{ steps.msi.outputs.msi }}
+          INFECTION_OUTCOME: ${{ steps.infection.outcome }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-mutation
+          path: nightly-status.json
+          retention-days: 7
+
       - name: Fail if Infection exit code non-zero
         if: steps.infection.outcome == 'failure'
         run: |
           echo "::error::Infection failed — MSI ${{ steps.msi.outputs.msi }}% below threshold. See artifact for surviving mutants."
           exit 1
+
+      - name: Notify on failure
+        if: failure()
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — mutation testing FAILED"
+          body: "Infection MSI ${{ steps.msi.outputs.msi }}% below threshold. Run ${{ github.run_id }}"
+          priority: high
+          tags: "warning,ci,mutation"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

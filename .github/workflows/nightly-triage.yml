@@ -1,0 +1,154 @@
+name: Nightly Triage
+
+# Runs at 05:00 UTC every morning — after all nightly jobs have completed.
+# Downloads every nightly-status-* artifact from the past 12h, classifies
+# failures, opens GitHub issues (deduped by hash), and posts an ntfy digest.
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-triage
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    name: Aggregate nightly results
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # commit ci-nightly-history.md
+      issues: write      # open auto-triage issues
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all nightly-status artifacts
+        run: |
+          mkdir -p /tmp/status
+          # Find all runs from the past 12h that belong to nightly workflows
+          SINCE=$(date -u -d '12 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          WORKFLOWS=("tests.yml" "mutation-testing.yml" "performance.yml" "security-shannon.yml" "snyk.yml" "security-zap.yml" "e2e.yml" "smoke-staging.yml")
+
+          for WF in "${WORKFLOWS[@]}"; do
+            RUN_ID=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow "$WF" \
+              --created ">$SINCE" \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty' 2>/dev/null)
+
+            if [ -n "$RUN_ID" ]; then
+              echo "Downloading nightly-status from $WF run $RUN_ID"
+              gh run download "$RUN_ID" \
+                --repo "${{ github.repository }}" \
+                --pattern "nightly-status-*" \
+                --dir /tmp/status \
+                2>/dev/null || echo "  No nightly-status artifacts in $RUN_ID"
+            else
+              echo "No recent run found for $WF"
+            fi
+          done
+
+          echo "Downloaded status dirs:"
+          ls /tmp/status/ || echo "(empty)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run triage script
+        id: triage
+        run: |
+          python3 scripts/ci/triage_nightly.py \
+            --status-dir /tmp/status \
+            --repo "${{ github.repository }}" \
+            --output-dir . \
+            > triage-output.txt 2>&1 || TRIAGE_EXIT=$?
+
+          cat triage-output.txt
+
+          # Extract ntfy body
+          NTFY_BODY=$(sed -n '/--- NTFY BODY ---/,/--- END NTFY BODY ---/p' triage-output.txt \
+            | grep -v '^---' | head -20 || echo "Triage complete")
+
+          # Store for downstream steps (escape newlines for GITHUB_OUTPUT)
+          {
+            echo 'ntfy_body<<NTFY_EOF'
+            echo "$NTFY_BODY"
+            echo 'NTFY_EOF'
+            echo "exit_code=${TRIAGE_EXIT:-0}"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload triage report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage-report
+          path: |
+            triage-report.json
+            triage-report.md
+          retention-days: 30
+
+      - name: Append to nightly history
+        if: always()
+        run: |
+          DATE=$(date -u '+%Y-%m-%d')
+          mkdir -p docs
+          HISTORY="docs/ci-nightly-history.md"
+
+          # Seed file if new
+          if [ ! -f "$HISTORY" ]; then
+            {
+              echo "# StratFlow Nightly CI History"
+              echo ""
+              echo "| Date | Tests | E2E | Perf | Mutation | ZAP | Shannon | Snyk | Smoke |"
+              echo "|------|-------|-----|------|----------|-----|---------|------|-------|"
+            } > "$HISTORY"
+          fi
+
+          # Append today's row from the triage report
+          if [ -f triage-report.json ]; then
+            python3 - <<'PYEOF'
+          import json, sys
+          from pathlib import Path
+          report = json.loads(Path("triage-report.json").read_text())
+          jobs = report.get("jobs", {})
+          icon = lambda j: "✅" if jobs.get(j, {}).get("status") == "pass" else ("⚠️" if jobs.get(j, {}).get("status") == "warn" else "❌")
+          date = report.get("date", "?")
+          row = f"| {date} | {icon('tests')} | {icon('e2e')} | {icon('perf')} | {icon('mutation')} | {icon('zap')} | {icon('shannon')} | {icon('snyk')} | {icon('smoke')} |"
+          with open("docs/ci-nightly-history.md", "a") as f:
+              f.write(row + "\n")
+          PYEOF
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ci-nightly-history.md || true
+          if git diff --cached --quiet; then
+            echo "No history changes"
+          else
+            git commit -m "chore: nightly CI history ${DATE}"
+            git push
+          fi
+
+      - name: Notify on any failures
+        if: steps.triage.outputs.exit_code != '0'
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow nightly — FAILURES detected"
+          body: ${{ steps.triage.outputs.ntfy_body }}
+          priority: high
+          tags: "warning,ci,nightly"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Fail if triage found failures
+        if: steps.triage.outputs.exit_code != '0'
+        run: |
+          echo "::error::Nightly triage found failures — see issues opened above."
+          exit 1

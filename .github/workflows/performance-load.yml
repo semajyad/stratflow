@@ -96,6 +96,51 @@ jobs:
             exit 1
           fi
 
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          p95 = None
+          try:
+              summary = json.load(open("tests/performance/summary-peak-latest.json"))
+              p95 = summary.get("metrics", {}).get("http_req_duration", {}).get("values", {}).get("p(95)")
+          except Exception:
+              pass
+          failed = os.environ.get("JOB_STATUS") != "success"
+          perf_fail = p95 is not None and p95 > 800
+          status = "fail" if (failed or perf_fail) else "pass"
+          payload = {
+              "job": "perf-load",
+              "status": status,
+              "metric": {"p95_ms": round(p95) if p95 else None},
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-perf-load
+          path: nightly-status.json
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — k6 peak load FAILED"
+          body: "50-VU peak load test breached thresholds. Run ${{ github.run_id }}"
+          priority: high
+          tags: "warning,ci,perf"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Archive peak result to history
         if: always()
         run: |

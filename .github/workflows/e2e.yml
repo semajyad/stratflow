@@ -126,6 +126,43 @@ jobs:
             tests/Playwright/test-results/
           retention-days: 7
 
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
+          payload = {
+              "job": "e2e",
+              "status": status,
+              "metric": None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-e2e
+          path: nightly-status.json
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — E2E fast FAILED"
+          body: "Playwright fast suite failed on branch ${{ github.ref_name }}. Run ${{ github.run_id }}"
+          priority: high
+          tags: "warning,ci,e2e"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
   e2e-full:
     name: Playwright (full — all browsers)
     runs-on: ubuntu-latest

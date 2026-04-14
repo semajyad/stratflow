@@ -1,0 +1,124 @@
+name: Morning Summary
+
+# Runs at 05:30 UTC daily — 30min after nightly-triage completes.
+# Fetches the triage-report artifact from the most recent nightly-triage run
+# and posts a single ntfy digest. Designed to be the first notification
+# James sees in the morning (≈ 17:30 NZT).
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: morning-summary
+  cancel-in-progress: true
+
+jobs:
+  summary:
+    name: Post morning digest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download latest triage report
+        run: |
+          TRIAGE_RUN=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "nightly-triage.yml" \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+
+          if [ -z "$TRIAGE_RUN" ]; then
+            echo "::warning::No nightly-triage run found"
+            exit 0
+          fi
+
+          echo "Downloading triage-report from run $TRIAGE_RUN"
+          gh run download "$TRIAGE_RUN" \
+            --repo "${{ github.repository }}" \
+            --name triage-report \
+            --dir /tmp/triage \
+            || { echo "::warning::No triage-report artifact"; exit 0; }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and send morning digest
+        run: |
+          if [ ! -f /tmp/triage/triage-report.json ]; then
+            echo "::warning::triage-report.json not found"
+            exit 0
+          fi
+
+          python3 - <<'PYEOF'
+          import json, os, subprocess, urllib.request
+          from pathlib import Path
+
+          report = json.loads(Path("/tmp/triage/triage-report.json").read_text())
+          s = report["summary"]
+          date = report.get("date", "?")
+          jobs = report.get("jobs", {})
+          metrics = report.get("metrics", {})
+          issues = report.get("issue_urls", {})
+
+          # Build digest
+          icon = lambda status: {"pass": "✅", "fail": "❌", "warn": "⚠️"}.get(status, "?")
+          lines = [f"StratFlow nightly — {date}  {s['fail']} FAIL / {s['warn']} WARN / {s['pass']} PASS"]
+
+          if s["pass_jobs"]:
+              lines.append("  ✅ " + ", ".join(s["pass_jobs"]))
+          for job in s["fail_jobs"]:
+              m = metrics.get(job) or {}
+              metric_str = " (" + ", ".join(f"{k}={v}" for k,v in m.items() if v is not None) + ")" if m else ""
+              issue = issues.get(job, "")
+              lines.append(f"  ❌ {job}{metric_str}" + (f" → {issue}" if issue else ""))
+          for job in s["warn_jobs"]:
+              m = metrics.get(job) or {}
+              metric_str = " (" + ", ".join(f"{k}={v}" for k,v in m.items() if v is not None) + ")" if m else ""
+              lines.append(f"  ⚠️  {job}{metric_str}")
+
+          # Trend lines
+          if metrics.get("perf", {}).get("p95_ms"):
+              lines.append(f"  Δ p95: {metrics['perf']['p95_ms']}ms")
+          if metrics.get("mutation", {}).get("msi"):
+              lines.append(f"  Δ MSI: {metrics['mutation']['msi']}%")
+          if metrics.get("tests", {}).get("coverage"):
+              lines.append(f"  Δ cov: {metrics['tests']['coverage']}%")
+
+          body = "\n".join(lines)
+
+          # Send via ntfy
+          ntfy_url = os.environ.get("NTFY_URL", "")
+          ntfy_topic = os.environ.get("NTFY_TOPIC", "stratflow-ci")
+          if not ntfy_url:
+              print("NTFY_URL not set — printing digest only")
+              print(body)
+          else:
+              title = f"StratFlow nightly — {s['fail']} FAIL [{date}]" if s["fail"] else f"StratFlow nightly — all pass [{date}]"
+              priority = "high" if s["fail"] else ("default" if s["warn"] else "low")
+              tags = "warning,ci" if s["fail"] else "ci"
+
+              req = urllib.request.Request(
+                  f"{ntfy_url}/{ntfy_topic}",
+                  data=body.encode(),
+                  headers={"Title": title, "Priority": priority, "Tags": tags},
+                  method="POST",
+              )
+              try:
+                  urllib.request.urlopen(req, timeout=10)
+                  print(f"ntfy sent: {title}")
+              except Exception as e:
+                  print(f"ntfy failed: {e}")
+
+          print("\n--- DIGEST ---")
+          print(body)
+          PYEOF
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

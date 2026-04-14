@@ -144,6 +144,51 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re
+          # Try to count HIGH/CRITICAL findings from the report markdown
+          high_count = 0
+          try:
+              text = open("security-reports/shannon-latest.md").read()
+              high_count = len(re.findall(r'\b(HIGH|CRITICAL)\b', text, re.I))
+          except Exception:
+              pass
+          failed = os.environ.get("JOB_STATUS") != "success"
+          status = "fail" if failed else ("warn" if high_count else "pass")
+          payload = {
+              "job": "shannon",
+              "status": status,
+              "metric": {"high_count": high_count} if high_count else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status != "pass" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-shannon
+          path: nightly-status.json
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — Shannon pen test FAILED"
+          body: "Shannon AI pen test job failed. Run ${{ github.run_id }}"
+          priority: urgent
+          tags: "warning,ci,security,shannon"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Commit updated shannon-latest.md
         run: |
           git config user.name  "github-actions[bot]"

@@ -11,29 +11,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Fast unit suite — no MySQL, runs in ~30s, blocks every PR
+  # ─────────────────────────────────────────────────────────────────────────
+  unit:
+    name: PHPUnit unit (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         php-version: ['8.3', '8.4']
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: stratflow
-          MYSQL_USER: stratflow
-          MYSQL_PASSWORD: stratflow_secret
-          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=15
 
     steps:
       - uses: actions/checkout@v4
@@ -94,23 +82,14 @@ jobs:
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
 
-      - name: Initialize database
-        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
-
-      - name: Run migrations
-        run: |
-          for f in database/migrations/*.sql; do
-            echo "Running $f..."
-            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
-          done
-
-      - name: Run tests with coverage
+      - name: Run unit tests with coverage
         run: |
           vendor/bin/phpunit \
             --configuration tests/phpunit.xml \
+            --testsuite unit \
             --coverage-text \
             --coverage-clover coverage.xml \
-            --log-junit junit.xml \
+            --log-junit junit-unit.xml \
             --colors=never
 
       - name: Enforce coverage threshold (≥60%)
@@ -143,8 +122,181 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-php${{ matrix.php-version }}
+          name: unit-results-php${{ matrix.php-version }}
           path: |
-            junit.xml
+            junit-unit.xml
             coverage.xml
           retention-days: 14
+
+      - name: Write nightly status
+        if: always() && matrix.php-version == '8.4'
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
+          coverage = None
+          try:
+              import xml.etree.ElementTree as ET
+              xml = ET.parse("coverage.xml")
+              m = xml.getroot().find(".//project/metrics")
+              if m is not None:
+                  total   = int(m.get("statements", 0))
+                  covered = int(m.get("coveredstatements", 0))
+                  coverage = round(covered / total * 100, 1) if total else None
+          except Exception:
+              pass
+          payload = {
+              "job": "tests",
+              "status": status,
+              "metric": {"coverage": coverage} if coverage is not None else None,
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always() && matrix.php-version == '8.4'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-tests
+          path: nightly-status.json
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure() && matrix.php-version == '8.4'
+        uses: ./.github/actions/ntfy-notify
+        with:
+          title: "StratFlow CI — unit tests FAILED"
+          body: "PHPUnit unit suite failed on run ${{ github.run_id }}. Branch: ${{ github.ref_name }}"
+          priority: high
+          tags: "warning,ci,tests"
+          click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Integration suite — MySQL backed, runs in parallel with unit job
+  # ─────────────────────────────────────────────────────────────────────────
+  integration:
+    name: PHPUnit integration (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.3', '8.4']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create .env
+        run: |
+          echo "APP_ENV=testing" > .env
+          echo "APP_URL=http://localhost" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+          echo "GEMINI_MODEL=gemini-2.0-flash" >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
+          echo "STRIPE_PRICE_PRODUCT=price_xxx" >> .env
+          echo "STRIPE_PRICE_CONSULTANCY=price_xxx" >> .env
+          echo "STRIPE_PRICE_USER_PACK=price_xxx" >> .env
+          echo "STRIPE_PRICE_EVAL_BOARD=price_xxx" >> .env
+          echo "MAIL_FROM_NAME=StratFlow" >> .env
+          echo "MAIL_FROM_EMAIL=test@example.com" >> .env
+          echo "MAIL_SMTP_HOST=localhost" >> .env
+          echo "MAIL_SMTP_PORT=587" >> .env
+          echo "MAIL_SMTP_USER=" >> .env
+          echo "MAIL_SMTP_PASS=" >> .env
+          echo "UPLOAD_MAX_SIZE=52428800" >> .env
+
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            echo "Running $f..."
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
+      - name: Run integration tests
+        run: |
+          vendor/bin/phpunit \
+            --configuration tests/phpunit.xml \
+            --testsuite integration \
+            --log-junit junit-integration.xml \
+            --colors=never
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-results-php${{ matrix.php-version }}
+          path: junit-integration.xml
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Touched-file test gate — every modified src/*.php must have a test change
+  # ─────────────────────────────────────────────────────────────────────────
+  test-touch-check:
+    name: Test-touch gate
+    runs-on: ubuntu-latest
+    # Only meaningful on PRs — push to main skips (merge already reviewed)
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce test-touches-code rule
+        run: |
+          python3 scripts/ci/check_test_touches.py \
+            --base origin/main \
+            --head HEAD
+        env:
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

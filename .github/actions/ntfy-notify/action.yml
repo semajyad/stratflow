@@ -1,0 +1,55 @@
+name: Ntfy Notify
+description: Send a push notification to the configured ntfy topic
+
+inputs:
+  title:
+    description: Notification title
+    required: true
+  body:
+    description: Notification body text
+    required: true
+  priority:
+    description: "Ntfy priority: min, low, default, high, urgent"
+    required: false
+    default: default
+  tags:
+    description: Comma-separated ntfy tags (e.g. "warning,ci")
+    required: false
+    default: ""
+  click_url:
+    description: URL to open when notification is tapped
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Send ntfy notification
+      shell: bash
+      env:
+        NTFY_URL: ${{ secrets.NTFY_URL }}
+        NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      run: |
+        if [ -z "$NTFY_URL" ] || [ -z "$NTFY_TOPIC" ]; then
+          echo "::warning::NTFY_URL or NTFY_TOPIC secret not set — skipping notification"
+          exit 0
+        fi
+
+        HEADERS=(
+          -H "Title: ${{ inputs.title }}"
+          -H "Priority: ${{ inputs.priority }}"
+        )
+
+        if [ -n "${{ inputs.tags }}" ]; then
+          HEADERS+=(-H "Tags: ${{ inputs.tags }}")
+        fi
+
+        if [ -n "${{ inputs.click_url }}" ]; then
+          HEADERS+=(-H "Click: ${{ inputs.click_url }}")
+        fi
+
+        curl -fsS \
+          "${HEADERS[@]}" \
+          -d "${{ inputs.body }}" \
+          "$NTFY_URL/$NTFY_TOPIC" \
+          || echo "::warning::ntfy notification failed (non-fatal)"
