@@ -1,0 +1,222 @@
+name: Auto-merge approved PRs
+
+# Merges a PR automatically when:
+#   - Required CI checks (listed in .github/auto-merge-required.txt) all pass, AND
+#   - At least one APPROVED review exists for the current HEAD commit, AND
+#   - No CHANGES_REQUESTED reviews are present for the current HEAD commit.
+#
+# Dependabot PRs are approved + merged automatically when required CI passes.
+# Advisory checks (security scans, mutation, Dependency Review, CodeRabbit)
+# do NOT block merge — only the required check list does.
+#
+# Stale-review guard: an approval on a previous commit SHA is ignored.
+# The reviewer must re-approve after any post-approval push.
+
+on:
+  pull_request_review:
+    types: [submitted]
+  check_run:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to force-attempt auto-merge
+        required: true
+        type: number
+
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false   # Never cancel — queue instead; ensures ordered merges
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for allow-list file)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/auto-merge-required.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Find and merge eligible PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+          FORCED_PR: ${{ inputs.pr_number }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+        run: |
+          set -euo pipefail
+
+          # On review events, only act on approvals (not comments, dismissed, etc.)
+          if [ "$EVENT" = "pull_request_review" ] && [ "$REVIEW_STATE" != "approved" ]; then
+            echo "Review state is '$REVIEW_STATE' — not an approval, skipping"
+            exit 0
+          fi
+
+          # Load required check names from allow-list
+          REQUIRED_CHECKS=$(grep -v '^#' .github/auto-merge-required.txt | grep -v '^$' | tr '\n' '|' | sed 's/|$//')
+          echo "Required checks: $REQUIRED_CHECKS"
+
+          # Determine which PR(s) to evaluate
+          if [ -n "${FORCED_PR:-}" ]; then
+            PR_NUMBERS="$FORCED_PR"
+          elif [ "$EVENT" = "pull_request_review" ]; then
+            PR_NUMBERS="${{ github.event.pull_request.number }}"
+          elif [ "$EVENT" = "check_run" ]; then
+            HEAD_SHA="${{ github.event.check_run.head_sha }}"
+            PR_NUMBERS=$(gh api repos/$REPO/pulls --jq \
+              "[.[] | select(.state==\"open\" and .head.sha==\"$HEAD_SHA\") | .number] | join(\" \")")
+          fi
+
+          if [ -z "${PR_NUMBERS:-}" ]; then
+            echo "No PRs to check"
+            exit 0
+          fi
+
+          for PR in $PR_NUMBERS; do
+            echo ""
+            echo "=== Evaluating PR #$PR ==="
+
+            # --- Fetch PR metadata ---
+            PR_META=$(gh api repos/$REPO/pulls/$PR --jq \
+              '{state, draft, author: .user.login, title, head_sha: .head.sha}')
+            STATE=$(echo "$PR_META" | jq -r '.state')
+            DRAFT=$(echo "$PR_META" | jq -r '.draft')
+            AUTHOR=$(echo "$PR_META" | jq -r '.author')
+            TITLE=$(echo "$PR_META" | jq -r '.title')
+            HEAD_SHA=$(echo "$PR_META" | jq -r '.head_sha')
+
+            [ "$STATE" = "open" ] || { echo "  Not open ($STATE) — skip"; continue; }
+            [ "$DRAFT" = "false" ] || { echo "  Draft — skip"; continue; }
+
+            AUDIT_REASONS=()
+
+            # --- Required CI check gate ---
+            CHECKS=$(gh api repos/$REPO/commits/$HEAD_SHA/check-runs --paginate \
+              --jq '.check_runs')
+
+            # Filter to only required checks
+            REQUIRED_PENDING=0
+            REQUIRED_FAILED=0
+            REQUIRED_PASSED=0
+
+            while IFS= read -r NAME; do
+              [ -z "$NAME" ] && continue
+              STATUS=$(echo "$CHECKS" | jq -r --arg n "$NAME" \
+                '[.[] | select(.name == $n)] | sort_by(.id) | last | .status // "missing"')
+              CONCLUSION=$(echo "$CHECKS" | jq -r --arg n "$NAME" \
+                '[.[] | select(.name == $n)] | sort_by(.id) | last | .conclusion // "none"')
+
+              case "$STATUS" in
+                completed)
+                  if [ "$CONCLUSION" = "success" ] || [ "$CONCLUSION" = "skipped" ]; then
+                    REQUIRED_PASSED=$((REQUIRED_PASSED + 1))
+                  else
+                    REQUIRED_FAILED=$((REQUIRED_FAILED + 1))
+                    AUDIT_REASONS+=("Required check '$NAME' failed ($CONCLUSION)")
+                  fi
+                  ;;
+                missing)
+                  REQUIRED_PENDING=$((REQUIRED_PENDING + 1))
+                  AUDIT_REASONS+=("Required check '$NAME' not yet started")
+                  ;;
+                *)
+                  REQUIRED_PENDING=$((REQUIRED_PENDING + 1))
+                  AUDIT_REASONS+=("Required check '$NAME' still running ($STATUS)")
+                  ;;
+              esac
+            done < <(echo "$REQUIRED_CHECKS" | tr '|' '\n')
+
+            echo "  CI gate — passed: $REQUIRED_PASSED, pending: $REQUIRED_PENDING, failed: $REQUIRED_FAILED"
+
+            if [ "$REQUIRED_PENDING" -gt 0 ]; then
+              echo "  Waiting for required checks to complete"
+              gh pr comment $PR --repo $REPO \
+                --body "⏳ Auto-merge waiting: ${AUDIT_REASONS[*]}" 2>/dev/null || true
+              continue
+            fi
+
+            if [ "$REQUIRED_FAILED" -gt 0 ]; then
+              echo "  Required check(s) failed — will not merge"
+              gh pr comment $PR --repo $REPO \
+                --body "❌ Auto-merge blocked: ${AUDIT_REASONS[*]}" 2>/dev/null || true
+              continue
+            fi
+
+            echo "  All required CI checks passed"
+
+            # --- Dependabot: auto-approve and merge ---
+            if [[ "$AUTHOR" == "dependabot[bot]" ]]; then
+              echo "  Dependabot PR — auto-approving..."
+              gh pr review $PR --approve --repo $REPO \
+                --body "Auto-approved: Dependabot update, all required CI green." 2>/dev/null || true
+              echo "  Merging PR #$PR (Dependabot)..."
+              if gh pr merge $PR --repo $REPO --squash --delete-branch; then
+                echo "  ✅ Merged PR #$PR"
+              else
+                echo "  ⚠️ Merge failed — may be a race condition, will retry on next event"
+              fi
+              continue
+            fi
+
+            # --- Stale-review guard ---
+            # An approval is only valid if it was submitted on the current HEAD SHA.
+            # If someone approved on a previous commit and new commits were pushed,
+            # they must re-approve.
+            REVIEWS_RAW=$(gh api repos/$REPO/pulls/$PR/reviews --paginate)
+
+            # Deduplicate: for each reviewer, take their latest decisive review
+            # (APPROVED / CHANGES_REQUESTED / DISMISSED only — ignore COMMENTED/PENDING)
+            APPROVED_ON_HEAD=$(echo "$REVIEWS_RAW" | jq --arg sha "$HEAD_SHA" \
+              '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
+               | group_by(.user.login)[] | max_by(.id)
+               | select(.state == "APPROVED" and .commit_id == $sha) | .id' | wc -l | tr -d ' ')
+
+            BLOCKING=$(echo "$REVIEWS_RAW" | jq \
+              '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
+               | group_by(.user.login)[] | max_by(.id)
+               | select(.state == "CHANGES_REQUESTED") | .id' | wc -l | tr -d ' ')
+
+            echo "  Reviews: $APPROVED_ON_HEAD approved on HEAD, $BLOCKING requesting changes"
+
+            if [ "$BLOCKING" -gt 0 ]; then
+              echo "  CHANGES_REQUESTED present — will not merge"
+              gh pr comment $PR --repo $REPO \
+                --body "❌ Auto-merge blocked: CHANGES_REQUESTED review(s) present. Resolve review and re-approve." 2>/dev/null || true
+              continue
+            fi
+
+            if [ "$APPROVED_ON_HEAD" -eq 0 ]; then
+              # Check if there's an approval at all (stale)
+              ANY_APPROVED=$(echo "$REVIEWS_RAW" | jq \
+                '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
+                 | group_by(.user.login)[] | max_by(.id)
+                 | select(.state == "APPROVED") | .id' | wc -l | tr -d ' ')
+              if [ "$ANY_APPROVED" -gt 0 ]; then
+                echo "  Stale approval(s) detected — commits were pushed after approval"
+                gh pr comment $PR --repo $REPO \
+                  --body "⚠️ Auto-merge blocked: approval(s) are stale (new commits pushed after review). Please re-approve." 2>/dev/null || true
+              else
+                echo "  No approval yet — waiting"
+              fi
+              continue
+            fi
+
+            # --- Merge ---
+            echo "  ✅ Ready to merge PR #$PR: $TITLE"
+            if gh pr merge $PR --repo $REPO --squash --delete-branch --subject "$TITLE"; then
+              echo "  ✅ Merged PR #$PR successfully"
+              gh pr comment $PR --repo $REPO \
+                --body "✅ Auto-merged: all required checks passed and PR was approved on the current commit." 2>/dev/null || true
+            else
+              echo "  ⚠️ Merge failed — may be a rebase conflict or race condition"
+              gh pr comment $PR --repo $REPO \
+                --body "⚠️ Auto-merge attempted but failed — check for rebase conflicts. Will retry on the next push." 2>/dev/null || true
+            fi
+          done
