@@ -72,7 +72,7 @@ $icon = function (string $name): string {
     <div class="sidebar-project">
         <span class="sidebar-project-label">CURRENT PROJECT</span>
         <?php if (!empty($all_projects)): ?>
-        <select class="sidebar-project-select js-project-switcher" data-project-base-url="<?= htmlspecialchars($currentPath) ?>">
+        <select class="sidebar-project-select js-project-switcher" aria-label="Current project" data-project-base-url="<?= htmlspecialchars($currentPath) ?>">
             <option value="">Select a project...</option>
             <?php foreach ($all_projects as $ap): ?>
                 <option value="<?= (int) $ap['id'] ?>" <?= $pid === (int) $ap['id'] ? 'selected' : '' ?>>

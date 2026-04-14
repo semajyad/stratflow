@@ -302,7 +302,7 @@ jobs:
             git push
           fi
 
-      - name: Run Playwright full suite (fast + full)
+      - name: Run Playwright full suite (fast + full + firefox)
         working-directory: tests/Playwright
         env:
           CI: 'true'
@@ -312,7 +312,10 @@ jobs:
           DB_USERNAME: 'stratflow'
           DB_PASSWORD: 'stratflow_secret'
           DB_DATABASE: 'stratflow'
-        run: npx playwright test --project=fast --project=full --project=firefox --project=webkit --project=mobile-chrome
+        # WebKit and mobile-chrome are excluded here: the PHP dev server cannot
+        # reliably serve those browsers within CI timeouts. They run nightly via
+        # e2e-full-nightly.yml against the live staging URL instead.
+        run: npx playwright test --project=fast --project=full --project=firefox
 
       - name: Upload Playwright artifacts on failure
         if: failure()

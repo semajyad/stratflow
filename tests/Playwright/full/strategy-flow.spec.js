@@ -22,10 +22,13 @@ test.describe('Strategy E2E flow', () => {
     const projectName = `E2E Test Project ${Date.now()}`;
     await page.goto(`${BASE}/app/home`);
 
+    // Ensure JS is fully initialised before interacting with the modal
+    await page.waitForLoadState('networkidle');
+
     // Open the New Project modal
     await page.click('button:has-text("+ New Project"), button:has-text("New Project")');
 
-    // Wait for the modal to be visible
+    // Wait for the modal to be visible (hidden class removed by JS)
     await expect(page.locator('#new-project-modal')).not.toHaveClass(/hidden/);
 
     // Fill the project name input inside the modal
