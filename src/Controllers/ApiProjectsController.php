@@ -55,9 +55,6 @@ class ApiProjectsController
             'created_at' => $p['created_at'],
         ], $projects);
 
-        http_response_code(200);
-        header('Content-Type: application/json');
-        echo json_encode(['data' => $data, 'count' => count($data)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        exit;
+        $this->response->json(['data' => $data, 'count' => count($data)]);
     }
 }

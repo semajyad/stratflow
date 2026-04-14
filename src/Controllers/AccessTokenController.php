@@ -285,8 +285,8 @@ class AccessTokenController
         }
 
         if (!$integration || ($integration['status'] ?? '') === 'disconnected') {
-            echo json_encode(['users' => [], 'error' => 'Jira not connected']);
-            exit;
+            $this->response->json(['users' => [], 'error' => 'Jira not connected']);
+            return;
         }
 
         $q          = trim((string) $this->request->get('q', ''));
@@ -306,10 +306,9 @@ class AccessTokenController
                 'avatar'      => $u['avatarUrls']['24x24'] ?? '',
             ], $users);
 
-            echo json_encode(['users' => array_values($mapped)]);
+            $this->response->json(['users' => array_values($mapped)]);
         } catch (\Throwable $e) {
-            echo json_encode(['users' => [], 'error' => $e->getMessage()]);
+            $this->response->json(['users' => [], 'error' => $e->getMessage()]);
         }
-        exit;
     }
 }

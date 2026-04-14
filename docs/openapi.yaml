@@ -1,0 +1,364 @@
+openapi: 3.1.0
+info:
+  title: StratFlow API
+  version: 1.0.0
+  description: |
+    JSON API for StratFlow, authenticated via Personal Access Tokens (PAT).
+    All endpoints require an `Authorization: Bearer <token>` header.
+    All responses are `application/json`.
+
+servers:
+  - url: /api/v1
+    description: Local / staging
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Personal Access Token (PAT) created in /app/account/tokens
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Unauthorised
+
+    User:
+      type: object
+      required: [id, name, email, org_id]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        org_id:
+          type: integer
+        team:
+          type: string
+          nullable: true
+
+    Story:
+      type: object
+      required: [id, title, status, project_id]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [backlog, in_progress, in_review, done]
+        priority_number:
+          type: integer
+          nullable: true
+        project_id:
+          type: integer
+        team_assigned:
+          type: string
+          nullable: true
+        size:
+          type: string
+          nullable: true
+        acceptance_criteria:
+          type: string
+          nullable: true
+        jira_key:
+          type: string
+          nullable: true
+
+    StoryList:
+      type: object
+      required: [stories]
+      properties:
+        stories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Story'
+
+    Project:
+      type: object
+      required: [id, name, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+
+    ProjectList:
+      type: object
+      required: [projects]
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+
+paths:
+  /me:
+    get:
+      operationId: getMe
+      summary: Get the authenticated user's identity
+      description: |
+        Returns the PAT-authenticated user's profile. The MCP server calls
+        this at startup to verify the token is valid.
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/team:
+    post:
+      operationId: setMyTeam
+      summary: Update the authenticated user's team assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [team]
+              properties:
+                team:
+                  type: string
+                  maxLength: 100
+      responses:
+        '200':
+          description: Team updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stories:
+    get:
+      operationId: listStories
+      summary: List user stories
+      parameters:
+        - name: mine
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: Filter to stories assigned to the authenticated user
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [backlog, in_progress, in_review, done]
+        - name: project_id
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        '200':
+          description: List of stories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryList'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stories/team:
+    get:
+      operationId: listTeamStories
+      summary: List stories assigned to the authenticated user's team
+      responses:
+        '200':
+          description: List of team stories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryList'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stories/{id}:
+    get:
+      operationId: getStory
+      summary: Get a single story with full context
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Story detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+        '404':
+          description: Story not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stories/{id}/status:
+    post:
+      operationId: updateStoryStatus
+      summary: Transition a story to a new status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [backlog, in_progress, in_review, done]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, status]
+                properties:
+                  ok:
+                    type: boolean
+                  status:
+                    type: string
+        '400':
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Story not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stories/{id}/assign:
+    post:
+      operationId: assignStory
+      summary: Assign a story to the authenticated user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Story assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '404':
+          description: Story not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List projects visible to the authenticated user
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+        '401':
+          description: Unauthorised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
