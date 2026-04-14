@@ -96,7 +96,7 @@ class FileProcessor
         $hardLimit = $isMedia ? self::MAX_MEDIA_FILE_SIZE : self::MAX_FILE_SIZE;
         $hardLabel = $isMedia ? '200 MB' : '50 MB';
         if ($file['size'] === 0) {
-            return ['valid' => false, 'error' => 'The uploaded file is empty (0 bytes). Please upload a non-empty file.'];
+            return ['valid' => false, 'error' => 'File rejected: the uploaded file is empty (0 bytes). Please upload a non-empty file.'];
         }
         if ($file['size'] > $hardLimit) {
             return ['valid' => false, 'error' => "File exceeds the maximum allowed size of {$hardLabel}."];

@@ -165,7 +165,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
     'label' => $u['full_name'] . ' (' . $u['email'] . ')',
 ], $org_users ?? []), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
 ?>
-<textarea id="home-org-users-data" class="hidden"><?= htmlspecialchars($orgUsersJson ?? '[]', ENT_QUOTES, 'UTF-8') ?></textarea>
+<textarea id="home-org-users-data" class="hidden" aria-hidden="true" aria-label="Organisation users data"><?= htmlspecialchars($orgUsersJson ?? '[]', ENT_QUOTES, 'UTF-8') ?></textarea>
 
 <!-- New Project Modal -->
 <div id="new-project-modal" class="modal-overlay hidden js-project-modal home-project-modal">
@@ -182,7 +182,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
                        placeholder="e.g. Q3 Platform Modernisation" required maxlength="255" autocomplete="off">
             </div>
             <div class="form-group">
-                <label class="form-label">Access</label>
+                <label class="form-label" for="new-visibility">Access</label>
                 <select name="visibility" id="new-visibility" class="form-input js-project-visibility" data-prefix="new">
                     <option value="everyone">Everyone in organisation</option>
                     <option value="restricted">Restricted - specific users only</option>
@@ -231,7 +231,7 @@ $orgUsersJson = json_encode(array_map(fn($u) => [
                 <?php endif; ?>
             </div>
             <div class="form-group">
-                <label class="form-label">Access</label>
+                <label class="form-label" for="edit-visibility">Access</label>
                 <select name="visibility" id="edit-visibility" class="form-input js-project-visibility" data-prefix="edit">
                     <option value="everyone">Everyone in organisation</option>
                     <option value="restricted">Restricted - specific users only</option>

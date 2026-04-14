@@ -9,6 +9,7 @@ module.exports = defineConfig({
   globalTeardown: require.resolve('./global-teardown'),
   workers: 1,                     // serialise — shared DB, single server instance
   timeout: 30_000,
+  expect: { timeout: isCI ? 15_000 : 5_000 },  // PHP dev server is slower in CI
   retries: isCI ? 2 : 0,          // retry flaky specs in CI only
   reporter: [
     ['list'],

@@ -16,14 +16,14 @@
         <!-- Configuration Form -->
         <div class="sb-config" id="sb-config">
             <div class="form-group">
-                <label>Panel Type</label>
+                <label for="sb-panel-type">Panel Type</label>
                 <select id="sb-panel-type" class="form-control">
                     <option value="executive">Executive Panel (CEO, CFO, COO, CMO, Strategist)</option>
                     <option value="product_management">Product Management Panel (PM, PO, Architect, Dev)</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Evaluation Level</label>
+                <label for="sb-eval-level">Evaluation Level</label>
                 <select id="sb-eval-level" class="form-control">
                     <option value="devils_advocate">Devil's Advocate &mdash; Constructive challenge</option>
                     <option value="red_teaming">Red Teaming &mdash; Adversarial critique</option>
