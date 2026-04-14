@@ -20,7 +20,7 @@ test.describe('Auth — login / logout / session', () => {
     await page.fill('input[name="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(`${BASE}/login`);
-    await expect(page.locator('body')).toContainText(/invalid|incorrect|wrong|error/i);
+    await expect(page.locator('body')).toContainText(/invalid|incorrect|wrong|error|too many/i);
   });
 
   test('non-existent user shows error on login page', async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('Auth — login / logout / session', () => {
     await page.fill('input[name="password"]', 'whatever');
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(`${BASE}/login`);
-    await expect(page.locator('body')).toContainText(/invalid|incorrect|wrong|error/i);
+    await expect(page.locator('body')).toContainText(/invalid|incorrect|wrong|error|too many/i);
   });
 
   test('logout clears session and redirects to /login', async ({ page }) => {

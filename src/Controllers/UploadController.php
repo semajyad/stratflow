@@ -106,7 +106,7 @@ class UploadController
 // Determine if we have a file upload or a text paste
         $hasFile = $uploadedFile !== null && $uploadedFile['error'] !== UPLOAD_ERR_NO_FILE;
         if (!$hasFile && $pasteText === '') {
-            $_SESSION['flash_error'] = 'Please upload a file or paste text before submitting.';
+            $_SESSION['flash_error'] = 'A file or text is required — please upload a document or paste text before submitting.';
             $this->response->redirect('/app/upload?project_id=' . $projectId);
             return;
         }

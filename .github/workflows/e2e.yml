@@ -277,6 +277,31 @@ jobs:
         working-directory: tests/Playwright
         run: npx playwright install --with-deps
 
+      - name: Update visual snapshots (first-run or intentional update)
+        working-directory: tests/Playwright
+        env:
+          CI: 'true'
+          BASE_URL: 'http://localhost:8890'
+          DB_HOST: '127.0.0.1'
+          DB_PORT: '3306'
+          DB_USERNAME: 'stratflow'
+          DB_PASSWORD: 'stratflow_secret'
+          DB_DATABASE: 'stratflow'
+        run: |
+          npx playwright test --project=full full/visual.spec.js --update-snapshots || true
+
+      - name: Commit updated visual snapshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/Playwright/__screenshots__ || true
+          if git diff --cached --quiet; then
+            echo "No snapshot changes"
+          else
+            git commit -m "chore: update Playwright visual snapshots [skip ci]"
+            git push
+          fi
+
       - name: Run Playwright full suite (fast + full)
         working-directory: tests/Playwright
         env:

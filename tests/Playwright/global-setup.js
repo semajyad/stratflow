@@ -6,6 +6,8 @@ async function globalSetup() {
   let conn;
   try {
     conn = await mysql.createConnection(DB_CONFIG);
+    // Clear login_attempts so cross-browser runs don't trigger rate-limiting
+    await conn.execute('DELETE FROM login_attempts');
     await conn.execute('DELETE FROM users WHERE email = ?', [REGULAR_USER_EMAIL]);
     await conn.execute(
       'INSERT INTO users (org_id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)',
