@@ -4,12 +4,21 @@ name: Deploy to Railway
 # but requires manual approval via a GitHub Environment protection rule
 # before the actual deploy step executes.
 #
+# Self-healing: if the healthcheck fails after deploy, this workflow
+# automatically redeploys the last known-good deployment and fires a
+# HIGH ntfy alert. James does not need to intervene unless rollback also fails.
+#
 # Required GitHub Secrets:
 #   RAILWAY_TOKEN — Railway API token with deploy access
+#   NTFY_URL      — ntfy server base URL (e.g. https://ntfy.example.com)
 #
 # Required GitHub Environment:
 #   "railway-test" — set up at Settings → Environments with required reviewers
 #                    if you want manual approval on every deploy.
+#
+# Required GitHub Variables:
+#   RAILWAY_SERVICE (optional) — Railway service name, defaults to 'StratFlow App'
+#   LAST_GOOD_DEPLOY_ID        — set automatically after each successful deploy
 
 on:
   workflow_run:
@@ -21,6 +30,10 @@ on:
       confirm:
         description: "Type 'deploy' to confirm manual deployment"
         required: true
+        type: string
+      clear_pause:
+        description: "Type 'yes' to clear DEPLOY_PAUSED and force deploy"
+        required: false
         type: string
 
 concurrency:
@@ -35,6 +48,9 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       (github.event_name == 'workflow_dispatch' && inputs.confirm == 'deploy')
 
+    outputs:
+      paused: ${{ steps.pause-check.outputs.paused }}
+
     steps:
       - name: Confirm triggering workflow passed
         if: github.event_name == 'workflow_run'
@@ -43,9 +59,33 @@ jobs:
           echo "Conclusion:   ${{ github.event.workflow_run.conclusion }}"
           echo "Head SHA:     ${{ github.event.workflow_run.head_sha }}"
 
+      - name: Check if deploys are paused
+        id: pause-check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CLEAR_PAUSE: ${{ inputs.clear_pause }}
+        run: |
+          PAUSED=$(gh api repos/$REPO/actions/variables/DEPLOY_PAUSED \
+            --jq '.value' 2>/dev/null || echo "0")
+
+          if [ "$PAUSED" = "1" ] && [ "${CLEAR_PAUSE:-}" != "yes" ]; then
+            echo "::warning::Deploys are PAUSED due to a previous failed rollback."
+            echo "::warning::Re-run with workflow_dispatch, confirm=deploy, clear_pause=yes to override."
+            echo "paused=true" >> "$GITHUB_OUTPUT"
+          else
+            if [ "$PAUSED" = "1" ] && [ "${CLEAR_PAUSE:-}" = "yes" ]; then
+              echo "Clearing DEPLOY_PAUSED..."
+              gh api repos/$REPO/actions/variables/DEPLOY_PAUSED \
+                --method PATCH --field value="0" 2>/dev/null || true
+            fi
+            echo "paused=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
     name: Deploy to Railway (test env)
     needs: gate
+    if: needs.gate.outputs.paused != 'true'
     runs-on: ubuntu-latest
     environment: railway-test   # <- set required reviewers here for manual approval
     permissions:
@@ -59,26 +99,132 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy
+        id: deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'StratFlow App' }}
         run: |
+          echo "Deploying service: $RAILWAY_SERVICE"
           railway up --detach --service "$RAILWAY_SERVICE"
-          echo "Deployment triggered. Check Railway dashboard for status."
+          echo "Deployment triggered. Waiting for Railway to start container..."
 
       - name: Post-deploy healthcheck
+        id: healthcheck
         env:
           HEALTHZ_URL: ${{ vars.APP_URL_STAGING || 'https://stratflow-app-test.up.railway.app' }}/healthz
         run: |
-          # Wait up to 2 minutes for the app to come up
+          echo "Polling $HEALTHZ_URL"
           for i in $(seq 1 24); do
             STATUS=$(curl -sf "$HEALTHZ_URL" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
             if [ "$STATUS" = "ok" ]; then
               echo "Healthcheck passed after $((i * 5))s"
+              echo "healthy=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "Waiting... ($((i * 5))s)"
+            echo "Waiting... ($((i * 5))s elapsed)"
             sleep 5
           done
+          echo "healthy=false" >> "$GITHUB_OUTPUT"
           echo "::error::Healthcheck failed after 120s — $HEALTHZ_URL did not return {status: ok}"
+          exit 1
+
+      - name: Record last-good deploy
+        if: steps.healthcheck.outputs.healthy == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'StratFlow App' }}
+        run: |
+          # Record the deployment ID from Railway for rollback reference
+          DEPLOY_ID=$(railway status --service "$RAILWAY_SERVICE" --json 2>/dev/null \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('deploymentId','unknown'))" \
+            2>/dev/null || echo "unknown")
+
+          echo "Recording last-good deploy ID: $DEPLOY_ID"
+
+          # Upsert LAST_GOOD_DEPLOY_ID variable
+          gh api repos/$REPO/actions/variables/LAST_GOOD_DEPLOY_ID \
+            --method PATCH --field value="$DEPLOY_ID" 2>/dev/null || \
+          gh api repos/$REPO/actions/variables \
+            --method POST --field name=LAST_GOOD_DEPLOY_ID --field value="$DEPLOY_ID" 2>/dev/null || true
+
+          echo "Last-good deploy recorded: $DEPLOY_ID"
+
+      - name: Notify successful deploy (low-priority)
+        if: steps.healthcheck.outputs.healthy == 'true'
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -n "${NTFY_URL:-}" ]; then
+            SHA="${{ github.sha }}"
+            SHORT_SHA="${SHA:0:7}"
+            curl -s \
+              -H "Title: StratFlow deployed: $SHORT_SHA" \
+              -H "Priority: min" \
+              -H "Tags: white_check_mark" \
+              -H "Click: https://github.com/$REPO/actions/runs/${{ github.run_id }}" \
+              -d "Deploy to Railway succeeded. Healthcheck passed." \
+              "$NTFY_URL/stratflow-ci" || true
+          fi
+
+      - name: Auto-rollback on healthcheck failure
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'StratFlow App' }}
+          REPO: ${{ github.repository }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+        run: |
+          echo "Healthcheck failed — attempting auto-rollback..."
+
+          LAST_DEPLOY_ID=$(gh api repos/$REPO/actions/variables/LAST_GOOD_DEPLOY_ID \
+            --jq '.value' 2>/dev/null || echo "")
+
+          ROLLBACK_OK=false
+
+          if [ -n "$LAST_DEPLOY_ID" ] && [ "$LAST_DEPLOY_ID" != "unknown" ]; then
+            echo "Rolling back to deployment: $LAST_DEPLOY_ID"
+            if railway deployment redeploy "$LAST_DEPLOY_ID" --service "$RAILWAY_SERVICE" 2>/dev/null; then
+              echo "Rollback triggered successfully"
+              ROLLBACK_OK=true
+            else
+              echo "railway deployment redeploy failed — trying alternative rollback..."
+            fi
+          else
+            echo "No last-good deployment ID recorded — cannot auto-rollback"
+          fi
+
+          FAILING_SHA="${{ github.sha }}"
+          SHORT_SHA="${FAILING_SHA:0:7}"
+
+          if [ "$ROLLBACK_OK" = "true" ]; then
+            PRIORITY="high"
+            MSG="Deploy $SHORT_SHA failed healthcheck. Rolled back to last good deployment ($LAST_DEPLOY_ID). Deploys NOT paused — next merge will re-attempt."
+            TAGS="warning,repeat"
+          else
+            # Pause deploys to prevent cascading failures
+            gh api repos/$REPO/actions/variables/DEPLOY_PAUSED \
+              --method PATCH --field value="1" 2>/dev/null || \
+            gh api repos/$REPO/actions/variables \
+              --method POST --field name=DEPLOY_PAUSED --field value="1" 2>/dev/null || true
+
+            PRIORITY="urgent"
+            MSG="Deploy $SHORT_SHA failed healthcheck AND rollback failed. Deploys are now PAUSED. Manual intervention required — re-run workflow with clear_pause=yes after fixing."
+            TAGS="rotating_light,stop_sign"
+          fi
+
+          if [ -n "${NTFY_URL:-}" ]; then
+            curl -s \
+              -H "Title: StratFlow deploy $( [ "$ROLLBACK_OK" = "true" ] && echo 'rolled back' || echo 'FAILED — paused'): $SHORT_SHA" \
+              -H "Priority: $PRIORITY" \
+              -H "Tags: $TAGS" \
+              -H "Click: https://github.com/$REPO/actions/runs/${{ github.run_id }}" \
+              -d "$MSG" \
+              "$NTFY_URL/stratflow-ci" || true
+          fi
+
+          echo "$MSG"
           exit 1
