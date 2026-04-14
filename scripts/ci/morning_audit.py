@@ -150,13 +150,13 @@ def build_ntfy_body(report: dict) -> tuple[str, str, str]:
     date = report.get("date", "?")
 
     if s["fail"]:
-        title = f"StratFlow nightly — {s['fail']} FAIL [{date}]"
+        title = f"StratFlow nightly: {s['fail']} FAIL [{date}]"
         priority = "high"
     elif s["warn"]:
-        title = f"StratFlow nightly — {s['warn']} WARN [{date}]"
+        title = f"StratFlow nightly: {s['warn']} WARN [{date}]"
         priority = "default"
     else:
-        title = f"StratFlow nightly — all pass [{date}]"
+        title = f"StratFlow nightly: all pass [{date}]"
         priority = "low"
 
     lines = [title]
@@ -181,7 +181,7 @@ def main():
     if not report:
         print("Could not fetch triage report. Check GitHub Actions manually.")
         send_ntfy(
-            "StratFlow morning audit — FETCH FAILED",
+            "StratFlow morning audit: FETCH FAILED",
             "Could not download nightly-triage report. Check GH Actions.",
             priority="high",
             tags="warning,ci",
