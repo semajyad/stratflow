@@ -160,9 +160,13 @@ def check_nightly_ci(project_dir: str) -> list[str]:
         if result.returncode == 0:
             return ["[session-start] Nightly CI: all pass ✅"]
 
-        # Failures — output the report AND a hard mandate
+        # Failures — output the report AND a hard mandate.
+        # Include stderr so tracebacks from morning_audit.py are not silently lost.
+        stderr_lines = [l for l in result.stderr.strip().splitlines() if l.strip()]
         output = ["[session-start] Nightly CI: FAILURES DETECTED ❌"]
         output += [f"  {l}" for l in lines]
+        if stderr_lines:
+            output += ["  [stderr]:"] + [f"    {l}" for l in stderr_lines]
         output += [
             "",
             "  !! MANDATORY — fix all nightly CI failures before any other work !!",
