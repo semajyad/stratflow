@@ -79,12 +79,6 @@ parameters:
 			path: src/Controllers/UserStoryController.php
 
 		-
-			message: '#^Call to static method findEditableProject\(\) on an unknown class StratFlow\\Models\\ProjectPolicy\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Controllers/UserStoryController.php
-
-		-
 			message: '#^PHPDoc tag @param for parameter \$id with type int is incompatible with native type string\.$#'
 			identifier: parameter.phpDocType
 			count: 1
@@ -102,11 +96,6 @@ parameters:
 			count: 2
 			path: src/Controllers/WorkItemController.php
 
-		-
-			message: '#^Call to static method findEditableProject\(\) on an unknown class StratFlow\\Models\\ProjectPolicy\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Controllers/WorkItemController.php
 
 		-
 			message: '#^PHPDoc tag @param for parameter \$id with type int is incompatible with native type string\.$#'
