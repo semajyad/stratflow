@@ -6,7 +6,7 @@ Authoritative reference for the CI/CD pipeline. If you observe unexpected behavi
 
 ## Architecture Overview
 
-```
+```text
   PR opened by agent
     │
     ├─► multi-agent-guard       (branch naming + claim advisory)
@@ -137,6 +137,7 @@ Exempted directories: `src/Config/`, `src/Services/Prompts/`.
 ## Self-Heal
 
 ### PR-time (`self-heal.yml`)
+
 Runs before unit/integration on every PR.
 
 | Issue | Action |
@@ -173,6 +174,7 @@ Retry budget: 2. Exhaustion → `self-heal-failed` label + ntfy HIGH.
    - Rollback failed → ntfy CRITICAL + `DEPLOY_PAUSED=1`.
 
 **To resume after pause:**
+
 ```bash
 gh workflow run deploy.yml -f confirm=deploy -f clear_pause=yes
 ```
@@ -192,6 +194,7 @@ Scans fail only on findings **absent from** the committed baselines.
 | Snyk | `tests/security/baseline-snyk.json` |
 
 **Accept a new finding:**
+
 ```bash
 python3 scripts/ci/update_security_baseline.py zap   # or shannon / snyk
 git add tests/security/baseline-zap.json
@@ -239,6 +242,7 @@ To add a new notification: update this table in a PR and justify why human atten
 `agent/<id>/<topic>`, `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, `security-`, `hotfix/`, `dependabot/`
 
 ### Work-claim ledger
+
 ```bash
 python3 scripts/agent-claim.py claim --agent "claude" --branch "agent/abc/feat" \
   --patterns "src/Controllers/**"
@@ -264,7 +268,7 @@ Playwright `--retries=1` auto-retries each failing test once. Persistent flakes:
 - ≥3 flakes in 7 days → GitHub issue with `flaky-test` label
 
 ```bash
-python3 scripts/ci/manage_flake_quarantine.py list \
+python3 scripts/ci/manage_flake_quarantine.py list \ list \
   --quarantine tests/Playwright/quarantine.jsonl
 ```
 
