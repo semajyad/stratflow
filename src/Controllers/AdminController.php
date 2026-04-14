@@ -628,7 +628,7 @@ class AdminController
                              || str_starts_with($sub['stripe_subscription_id'] ?? '', 'manual_'));
         if (!$isInvoiceBilling && $sub && !empty($sub['stripe_subscription_id'])) {
             try {
-                $stripe = new StripeService($this->config['stripe']);
+                $stripe = $this->makeStripe();
                 $stripeDetails = $stripe->getSubscription($sub['stripe_subscription_id']);
             } catch (\Throwable $e) {
                 // Non-critical — show local data
@@ -653,7 +653,7 @@ class AdminController
         $stripeSubscriptions  = [];
         if ($hasStripeCustomer) {
             try {
-                $stripe = new StripeService($this->config['stripe']);
+                $stripe = $this->makeStripe();
                 $stripeInvoices      = $stripe->listInvoices($org['stripe_customer_id']);
                 $stripeSubscriptions = $stripe->listSubscriptions($org['stripe_customer_id']);
             } catch (\Throwable) {}
@@ -718,7 +718,7 @@ class AdminController
         }
 
         try {
-            $stripe = new StripeService($this->config['stripe']);
+            $stripe = $this->makeStripe();
             $appUrl = rtrim($this->config['app']['url'] ?? '', '/');
             $portalUrl = $stripe->createPortalSession(
                 $org['stripe_customer_id'],
@@ -845,7 +845,7 @@ class AdminController
         $customerId = !empty($org['stripe_customer_id']) ? $org['stripe_customer_id'] : null;
 
         try {
-            $stripe  = new StripeService($this->config['stripe']);
+            $stripe  = $this->makeStripe();
             $session = $stripe->createSeatCheckout($priceId, $quantity, $successUrl, $cancelUrl, $customerId);
 
             \StratFlow\Services\AuditLogger::log(
@@ -872,7 +872,7 @@ class AdminController
 
         if ($org && !empty($org['stripe_customer_id'])) {
             try {
-                $stripe   = new StripeService($this->config['stripe']);
+                $stripe   = $this->makeStripe();
                 $invoices = $stripe->listInvoices($org['stripe_customer_id']);
             } catch (\Exception $e) {
                 $_SESSION['flash_error'] = 'Could not load invoices: ' . $e->getMessage();
@@ -909,7 +909,7 @@ class AdminController
         }
 
         try {
-            $stripe  = new StripeService($this->config['stripe']);
+            $stripe  = $this->makeStripe();
 
             // Verify the invoice belongs to this org's customer before redirecting
             \Stripe\Stripe::setApiKey($this->config['stripe']['secret_key']);
@@ -1214,5 +1214,17 @@ class AdminController
         } catch (\Throwable $e) {
             $this->response->json(['status' => 'error', 'message' => $e->getMessage()]);
         }
+    }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
+    /**
+     * Instantiate a StripeService using the app configuration.
+     */
+    private function makeStripe(): StripeService
+    {
+        return new StripeService($this->config['stripe']);
     }
 }

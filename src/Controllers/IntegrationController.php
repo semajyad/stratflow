@@ -273,7 +273,7 @@ class IntegrationController
         $jiraBoards   = [];
 
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $jira = $this->makeJira($integration);
             $projects = $jira->getProjects();
 
             // Load fields and issue types for mapping configuration
@@ -397,7 +397,7 @@ class IntegrationController
 
         // Attempt to register webhook
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $jira = $this->makeJira($integration);
             $appUrl = rtrim($this->config['app']['url'] ?? '', '/');
             $webhookUrl = $appUrl . '/webhook/integration/jira';
 
@@ -525,7 +525,7 @@ class IntegrationController
         }
 
         try {
-            $jira  = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $jira  = $this->makeJira($integration);
             $users = $projectKey !== ''
                 ? $jira->getAssignableUsers($projectKey, $q)
                 : $jira->searchUsers($q ?: 'a');
@@ -582,8 +582,7 @@ class IntegrationController
         }
 
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
-            $sync = new JiraSyncService($this->db, $jira, $integration);
+            [$jira, $sync] = $this->makeJiraSync($integration);
 
             $wiResult = $sync->pushWorkItems($projectId, $jiraProjectKey);
             $usResult = $sync->pushUserStories($projectId, $jiraProjectKey);
@@ -664,8 +663,7 @@ class IntegrationController
         }
 
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
-            $sync = new JiraSyncService($this->db, $jira, $integration);
+            [$jira, $sync] = $this->makeJiraSync($integration);
 
             $result = $sync->pullChanges($projectId, $jiraProjectKey);
 
@@ -737,8 +735,7 @@ class IntegrationController
         }
 
         try {
-            $jira    = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
-            $sync    = new JiraSyncService($this->db, $jira, $integration);
+            [$jira, $sync] = $this->makeJiraSync($integration);
             $updated = $sync->pullStatusBulk($issueKeys);
 
             $_SESSION['flash_message'] = "Pulled status for " . count($issueKeys) . " items — {$updated} updated.";
@@ -1017,8 +1014,7 @@ class IntegrationController
 
                     $integration = \StratFlow\Models\Integration::findById($this->db, $integrationId);
                     if ($integration) {
-                        $jiraSvc = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
-                        $syncSvc = new \StratFlow\Services\JiraSyncService($this->db, $jiraSvc, $integration);
+                        [$jiraSvc, $syncSvc] = $this->makeJiraSync($integration);
 
                         if ($statusChangelog !== null) {
                             // Changelog gives us the new status name directly — build a
@@ -1103,8 +1099,7 @@ class IntegrationController
         }
 
         try {
-            $jiraService = new \StratFlow\Services\JiraService($this->config['jira'] ?? [], $integration, $this->db);
-            $syncService = new \StratFlow\Services\JiraSyncService($this->db, $jiraService, $integration);
+            [$jiraService, $syncService] = $this->makeJiraSync($integration);
 
             $results = [];
             $jiraKey = $project['jira_project_key'];
@@ -1242,8 +1237,7 @@ class IntegrationController
         }
 
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
-            $sync = new JiraSyncService($this->db, $jira, $integration);
+            [$jira, $sync] = $this->makeJiraSync($integration);
             $preview = $sync->dryRunPreview($projectId, $project['jira_project_key']);
             $this->response->json($preview);
         } catch (\Throwable $e) {
@@ -1272,7 +1266,7 @@ class IntegrationController
         }
 
         try {
-            $jira = new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+            $jira = $this->makeJira($integration);
             $created = 0;
             $skipped = 0;
 
@@ -1394,5 +1388,28 @@ class IntegrationController
         }
 
         $this->response->redirect('/app/admin/teams');
+    }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
+    /**
+     * Instantiate a JiraService for the given integration record.
+     */
+    private function makeJira(array $integration): JiraService
+    {
+        return new JiraService($this->config['jira'] ?? [], $integration, $this->db);
+    }
+
+    /**
+     * Instantiate both JiraService and JiraSyncService for the given integration.
+     *
+     * @return array{0: JiraService, 1: JiraSyncService}
+     */
+    private function makeJiraSync(array $integration): array
+    {
+        $jira = $this->makeJira($integration);
+        return [$jira, new JiraSyncService($this->db, $jira, $integration)];
     }
 }
