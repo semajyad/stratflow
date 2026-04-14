@@ -432,7 +432,7 @@ class WorkItemController
         $descChanged    = $newDescription !== ($item['description'] ?? '');
         $sprintChanged  = $newEstimatedSprints !== '' && (int) $newEstimatedSprints !== (int) $item['estimated_sprints'];
         if ($descChanged || $sprintChanged) {
-            HLWorkItem::update($this->db, $id, ['requires_review' => 1]);
+            HLWorkItem::update($this->db, (int) $id, ['requires_review' => 1]);
         }
 
         $_SESSION['flash_message'] = 'Work item updated.';

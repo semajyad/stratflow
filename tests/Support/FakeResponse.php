@@ -20,6 +20,9 @@ final class FakeResponse extends Response
     public ?array  $jsonPayload      = null;
     public int     $jsonStatus       = 200;
     public ?string $redirectedTo     = null;
+    public ?string $downloadContent  = null;
+    public ?string $downloadFilename = null;
+    public ?string $downloadMimeType = null;
 
     public function __construct()
     {
@@ -41,5 +44,12 @@ final class FakeResponse extends Response
     public function redirect(string $url): void
     {
         $this->redirectedTo = $url;
+    }
+
+    public function download(string $content, string $filename, string $mimeType): void
+    {
+        $this->downloadContent  = $content;
+        $this->downloadFilename = $filename;
+        $this->downloadMimeType = $mimeType;
     }
 }

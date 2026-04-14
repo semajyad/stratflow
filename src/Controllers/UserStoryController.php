@@ -828,7 +828,7 @@ PROMPT;
             return;
         }
 
-        $project = \StratFlow\Models\ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
+        $project = \StratFlow\Security\ProjectPolicy::findEditableProject($this->db, $user, (int) $story['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
