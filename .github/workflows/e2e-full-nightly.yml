@@ -99,3 +99,5 @@ jobs:
           priority: urgent
           tags: "warning,ci,e2e,staging"
           click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          ntfy_url: ${{ secrets.NTFY_URL }}
+          ntfy_topic: ${{ secrets.NTFY_TOPIC }}

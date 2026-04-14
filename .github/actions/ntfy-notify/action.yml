@@ -20,6 +20,14 @@ inputs:
     description: URL to open when notification is tapped
     required: false
     default: ""
+  ntfy_url:
+    description: Ntfy server base URL (pass secrets.NTFY_URL from caller)
+    required: false
+    default: ""
+  ntfy_topic:
+    description: Ntfy topic name (pass secrets.NTFY_TOPIC from caller)
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -27,29 +35,34 @@ runs:
     - name: Send ntfy notification
       shell: bash
       env:
-        NTFY_URL: ${{ secrets.NTFY_URL }}
-        NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        NTFY_URL: ${{ inputs.ntfy_url }}
+        NTFY_TOPIC: ${{ inputs.ntfy_topic }}
+        TITLE: ${{ inputs.title }}
+        BODY: ${{ inputs.body }}
+        PRIORITY: ${{ inputs.priority }}
+        TAGS: ${{ inputs.tags }}
+        CLICK_URL: ${{ inputs.click_url }}
       run: |
         if [ -z "$NTFY_URL" ] || [ -z "$NTFY_TOPIC" ]; then
-          echo "::warning::NTFY_URL or NTFY_TOPIC secret not set — skipping notification"
+          echo "::warning::NTFY_URL or NTFY_TOPIC not provided — skipping notification"
           exit 0
         fi
 
         HEADERS=(
-          -H "Title: ${{ inputs.title }}"
-          -H "Priority: ${{ inputs.priority }}"
+          -H "Title: $TITLE"
+          -H "Priority: $PRIORITY"
         )
 
-        if [ -n "${{ inputs.tags }}" ]; then
-          HEADERS+=(-H "Tags: ${{ inputs.tags }}")
+        if [ -n "$TAGS" ]; then
+          HEADERS+=(-H "Tags: $TAGS")
         fi
 
-        if [ -n "${{ inputs.click_url }}" ]; then
-          HEADERS+=(-H "Click: ${{ inputs.click_url }}")
+        if [ -n "$CLICK_URL" ]; then
+          HEADERS+=(-H "Click: $CLICK_URL")
         fi
 
         curl -fsS \
           "${HEADERS[@]}" \
-          -d "${{ inputs.body }}" \
+          -d "$BODY" \
           "$NTFY_URL/$NTFY_TOPIC" \
           || echo "::warning::ntfy notification failed (non-fatal)"

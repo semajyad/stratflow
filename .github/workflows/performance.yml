@@ -157,6 +157,8 @@ jobs:
           priority: high
           tags: "warning,ci,perf"
           click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          ntfy_url: ${{ secrets.NTFY_URL }}
+          ntfy_topic: ${{ secrets.NTFY_TOPIC }}
 
       - name: Append to performance history
         if: always()

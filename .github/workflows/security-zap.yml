@@ -166,6 +166,8 @@ jobs:
           priority: urgent
           tags: "warning,ci,security,zap"
           click_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          ntfy_url: ${{ secrets.NTFY_URL }}
+          ntfy_topic: ${{ secrets.NTFY_TOPIC }}
 
       - name: Promote ZAP report to zap-latest.md
         if: always()
