@@ -34,6 +34,10 @@ use StratFlow\Tests\Support\ControllerTestCase;
 #[UsesClass(\StratFlow\Services\GeminiService::class)]
 #[UsesClass(\StratFlow\Services\StoryQualityScorer::class)]
 #[UsesClass(\StratFlow\Services\StoryImprovementService::class)]
+#[UsesClass(\StratFlow\Models\Organisation::class)]
+#[UsesClass(\StratFlow\Models\SystemSettings::class)]
+#[UsesClass(\StratFlow\Models\Team::class)]
+#[UsesClass(\StratFlow\Models\User::class)]
 class UserStoryControllerTest extends ControllerTestCase
 {
     // ===========================

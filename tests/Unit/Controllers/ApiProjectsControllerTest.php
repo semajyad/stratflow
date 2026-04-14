@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace StratFlow\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use StratFlow\Controllers\ApiProjectsController;
 use StratFlow\Tests\Support\ApiTestCase;
 
@@ -18,6 +19,8 @@ use StratFlow\Tests\Support\ApiTestCase;
  * response formatting, not the query layer.
  */
 #[CoversClass(ApiProjectsController::class)]
+#[UsesClass(\StratFlow\Models\Project::class)]
+#[UsesClass(\StratFlow\Security\PermissionService::class)]
 class ApiProjectsControllerTest extends ApiTestCase
 {
     // ===========================

@@ -6,6 +6,7 @@ namespace StratFlow\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use StratFlow\Controllers\HealthController;
 use StratFlow\Controllers\PricingController;
 use StratFlow\Controllers\SuccessController;
@@ -25,6 +26,9 @@ use StratFlow\Tests\Support\ControllerTestCase;
 #[CoversClass(SuccessController::class)]
 #[CoversClass(HealthController::class)]
 #[CoversClass(TraceabilityController::class)]
+#[UsesClass(\StratFlow\Core\Response::class)]
+#[UsesClass(\StratFlow\Services\TraceabilityService::class)]
+#[UsesClass(\StratFlow\Models\StoryGitLink::class)]
 final class TinyControllersTest extends ControllerTestCase
 {
     // ===========================
