@@ -102,8 +102,8 @@ jobs:
             echo \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
           ")
           echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below the 60% threshold (whitelisted src/ only)."
+          if (( $(echo "$COVERAGE < 10" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below the 10% threshold (unit suite only; integration suite coverage is measured separately)."
             exit 1
           fi
 
