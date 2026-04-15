@@ -201,3 +201,47 @@ ssh user@server "cd /home/<user>/stratflow.threepointssolutions.com && composer 
 
 # Apply any schema changes manually via phpMyAdmin or mysql CLI
 ```
+
+---
+
+## Database migration strategy — expand/contract
+
+Auto-rollback (Railway rolling back code to `LAST_GOOD_SHA`) only undoes the application binary.
+It does **not** reverse database schema changes. A destructive migration + auto-rollback = production outage.
+
+### Rule
+
+Every schema migration MUST be backward compatible with the **previous deploy** of the code.
+Use the expand/contract pattern:
+
+| Phase | What happens | Safe to rollback? |
+|-------|-------------|-------------------|
+| **Expand** | Add new column/table (nullable or with default). Old code ignores it. | ✅ Yes |
+| **Migrate** | Backfill data, deploy new code that uses the new column. | ✅ Yes |
+| **Contract** | Drop the old column/table in a *separate* later migration, after verifying the previous deploy is no longer `LAST_GOOD_SHA`. | ✅ Yes — old code is gone |
+
+### Forbidden in a single deploy
+
+- `DROP COLUMN` (unless the column is not read by the running code)
+- `RENAME COLUMN` / `RENAME TABLE` (breaks the previous code immediately)
+- `TRUNCATE TABLE` on non-temporary data
+- `ALTER COLUMN` narrowing the type (e.g. `VARCHAR(500)` → `VARCHAR(10)`)
+
+### CI enforcement
+
+`scripts/ci/check_destructive_migrations.py` runs on every PR that touches `database/migrations/`.
+If it detects any of the above:
+
+1. It blocks merge until the PR has the `safe-migration-reviewed` label.
+2. Add that label only after confirming the LAST_GOOD_SHA code is compatible with the new schema.
+
+### Bypassing auto-rollback for destructive migrations
+
+If you intentionally need a destructive migration (e.g. the expand phase already shipped):
+
+1. Add `safe-migration-reviewed` label to the PR (CI will pass).
+2. Immediately after merge, update `LAST_GOOD_SHA` to the new deploy SHA so rollback never targets the pre-migration code:
+   ```bash
+   gh variable set LAST_GOOD_SHA --body "<new deploy SHA>" --repo semajyad/stratflow
+   ```
+3. Monitor `/healthz` for 10 minutes post-deploy before considering the deploy stable.
