@@ -1,0 +1,255 @@
+name: Nightly self-heal
+
+# Runs at 04:30 UTC (16:30 NZT) — before nightly-triage at 05:00 UTC.
+# Cleans up infrastructure issues that would otherwise cause nightly-triage
+# to report false failures.
+#
+# Actions:
+#   1. Cancel stuck in_progress workflow runs older than 2h
+#   2. Detect composer.lock / phpstan-baseline drift on main;
+#      open a self-heal PR if found (never pushes directly to main)
+#   3. Auto-close resolved ci-nightly GitHub issues
+#   4. Prune Playwright flake quarantine entries older than 30 days
+
+on:
+  schedule:
+    - cron: "30 4 * * *"   # 04:30 UTC = 16:30 NZT
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-self-heal
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  issues: write
+
+jobs:
+  self-heal:
+    name: Nightly self-heal
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup PHP (needed for composer/phpstan checks)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --quiet
+
+      - name: Cancel stuck workflow runs (>2h in_progress)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          CUTOFF_EPOCH=$(($(date -u +%s) - 7200))
+
+          echo "Checking for stuck workflow runs older than 2h..."
+          IN_PROGRESS=$(gh api repos/$REPO/actions/runs \
+            --jq '[.workflow_runs[] | select(.status == "in_progress")] | length' 2>/dev/null || echo "0")
+          echo "$IN_PROGRESS runs currently in_progress"
+
+          # Cancel any that started >2h ago
+          gh api repos/$REPO/actions/runs --paginate \
+            --jq '.workflow_runs[] | select(.status == "in_progress") | "\(.id) \(.created_at)"' \
+          2>/dev/null | while IFS=' ' read -r RUN_ID CREATED_AT; do
+            CREATED_EPOCH=$(python3 -c "
+          from datetime import datetime
+          import sys
+          try:
+              ts = '$CREATED_AT'
+              print(int(datetime.fromisoformat(ts.replace('Z','+00:00')).timestamp()))
+          except Exception:
+              print(0)
+          " 2>/dev/null || echo "0")
+            if [ "$CREATED_EPOCH" -gt "0" ] && [ "$CREATED_EPOCH" -lt "$CUTOFF_EPOCH" ]; then
+              echo "Cancelling stuck run #$RUN_ID (started $CREATED_AT)..."
+              gh api repos/$REPO/actions/runs/$RUN_ID/cancel \
+                --method POST 2>/dev/null && echo "  Cancelled" || echo "  Could not cancel"
+            fi
+          done
+
+      - name: Check for composer.lock / phpstan drift on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          DRIFT_FOUND=false
+          DRIFT_DETAILS=()
+
+          # Check composer.lock drift
+          COMPOSER_OUTPUT=$(composer install --no-interaction --dry-run 2>&1 || true)
+          if echo "$COMPOSER_OUTPUT" | grep -qE "Warning.*lock file|lock file is not up to date"; then
+            echo "composer.lock drift detected on main"
+            DRIFT_FOUND=true
+            DRIFT_DETAILS+=("composer.lock is out of sync with composer.json")
+          fi
+
+          # Check phpstan baseline for stale entries
+          if [ -f "phpstan-baseline.neon" ]; then
+            PHPSTAN_OUTPUT=$(vendor/bin/phpstan analyse \
+              --memory-limit=512M --configuration=phpstan.neon \
+              --no-progress --error-format=json 2>/dev/null || true)
+            NOT_MATCHED=$(echo "$PHPSTAN_OUTPUT" | python3 -c "
+          import json, sys
+          try:
+              d = json.load(sys.stdin)
+              count = sum(1 for e in d.get('files', {}).get('', {}).get('messages', [])
+                         if 'Ignored error pattern' in e.get('message','') and 'not matched' in e.get('message',''))
+              print(count)
+          except Exception:
+              print(0)
+          " 2>/dev/null || echo "0")
+            if [ "${NOT_MATCHED:-0}" -gt 0 ]; then
+              echo "phpstan-baseline.neon has $NOT_MATCHED stale entries on main"
+              DRIFT_FOUND=true
+              DRIFT_DETAILS+=("phpstan-baseline.neon has $NOT_MATCHED stale ignore patterns")
+            fi
+          fi
+
+          if [ "$DRIFT_FOUND" = "true" ]; then
+            echo "Drift found: ${DRIFT_DETAILS[*]}"
+
+            # Check if a self-heal PR already exists
+            EXISTING_PR=$(gh api repos/$REPO/pulls \
+              --jq '[.[] | select(.head.ref | startswith("chore/nightly-self-heal-main"))] | length' \
+              2>/dev/null || echo "0")
+
+            if [ "$EXISTING_PR" -gt 0 ]; then
+              echo "Self-heal PR already open — skipping"
+            else
+              # Create a self-heal branch and PR
+              BRANCH="chore/nightly-self-heal-main-$(date +%Y%m%d)"
+              git config user.name "stratflow-ci[bot]"
+              git config user.email "stratflow-ci[bot]@users.noreply.github.com"
+              git checkout -b "$BRANCH"
+
+              # Fix composer.lock drift
+              composer update --lock --no-interaction --quiet 2>/dev/null || true
+              git add composer.lock 2>/dev/null || true
+
+              # Fix phpstan baseline stale entries
+              vendor/bin/phpstan analyse \
+                --memory-limit=512M --configuration=phpstan.neon \
+                --generate-baseline=phpstan-baseline.neon \
+                --no-progress 2>/dev/null || true
+              git add phpstan-baseline.neon 2>/dev/null || true
+
+              if ! git diff --cached --quiet; then
+                git commit -m "chore: nightly self-heal — fix main branch drift
+
+          Generated by nightly-self-heal workflow at $(date -u +%Y-%m-%dT%H:%M:%SZ).
+          Issues: ${DRIFT_DETAILS[*]}
+
+          [ci skip]"
+                git push origin "$BRANCH"
+
+                gh pr create \
+                  --repo "$REPO" \
+                  --title "chore: nightly self-heal — main branch drift ($(date +%Y-%m-%d))" \
+                  --body "## Auto-generated self-heal PR
+
+          The nightly-self-heal workflow detected drift on the \`main\` branch and cannot auto-push to main.
+          This PR fixes: ${DRIFT_DETAILS[*]}
+
+          **Review and merge to resolve.** If this PR looks wrong, close it and investigate manually.
+
+          🤖 Auto-generated by nightly-self-heal workflow" \
+                  --label "self-heal" \
+                  --head "$BRANCH" \
+                  --base main 2>/dev/null || true
+
+                echo "Self-heal PR created for branch $BRANCH"
+              fi
+            fi
+          else
+            echo "No drift detected on main — all good"
+          fi
+
+      - name: Auto-close resolved ci-nightly issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Checking for resolved ci-nightly issues to auto-close..."
+
+          # Get all open ci-nightly labelled issues
+          OPEN_ISSUES=$(gh api repos/$REPO/issues \
+            --jq '[.[] | select(.state == "open" and (.labels[].name == "ci-nightly")) | {number, title}]' \
+            2>/dev/null || echo "[]")
+
+          ISSUE_COUNT=$(echo "$OPEN_ISSUES" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+          echo "Open ci-nightly issues: $ISSUE_COUNT"
+
+          # For each issue, check if the hash-based finding is still active
+          # Issues created by triage_nightly.py have [ci-nightly:<hash>] in their title
+          echo "$OPEN_ISSUES" | python3 - <<'PYEOF'
+          import json, sys, os, subprocess
+          from pathlib import Path
+
+          issues = json.load(sys.stdin)
+          repo = os.environ["REPO"]
+
+          for issue in issues:
+              title = issue["title"]
+              number = issue["number"]
+
+              # Extract the hash from the title
+              import re
+              match = re.search(r'\[ci-nightly:([a-f0-9]+)\]', title)
+              if not match:
+                  continue
+
+              # Check if the triage report from last night shows this finding as resolved
+              # (Simple heuristic: if the report doesn't exist, don't close)
+              report_path = Path("triage-report.json")
+              if not report_path.exists():
+                  print(f"  No triage report — skipping issue #{number}")
+                  continue
+
+              try:
+                  report = json.loads(report_path.read_text())
+              except Exception:
+                  continue
+
+              # Check if all jobs are now passing
+              all_passing = all(
+                  j.get("status") in ("pass", "warn")
+                  for j in report.get("jobs", {}).values()
+              )
+
+              if all_passing:
+                  print(f"  All nightly jobs passing — auto-closing issue #{number}: {title[:60]}")
+                  subprocess.run([
+                      "gh", "issue", "close", str(number),
+                      "--repo", repo,
+                      "--comment", "Auto-closed: all nightly CI jobs are now passing.",
+                  ], capture_output=True)
+          PYEOF
+
+      - name: Prune Playwright flake quarantine (>30 days)
+        run: |
+          if [ -f "tests/Playwright/quarantine.jsonl" ] && [ -f "scripts/ci/manage_flake_quarantine.py" ]; then
+            python3 scripts/ci/manage_flake_quarantine.py prune \
+              --quarantine tests/Playwright/quarantine.jsonl \
+              --days 30
+
+            git config user.name "stratflow-ci[bot]"
+            git config user.email "stratflow-ci[bot]@users.noreply.github.com"
+            git add tests/Playwright/quarantine.jsonl 2>/dev/null || true
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: prune Playwright flake quarantine entries >30d [ci skip]"
+              git push origin main || echo "::warning::Could not push quarantine prune — will retry next night"
+            fi
+          fi

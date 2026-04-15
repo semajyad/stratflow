@@ -16,6 +16,18 @@ If the task touches auth, permissions, sessions, secrets, uploads, billing, webh
 - If the same fix attempt fails 3 times, stop and rescope instead of thrashing.
 - Before finishing, prefer the simpler solution if it reduces code and context size safely.
 
+## Unit Test Rule — MANDATORY
+
+**Every new or modified `src/**/*.php` file must have a unit test written before the task is considered complete.**
+
+After writing or modifying any source file:
+1. Invoke the `unit-test-writer` skill immediately.
+2. The skill spawns a **Haiku** agent with full context of the new code.
+3. The Haiku agent writes the test file to `tests/Unit/<matching path>Test.php`.
+4. You review the output and commit both files together.
+
+This is non-negotiable. Do not open a PR, commit source changes, or mark a task done without the accompanying test file.
+
 ## Project Rules
 
 - Keep all tenant-scoped queries filtered by `org_id`.

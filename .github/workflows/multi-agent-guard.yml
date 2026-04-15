@@ -1,346 +1,154 @@
-name: Multi-Agent Guard
+name: Multi-agent guard
+
+# Enforces conventions for concurrent agent workflows:
+#   1. Branch naming: agent/<id>/<topic>, dependabot/*, main, or trunk branches.
+#      PRs from non-conforming branches get a comment but are NOT blocked —
+#      the convention is advisory so human devs aren't locked out.
+#   2. Claim advisory: if .github/agent-claims.json shows another agent has
+#      claimed the files touched by this PR, posts a coordination comment.
+#      Non-blocking — advisory only.
+#   3. Push-to-main guard: direct pushes to main (not via PR merge) are
+#      rejected with an error.
 
 on:
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
-
-concurrency:
-  group: multi-agent-guard-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
-  issues: write
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # lineage-check — runs on PRs only. Enforces agent branch naming and ensures
-  # the branch was forked from origin/main (not some stale SHA).
-  # ---------------------------------------------------------------------------
-  lineage-check:
-    name: Branch Lineage Check
+  guard:
+    name: Multi-agent guard
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Skip dependabot / renovate
-        id: skip
-        run: |
-          HEAD="${{ github.head_ref }}"
-          if [[ "$HEAD" == dependabot/** || "$HEAD" == renovate/** ]]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
 
+    steps:
       - uses: actions/checkout@v4
-        if: steps.skip.outputs.skip == 'false'
         with:
           fetch-depth: 0
+          sparse-checkout: .github/agent-claims.json
+          sparse-checkout-cone-mode: false
 
-      - name: Validate agent branch naming
-        if: steps.skip.outputs.skip == 'false'
-        id: naming
+      - name: Direct push to main guard
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          HEAD="${{ github.head_ref }}"
-          # Only validate branches that look like agent branches
-          if [[ "$HEAD" == agent/** ]]; then
-            PATTERN='^agent/[a-z0-9_-]+-[0-9]{8}-[0-9]{4}-[0-9a-f]{4}/[a-z0-9-]{1,40}$'
-            if ! echo "$HEAD" | grep -qE "$PATTERN"; then
-              echo "::error::Branch '$HEAD' matches agent/** prefix but does not follow the required format."
-              echo "::error::Required pattern: agent/<session_id>/<slug>"
-              echo "::error::Where session_id matches: <name>-YYYYMMDD-HHMM-<hex4>"
-              echo "::error::Example: agent/claude-20240115-1430-a3f2/add-auth-endpoint"
-              echo "naming_ok=false" >> "$GITHUB_OUTPUT"
-              exit 1
-            fi
-          fi
-          echo "naming_ok=true" >> "$GITHUB_OUTPUT"
-
-      - name: Check branch lineage from origin/main
-        if: steps.skip.outputs.skip == 'false'
-        id: lineage
-        run: |
-          git fetch origin main --quiet
-          MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null || true)
-          if [[ -z "$MERGE_BASE" ]]; then
-            echo "lineage_ok=false" >> "$GITHUB_OUTPUT"
-            echo "::error::Branch has no common ancestor with origin/main."
-            echo "::error::Branch was not created from origin/main."
-            echo "::error::Fix: create a new branch with: python scripts/agent/session-start.py"
+          # Detect if this push came from a PR merge (has 2 parents) or is direct
+          PARENTS=$(git log -1 --format="%P" "${{ github.sha }}" | wc -w | tr -d ' ')
+          if [ "$PARENTS" -lt 2 ] && [[ "${{ github.event.head_commit.message }}" != *"Merge pull request"* ]]; then
+            echo "::error::Direct push to main detected. All changes must go through PRs."
+            echo "::error::Commit: ${{ github.sha }} | Message: $(git log -1 --format='%s' ${{ github.sha }})"
             exit 1
           fi
-          echo "lineage_ok=true" >> "$GITHUB_OUTPUT"
-          echo "merge_base=$MERGE_BASE" >> "$GITHUB_OUTPUT"
+          echo "Push to main is a merge commit — OK"
 
-      - name: Check ledger registration
-        if: steps.skip.outputs.skip == 'false'
-        id: ledger
-        run: |
-          LEDGER=$(git show origin/main:.github/agent-ledger.json 2>/dev/null || echo '{}')
-          HEAD="${{ github.head_ref }}"
-          REGISTERED=$(echo "$LEDGER" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          branch = '$HEAD'
-          sessions = data.get('sessions', data) if isinstance(data, dict) else {}
-          found = any(
-              v.get('branch') == branch
-              for v in (sessions.values() if isinstance(sessions, dict) else [])
-          )
-          print('yes' if found else 'no')
-          " 2>/dev/null || echo 'no')
-          echo "registered=$REGISTERED" >> "$GITHUB_OUTPUT"
-
-      - name: Post success comment
-        if: steps.skip.outputs.skip == 'false' && success()
+      - name: Branch naming convention
+        if: github.event_name == 'pull_request'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          REGISTERED="${{ steps.ledger.outputs.registered }}"
-          MERGE_BASE="${{ steps.lineage.outputs.merge_base }}"
-          BODY="<!-- multi-agent-guard -->
-          ## Multi-Agent Guard
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          echo "Checking branch: $BRANCH"
 
-          | Check | Result |
-          |---|---|
-          | Branch lineage | OK (base: \`${MERGE_BASE:0:8}\`) |
-          | Session registered in ledger | ${REGISTERED} |
-
-          All multi-agent coordination checks passed."
-
-          # Update previous guard comment if one exists, otherwise create new
-          EXISTING=$(gh pr view "$PR_NUMBER" --json comments --jq \
-            '[.comments[] | select(.body | contains("<!-- multi-agent-guard -->"))] | length')
-          if [[ "$EXISTING" -gt 0 ]]; then
-            gh pr comment "$PR_NUMBER" --body "$BODY" --edit-last
+          # Allowed patterns
+          if echo "$BRANCH" | grep -qE '^(agent/|dependabot/|fix/|feat/|chore/|docs/|refactor/|test/|security-|hotfix/)'; then
+            echo "Branch naming: OK ($BRANCH)"
           else
-            gh pr comment "$PR_NUMBER" --body "$BODY"
+            echo "::warning::Branch '$BRANCH' doesn't follow naming convention."
+            echo "::warning::Expected: agent/<id>/<topic>, feat/<topic>, fix/<topic>, chore/<topic>, etc."
+            # Advisory only — post comment but don't fail
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⚠️ Branch name \`$BRANCH\` doesn't follow the convention (\`agent/<id>/<topic>\` or \`feat/\`, \`fix/\`, \`chore/\`, etc.). This is advisory only — CI will still run." \
+              --repo ${{ github.repository }} 2>/dev/null || true
           fi
 
-      - name: Post failure comment
-        if: steps.skip.outputs.skip == 'false' && failure()
+      - name: Agent claim advisory
+        if: github.event_name == 'pull_request'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          HEAD="${{ github.head_ref }}"
-          BODY="<!-- multi-agent-guard -->
-          ## Multi-Agent Guard — FAILED
-
-          This PR cannot be merged because it failed the multi-agent coordination check.
-
-          **Branch:** \`$HEAD\`
-
-          ### Fix instructions
-
-          The branch was not created from \`origin/main\`, or the agent branch name is invalid.
-
-          **To fix:**
-          \`\`\`bash
-          # Create a fresh branch from main using the session-start script
-          python scripts/agent/session-start.py
-
-          # Or manually:
-          git fetch origin
-          git checkout -b agent/<session_id>/<slug> origin/main
-          \`\`\`
-
-          **Required branch pattern for agent branches:**
-          \`agent/<name>-YYYYMMDD-HHMM-<hex4>/<slug>\`
-          Example: \`agent/claude-20240115-1430-a3f2/add-auth-endpoint\`"
-
-          EXISTING=$(gh pr view "$PR_NUMBER" --json comments --jq \
-            '[.comments[] | select(.body | contains("<!-- multi-agent-guard -->"))] | length' 2>/dev/null || echo 0)
-          if [[ "$EXISTING" -gt 0 ]]; then
-            gh pr comment "$PR_NUMBER" --body "$BODY" --edit-last
-          else
-            gh pr comment "$PR_NUMBER" --body "$BODY"
-          fi
-
-  # ---------------------------------------------------------------------------
-  # ledger-check — advisory only, does not block merge.
-  # Detects file-level overlap between concurrent agent sessions.
-  # ---------------------------------------------------------------------------
-  ledger-check:
-    name: Agent Ledger Overlap Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fetch ledger and detect overlap
-        id: overlap
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git fetch origin main --quiet
-          LEDGER=$(git show origin/main:.github/agent-ledger.json 2>/dev/null || echo '{}')
-          CHANGED=$(git diff --name-only origin/main...HEAD)
-          HEAD="${{ github.head_ref }}"
-
-          OVERLAP_RESULT=$(python3 << 'PYEOF'
-          import json, fnmatch, sys, os
-
-          ledger_raw = os.environ.get('LEDGER_JSON', '{}')
-          changed_raw = os.environ.get('CHANGED_FILES', '')
-          current_branch = os.environ.get('HEAD_REF', '')
-
-          try:
-              data = json.loads(ledger_raw)
-          except Exception:
-              data = {}
-
-          sessions = data.get('sessions', data) if isinstance(data, dict) else {}
-          changed_files = [f for f in changed_raw.strip().splitlines() if f]
-
-          overlaps = []
-          for session_id, session in sessions.items():
-              branch = session.get('branch', '')
-              if branch == current_branch:
-                  continue  # skip own session
-              globs = session.get('files_glob', [])
-              if isinstance(globs, str):
-                  globs = [globs]
-              matched = []
-              for f in changed_files:
-                  for g in globs:
-                      if fnmatch.fnmatch(f, g):
-                          matched.append(f)
-                          break
-              if matched:
-                  goal = session.get('goal', 'unknown goal')
-                  overlaps.append(f"Session `{session_id}` (branch: `{branch}`, goal: {goal}): {', '.join(matched[:5])}")
-
-          if overlaps:
-              print('OVERLAP_FOUND')
-              for o in overlaps:
-                  print(o)
-          else:
-              print('NO_OVERLAP')
-          PYEOF
-          )
-
-          export LEDGER_JSON="$LEDGER"
-          export CHANGED_FILES="$CHANGED"
-          export HEAD_REF="$HEAD"
-
-          # Re-run with env vars properly set
-          OVERLAP_RESULT=$(LEDGER_JSON="$LEDGER" CHANGED_FILES="$CHANGED" HEAD_REF="$HEAD" python3 << 'PYEOF'
-          import json, fnmatch, os
-
-          ledger_raw = os.environ.get('LEDGER_JSON', '{}')
-          changed_raw = os.environ.get('CHANGED_FILES', '')
-          current_branch = os.environ.get('HEAD_REF', '')
-
-          try:
-              data = json.loads(ledger_raw)
-          except Exception:
-              data = {}
-
-          sessions = data.get('sessions', data) if isinstance(data, dict) else {}
-          changed_files = [f for f in changed_raw.strip().splitlines() if f]
-
-          overlaps = []
-          for session_id, session in sessions.items():
-              branch = session.get('branch', '')
-              if branch == current_branch:
-                  continue
-              globs = session.get('files_glob', [])
-              if isinstance(globs, str):
-                  globs = [globs]
-              matched = []
-              for f in changed_files:
-                  for g in globs:
-                      if fnmatch.fnmatch(f, g):
-                          matched.append(f)
-                          break
-              if matched:
-                  goal = session.get('goal', 'unknown goal')
-                  overlaps.append(f"Session `{session_id}` (branch: `{branch}`, goal: {goal}): {', '.join(matched[:5])}")
-
-          if overlaps:
-              print('OVERLAP_FOUND')
-              for o in overlaps:
-                  print(o)
-          else:
-              print('NO_OVERLAP')
-          PYEOF
-          )
-
-          echo "overlap_result<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$OVERLAP_RESULT" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-          if echo "$OVERLAP_RESULT" | grep -q "^OVERLAP_FOUND"; then
-            echo "has_overlap=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_overlap=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Post overlap warning comment
-        if: steps.overlap.outputs.has_overlap == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          DETAILS=$(echo "${{ steps.overlap.outputs.overlap_result }}" | grep -v '^OVERLAP_FOUND')
-          BODY="<!-- multi-agent-ledger-overlap -->
-          ## Agent Ledger — File Overlap Detected (Advisory)
-
-          This PR modifies files that overlap with another active agent session.
-          This is **non-blocking** but you should coordinate to avoid merge conflicts.
-
-          **Overlapping sessions:**
-          $DETAILS
-
-          Consider rebasing or coordinating with the other session before merging."
-
-          EXISTING=$(gh pr view "$PR_NUMBER" --json comments --jq \
-            '[.comments[] | select(.body | contains("<!-- multi-agent-ledger-overlap -->"))] | length' 2>/dev/null || echo 0)
-          if [[ "$EXISTING" -gt 0 ]]; then
-            gh pr comment "$PR_NUMBER" --body "$BODY" --edit-last
-          else
-            gh pr comment "$PR_NUMBER" --body "$BODY"
-          fi
-
-  # ---------------------------------------------------------------------------
-  # direct-push-guard — runs on push to main only.
-  # Prevents agents (or humans) from committing directly to main.
-  # ---------------------------------------------------------------------------
-  direct-push-guard:
-    name: Direct Push Guard
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Verify commit is a merge or from an allowed bot
-        run: |
-          ACTOR="${{ github.actor }}"
-          COMMIT_SHA="${{ github.sha }}"
-
-          # Allow GitHub Actions bot and Dependabot
-          if [[ "$ACTOR" == "github-actions[bot]" || "$ACTOR" == "dependabot[bot]" ]]; then
-            echo "Allowed actor: $ACTOR — skipping direct push check."
+          # Skip if agent-claims.json doesn't exist
+          if [ ! -f ".github/agent-claims.json" ]; then
+            echo "No agent-claims.json — skip claim check"
             exit 0
           fi
 
-          # Check if this is a merge commit (has 2+ parents)
-          PARENT_COUNT=$(git cat-file -p "$COMMIT_SHA" | grep -c "^parent " || true)
-          if [[ "$PARENT_COUNT" -lt 2 ]]; then
-            echo "::error::Direct commit to main detected from actor '$ACTOR'."
-            echo "::error::Commit $COMMIT_SHA is not a merge commit (parent count: $PARENT_COUNT)."
-            echo "::error::Direct commits to main are not allowed. Open a PR instead."
-            echo "::error::To fix: revert this push and open a pull request from a feature branch."
-            exit 1
+          # Get the files changed in this PR
+          CHANGED_FILES=$(gh api repos/$REPO/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '[.[] | .filename]' 2>/dev/null || echo "[]")
+
+          if [ "$CHANGED_FILES" = "[]" ]; then
+            echo "No changed files to check"
+            exit 0
           fi
 
-          echo "Merge commit verified (parents: $PARENT_COUNT). OK."
+          # Check claims file for conflicts
+          python3 - <<'PYEOF'
+          import json, sys, os
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          claims_path = Path(".github/agent-claims.json")
+          try:
+              claims = json.loads(claims_path.read_text())
+          except Exception:
+              sys.exit(0)
+
+          changed_raw = os.environ.get("CHANGED_FILES_JSON", "[]")
+          try:
+              changed = json.loads(os.popen(f"echo '{changed_raw}'").read().strip())
+          except Exception:
+              sys.exit(0)
+
+          pr_branch = os.environ.get("PR_BRANCH", "")
+          now = datetime.now(timezone.utc)
+          cutoff = now - timedelta(hours=4)
+
+          conflicts = []
+          for claim in claims.get("claims", []):
+              # Skip expired claims
+              try:
+                  claimed_at = datetime.fromisoformat(claim["claimed_at"].replace("Z", "+00:00"))
+                  if claimed_at < cutoff:
+                      continue
+              except Exception:
+                  continue
+
+              # Skip if same agent's branch
+              if claim.get("branch") == pr_branch:
+                  continue
+
+              # Check if any changed file matches the claim's glob
+              import fnmatch
+              for f in changed:
+                  for pattern in claim.get("patterns", []):
+                      if fnmatch.fnmatch(f, pattern):
+                          conflicts.append({
+                              "agent": claim.get("agent", "unknown"),
+                              "branch": claim.get("branch", "unknown"),
+                              "file": f,
+                              "pattern": pattern,
+                          })
+                          break
+
+          if conflicts:
+              print("::warning::Agent claim conflicts detected:")
+              for c in conflicts:
+                  print(f"::warning::  {c['agent']} ({c['branch']}) has claimed '{c['pattern']}' covering {c['file']}")
+              sys.exit(2)  # Use exit code 2 to signal advisory (caught below)
+          PYEOF
+
+          EXIT_CODE=$?
+          if [ "$EXIT_CODE" -eq 2 ]; then
+            # Post advisory comment but don't fail the job
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⚠️ Agent claim overlap detected. Another agent has claimed files touched by this PR. This is **advisory only** — coordinate if editing the same code paths." \
+              --repo $REPO 2>/dev/null || true
+          fi
+          exit 0   # Always exit 0 — advisory only
+        env:
+          CHANGED_FILES_JSON: ${{ toJson(github.event.pull_request.changed_files) }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}

@@ -22,8 +22,8 @@ test.describe('Strategy E2E flow', () => {
     const projectName = `E2E Test Project ${Date.now()}`;
     await page.goto(`${BASE}/app/home`);
 
-    // Ensure JS is fully initialised before interacting with the modal
-    await page.waitForLoadState('networkidle');
+    // Wait until app.js has fully executed — openProjectModalById is defined globally
+    await page.waitForFunction(() => typeof window.openProjectModalById === 'function');
 
     // Open the New Project modal
     await page.click('button:has-text("+ New Project"), button:has-text("New Project")');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace StratFlow\Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use StratFlow\Core\DatabaseSessionHandler;
 
@@ -33,12 +34,14 @@ class DatabaseSessionHandlerTest extends TestCase
     // open / close
     // ===========================
 
-    public function testOpenReturnsTrue(): void
+    #[Test]
+    public function openReturnsTrue(): void
     {
         $this->assertTrue($this->handler->open('/tmp', 'PHPSESSID'));
     }
 
-    public function testCloseReturnsTrue(): void
+    #[Test]
+    public function closeReturnsTrue(): void
     {
         $this->assertTrue($this->handler->close());
     }
@@ -47,7 +50,8 @@ class DatabaseSessionHandlerTest extends TestCase
     // read
     // ===========================
 
-    public function testReadReturnsDataWhenSessionExists(): void
+    #[Test]
+    public function readReturnsDataWhenSessionExists(): void
     {
         $this->stmt->method('execute')->willReturn(true);
         $this->stmt->method('fetch')->willReturn(['data' => 'serialized-data']);
@@ -56,7 +60,8 @@ class DatabaseSessionHandlerTest extends TestCase
         $this->assertSame('serialized-data', $result);
     }
 
-    public function testReadReturnsEmptyStringWhenSessionMissing(): void
+    #[Test]
+    public function readReturnsEmptyStringWhenSessionMissing(): void
     {
         $this->stmt->method('execute')->willReturn(true);
         $this->stmt->method('fetch')->willReturn(false);
@@ -69,7 +74,8 @@ class DatabaseSessionHandlerTest extends TestCase
     // write
     // ===========================
 
-    public function testWriteReturnsTrueOnSuccess(): void
+    #[Test]
+    public function writeReturnsTrueOnSuccess(): void
     {
         $this->stmt->method('execute')->willReturn(true);
         $this->assertTrue($this->handler->write('session-id', 'session-data'));
@@ -79,7 +85,8 @@ class DatabaseSessionHandlerTest extends TestCase
     // destroy
     // ===========================
 
-    public function testDestroyReturnsTrueOnSuccess(): void
+    #[Test]
+    public function destroyReturnsTrueOnSuccess(): void
     {
         $this->stmt->method('execute')->willReturn(true);
         $this->assertTrue($this->handler->destroy('session-id-123'));
@@ -89,7 +96,8 @@ class DatabaseSessionHandlerTest extends TestCase
     // gc
     // ===========================
 
-    public function testGcReturnsTrueOrRowCount(): void
+    #[Test]
+    public function gcReturnsTrueOrRowCount(): void
     {
         $this->stmt->method('execute')->willReturn(true);
         $this->stmt->method('rowCount')->willReturn(3);

@@ -182,7 +182,7 @@ jobs:
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add security-reports/zap-latest.md
+          git add -f security-reports/zap-latest.md
           if git diff --cached --quiet; then
             echo "No changes to zap-latest.md"
           else

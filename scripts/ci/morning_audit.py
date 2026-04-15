@@ -174,25 +174,33 @@ def build_ntfy_body(report: dict) -> tuple[str, str, str]:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-ntfy", action="store_true",
+                        help="Skip ntfy notification (used by session-start hook)")
+    args = parser.parse_args()
+
     load_env()
     print(f"=== StratFlow morning audit — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} ===")
 
     report = fetch_latest_triage()
     if not report:
         print("Could not fetch triage report. Check GitHub Actions manually.")
-        send_ntfy(
-            "StratFlow morning audit: FETCH FAILED",
-            "Could not download nightly-triage report. Check GH Actions.",
-            priority="high",
-            tags="warning,ci",
-        )
+        if not args.no_ntfy:
+            send_ntfy(
+                "StratFlow morning audit: FETCH FAILED",
+                "Could not download nightly-triage report. Check GH Actions.",
+                priority="high",
+                tags="warning,ci",
+            )
         sys.exit(1)
 
     print_report(report)
 
-    title, body, priority = build_ntfy_body(report)
-    tags = "warning,ci" if report["summary"]["fail"] else "ci"
-    send_ntfy(title, body, priority=priority, tags=tags)
+    if not args.no_ntfy:
+        title, body, priority = build_ntfy_body(report)
+        tags = "warning,ci" if report["summary"]["fail"] else "ci"
+        send_ntfy(title, body, priority=priority, tags=tags)
 
     sys.exit(1 if report["summary"]["fail"] else 0)
 

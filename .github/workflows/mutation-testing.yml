@@ -19,6 +19,7 @@ jobs:
   mutation:
     runs-on: ubuntu-latest
     permissions:
+      contents: read        # required for actions/checkout
       pull-requests: write  # to post MSI comment on PRs triggered via workflow_dispatch
 
     services:

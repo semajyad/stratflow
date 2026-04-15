@@ -10,6 +10,7 @@ phpstan-baseline.neon merge=ours
 # Agent coordination ledger — serialized via session-start.py; never text-merged
 .github/agent-ledger.json merge=ours
 
+
 # Binary files — no CRLF conversion
 *.png binary
 *.jpg binary

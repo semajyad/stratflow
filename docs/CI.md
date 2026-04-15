@@ -1,152 +1,297 @@
-# CI/CD Orchestration — StratFlow
+# StratFlow CI/CD Operations Guide
 
-## Overview
-
-StratFlow has a two-tier CI pipeline: fast per-PR gates that must pass before
-merge, and a nightly full regression that runs overnight and is reviewed every
-morning.
+Authoritative reference for the CI/CD pipeline. If you observe unexpected behaviour, check here first.
 
 ---
 
-## Per-PR Gates (must pass to merge)
+## Architecture Overview
 
-| Check | Workflow | Timing |
-|---|---|---|
-| PHPUnit unit suite (PHP 8.3 + 8.4) | `tests.yml / unit` | ~30s |
-| PHPUnit integration suite (PHP 8.3 + 8.4) | `tests.yml / integration` | ~2min |
-| Test-touch enforcement | `tests.yml / test-touch-check` | ~5s |
-| Playwright fast (Chromium) | `e2e.yml / e2e-fast` | ~10min |
-| Coverage delta (Codecov) | `tests.yml → Codecov` | async |
-| PHP syntax lint, PHPStan, PHPCS | `tests.yml / unit` | included above |
-| Composer security audit | `tests.yml / unit` | included above |
-| Dependency review | `dependency-review.yml` | on PR |
-| Secret scan | `secret-scan.yml` | on PR |
+```text
+  PR opened by agent
+    │
+    ├─► multi-agent-guard       (branch naming + claim advisory)
+    ├─► self-heal               (lockfile drift, stale baseline, rebase)
+    │
+    ├─► FAST PATH (<5 min p95)
+    │     unit · integration · e2e-fast · PHPStan · test-touch-check · codecov/patch
+    │
+    ├─► CodeRabbit review ──► autofix (retry 2x) ──► re-review
+    │
+    └─► auto-merge (stale-review guard + serialised)
+          │
+          ▼
+       main
+          │
+          ▼
+  deploy.yml ──► Railway up ──► healthz poll
+          ├─► pass → record LAST_GOOD_DEPLOY_ID → silent
+          └─► fail → auto-rollback → ntfy HIGH
 
-### Test-touch rule
+  NIGHTLY CHAIN (UTC)
+    04:30  nightly-self-heal    (cancel stuck runs, fix main drift, close resolved issues)
+    12:30  performance          k6 baseline
+    13:00  mutation-testing     Infection MSI
+    14:00  security-shannon     Shannon SAST
+    15:00  snyk                 Dependency CVEs
+    16:00  security-zap         DAST baseline scan
+    16:30  e2e-full-nightly     Full Playwright matrix vs staging
+    17:00  nightly-triage       Aggregate, open issues, ntfy on new failures
+    17:30  morning-summary      Single ntfy digest (SILENT if all green)
+```
 
-Every modified `src/**/*.php` file in a PR must include a corresponding change
-under `tests/`. The mapping:
+---
 
-| Source | Expected test |
-|---|---|
-| `src/Controllers/FooController.php` | `tests/Unit/Controllers/FooControllerTest.php` |
-| `src/Models/Foo.php` | `tests/Unit/Models/FooTest.php` |
-| `src/Services/FooService.php` | `tests/Unit/Services/FooServiceTest.php` |
-| `src/Middleware/FooMiddleware.php` | `tests/Unit/Middleware/FooMiddlewareTest.php` |
+## Required CI Checks (merge gate)
 
-**Exemption:** Add the `no-test-required` label to the PR and include a
-comment `/no-test-required: <reason>` (e.g. for pure config changes,
-documentation updates, or refactors with no behaviour change).
+Managed in `.github/auto-merge-required.txt`. Only these checks must pass before auto-merge. Everything else is advisory.
+
+| Check | Workflow | Target |
+|-------|----------|--------|
+| `unit` | tests.yml | <45s |
+| `integration` | tests.yml | <2.5 min |
+| `e2e-fast` | e2e.yml | <5 min |
+| `PHPStan` | tests.yml | 0 errors |
+| `test-touch-check` | tests.yml | all src/ changes have tests |
+| `codecov/patch` | codecov | ≥80% on new code |
+
+**Advisory (not merge-blocking):**
+- `Dependency Review` — GitHub built-in
+- `CodeRabbit Review` — findings auto-fixed by `coderabbit-autofix.yml`
+- All nightly jobs (mutation, perf, security scans)
+
+To add a new required check: add its exact name (as shown in GitHub UI) to `.github/auto-merge-required.txt`.
 
 ---
 
 ## Nightly Schedule (UTC)
 
 | Time | Workflow | Purpose |
-|---|---|---|
+|------|----------|---------|
 | 02:00 | `smoke-staging.yml` | Playwright fast smoke against live staging |
-| 12:30 | `performance.yml` | k6 baseline (5→20→50 VU) against staging |
-| 13:00 | `mutation-testing.yml` | Infection PHP mutation testing (full src/) |
+| 04:30 | `nightly-self-heal.yml` | Cancel stuck runs, fix main drift, prune quarantine |
+| 12:30 | `performance.yml` | k6 baseline (5→20→50 VU) |
+| 13:00 | `mutation-testing.yml` | Infection PHP mutation testing |
 | 14:00 | `security-shannon.yml` | Shannon AI pen test against staging |
 | 15:00 | `snyk.yml` | Snyk PHP dependency CVE scan |
 | 16:00 | `security-zap.yml` | OWASP ZAP authenticated baseline scan |
 | 16:30 | `e2e-full-nightly.yml` | Playwright full matrix against staging |
 | Sun 20:00 | `performance-load.yml` | k6 50-VU peak load (weekly) |
-| 05:00 | `nightly-triage.yml` | Aggregate results, open GitHub issues for failures |
-| 05:30 | `morning-summary.yml` | Single ntfy digest to James |
+| 17:00 | `nightly-triage.yml` | Aggregate, open issues, ntfy on NEW failures |
+| 17:30 | `morning-summary.yml` | Single ntfy (SILENT if all green) |
 
 ---
 
-## Morning Triage
+## Auto-Merge
 
-`nightly-triage.yml` downloads every `nightly-status-<job>` artifact from the
-past 12h, then:
+**Triggers:** `pull_request_review: submitted` or `check_run: completed`.
 
-1. Classifies each job as `pass`, `warn`, or `fail`.
-2. Marks any job with a **missing** artifact as `fail` (silently skipped jobs
-   are treated as failures).
-3. For each `fail`: opens a GitHub issue tagged `ci-nightly, auto-triaged`
-   with a link to the failing run. Issues are deduped by `SHA-256(job+run_id)`
-   so re-runs don't spam.
-4. Appends a row to `docs/ci-nightly-history.md`.
-5. Sends an ntfy push if any failures were found.
+**Conditions:**
+1. All checks in `.github/auto-merge-required.txt` have passed.
+2. At least one APPROVED review on the **current HEAD commit** (stale-review guard).
+3. No `CHANGES_REQUESTED` reviews present.
+4. PR is not a draft.
 
-`morning-summary.yml` (05:30 UTC) sends a single consolidated ntfy digest
-regardless of pass/fail — the one message James sees first thing in the
-morning (≈ 17:30 NZT).
+**Dependabot:** auto-approved and merged when required checks pass.
 
-### Local morning audit
+**Audit trail:** Every run posts a PR comment explaining why it did or didn't merge.
 
-Run on the dev box to get the same summary in the terminal:
+**Override:** `gh workflow run auto-merge.yml -f pr_number=<N>`
+
+---
+
+## CodeRabbit Autofix
+
+**Trigger:** CodeRabbit `CHANGES_REQUESTED` on a non-fork PR.
+
+**Flow:**
+1. Claude Code reads the review body + inline comments for the current review only.
+2. Applies fixes (≤15 turns, 10-min timeout).
+3. If no changes: retries once.
+4. On exhaustion: labels `autofix-failed` + ntfy HIGH.
+5. If fixes applied: commits, pushes, `@coderabbitai review`.
+
+**Concurrency:** Newer review on same PR cancels in-flight autofix.
+
+**`autofix-failed` label:** Read the workflow logs. Fix manually. Remove label to unblock.
+
+---
+
+## Test-Touch Rule
+
+Every modified `src/**/*.php` must have a corresponding test change. Mapping:
+
+| Source | Required test |
+|--------|---------------|
+| `src/Controllers/FooController.php` | `tests/Unit/Controllers/FooControllerTest.php` |
+| `src/Models/Foo.php` | `tests/Unit/Models/FooTest.php` |
+| `src/Services/FooService.php` | `tests/Unit/Services/FooServiceTest.php` |
+| `src/Middleware/FooMiddleware.php` | `tests/Unit/Middleware/FooMiddlewareTest.php` |
+| `src/Security/Foo.php` | `tests/Unit/Security/FooTest.php` |
+
+Exempted directories: `src/Config/`, `src/Services/Prompts/`.
+
+**Override:** Add `no-test-required` label + `/no-test-required: <reason>` comment.
+
+---
+
+## Self-Heal
+
+### PR-time (`self-heal.yml`)
+
+Runs before unit/integration on every PR.
+
+| Issue | Action |
+|-------|--------|
+| `composer.lock` drift | `composer update --lock` → commit |
+| Stale `phpstan-baseline.neon` | regenerate → commit |
+| Branch behind main | rebase onto main |
+| Hand-written code conflict | abort, post comment, let tests show real error |
+
+Retry budget: 2. Exhaustion → `self-heal-failed` label + ntfy HIGH.
+
+### Nightly (`nightly-self-heal.yml`, 04:30 UTC)
+
+| Issue | Action |
+|-------|--------|
+| Stuck GHA runs (>2h in_progress) | cancel via API |
+| Lockfile/baseline drift on main | open a self-heal PR (never direct push) |
+| Resolved `ci-nightly` issues | auto-close |
+| Playwright quarantine entries >30d | prune |
+
+---
+
+## Deploy & Rollback
+
+**Trigger:** Tests pass on main, or `workflow_dispatch` with `confirm: deploy`.
+
+**Flow:**
+1. Gate checks `DEPLOY_PAUSED` variable.
+2. `railway up --detach --service "StratFlow App"`.
+3. Polls `/healthz` up to 2 minutes.
+4. Success → records `LAST_GOOD_DEPLOY_ID` → silent.
+5. Failure → `railway deployment redeploy <LAST_GOOD_DEPLOY_ID>`.
+   - Rollback OK → ntfy HIGH.
+   - Rollback failed → ntfy CRITICAL + `DEPLOY_PAUSED=1`.
+
+**To resume after pause:**
 
 ```bash
-python scripts/ci/morning_audit.py
+gh workflow run deploy.yml -f confirm=deploy -f clear_pause=yes
 ```
 
-Requires `NTFY_URL`, `NTFY_TOPIC`, and a GitHub token in `.env` or env vars.
+**RAILWAY_SERVICE var:** Defaults to `StratFlow App`. Override via `vars.RAILWAY_SERVICE`.
+
+---
+
+## Security Baselines
+
+Scans fail only on findings **absent from** the committed baselines.
+
+| Scan | Baseline file |
+|------|--------------|
+| ZAP | `tests/security/baseline-zap.json` |
+| Shannon | `tests/security/baseline-shannon.json` |
+| Snyk | `tests/security/baseline-snyk.json` |
+
+**Accept a new finding:**
+
+```bash
+python3 scripts/ci/update_security_baseline.py zap   # or shannon / snyk
+git add tests/security/baseline-zap.json
+git commit -m "chore: accept ZAP finding — <reason>"
+# Open a PR; baseline changes require human review
+```
 
 ---
 
 ## Status Artifact Contract
 
-Every nightly workflow emits a `nightly-status.json` artifact named
-`nightly-status-<job>` with 7-day retention. Schema:
+Every nightly workflow emits `nightly-status.json` (artifact `nightly-status-<job>`, 7-day retention):
 
 ```json
 {
-  "job":          "string",
+  "job":          "tests",
   "status":       "pass | fail | warn",
-  "metric":       "object | null",
-  "findings_url": "string | null",
-  "run_id":       "string"
+  "metric":       { "coverage": 68.4 },
+  "findings_url": "https://github.com/.../actions/runs/12345",
+  "run_id":       "12345"
 }
 ```
 
-See `.github/workflows/_status-schema.md` for the full contract and examples.
+See `.github/workflows/_status-schema.md` for the full contract.
 
 ---
 
-## Security Baseline
+## Notification Budget
 
-Security scans emit findings that persist in the codebase as
-`tests/security/baseline-{zap,snyk,shannon}.json`. The nightly-triage
-workflow treats a finding as **new** only if it's absent from the baseline.
+| Priority | Event |
+|----------|-------|
+| CRITICAL | Deploy rollback failed; pipeline paused |
+| HIGH | Deploy rolled back; self-heal budget exhausted; `autofix-failed`; new security HIGH |
+| DEFAULT | Morning summary with failures/warnings |
+| MIN | Successful deploys |
+| **SILENT** | All nightly green; routine green CI; recurring (already-ticketed) failures |
 
-To accept new known-safe findings:
+To add a new notification: update this table in a PR and justify why human attention is needed.
+
+---
+
+## Multi-Agent Safety
+
+### Branch naming (advisory)
+`agent/<id>/<topic>`, `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, `security-`, `hotfix/`, `dependabot/`
+
+### Work-claim ledger
 
 ```bash
-python scripts/ci/update_security_baseline.py zap --reason "false positive on error page"
-git add tests/security/baseline-zap.json
-git commit -m "chore: accept ZAP baseline — false positive on error page"
+python3 scripts/agent-claim.py claim --agent "claude" --branch "agent/abc/feat" \
+  --patterns "src/Controllers/**"
+python3 scripts/agent-claim.py list
+python3 scripts/agent-claim.py release --branch "agent/abc/feat"
+python3 scripts/agent-claim.py prune
+```
+
+Ledger at `.github/agent-claims.json`. Claims expire after 4h. Advisory only.
+
+### Lockfile merge drivers
+`.gitattributes` declares `merge=ours` for `composer.lock`, `package-lock.json`, `phpstan-baseline.neon`. Rebase conflicts on these files self-resolve. `self-heal.yml` regenerates correct content.
+
+### Session hand-off
+`pr-closed-handoff.yml` writes `docs/agent-handoffs/<pr>.md` on PR close. Extracts decisions from commit trailers. Releases claims.
+
+---
+
+## Flake Quarantine
+
+Playwright `--retries=1` auto-retries each failing test once. Persistent flakes:
+- Logged to `tests/Playwright/quarantine.jsonl`
+- ≥3 flakes in 7 days → GitHub issue with `flaky-test` label
+
+```bash
+python3 scripts/ci/manage_flake_quarantine.py list \ list \
+  --quarantine tests/Playwright/quarantine.jsonl
 ```
 
 ---
 
-## Notification Surface
+## Morning Audit (local)
 
-All notifications go to the `stratflow-ci` ntfy topic on the Sentinel ntfy
-server. Secrets required in GitHub repo settings:
+```bash
+python3 scripts/ci/morning_audit.py
+```
 
-| Secret | Value |
-|---|---|
-| `NTFY_URL` | `http://<sentinel-host>:8090` |
-| `NTFY_TOPIC` | `stratflow-ci` |
-
-Priority levels used: `low` (all-pass), `default` (warn), `high` (test/perf
-fail), `urgent` (security scan fail or staging down).
+Fetches the latest `triage-report.json` from `nightly-triage` and prints a terminal summary. Runs automatically via Task Scheduler at 06:00 NZT.
 
 ---
 
-## Workflows NOT in scope for branch protection
+## Override Reference
 
-These run nightly only and do not block PRs. Failures open GitHub issues
-via `nightly-triage.yml`:
-
-- `security-zap.yml`
-- `security-shannon.yml`
-- `snyk.yml`
-- `mutation-testing.yml`
-- `performance.yml`
-- `performance-load.yml`
-- `smoke-staging.yml`
-- `e2e-full-nightly.yml`
+| Situation | Override |
+|-----------|---------|
+| PR with no test change | `no-test-required` label + `/no-test-required: <reason>` comment |
+| Autofix failed | Fix manually, remove `autofix-failed` label |
+| Self-heal failed | Fix drift manually, remove `self-heal-failed` label |
+| Deploy paused | `gh workflow run deploy.yml -f confirm=deploy -f clear_pause=yes` |
+| Force-merge a PR | `gh workflow run auto-merge.yml -f pr_number=<N>` |
+| Accept security finding | `python3 scripts/ci/update_security_baseline.py <scan>` → PR |
+| Run nightly job on demand | `gh workflow run <workflow>.yml` (all support `workflow_dispatch`) |

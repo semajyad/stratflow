@@ -122,6 +122,68 @@ def check_migrations(project_dir: str) -> list[str]:
     return lines
 
 
+def check_nightly_ci(project_dir: str) -> list[str]:
+    """Run morning_audit.py once per calendar day and surface any nightly failures.
+
+    On failure outputs a MANDATORY directive so Claude fixes everything before
+    starting other work. Skips if already run today (marker file in .claude/).
+    """
+    import subprocess
+
+    marker = os.path.join(project_dir, ".claude", ".last-nightly-audit")
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    if os.path.isfile(marker):
+        try:
+            if open(marker).read().strip() == today:
+                return []  # already ran this calendar day
+        except OSError:
+            pass
+
+    script = os.path.join(project_dir, "scripts", "ci", "morning_audit.py")
+    if not os.path.isfile(script):
+        return ["  [nightly-ci] morning_audit.py not found"]
+
+    try:
+        result = subprocess.run(
+            [sys.executable, script, "--no-ntfy"],
+            capture_output=True, text=True, timeout=45, cwd=project_dir,
+        )
+        # Record that we ran today regardless of outcome
+        try:
+            open(marker, "w").write(today)
+        except OSError:
+            pass
+
+        lines = [l for l in result.stdout.strip().splitlines() if l.strip()]
+
+        if result.returncode == 0:
+            return ["[session-start] Nightly CI: all pass ✅"]
+
+        # Failures — output the report AND a hard mandate.
+        # Include stderr so tracebacks from morning_audit.py are not silently lost.
+        stderr_lines = [l for l in result.stderr.strip().splitlines() if l.strip()]
+        output = ["[session-start] Nightly CI: FAILURES DETECTED ❌"]
+        output += [f"  {l}" for l in lines]
+        if stderr_lines:
+            output += ["  [stderr]:"] + [f"    {l}" for l in stderr_lines]
+        output += [
+            "",
+            "  !! MANDATORY — fix all nightly CI failures before any other work !!",
+            "  1. git checkout -b fix/nightly-" + today,
+            "  2. Investigate and fix each failing job above",
+            "  3. gh pr create, wait for green CI, merge",
+            "  Do NOT start user-requested tasks until every failure is resolved.",
+            "  Open ci-nightly issues are linked in the report above.",
+        ]
+        return output
+
+    except subprocess.TimeoutExpired:
+        return ["  [nightly-ci] morning_audit.py timed out — check GH Actions manually"]
+    except Exception as e:
+        return [f"  [nightly-ci] error: {e}"]
+
+
 def check_quality_health(project_dir: str) -> list[str]:
     """Run a quick status query via docker compose and report quality scoring health."""
     import subprocess
@@ -189,10 +251,16 @@ def main() -> int:
 
     output: list[str] = []
 
-    # 1. .env check
+    # 1. Nightly CI audit — FIRST so failures are the first thing Claude sees
+    nightly = check_nightly_ci(project_dir)
+    if nightly:
+        output.extend(nightly)
+        output.append("")
+
+    # 2. .env check
     output.extend(check_env(project_dir))
 
-    # 2. Security reports
+    # 3. Security reports
     output.append("[session-start] Security report status:")
     output.extend(check_security_report(
         os.path.join(project_dir, "security-reports", "shannon-latest.md"),
@@ -203,11 +271,11 @@ def main() -> int:
         "ZAP"
     ))
 
-    # 3. Migrations
+    # 4. Migrations
     output.append("[session-start] Migration status:")
     output.extend(check_migrations(project_dir))
 
-    # 4. Quality scoring health
+    # 5. Quality scoring health
     output.append("[session-start] Quality scoring health:")
     output.extend(check_quality_health(project_dir))
 

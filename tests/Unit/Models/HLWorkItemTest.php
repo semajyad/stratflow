@@ -280,4 +280,112 @@ class HLWorkItemTest extends TestCase
         $this->assertSame('scored', $capturedParams[':quality_status']);
         $this->assertSame(72, $capturedParams[':quality_score']);
     }
+
+    #[Test]
+    public function markQualityFailedSetsFailedStatusAndError(): void
+    {
+        $capturedParams = null;
+        $stmt = $this->createMock(\PDOStatement::class);
+        $db   = $this->createMock(Database::class);
+        $db->expects($this->once())->method('query')->willReturnCallback(
+            function (string $sql, array $params) use ($stmt, &$capturedParams): \PDOStatement {
+                $capturedParams = $params;
+                return $stmt;
+            }
+        );
+        HLWorkItem::markQualityFailed($db, 20, 2, 'schema:invest');
+        $this->assertSame('failed', $capturedParams[':quality_status']);
+        $this->assertSame(2, $capturedParams[':quality_attempts']);
+        $this->assertSame('schema:invest', $capturedParams[':quality_error']);
+    }
+
+    // ===========================
+    // BATCH UPDATE PRIORITY
+    // ===========================
+
+    #[Test]
+    public function batchUpdatePriorityExecutesMultipleUpdates(): void
+    {
+        $queryCount = 0;
+        $stmt = $this->createMock(\PDOStatement::class);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('beginTransaction');
+        $pdo->expects($this->once())->method('commit');
+        $db = $this->createMock(Database::class);
+        $db->expects($this->exactly(2))->method('query')->willReturnCallback(
+            function (string $sql, array $params) use ($stmt, &$queryCount): \PDOStatement {
+                $queryCount++;
+                return $stmt;
+            }
+        );
+        $db->method('getPdo')->willReturn($pdo);
+
+        $items = [
+            ['id' => 1, 'priority_number' => 1],
+            ['id' => 2, 'priority_number' => 2],
+        ];
+        HLWorkItem::batchUpdatePriority($db, $items);
+        $this->assertSame(2, $queryCount);
+    }
+
+    #[Test]
+    public function batchUpdatePriorityRollsBackOnException(): void
+    {
+        $stmt = $this->createMock(\PDOStatement::class);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('beginTransaction');
+        $pdo->expects($this->once())->method('rollBack');
+        $db = $this->createMock(Database::class);
+        $db->method('query')->willThrowException(new \Exception('DB error'));
+        $db->method('getPdo')->willReturn($pdo);
+
+        $items = [['id' => 1, 'priority_number' => 1]];
+        $this->expectException(\Exception::class);
+        HLWorkItem::batchUpdatePriority($db, $items);
+    }
+
+    // ===========================
+    // BATCH UPDATE SCORES
+    // ===========================
+
+    #[Test]
+    public function batchUpdateScoresExecutesMultipleScoreUpdates(): void
+    {
+        $queryCount = 0;
+        $stmt = $this->createMock(\PDOStatement::class);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('beginTransaction');
+        $pdo->expects($this->once())->method('commit');
+        $db = $this->createMock(Database::class);
+        $db->expects($this->exactly(2))->method('query')->willReturnCallback(
+            function (string $sql, array $params) use ($stmt, &$queryCount): \PDOStatement {
+                $queryCount++;
+                return $stmt;
+            }
+        );
+        $db->method('getPdo')->willReturn($pdo);
+
+        $items = [
+            ['id' => 1, 'scores' => ['final_score' => 80]],
+            ['id' => 2, 'scores' => ['final_score' => 90]],
+        ];
+        HLWorkItem::batchUpdateScores($db, $items);
+        $this->assertSame(2, $queryCount);
+    }
+
+    #[Test]
+    public function batchUpdateScoresRollsBackOnException(): void
+    {
+        $stmt = $this->createMock(\PDOStatement::class);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('beginTransaction');
+        $pdo->expects($this->once())->method('rollBack');
+        $db = $this->createMock(Database::class);
+        $db->method('query')->willThrowException(new \Exception('DB error'));
+        $db->method('getPdo')->willReturn($pdo);
+
+        $items = [['id' => 1, 'scores' => ['final_score' => 80]]];
+        $this->expectException(\Exception::class);
+        HLWorkItem::batchUpdateScores($db, $items);
+    }
 }
