@@ -76,27 +76,40 @@ class GitLinkServiceTest extends TestCase
 
     public function testLinkFromPrBodyParsesAndLinksValidReferences(): void
     {
-        $this->mockStmt->method('fetch')->willReturn(false);
-        $this->mockStmt->method('fetchAll')->willReturn([]);
-
-        $service = new GitLinkService($this->mockDb);
+        $storyRow  = ['id' => 123, 'org_id' => 1, 'title' => 'Test Story'];
+        $insertStmt = $this->createMock(\PDOStatement::class);
+        $insertStmt->method('fetch')->willReturn(false);
+        $insertStmt->method('fetchAll')->willReturn([]);
 
         $linkCreateCalls = 0;
-        $this->mockDb->expects($this->any())
-            ->method('query')
-            ->willReturnCallback(function ($sql) use (&$linkCreateCalls) {
-                if (strpos($sql, 'INSERT INTO story_git_links') !== false) {
+        $db = $this->createMock(Database::class);
+        $db->method('lastInsertId')->willReturn('999');
+        $db->method('query')->willReturnCallback(
+            function (string $sql) use ($storyRow, $insertStmt, &$linkCreateCalls): \PDOStatement {
+                $stmt = $this->createMock(\PDOStatement::class);
+                if (str_contains($sql, 'INSERT') && str_contains($sql, 'story_git_links')) {
                     $linkCreateCalls++;
+                    $stmt->method('fetch')->willReturn(['id' => 999]);
+                } elseif (str_contains($sql, 'user_stories') || str_contains($sql, 'hl_work_items')) {
+                    // UserStory::findById / HLWorkItem::findById — return a valid story
+                    $stmt->method('fetch')->willReturn($storyRow);
+                } else {
+                    // findExistingLink, AuditLogger, etc. — return nothing
+                    $stmt->method('fetch')->willReturn(false);
                 }
-                return $this->mockStmt;
-            });
+                $stmt->method('fetchAll')->willReturn([]);
+                return $stmt;
+            }
+        );
 
-        $result = $service->linkFromPrBody('SF-123 is related', 'https://github.com/org/repo/pull/1', 'github', 'Test PR');
+        $service = new GitLinkService($db);
+        $result  = $service->linkFromPrBody('SF-123 is related', 'https://github.com/org/repo/pull/1', 'github', 'Test PR');
 
-        $this->assertSame(0, $result);
+        $this->assertGreaterThan(0, $linkCreateCalls, 'Expected at least one INSERT into story_git_links');
+        $this->assertGreaterThan(0, $result, 'Expected at least one link to be created');
     }
 
-    public function testLinkFromPrBodyRecognizesSF_WithUnderscore(): void
+    public function testLinkFromPrBodyRecognizesSfWithUnderscore(): void
     {
         $service = new GitLinkService($this->mockDb);
         $this->mockStmt->method('fetch')->willReturn(false);
