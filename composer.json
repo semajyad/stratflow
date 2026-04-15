@@ -4,6 +4,7 @@
     "type": "project",
     "require": {
         "php": ">=8.4",
+        "growthbook/growthbook": "^2.0",
         "sentry/sentry": "^4.0",
         "smalot/pdfparser": "^2.0",
         "stripe/stripe-php": "^16.0",
