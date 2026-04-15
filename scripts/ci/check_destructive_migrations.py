@@ -55,7 +55,7 @@ SAFE_MIGRATION_LABEL = "safe-migration-reviewed"
 def changed_migration_files(base: str, head: str) -> list[str]:
     """Return added/modified files under database/migrations/ vs base."""
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=A", f"{base}...{head}",
+        ["git", "diff", "--name-only", "--diff-filter=AM", f"{base}...{head}",
          "--", "database/migrations/"],
         capture_output=True, text=True, check=True,
     )
