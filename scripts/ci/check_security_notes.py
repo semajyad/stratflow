@@ -49,6 +49,9 @@ def get_changed_files(base: str, head: str) -> list[str]:
         ["git", "diff", "--name-only", f"{base}...{head}"],
         capture_output=True, text=True,
     )
+    if result.returncode != 0:
+        print(f"check_security_notes: git diff failed: {result.stderr.strip()}", file=sys.stderr)
+        return []
     return [l.strip() for l in result.stdout.splitlines() if l.strip()]
 
 
@@ -95,7 +98,8 @@ def main() -> int:
     # Read PR body
     body = ""
     if args.pr_body_file and os.path.isfile(args.pr_body_file):
-        body = open(args.pr_body_file).read()
+        with open(args.pr_body_file) as fh:
+            body = fh.read()
     elif os.environ.get("PR_BODY"):
         body = os.environ["PR_BODY"]
 
