@@ -35,7 +35,7 @@ jobs:
   provision:
     name: Provision PR preview
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && secrets.RAILWAY_TOKEN != ''
 
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
@@ -160,7 +160,7 @@ jobs:
   teardown:
     name: Teardown PR preview
     runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
+    if: github.event.action == 'closed' && secrets.RAILWAY_TOKEN != ''
 
     steps:
       - name: Delete Railway environment
