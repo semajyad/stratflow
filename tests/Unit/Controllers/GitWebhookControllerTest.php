@@ -48,14 +48,6 @@ final class GitWebhookControllerTest extends ControllerTestCase
         return new GitWebhookController($r ?? $this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
     }
 
-    private function stmt(mixed $fetch, array $all = []): \PDOStatement
-    {
-        $s = $this->createMock(\PDOStatement::class);
-        $s->method('fetch')->willReturn($fetch);
-        $s->method('fetchAll')->willReturn($all);
-        return $s;
-    }
-
     // ===========================
     // GitHub Webhook: Controller Exists
     // ===========================
@@ -95,8 +87,7 @@ final class GitWebhookControllerTest extends ControllerTestCase
 
         // Should output JSON response (at minimum)
         $this->assertNotEmpty($output);
-        $decoded = json_decode($output, true);
-        $this->assertTrue(is_array($decoded) || $decoded === null);
+        $this->assertJson($output);
     }
 
     #[Test]

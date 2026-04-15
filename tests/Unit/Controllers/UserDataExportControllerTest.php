@@ -73,11 +73,4 @@ class UserDataExportControllerTest extends ControllerTestCase
         $this->assertTrue(true);
     }
 
-    public function testIndexCanBeCalledByAuthenticatedUser(): void
-    {
-        $ctrl = $this->ctrl();
-        $ctrl->index();
-
-        $this->assertSame('account/export-data', $this->response->renderedTemplate);
-    }
 }

@@ -26,6 +26,12 @@ class GitHubAppClientTest extends TestCase
         $property->setValue(null, []);
     }
 
+    protected function tearDown(): void
+    {
+        unset($_ENV['GITHUB_APP_ID'], $_ENV['GITHUB_APP_PRIVATE_KEY'], $_ENV['GITHUB_APP_PRIVATE_KEY_PATH']);
+        parent::tearDown();
+    }
+
     // ===========================
     // JWT MINTING
     // ===========================
