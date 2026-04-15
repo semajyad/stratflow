@@ -29,10 +29,10 @@ jobs:
           fetch-depth: 0
 
       - name: Write PR body to file
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          cat > /tmp/pr_body.txt << 'PREOF'
-          ${{ github.event.pull_request.body }}
-          PREOF
+          printf '%s' "$PR_BODY" > /tmp/pr_body.txt
 
       - name: Check security notes
         run: |
