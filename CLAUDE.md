@@ -16,6 +16,19 @@ If the task touches auth, permissions, sessions, secrets, uploads, billing, webh
 - If the same fix attempt fails 3 times, stop and rescope instead of thrashing.
 - Before finishing, prefer the simpler solution if it reduces code and context size safely.
 
+## Security Notes — MANDATORY on security-touching PRs
+
+When opening a PR that touches auth, sessions, permissions, billing, webhooks,
+file uploads, external APIs, HTTP headers, middleware, controllers, or any new
+stored data: **fill in the `## Security notes` section** of the PR description.
+
+Answer whichever of these apply (3–5 bullet points, not an essay):
+- What data does this touch, and who should be able to access it?
+- What is the worst-case abuse by a malicious user or outsider?
+- What existing controls cover it, and is anything left unguarded?
+
+For pure refactors, tests, docs, or config-only changes: delete the section.
+
 ## Unit Test Rule — MANDATORY
 
 **Every new or modified `src/**/*.php` file must have a unit test written before the task is considered complete.**

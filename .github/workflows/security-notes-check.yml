@@ -1,0 +1,46 @@
+name: Security notes check
+
+# Advisory-only check. Posts a PR comment when security-sensitive files
+# are changed but the PR description has no Security notes section.
+# Never blocks merge — exit 0 always.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write  # to post advisory comment
+
+concurrency:
+  group: security-notes-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Security notes advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Write PR body to file
+        run: |
+          cat > /tmp/pr_body.txt << 'PREOF'
+          ${{ github.event.pull_request.body }}
+          PREOF
+
+      - name: Check security notes
+        run: |
+          python3 scripts/ci/check_security_notes.py \
+            --base origin/${{ github.base_ref }} \
+            --head HEAD \
+            --pr-body-file /tmp/pr_body.txt
+        env:
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
