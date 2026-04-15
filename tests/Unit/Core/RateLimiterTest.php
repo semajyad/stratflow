@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace StratFlow\Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use StratFlow\Core\Database;
 use StratFlow\Core\RateLimiter;
@@ -38,31 +39,36 @@ class RateLimiterTest extends TestCase
     // check()
     // ===========================
 
-    public function testCheckAllowsWhenUnderLimit(): void
+    #[Test]
+    public function checkAllowsWhenUnderLimit(): void
     {
         $db = $this->makeDb(count: 2);
         $this->assertTrue(RateLimiter::check($db, 'login', '1.2.3.4', 5, 300));
     }
 
-    public function testCheckBlocksWhenAtLimit(): void
+    #[Test]
+    public function checkBlocksWhenAtLimit(): void
     {
         $db = $this->makeDb(count: 5);
         $this->assertFalse(RateLimiter::check($db, 'login', '1.2.3.4', 5, 300));
     }
 
-    public function testCheckBlocksWhenOverLimit(): void
+    #[Test]
+    public function checkBlocksWhenOverLimit(): void
     {
         $db = $this->makeDb(count: 99);
         $this->assertFalse(RateLimiter::check($db, 'login', '1.2.3.4', 5, 300));
     }
 
-    public function testCheckFailsOpenWhenTableMissing(): void
+    #[Test]
+    public function checkFailsOpenWhenTableMissing(): void
     {
         $db = $this->makeDb(tableExists: false);
         $this->assertTrue(RateLimiter::check($db, 'login', '1.2.3.4', 5, 300));
     }
 
-    public function testCheckFailsOpenOnDbException(): void
+    #[Test]
+    public function checkFailsOpenOnDbException(): void
     {
         $db = $this->createMock(Database::class);
         $db->method('tableExists')->willReturn(true);
@@ -75,7 +81,8 @@ class RateLimiterTest extends TestCase
     // record()
     // ===========================
 
-    public function testRecordInsertsRowWhenTableExists(): void
+    #[Test]
+    public function recordInsertsRowWhenTableExists(): void
     {
         $stmt = $this->createMock(\PDOStatement::class);
         $db   = $this->createMock(Database::class);
@@ -91,7 +98,8 @@ class RateLimiterTest extends TestCase
         RateLimiter::record($db, RateLimiter::PASSWORD_RESET, '1.2.3.4');
     }
 
-    public function testRecordSkipsWhenTableMissing(): void
+    #[Test]
+    public function recordSkipsWhenTableMissing(): void
     {
         $db = $this->createMock(Database::class);
         $db->method('tableExists')->willReturn(false);
@@ -100,7 +108,8 @@ class RateLimiterTest extends TestCase
         RateLimiter::record($db, 'login', '1.2.3.4');
     }
 
-    public function testRecordSilentlyHandlesDbException(): void
+    #[Test]
+    public function recordSilentlyHandlesDbException(): void
     {
         $db = $this->createMock(Database::class);
         $db->method('tableExists')->willReturn(true);
@@ -115,7 +124,8 @@ class RateLimiterTest extends TestCase
     // cleanup()
     // ===========================
 
-    public function testCleanupDeletesOldRows(): void
+    #[Test]
+    public function cleanupDeletesOldRows(): void
     {
         $stmt = $this->createMock(\PDOStatement::class);
         $db   = $this->createMock(Database::class);
@@ -128,7 +138,8 @@ class RateLimiterTest extends TestCase
         RateLimiter::cleanup($db);
     }
 
-    public function testCleanupSkipsWhenTableMissing(): void
+    #[Test]
+    public function cleanupSkipsWhenTableMissing(): void
     {
         $db = $this->createMock(Database::class);
         $db->method('tableExists')->willReturn(false);
@@ -141,7 +152,8 @@ class RateLimiterTest extends TestCase
     // constants
     // ===========================
 
-    public function testKeyConstantsAreDefined(): void
+    #[Test]
+    public function keyConstantsAreDefined(): void
     {
         $this->assertSame('password_reset', RateLimiter::PASSWORD_RESET);
         $this->assertSame('api_gemini', RateLimiter::API_GEMINI);

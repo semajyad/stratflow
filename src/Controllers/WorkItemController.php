@@ -432,7 +432,7 @@ class WorkItemController
         $descChanged    = $newDescription !== ($item['description'] ?? '');
         $sprintChanged  = $newEstimatedSprints !== '' && (int) $newEstimatedSprints !== (int) $item['estimated_sprints'];
         if ($descChanged || $sprintChanged) {
-            HLWorkItem::update($this->db, $id, ['requires_review' => 1]);
+            HLWorkItem::update($this->db, (int) $id, ['requires_review' => 1]);
         }
 
         $_SESSION['flash_message'] = 'Work item updated.';
@@ -742,7 +742,7 @@ class WorkItemController
             return;
         }
 
-        $project = \StratFlow\Models\ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
+        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $item['project_id']);
         if ($project === null) {
             $this->response->json(['status' => 'error', 'message' => 'Access denied'], 403);
             return;
@@ -775,7 +775,10 @@ class WorkItemController
             $breakdownData = $scored['breakdown'];
             $itemId        = $id;
             $itemType      = 'work-item';
-            $csrf_token    = $this->request->post('_csrf_token');
+            // CSRF is enforced by CSRFMiddleware at the router level for this route
+            // before this method is called. We read the current session token here
+            // only to pass it to the partial template for any forms it renders.
+            $csrf_token    = $_SESSION['_csrf_token'] ?? '';
             require __DIR__ . '/../../templates/partials/quality-breakdown.php';
             $html = ob_get_clean();
             $this->response->json([

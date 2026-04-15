@@ -119,6 +119,6 @@ class Subscription
              WHERE org_id = :org_id AND status = 'active'
              ORDER BY id DESC LIMIT 1", [':org_id' => $orgId]);
         $row = $stmt->fetch();
-        return $row && (bool) $row['has_evaluation_board'];
+        return $row && (bool) ($row['has_evaluation_board'] ?? false);
     }
 }

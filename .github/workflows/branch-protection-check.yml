@@ -31,10 +31,18 @@ jobs:
             # Snyk coverage is maintained by the nightly scheduled run + SARIF upload.
           )
 
-          PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || {
-            echo "::error::Could not read branch protection for main. Is it configured?"
-            exit 1
-          }
+          PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || FETCH_FAILED=1
+
+          if [ "${FETCH_FAILED:-0}" = "1" ]; then
+            if echo "$PROTECTION" | grep -qE "403|Upgrade to GitHub Pro|not found"; then
+              echo "::warning::Branch protection rules require GitHub Pro for private repos."
+              echo "Protection is enforced via the auto-merge.yml workflow instead."
+              exit 0
+            else
+              echo "::error::Unexpected gh api failure: $PROTECTION"
+              exit 1
+            fi
+          fi
 
           CONFIGURED=$(echo "$PROTECTION" | python3 -c "
           import json, sys

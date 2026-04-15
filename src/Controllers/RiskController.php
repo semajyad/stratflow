@@ -292,7 +292,7 @@ class RiskController
         $allowedRoam = ['resolved', 'owned', 'accepted', 'mitigated'];
         $roamRaw     = strtolower(trim((string) $this->request->post('roam_status', '')));
         $roamStatus  = in_array($roamRaw, $allowedRoam, true) ? $roamRaw : null;
-        Risk::update($this->db, $id, [
+        Risk::update($this->db, (int) $id, [
             'title'         => $title,
             'description'   => $description ?: null,
             'likelihood'    => $likelihood,
@@ -302,10 +302,10 @@ class RiskController
             'roam_status'   => $roamStatus,
         ]);
 // Re-create links
-        RiskItemLink::deleteByRiskId($this->db, $id);
+        RiskItemLink::deleteByRiskId($this->db, (int) $id);
         $workItemIds = $this->request->post('work_item_ids', []);
         if (is_array($workItemIds) && !empty($workItemIds)) {
-            RiskItemLink::createLinks($this->db, $id, array_map('intval', $workItemIds));
+            RiskItemLink::createLinks($this->db, (int) $id, array_map('intval', $workItemIds));
         }
 
         $_SESSION['flash_message'] = 'Risk updated successfully.';
@@ -414,7 +414,7 @@ class RiskController
         }
 
         // Load linked work items
-        $linkedIds   = RiskItemLink::findByRiskId($this->db, $id);
+        $linkedIds   = RiskItemLink::findByRiskId($this->db, (int) $id);
         $linkedNames = [];
         foreach ($linkedIds as $wiId) {
             $wi = HLWorkItem::findById($this->db, (int) $wiId);
@@ -441,7 +441,7 @@ class RiskController
         }
 
         // Save mitigation to the risk
-        Risk::update($this->db, $id, ['mitigation' => $mitigation]);
+        Risk::update($this->db, (int) $id, ['mitigation' => $mitigation]);
         $this->response->json(['status' => 'ok', 'mitigation' => $mitigation]);
     }
 }
