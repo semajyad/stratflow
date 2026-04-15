@@ -6,16 +6,16 @@ _Last updated: 2026-04-15 (rev 2)_
 
 ## 1. PR → Merge flow
 
-```
+```ascii
 PR opened
   │
   ├─ multi-agent-guard      branch naming, claim advisory (non-blocking)
   ├─ self-heal              lockfile drift · stale PHPStan baseline · rebase onto main
   │
   ├─ FAST PATH  ── all required for auto-merge, target p95 < 5 min ──────────────
-  │   PHPUnit unit (PHP 8.4)          ~45 s   no DB
-  │   PHPUnit integration (PHP 8.4)   ~2.5 m  MySQL (tmpfs — in-memory I/O)
-  │   Playwright fast (Chromium)      ~5 m    MySQL (tmpfs) + PHP dev server
+  │   PHPUnit unit (PHP 8.4)          ~30 s   no DB
+  │   PHPUnit integration (PHP 8.4)   ~3 m    MySQL
+  │   Playwright fast (Chromium)      ~10 m   MySQL + PHP dev server (timeout: 15 min)
   │   PHPStan · PHPCS PSR-12          ~1 m    static only
   │   Test-touch gate                 instant  changed src/ must have test diff
   │   Destructive migration gate      instant  DROP/RENAME ops need safe-migration-reviewed label
@@ -40,6 +40,7 @@ PR opened
                           pass ─── record LAST_GOOD_SHA · silent ntfy
                           fail ─── auto-rollback → ntfy HIGH
                                    rollback fail → ntfy CRITICAL + DEPLOY_PAUSED
+
 ```
 
 **Required checks** (enforced by `main-protection` branch ruleset, ruleset ID 15091891):  
@@ -61,9 +62,7 @@ CHANGES_REQUESTED disables auto-merge on that PR until re-approved.
 | 13:00     | mutation-testing  | Infection PHP MSI score |
 | 13:30     | semgrep           | Full `src/` scan, SARIF → Security tab |
 | 14:00     | security-shannon  | Shannon AI pen-test vs staging |
-| 14:30     | sbom              | Syft SBOM + Grype CVE scan (NVD + GitHub Advisories + OSV) |
 | 15:00     | snyk              | PHP dependency CVEs (Snyk advisory DB) |
-| 15:30     | dependency-check  | OWASP Dep-Check vs NVD (catches CVEs before Snyk syncs) |
 | 16:00     | security-zap      | OWASP ZAP authenticated baseline scan vs staging |
 | 16:30     | e2e-full-nightly  | Staging DB re-seeded → Playwright full matrix (all browsers) |
 | 17:00     | nightly-triage    | Aggregate results · open GitHub issues · dedup |
@@ -86,16 +85,16 @@ All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
 | CodeQL | Deep inter-procedural SAST — injection, auth bypass, data flow | PR + push |
 | Semgrep PHP | Fast SAST — OWASP Top 10, PHP-specific patterns | PR (changed files) + nightly full |
 | PHPStan | Type errors, undefined methods, unreachable code | PR |
-| Hadolint | Dockerfile anti-patterns (root user, unpinned tags, ADD vs COPY) | PR (advisory) |
-| Checkov | IaC misconfig — docker-compose, Dockerfile, GH Actions workflows | PR (advisory) + weekly |
+| Hadolint | Dockerfile anti-patterns (root user, unpinned tags, ADD vs COPY) | Planned |
+| Checkov | IaC misconfig — docker-compose, Dockerfile, GH Actions workflows | Planned |
 
 ### Dependency & supply chain
 | Tool | What it catches | When |
 |------|----------------|------|
 | Snyk | CVEs in Composer deps (Snyk advisory DB) | PR + nightly |
 | Composer audit | PHP-native CVE check | PR (unit job) |
-| OWASP Dep-Check | CVEs from NVD directly — catches pre-Snyk-sync findings (~24 h lag) | Nightly |
-| Syft + Grype | Full SBOM (CycloneDX) + CVE scan across NVD/GH Advisories/OSV | PR (lock changes) + nightly |
+| OWASP Dep-Check | CVEs from NVD directly — catches pre-Snyk-sync findings (~24 h lag) | Planned |
+| Syft + Grype | Full SBOM (CycloneDX) + CVE scan across NVD/GH Advisories/OSV | Planned |
 | Dependabot | Automated PRs for outdated dependencies | Daily |
 | TruffleHog | Leaked secrets in code and git history | PR + push |
 | SLSA Level 3 | Signed provenance on release artifacts | Release |
@@ -106,7 +105,7 @@ All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
 |------|----------------|------|
 | OWASP ZAP | Authenticated DAST — XSS, injection, misconfigs on running app | Nightly |
 | Shannon AI | AI-driven pen-test — auth flaws, business logic, API abuse | Nightly |
-| Lighthouse CI | WCAG 2.1 accessibility violations, Core Web Vitals | PR (src changes, advisory) |
+| Lighthouse CI | WCAG 2.1 accessibility violations, Core Web Vitals | Planned |
 
 ### Baselines
 Accepted findings stored in `tests/security/baseline-{zap,shannon,snyk,grype}.json`.  
@@ -147,8 +146,10 @@ without backward compatibility → production outage on rollback.
 the `safe-migration-reviewed` label is present (manual confirmation of backward compatibility).
 
 After a deliberate destructive migration merges, update `LAST_GOOD_SHA` immediately:
+
 ```bash
 gh variable set LAST_GOOD_SHA --body "<new SHA>" --repo semajyad/stratflow
+
 ```
 
 ---
