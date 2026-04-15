@@ -16,6 +16,8 @@ on:
       - 'views/**'
       - 'resources/**'
       - 'tests/Lighthouse/**'
+      - 'database/schema.sql'
+      - 'database/migrations/**'
 
 permissions:
   contents: read

@@ -42,12 +42,16 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-scripts
 
+      - name: Get week stamp
+        id: date
+        run: echo "week=$(date +%Y-W%V)" >> "$GITHUB_OUTPUT"
+
       - name: Cache NVD database
         uses: actions/cache@v4
         with:
           path: ~/.dependency-check/data
-          # NVD data changes daily — invalidate cache daily via date key
-          key: owasp-depcheck-nvd-${{ runner.os }}-${{ github.run_id }}
+          # NVD data changes daily — share cache across all runs in the same week
+          key: owasp-depcheck-nvd-${{ runner.os }}-${{ steps.date.outputs.week }}
           restore-keys: |
             owasp-depcheck-nvd-${{ runner.os }}-
 
@@ -61,6 +65,7 @@ jobs:
             --volume "${HOME}/.dependency-check/data:/usr/share/dependency-check/data" \
             owasp/dependency-check@sha256:60ee7af9cf80ac009761e397b2d4ba5ddbf072c2a0ead1c068dc24dc62155600 \
             --scan /src \
+            --scan /composer.lock \
             --format HTML \
             --format SARIF \
             --format JSON \
