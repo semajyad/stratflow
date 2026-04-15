@@ -36,7 +36,7 @@ class HomeControllerTest extends ControllerTestCase
     {
         parent::setUp();
         if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
+            session_start();
         }
         // Clear session state between tests to prevent flash message pollution
         $_SESSION = [];

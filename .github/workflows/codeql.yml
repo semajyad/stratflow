@@ -27,9 +27,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: php
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+          build-mode: none
 
       - name: Perform CodeQL Analysis
         id: codeql
@@ -49,7 +47,7 @@ jobs:
             STATUS="fail"
           fi
           FINDINGS_URL="https://github.com/${{ github.repository }}/security/code-scanning"
-          cat > nightly-status-codeql.json << EOF
+          cat > nightly-status.json << EOF
           {
             "job": "codeql",
             "status": "${STATUS}",
@@ -63,6 +61,6 @@ jobs:
         if: github.event_name == 'schedule'
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-status-codeql
-          path: nightly-status-codeql.json
+          name: nightly-status
+          path: nightly-status.json
           retention-days: 7

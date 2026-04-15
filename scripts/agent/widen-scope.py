@@ -19,7 +19,7 @@ from pathlib import Path
 
 # === Constants ===
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / ".github" / "agent-ledger.json"
 
 
@@ -140,10 +140,13 @@ def main() -> None:
     # 4. Save ledger
     save_ledger(ledger)
 
-    # 5. Commit ledger update
-    run(["git", "add", ".github/agent-ledger.json"])
+    # 5. Commit ledger update via safe-commit to update session bookkeeping
+    safe_commit = REPO_ROOT / "scripts" / "agent" / "safe-commit.py"
     commit_msg = f"chore(ledger): widen scope +{new_glob}"
-    result = run(["git", "commit", "-m", commit_msg], check=False)
+    result = run(
+        [sys.executable, str(safe_commit), "-m", commit_msg, ".github/agent-ledger.json"],
+        check=False,
+    )
     if result.returncode != 0:
         print(
             f"[widen-scope] WARNING: Ledger saved but commit failed.\n{result.stderr.strip()}",

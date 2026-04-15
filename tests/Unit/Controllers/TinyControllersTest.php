@@ -39,7 +39,7 @@ final class TinyControllersTest extends ControllerTestCase
     {
         parent::setUp();
         if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
+            session_start();
         }
 
         // Define ASSET_VERSION for HealthController
@@ -50,6 +50,12 @@ final class TinyControllersTest extends ControllerTestCase
         $stmt->method('fetch')->willReturn(false);
         $stmt->method('fetchAll')->willReturn([]);
         $this->db->method('query')->willReturn($stmt);
+    }
+
+    protected function tearDown(): void
+    {
+        unset($_SESSION['_last_project_id']);
+        parent::tearDown();
     }
 
     // ===========================

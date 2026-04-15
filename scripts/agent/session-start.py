@@ -24,7 +24,7 @@ from pathlib import Path
 
 # === Constants ===
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / ".github" / "agent-ledger.json"
 HANDOFFS_DIR = REPO_ROOT / "docs" / "agent-handoffs"
 STALE_HOURS = 4
@@ -217,6 +217,7 @@ def register_session(
     branch: str,
     files_glob: list[str],
     exclusive: bool,
+    role: str = "foreground",
 ) -> dict:
     """Append a new session entry to the ledger and return the updated ledger."""
     ts = now_iso()
@@ -231,7 +232,7 @@ def register_session(
         "last_activity_at": ts,
         "last_commit_sha": None,
         "status": "active",
-        "role": "foreground",
+        "role": role,
         "push_counter": 0,
         "scope_widening_log": [],
     }
@@ -258,6 +259,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--goal", help="Short description of session goal")
     parser.add_argument("--files", help="Glob pattern(s) for files in scope, comma-separated")
     parser.add_argument("--exclusive", action="store_true", help="Claim exclusive access to declared file scope")
+    parser.add_argument("--role", choices=["foreground", "background"], default="foreground",
+                        help="Session role: foreground (default) or background")
     args = parser.parse_args()
 
     if not args.agent_id:
@@ -319,6 +322,7 @@ def main() -> None:
         branch=branch,
         files_glob=files_glob,
         exclusive=args.exclusive,
+        role=args.role,
     )
     save_ledger(ledger)
 

@@ -102,8 +102,8 @@ jobs:
             || railway up --detach  # fallback to default if env flag unsupported
 
           # Construct preview URL (Railway naming convention)
-          SLUG=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
-          PREVIEW_URL="https://stratflow-pr-${{ github.event.pull_request.number }}.up.railway.app"
+          SLUG=$(echo "$HEAD_REF" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+          PREVIEW_URL="https://stratflow-pr-${PR_NUMBER}.up.railway.app"
           echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "Preview URL: $PREVIEW_URL"
 
@@ -136,8 +136,8 @@ jobs:
           |---|---|
           | **Preview URL** | [$PREVIEW_URL]($PREVIEW_URL) |
           | **Environment** | \`pr-$PR_NUMBER\` |
-          | **Branch** | \`${{ github.event.pull_request.head.ref }}\` |
-          | **SHA** | \`${{ github.event.pull_request.head.sha }}\` |
+          | **Branch** | \`$HEAD_REF\` |
+          | **SHA** | \`$HEAD_SHA\` |
 
           This environment is automatically torn down when the PR closes.
           <sub>Updated: $(date -u '+%Y-%m-%d %H:%M UTC')</sub>"

@@ -23,7 +23,7 @@ from pathlib import Path
 
 # === Constants ===
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / ".github" / "agent-ledger.json"
 AUTO_PUSH_THRESHOLD = 5
 
@@ -148,6 +148,9 @@ def detect_broad_add(argv: list[str]) -> tuple[bool, str]:
     for p in paths:
         if p in FORBIDDEN_PATHS:
             return True, f"Path '{p}' is too broad. Specify explicit file paths."
+
+    if not paths:
+        return True, "No explicit file paths provided. Specify which files to commit."
 
     return False, ""
 

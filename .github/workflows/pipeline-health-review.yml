@@ -87,7 +87,8 @@ jobs:
           recent_3 = entries[:3]
           outstanding_followups = [
               e for e in entries
-              if e["follow_up"] and e["follow_up"].lower() not in ("none.", "none", "")
+              if e["follow_up"] and not e["follow_up"].lower().startswith("none")
+              and e["follow_up"].strip().lower() not in ("", "n/a")
           ]
 
           # Build issue body
