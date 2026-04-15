@@ -127,7 +127,7 @@ class UserStorySprintIntegrationTest extends TestCase
             'status'          => 'backlog',
         ]);
 
-        $statuses = ['in_progress', 'review', 'done'];
+        $statuses = ['in_progress', 'in_review', 'done'];
 
         foreach ($statuses as $status) {
             UserStory::update(self::$db, $storyId, ['status' => $status]);
