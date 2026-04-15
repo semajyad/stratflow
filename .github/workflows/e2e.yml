@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Required for GitHub Merge Queue — without this trigger the queue stalls.
+  merge_group:
+    branches: [main]
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ github.event.merge_group.head_sha || '' }}
   cancel-in-progress: true
 
 jobs:
