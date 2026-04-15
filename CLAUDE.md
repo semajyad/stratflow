@@ -40,6 +40,33 @@ This is non-negotiable. Do not open a PR, commit source changes, or mark a task 
 - Prefer delegated JS in shared bundles; do not introduce inline handlers or new CSP regressions.
 - Replace `error_log()` with `\StratFlow\Services\Logger::warn/error()` in all new code.
 
+## Starting a New Work Session
+
+**Every agent starting work must run:**
+```bash
+python scripts/agent/session-start.py --agent-id <your-id> --goal "<short goal>" --files "<glob>"
+```
+This creates your branch from `origin/main`, registers your session in the ledger, and shows a briefing of other active sessions. See `docs/AGENT_WORKFLOW.md` for full details.
+
+**If you think work is "missing"**, run `python scripts/agent/recover.py` first — it scans reflog, stash, and unpushed branches before assuming data loss.
+
+**Instead of `git commit`, use:**
+```bash
+python scripts/agent/safe-commit.py -m "feat: ..." src/Foo.php tests/Unit/FooTest.php
+```
+
+## Continuous Improvement — Learnings
+
+When any CI/CD, security, or test failure occurs that reveals a non-obvious root cause, record it:
+```bash
+python scripts/ci/record_learning.py --category ci --title "..." --symptom "..." --root-cause "..." --fix "..." --prevention "..."
+```
+
+**Read these files when working on CI/CD, security, or testing — they contain institutional knowledge about what's failed and been fixed:**
+- `docs/ci-learnings.md` — CI/CD failure patterns and fixes
+- `docs/security-learnings.md` — security scan issues and accepted patterns
+- `docs/test-learnings.md` — test flakiness, coverage patterns, anti-patterns
+
 ## Morning CI Triage
 
 **Applies to the first code session each calendar day.**

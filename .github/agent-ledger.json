@@ -1,0 +1,20 @@
+{
+  "_schema": "https://github.com/semajyad/stratflow/blob/main/docs/AGENT_WORKFLOW.md",
+  "_description": "Active agent session ledger. Updated by scripts/agent/session-start.py and scripts/agent/safe-commit.py. Stale entries (no activity in >4h for foreground, >2h for background) are auto-pruned by nightly-self-heal.yml.",
+  "_fields": {
+    "session_id": "Unique session identifier: {agent_id}-{yyyymmdd-hhmm}-{rand4hex}",
+    "agent_id": "Human-readable agent identifier (e.g. claude-code-1, cursor-agent-a)",
+    "goal": "Short description of what this session is doing",
+    "branch": "Full branch name: agent/<session_id>/<slug>",
+    "files_glob": "List of glob patterns this session declares responsibility for",
+    "exclusive": "If true, overlap with this session should block other sessions (not just warn)",
+    "started_at": "ISO8601 UTC timestamp",
+    "last_activity_at": "ISO8601 UTC timestamp of last commit or push",
+    "last_commit_sha": "SHA of the last commit made in this session, or null",
+    "push_counter": "Number of commits since last push (resets on push)",
+    "status": "active | stale | completed",
+    "role": "foreground | background",
+    "scope_widening_log": "Audit trail of scope expansions [{timestamp, added_glob, reason, sha}]"
+  },
+  "sessions": []
+}
