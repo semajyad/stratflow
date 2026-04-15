@@ -1,0 +1,118 @@
+name: PR closed — agent hand-off
+
+# When a PR is closed (merged or abandoned):
+# 1. Extract agent context (key decisions, learnings) and append to
+#    docs/agent-handoffs/<pr-number>.md so the next agent can pick up
+#    context without re-deriving.
+# 2. Release any agent claims from .github/agent-claims.json.
+#
+# This keeps the multi-agent work-claim ledger clean and ensures
+# architectural decisions survive across PR boundaries.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  handoff:
+    name: Agent hand-off for PR #${{ github.event.pull_request.number }}
+    runs-on: ubuntu-latest
+    # Skip Dependabot PRs — they don't carry agent context
+    if: "!startsWith(github.event.pull_request.user.login, 'dependabot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "stratflow-ci[bot]"
+          git config user.email "stratflow-ci[bot]@users.noreply.github.com"
+
+      - name: Extract and save agent context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          # Extract agent observations from commit trailers and PR body
+          HANDOFF_DIR="docs/agent-handoffs"
+          mkdir -p "$HANDOFF_DIR"
+          HANDOFF_FILE="$HANDOFF_DIR/$PR_NUMBER.md"
+
+          # Collect commit messages from this PR
+          BASE_SHA=$(gh api repos/$REPO/pulls/$PR_NUMBER \
+            --jq '.base.sha' 2>/dev/null || echo "")
+          HEAD_SHA="${MERGE_COMMIT:-${{ github.event.pull_request.head.sha }}}"
+
+          COMMITS=""
+          if [ -n "$BASE_SHA" ]; then
+            COMMITS=$(git log --oneline "${BASE_SHA}..${HEAD_SHA}" 2>/dev/null || echo "")
+          fi
+
+          STATUS=$([ "$MERGED" = "true" ] && echo "merged" || echo "closed without merge")
+
+          cat > "$HANDOFF_FILE" <<MARKDOWN
+# PR #$PR_NUMBER: $PR_TITLE
+
+**Status:** $STATUS
+**Branch:** $BRANCH
+**Author:** $AUTHOR
+**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+$([ -n "$MERGE_COMMIT" ] && echo "**Merge commit:** \`${MERGE_COMMIT:0:8}\`" || echo "")
+
+## Description
+
+$PR_BODY
+
+## Commits
+
+\`\`\`
+$COMMITS
+\`\`\`
+
+## Key decisions (auto-extracted from commit trailers)
+
+$(git log --format='%B' "${BASE_SHA}..${HEAD_SHA}" 2>/dev/null | \
+  grep -E '^(Decision|Rationale|Trade-off|Note|Observation):' | \
+  sed 's/^/- /' || echo "_None recorded in commit trailers._")
+
+## Reviewers
+
+$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews \
+  --jq '[.[] | select(.state == "APPROVED") | "- \(.user.login) approved"] | join("\n")' \
+  2>/dev/null || echo "_Review data unavailable._")
+MARKDOWN
+
+          echo "Handoff written to $HANDOFF_FILE"
+
+      - name: Release agent claims
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ -f ".github/agent-claims.json" ] && [ -f "scripts/agent-claim.py" ]; then
+            python3 scripts/agent-claim.py release --branch "$BRANCH" && \
+              echo "Released claims for $BRANCH" || echo "No claims to release"
+          fi
+
+      - name: Commit handoff and claim release
+        run: |
+          git add docs/agent-handoffs/ .github/agent-claims.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "chore: agent hand-off for PR #${{ github.event.pull_request.number }} [ci skip]"
+            git push origin HEAD:main
+          fi

@@ -3,6 +3,13 @@ name: Morning Summary
 # Runs at 17:30 UTC = 05:30 NZT — 30min after nightly-triage completes.
 # Fetches the triage-report artifact from the most recent nightly-triage run
 # and posts a single ntfy digest ready before James starts coding.
+#
+# Notification budget:
+#   - All green + no new issues → SILENT (no ntfy). No noise.
+#   - Warnings (no failures) → default priority
+#   - Any failure → high priority
+#
+# Run morning_audit.py locally to check anytime (stratflow/CLAUDE.md).
 
 on:
   schedule:
@@ -92,16 +99,22 @@ jobs:
 
           body = "\n".join(lines)
 
-          # Send via ntfy
+          # Notification budget:
+          # - All green → SILENT (no ntfy)
+          # - Warnings only → default priority
+          # - Any failure → high priority
           ntfy_url = os.environ.get("NTFY_URL", "")
           ntfy_topic = os.environ.get("NTFY_TOPIC", "stratflow-ci")
-          if not ntfy_url:
-              print("NTFY_URL not set — printing digest only")
+
+          if s["fail"] == 0 and s["warn"] == 0:
+              print("All nightly jobs passing — silent (no ntfy). Nothing to do.")
+          elif not ntfy_url:
+              print("NTFY_URL not set — printing digest only (would have sent)")
               print(body)
           else:
-              title = f"StratFlow nightly — {s['fail']} FAIL [{date}]" if s["fail"] else f"StratFlow nightly — all pass [{date}]"
-              priority = "high" if s["fail"] else ("default" if s["warn"] else "low")
-              tags = "warning,ci" if s["fail"] else "ci"
+              title = f"StratFlow nightly — {s['fail']} FAIL [{date}]" if s["fail"] else f"StratFlow nightly — warnings [{date}]"
+              priority = "high" if s["fail"] else "default"
+              tags = "warning,ci,nightly" if s["fail"] else "ci,nightly"
 
               req = urllib.request.Request(
                   f"{ntfy_url}/{ntfy_topic}",

@@ -1,0 +1,154 @@
+name: Multi-agent guard
+
+# Enforces conventions for concurrent agent workflows:
+#   1. Branch naming: agent/<id>/<topic>, dependabot/*, main, or trunk branches.
+#      PRs from non-conforming branches get a comment but are NOT blocked —
+#      the convention is advisory so human devs aren't locked out.
+#   2. Claim advisory: if .github/agent-claims.json shows another agent has
+#      claimed the files touched by this PR, posts a coordination comment.
+#      Non-blocking — advisory only.
+#   3. Push-to-main guard: direct pushes to main (not via PR merge) are
+#      rejected with an error.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guard:
+    name: Multi-agent guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: .github/agent-claims.json
+          sparse-checkout-cone-mode: false
+
+      - name: Direct push to main guard
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Detect if this push came from a PR merge (has 2 parents) or is direct
+          PARENTS=$(git log -1 --format="%P" "${{ github.sha }}" | wc -w | tr -d ' ')
+          if [ "$PARENTS" -lt 2 ] && [[ "${{ github.event.head_commit.message }}" != *"Merge pull request"* ]]; then
+            echo "::error::Direct push to main detected. All changes must go through PRs."
+            echo "::error::Commit: ${{ github.sha }} | Message: $(git log -1 --format='%s' ${{ github.sha }})"
+            exit 1
+          fi
+          echo "Push to main is a merge commit — OK"
+
+      - name: Branch naming convention
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          echo "Checking branch: $BRANCH"
+
+          # Allowed patterns
+          if echo "$BRANCH" | grep -qE '^(agent/|dependabot/|fix/|feat/|chore/|docs/|refactor/|test/|security-|hotfix/)'; then
+            echo "Branch naming: OK ($BRANCH)"
+          else
+            echo "::warning::Branch '$BRANCH' doesn't follow naming convention."
+            echo "::warning::Expected: agent/<id>/<topic>, feat/<topic>, fix/<topic>, chore/<topic>, etc."
+            # Advisory only — post comment but don't fail
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⚠️ Branch name \`$BRANCH\` doesn't follow the convention (\`agent/<id>/<topic>\` or \`feat/\`, \`fix/\`, \`chore/\`, etc.). This is advisory only — CI will still run." \
+              --repo ${{ github.repository }} 2>/dev/null || true
+          fi
+
+      - name: Agent claim advisory
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Skip if agent-claims.json doesn't exist
+          if [ ! -f ".github/agent-claims.json" ]; then
+            echo "No agent-claims.json — skip claim check"
+            exit 0
+          fi
+
+          # Get the files changed in this PR
+          CHANGED_FILES=$(gh api repos/$REPO/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '[.[] | .filename]' 2>/dev/null || echo "[]")
+
+          if [ "$CHANGED_FILES" = "[]" ]; then
+            echo "No changed files to check"
+            exit 0
+          fi
+
+          # Check claims file for conflicts
+          python3 - <<'PYEOF'
+          import json, sys, os
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          claims_path = Path(".github/agent-claims.json")
+          try:
+              claims = json.loads(claims_path.read_text())
+          except Exception:
+              sys.exit(0)
+
+          changed_raw = os.environ.get("CHANGED_FILES_JSON", "[]")
+          try:
+              changed = json.loads(os.popen(f"echo '{changed_raw}'").read().strip())
+          except Exception:
+              sys.exit(0)
+
+          pr_branch = os.environ.get("PR_BRANCH", "")
+          now = datetime.now(timezone.utc)
+          cutoff = now - timedelta(hours=4)
+
+          conflicts = []
+          for claim in claims.get("claims", []):
+              # Skip expired claims
+              try:
+                  claimed_at = datetime.fromisoformat(claim["claimed_at"].replace("Z", "+00:00"))
+                  if claimed_at < cutoff:
+                      continue
+              except Exception:
+                  continue
+
+              # Skip if same agent's branch
+              if claim.get("branch") == pr_branch:
+                  continue
+
+              # Check if any changed file matches the claim's glob
+              import fnmatch
+              for f in changed:
+                  for pattern in claim.get("patterns", []):
+                      if fnmatch.fnmatch(f, pattern):
+                          conflicts.append({
+                              "agent": claim.get("agent", "unknown"),
+                              "branch": claim.get("branch", "unknown"),
+                              "file": f,
+                              "pattern": pattern,
+                          })
+                          break
+
+          if conflicts:
+              print("::warning::Agent claim conflicts detected:")
+              for c in conflicts:
+                  print(f"::warning::  {c['agent']} ({c['branch']}) has claimed '{c['pattern']}' covering {c['file']}")
+              sys.exit(2)  # Use exit code 2 to signal advisory (caught below)
+          PYEOF
+
+          EXIT_CODE=$?
+          if [ "$EXIT_CODE" -eq 2 ]; then
+            # Post advisory comment but don't fail the job
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⚠️ Agent claim overlap detected. Another agent has claimed files touched by this PR. This is **advisory only** — coordinate if editing the same code paths." \
+              --repo $REPO 2>/dev/null || true
+          fi
+          exit 0   # Always exit 0 — advisory only
+        env:
+          CHANGED_FILES_JSON: ${{ toJson(github.event.pull_request.changed_files) }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
