@@ -241,7 +241,9 @@ If you intentionally need a destructive migration (e.g. the expand phase already
 
 1. Add `safe-migration-reviewed` label to the PR (CI will pass).
 2. Immediately after merge, update `LAST_GOOD_SHA` to the new deploy SHA so rollback never targets the pre-migration code:
+
    ```bash
    gh variable set LAST_GOOD_SHA --body "<new deploy SHA>" --repo semajyad/stratflow
    ```
+
 3. Monitor `/healthz` for 10 minutes post-deploy before considering the deploy stable.
