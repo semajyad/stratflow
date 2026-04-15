@@ -1,0 +1,128 @@
+name: Lighthouse CI (accessibility + performance)
+
+# Runs Google Lighthouse against public pages on the local PHP dev server.
+# Checks WCAG 2.1 accessibility, Core Web Vitals, SEO, and best practices.
+# Thresholds: accessibility ≥ 85 (error), performance ≥ 30 (warn, dev server).
+#
+# Results uploaded to Lighthouse CI temporary storage — link appears in PR comment.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'templates/**'
+      - 'views/**'
+      - 'resources/**'
+      - 'tests/Lighthouse/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse accessibility + perf
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stratflow
+          MYSQL_USER: stratflow
+          MYSQL_PASSWORD: stratflow_secret
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create .env
+        run: |
+          echo "APP_ENV=testing" > .env
+          echo "APP_URL=http://localhost:8890" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=stratflow" >> .env
+          echo "DB_USERNAME=stratflow" >> .env
+          echo "DB_PASSWORD=stratflow_secret" >> .env
+          echo "GEMINI_API_KEY=test-key" >> .env
+          echo "GEMINI_MODEL=gemini-2.0-flash" >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=pk_test_xxx" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_xxx" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
+          echo "STRIPE_PRICE_PRODUCT=price_xxx" >> .env
+          echo "STRIPE_PRICE_CONSULTANCY=price_xxx" >> .env
+          echo "STRIPE_PRICE_USER_PACK=price_xxx" >> .env
+          echo "STRIPE_PRICE_EVAL_BOARD=price_xxx" >> .env
+          echo "MAIL_FROM_NAME=StratFlow" >> .env
+          echo "MAIL_FROM_EMAIL=test@example.com" >> .env
+          echo "MAIL_SMTP_HOST=localhost" >> .env
+          echo "MAIL_SMTP_PORT=587" >> .env
+          echo "MAIL_SMTP_USER=" >> .env
+          echo "MAIL_SMTP_PASS=" >> .env
+          echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "SESSION_DRIVER=file" >> .env
+
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
+
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
+          done
+
+      - name: Seed database
+        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/seed.sql
+
+      - name: Start PHP dev server
+        run: |
+          php -S 0.0.0.0:8890 -t public public/index.php &
+          sleep 2
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli --quiet
+
+      - name: Run Lighthouse CI
+        run: lhci autorun --config tests/Lighthouse/lighthouserc.yml
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 14

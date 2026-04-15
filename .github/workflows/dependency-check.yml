@@ -1,0 +1,141 @@
+name: OWASP Dependency-Check (nightly)
+
+# Scans PHP Composer dependencies directly against the NVD database.
+# Complements Snyk (different vulnerability database — catches CVEs that
+# appear in NVD before Snyk's advisory feed updates).
+#
+# NVD database download takes ~2-3 min, so this runs nightly only.
+# CVSS threshold: fail on ≥ 9.0 (CRITICAL). HIGH findings surface as warnings.
+#
+# Results: HTML report artifact + SARIF uploaded to GitHub Security tab.
+
+on:
+  schedule:
+    # 15:30 UTC — after Snyk (15:00), before ZAP (16:00)
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # for SARIF upload
+
+concurrency:
+  group: dependency-check
+  cancel-in-progress: false  # never cancel a running NVD download
+
+jobs:
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.dependency-check/data
+          # NVD data changes daily — invalidate cache daily via date key
+          key: owasp-depcheck-nvd-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            owasp-depcheck-nvd-${{ runner.os }}-
+
+      - name: Run OWASP Dependency-Check
+        run: |
+          mkdir -p dc-reports
+          docker run --rm \
+            --volume "$(pwd)/vendor:/src:ro" \
+            --volume "$(pwd)/composer.lock:/composer.lock:ro" \
+            --volume "$(pwd)/dc-reports:/reports" \
+            --volume "${HOME}/.dependency-check/data:/usr/share/dependency-check/data" \
+            owasp/dependency-check@sha256:60ee7af9cf80ac009761e397b2d4ba5ddbf072c2a0ead1c068dc24dc62155600 \
+            --scan /src \
+            --format HTML \
+            --format SARIF \
+            --format JSON \
+            --out /reports \
+            --project "StratFlow" \
+            --failOnCVSS 9 \
+            --enableRetired \
+            --suppression /src/../composer.lock \
+            2>&1 | tee dc-output.txt
+          EXIT=${PIPESTATUS[0]}
+          echo "Dependency-Check exit: $EXIT"
+          exit $EXIT
+        continue-on-error: true
+        id: depcheck
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always() && hashFiles('dc-reports/*.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: dc-reports/
+          category: dependency-check
+
+      - name: Upload Dependency-Check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: |
+            dc-reports/dependency-check-report.html
+            dc-reports/dependency-check-report.json
+          retention-days: 14
+
+      - name: Fail on CRITICAL CVEs
+        if: steps.depcheck.outcome == 'failure'
+        run: |
+          echo "::error::OWASP Dependency-Check found CVSS ≥ 9.0 findings."
+          echo "Review: GitHub Security tab → Code scanning alerts (dependency-check)"
+          echo "HTML report: download artifact 'dependency-check-report'"
+          exit 1
+
+      - name: Write nightly status
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, glob
+
+          status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
+          findings = 0
+
+          # Count findings from JSON report
+          for f in glob.glob("dc-reports/*.json"):
+              try:
+                  d = json.load(open(f))
+                  for dep in d.get("dependencies", []):
+                      findings += len(dep.get("vulnerabilities", []))
+              except Exception:
+                  pass
+
+          payload = {
+              "job": "dependency-check",
+              "status": status,
+              "metric": {"findings": findings},
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-dependency-check
+          path: nightly-status.json
+          retention-days: 7
