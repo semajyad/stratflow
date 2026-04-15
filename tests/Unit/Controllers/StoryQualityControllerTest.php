@@ -238,7 +238,7 @@ final class StoryQualityControllerTest extends ControllerTestCase
     }
 
     #[Test]
-    public function testStoreTrimssLabelWhitespace(): void
+    public function testStoreTrimsSingleLabelWhitespace(): void
     {
         $stmt = $this->createMock(\PDOStatement::class);
         $stmt->method('fetch')->willReturn(false);
