@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
@@ -34,16 +37,16 @@ jobs:
           --health-retries=15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2
         with:
           php-version: '8.4'
           extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
@@ -99,7 +102,7 @@ jobs:
           sleep 2
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
           cache: npm
@@ -185,7 +188,7 @@ jobs:
 
       - name: Upload Playwright artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: playwright-fast-artifacts
           path: |
@@ -213,7 +216,7 @@ jobs:
 
       - name: Upload nightly status artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: nightly-status-e2e
           path: nightly-status.json
@@ -257,16 +260,16 @@ jobs:
           --health-retries=15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2
         with:
           php-version: '8.4'
           extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
@@ -321,7 +324,7 @@ jobs:
           sleep 2
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
           cache: npm
@@ -377,7 +380,7 @@ jobs:
 
       - name: Upload Playwright artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: playwright-full-artifacts
           path: |
