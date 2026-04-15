@@ -154,7 +154,7 @@ def check_source_touch_rule(changed: list[str]) -> list[tuple[str, str]]:
     return missing
 
 
-def check_bug_test_rule(base: str, head: str, changed: list[str]) -> list[tuple[str, str]]:
+def check_bug_test_rule(base: str, head: str) -> list[tuple[str, str]]:
     """
     Rule 2: any commit starting with 'fix:' must include at least one test file.
     Returns list of (sha, subject) for fix commits that have no test changes.
@@ -207,7 +207,7 @@ def main():
 
     # ── Rule 2: Bug-test ──────────────────────────────────────────────────────
     print("\n── Rule 2: Bug-test (every fix: commit must include a test) ──")
-    bug_violations = check_bug_test_rule(args.base, args.head, changed)
+    bug_violations = check_bug_test_rule(args.base, args.head)
     if bug_violations:
         all_failures = True
         print(f"\n  ✗ {len(bug_violations)} fix commit(s) without test changes:")
