@@ -1,6 +1,6 @@
 # StratFlow — CI/CD, Security & Quality Pipeline
 
-_Last updated: 2026-04-15_
+_Last updated: 2026-04-15 (rev 2)_
 
 ---
 
@@ -14,11 +14,12 @@ PR opened
   │
   ├─ FAST PATH  ── all required for auto-merge, target p95 < 5 min ──────────────
   │   PHPUnit unit (PHP 8.4)          ~45 s   no DB
-  │   PHPUnit integration (PHP 8.4)   ~2.5 m  MySQL
-  │   Playwright fast (Chromium)      ~5 m    MySQL + PHP dev server
+  │   PHPUnit integration (PHP 8.4)   ~2.5 m  MySQL (tmpfs — in-memory I/O)
+  │   Playwright fast (Chromium)      ~5 m    MySQL (tmpfs) + PHP dev server
   │   PHPStan · PHPCS PSR-12          ~1 m    static only
-  │   Test-touch gate                 instant changed src/ must have test diff
-  │   Codecov patch coverage          ≥ 80% on new code
+  │   Test-touch gate                 instant  changed src/ must have test diff
+  │   Destructive migration gate      instant  DROP/RENAME ops need safe-migration-reviewed label
+  │   Codecov patch coverage          ≥ 80% on new lines
   │   k6 smoke (30 s, 1 VU)          p95 < 2 s  login · pricing · dashboard
   │
   ├─ ADVISORY (never blocks merge) ────────────────────────────────────────────
@@ -28,44 +29,52 @@ PR opened
   │   Checkov IaC                     ~30 s   when Docker/GH Actions files change
   │   Syft + Grype SBOM               ~2 m    when composer.lock changes
   │   Lighthouse CI                   ~5 m    when src/templates change
-  │   Security notes check            instant advisory comment if section missing
+  │   Security notes check            instant  advisory comment if section missing
   │   CodeRabbit review + autofix     AI code review, auto-fixes findings
   │
-  └─ auto-merge (oldest approved PR first, rebases next PR onto new main)
+  └─ auto-merge (gh pr merge --auto; branch ruleset enforces required checks)
         │
         ▼
        main ──► deploy.yml ──► Railway up ──► /healthz poll (2 min)
                                     │
-                          pass ─── record LAST_GOOD_DEPLOY_ID · silent ntfy
+                          pass ─── record LAST_GOOD_SHA · silent ntfy
                           fail ─── auto-rollback → ntfy HIGH
                                    rollback fail → ntfy CRITICAL + DEPLOY_PAUSED
 ```
 
-**Required checks** (`.github/auto-merge-required.txt`):
+**Required checks** (enforced by `main-protection` branch ruleset, ruleset ID 15091891):  
 `PHPUnit unit (PHP 8.4)` · `PHPUnit integration (PHP 8.4)` · `Playwright (fast — Chromium)`
+
+**Auto-merge mechanics**: `auto-merge.yml` calls `gh pr merge --auto --squash` on approval.
+GitHub merges atomically once required checks pass in the `merge_group` context.
+CHANGES_REQUESTED disables auto-merge on that PR until re-approved.
 
 ---
 
 ## 2. Nightly chain (UTC)
 
-| Time  | Job | Purpose |
-|-------|-----|---------|
-| 04:30 | nightly-self-heal | Cancel stuck runs · fix main drift · prune quarantine |
-| 12:00 | smoke-staging | Playwright fast smoke vs live Railway staging |
-| 12:30 | performance | k6 baseline 5→20→50 VU vs staging |
-| 13:00 | mutation-testing | Infection PHP MSI score |
-| 13:30 | semgrep | Full `src/` scan, SARIF → Security tab |
-| 14:00 | security-shannon | Shannon AI pen-test vs staging |
-| 14:30 | sbom | Syft SBOM + Grype CVE scan (NVD + GitHub Advisories + OSV) |
-| 15:00 | snyk | PHP dependency CVEs (Snyk advisory DB) |
-| 15:30 | dependency-check | OWASP Dep-Check vs NVD (catches CVEs before Snyk syncs) |
-| 16:00 | security-zap | OWASP ZAP authenticated baseline scan vs staging |
-| 16:30 | e2e-full-nightly | Playwright full matrix (all browsers) vs staging |
-| 17:00 | nightly-triage | Aggregate results · open GitHub issues · dedup |
-| 17:30 | morning-summary | Single ntfy digest — **silent if all green** |
-| Sun 20:00 | performance-load | k6 50-VU peak load (weekly) |
+| Time      | Job               | Purpose |
+|-----------|-------------------|---------|
+| 04:30     | nightly-self-heal | Cancel stuck runs · fix main drift · prune quarantine |
+| 12:00     | smoke-staging     | Playwright fast smoke vs live Railway staging |
+| 12:30     | performance       | k6 baseline 5→20→50 VU vs staging |
+| 13:00     | mutation-testing  | Infection PHP MSI score |
+| 13:30     | semgrep           | Full `src/` scan, SARIF → Security tab |
+| 14:00     | security-shannon  | Shannon AI pen-test vs staging |
+| 14:30     | sbom              | Syft SBOM + Grype CVE scan (NVD + GitHub Advisories + OSV) |
+| 15:00     | snyk              | PHP dependency CVEs (Snyk advisory DB) |
+| 15:30     | dependency-check  | OWASP Dep-Check vs NVD (catches CVEs before Snyk syncs) |
+| 16:00     | security-zap      | OWASP ZAP authenticated baseline scan vs staging |
+| 16:30     | e2e-full-nightly  | Staging DB re-seeded → Playwright full matrix (all browsers) |
+| 17:00     | nightly-triage    | Aggregate results · open GitHub issues · dedup |
+| 17:30     | morning-summary   | Single ntfy digest — **silent if all green** |
+| Sun 20:00 | performance-load  | k6 50-VU peak load (weekly) |
 
 All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
+
+> **Staging data hygiene**: Shannon AI (14:00) and ZAP (16:00) are authenticated and mutate
+> staging state. The e2e-full-nightly job re-seeds the staging database at 16:30 via
+> `STAGING_SEED_URL` before Playwright runs to prevent state bleed.
 
 ---
 
@@ -77,27 +86,27 @@ All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
 | CodeQL | Deep inter-procedural SAST — injection, auth bypass, data flow | PR + push |
 | Semgrep PHP | Fast SAST — OWASP Top 10, PHP-specific patterns | PR (changed files) + nightly full |
 | PHPStan | Type errors, undefined methods, unreachable code | PR |
-| Hadolint | Dockerfile anti-patterns (root user, unpinned tags, ADD vs COPY) | PR |
-| Checkov | IaC misconfig — docker-compose, Dockerfile, GH Actions workflows | PR + weekly |
+| Hadolint | Dockerfile anti-patterns (root user, unpinned tags, ADD vs COPY) | PR (advisory) |
+| Checkov | IaC misconfig — docker-compose, Dockerfile, GH Actions workflows | PR (advisory) + weekly |
 
 ### Dependency & supply chain
 | Tool | What it catches | When |
 |------|----------------|------|
 | Snyk | CVEs in Composer deps (Snyk advisory DB) | PR + nightly |
 | Composer audit | PHP-native CVE check | PR (unit job) |
-| OWASP Dep-Check | CVEs from NVD directly — catches pre-Snyk-sync findings | Nightly |
+| OWASP Dep-Check | CVEs from NVD directly — catches pre-Snyk-sync findings (~24 h lag) | Nightly |
 | Syft + Grype | Full SBOM (CycloneDX) + CVE scan across NVD/GH Advisories/OSV | PR (lock changes) + nightly |
 | Dependabot | Automated PRs for outdated dependencies | Daily |
 | TruffleHog | Leaked secrets in code and git history | PR + push |
 | SLSA Level 3 | Signed provenance on release artifacts | Release |
-| SHA-pinned actions | All 25 workflows pin `uses:` to commit SHAs | Always |
+| SHA-pinned actions | All workflows pin `uses:` to full commit SHAs | Always |
 
 ### Dynamic & runtime
 | Tool | What it catches | When |
 |------|----------------|------|
 | OWASP ZAP | Authenticated DAST — XSS, injection, misconfigs on running app | Nightly |
 | Shannon AI | AI-driven pen-test — auth flaws, business logic, API abuse | Nightly |
-| Lighthouse CI | WCAG 2.1 accessibility violations, Core Web Vitals | PR (src changes) |
+| Lighthouse CI | WCAG 2.1 accessibility violations, Core Web Vitals | PR (src changes, advisory) |
 
 ### Baselines
 Accepted findings stored in `tests/security/baseline-{zap,shannon,snyk,grype}.json`.  
@@ -109,16 +118,42 @@ Update via: `python3 scripts/ci/update_security_baseline.py <scan>` → PR with 
 
 | Gate | Threshold | Blocks merge? |
 |------|-----------|--------------|
-| PHPUnit unit coverage | ≥ 12% (unit suite only) | Yes |
+| PHPUnit unit coverage | ≥ 80% line coverage (unit suite) | Yes |
 | Codecov patch coverage | ≥ 80% on new lines | Yes |
 | Test-touch rule | Every changed `src/*.php` needs a test diff | Yes (override: `no-test-required` label) |
+| Destructive migration gate | `DROP`/`RENAME` ops require `safe-migration-reviewed` label | Yes |
 | Infection PHP MSI | Tracked, not gated | No (advisory) |
 | Playwright flake quarantine | 3 flakes in 7 days → skip + open issue | Auto-managed |
 | Security notes | Section present on security-touching PRs | No (advisory comment) |
 
 ---
 
-## 5. Performance testing
+## 5. Database migration safety
+
+Auto-rollback undoes the **code** but not the **schema**. A destructive migration
+without backward compatibility → production outage on rollback.
+
+**Rule: every migration must be compatible with the previous deploy (expand/contract).**
+
+| Phase | Action | Rollback safe? |
+|-------|--------|----------------|
+| Expand | Add nullable column / new table | Yes — old code ignores it |
+| Migrate | Backfill + deploy code using new column | Yes |
+| Contract | Remove old column in a *later* PR once LAST\_GOOD\_SHA is the new code | Yes |
+
+**Forbidden in a single deploy**: `DROP COLUMN`, `RENAME COLUMN`, `RENAME TABLE`, `TRUNCATE`.
+
+`scripts/ci/check_destructive_migrations.py` blocks PRs containing these unless
+the `safe-migration-reviewed` label is present (manual confirmation of backward compatibility).
+
+After a deliberate destructive migration merges, update `LAST_GOOD_SHA` immediately:
+```bash
+gh variable set LAST_GOOD_SHA --body "<new SHA>" --repo semajyad/stratflow
+```
+
+---
+
+## 6. Performance testing
 
 | Test | Config | Threshold | When |
 |------|--------|-----------|------|
@@ -130,7 +165,7 @@ Results in `tests/performance/history/YYYY-MM-DD.json`.
 
 ---
 
-## 6. Self-healing behaviours
+## 7. Self-healing behaviours
 
 | Failure | Automatic response | Retry budget |
 |---------|--------------------|-------------|
@@ -140,12 +175,12 @@ Results in `tests/performance/history/YYYY-MM-DD.json`.
 | Hand-written merge conflict | Stop, label `self-heal-failed`, ntfy | — |
 | Stuck GHA runs (> 2 h) | Cancel via API | Nightly |
 | Flaky Playwright test | Auto-retry once; quarantine after 3 flakes in 7 d | Per run |
-| Bad deploy | Auto-rollback to `LAST_GOOD_DEPLOY_ID` | 1 |
+| Bad deploy | Auto-rollback to `LAST_GOOD_SHA` | 1 |
 | CodeRabbit CHANGES_REQUESTED | Claude autofix (≤ 15 turns); retry once | 2 |
 
 ---
 
-## 7. Notification budget
+## 8. Notification budget
 
 | Priority | Fires on |
 |----------|---------|
@@ -158,13 +193,14 @@ Topic: `stratflow-ci` on local ntfy instance.
 
 ---
 
-## 8. Overrides
+## 9. Overrides
 
 | Situation | Override |
 |-----------|---------|
 | PR with no test change | `no-test-required` label + `/no-test-required: <reason>` comment |
+| Destructive migration | `safe-migration-reviewed` label; update `LAST_GOOD_SHA` post-merge |
 | Accept a security finding | `python3 scripts/ci/update_security_baseline.py <scan>` → PR |
 | Deploy paused | `gh workflow run deploy.yml -f confirm=deploy -f clear_pause=yes` |
-| Force-merge a PR | `gh workflow run auto-merge.yml -f pr_number=<N>` |
+| Force-enable auto-merge | `gh workflow run auto-merge.yml -f pr_number=<N>` |
 | Autofix failed | Fix manually, remove `autofix-failed` label |
 | Run any nightly on demand | `gh workflow run <workflow>.yml` |
