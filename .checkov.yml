@@ -1,0 +1,31 @@
+# Checkov IaC scanner configuration
+# https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+
+# Directories to scan
+directory:
+  - docker-compose.yml
+  - docker/php/Dockerfile
+  - .github/workflows
+
+# Output format
+output: sarif
+
+# Skip checks that are dev-environment false positives or intentionally accepted.
+# Each skipped check has a documented reason below.
+skip-check:
+  # CKV_DOCKER_2: No HEALTHCHECK — handled by docker-compose service healthchecks externally
+  - CKV_DOCKER_2
+  # CKV_DOCKER_3: No USER — php-fpm runs as www-data inside the container (set by base image),
+  #               but Checkov flags the absence of an explicit USER line. Accepted.
+  - CKV_DOCKER_3
+  # CKV2_DOCKER_1: Image not using digest pinning — nginx:alpine and mysql:8.4 use version tags,
+  #               not digests. CI rebuilds always pull; self-heal regenerates if drift detected.
+  - CKV2_DOCKER_1
+  # CKV_GHA_7: GitHub Actions — env vars containing secrets passed to subprocess. Flagged on
+  #            test .env creation steps that pass test/placeholder credentials. Not real secrets.
+  - CKV_GHA_7
+
+# Fail on HIGH and CRITICAL only (don't block PRs for LOW/MEDIUM findings)
+hard-fail-on:
+  - HIGH
+  - CRITICAL
