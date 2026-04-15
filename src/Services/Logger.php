@@ -142,7 +142,7 @@ class Logger
         }
 
         // Write to stdout — container platform captures this
-        $stream = self::$outputStream ?? STDOUT;
+        $stream = self::$outputStream ?? \STDOUT;
         fwrite($stream, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
     }
 }
