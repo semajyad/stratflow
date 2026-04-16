@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Required for GitHub Merge Queue — without this trigger the queue stalls.
+  merge_group:
+    branches: [main]
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ github.event.merge_group.head_sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -79,6 +82,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database
@@ -303,6 +308,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database

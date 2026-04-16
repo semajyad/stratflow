@@ -1,0 +1,227 @@
+name: SBOM + Grype vulnerability scan (nightly)
+
+# Generates a CycloneDX SBOM from the installed vendor/ directory using Syft,
+# then scans it with Grype against NVD + GitHub Advisories + OSV simultaneously.
+#
+# Complements Snyk (which uses Snyk's advisory feed from lock files only).
+# Grype scans the actual installed packages — catches CVEs that appear in NVD
+# before Snyk's database syncs, and detects transitive dependency issues.
+#
+# Findings: SARIF uploaded to GitHub Security tab.
+# SBOM: CycloneDX JSON artifact (7-day retention).
+# Baseline: tests/security/baseline-grype.json (commit to accept a finding).
+
+on:
+  schedule:
+    # 14:30 UTC — after mutation testing (14:00), before Shannon (15:00)
+    - cron: '30 14 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'composer.lock'
+      - 'composer.json'
+      - 'tests/security/baseline-grype.json'
+      - '.github/workflows/sbom.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'composer.lock'
+      - 'composer.json'
+      - 'tests/security/baseline-grype.json'
+      - '.github/workflows/sbom.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # for SARIF upload
+
+concurrency:
+  group: sbom-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom-scan:
+    name: SBOM (Syft) + Grype CVE scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, gd, mbstring, curl, mysqlnd
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Install Syft v1.42.4
+        run: |
+          curl -sSfL \
+            https://github.com/anchore/syft/releases/download/v1.42.4/syft_1.42.4_linux_amd64.tar.gz \
+            -o syft.tar.gz
+          # Verify checksum from Syft release checksums file
+          EXPECTED=$(curl -sSfL \
+            https://github.com/anchore/syft/releases/download/v1.42.4/syft_1.42.4_checksums.txt \
+            | grep 'linux_amd64.tar.gz$' | awk '{print $1}')
+          echo "${EXPECTED}  syft.tar.gz" | sha256sum -c --status \
+            || { echo "::error::Syft checksum mismatch"; exit 1; }
+          tar -xzf syft.tar.gz syft
+          sudo mv syft /usr/local/bin/syft
+
+      - name: Install Grype v0.111.0
+        run: |
+          curl -sSfL \
+            https://github.com/anchore/grype/releases/download/v0.111.0/grype_0.111.0_linux_amd64.tar.gz \
+            -o grype.tar.gz
+          EXPECTED=$(curl -sSfL \
+            https://github.com/anchore/grype/releases/download/v0.111.0/grype_0.111.0_checksums.txt \
+            | grep 'linux_amd64.tar.gz$' | awk '{print $1}')
+          echo "${EXPECTED}  grype.tar.gz" | sha256sum -c --status \
+            || { echo "::error::Grype checksum mismatch"; exit 1; }
+          tar -xzf grype.tar.gz grype
+          sudo mv grype /usr/local/bin/grype
+
+      - name: Generate SBOM (CycloneDX JSON)
+        run: |
+          syft . \
+            --output cyclonedx-json=sbom.cyclonedx.json \
+            --exclude './.git' \
+            --exclude './tests' \
+            --exclude './.github'
+          echo "SBOM generated:"
+          python3 -c "
+          import json
+          d = json.load(open('sbom.cyclonedx.json'))
+          comps = d.get('components', [])
+          print(f'  {len(comps)} components catalogued')
+          "
+
+      - name: Scan SBOM with Grype
+        run: |
+          grype sbom:sbom.cyclonedx.json \
+            --output sarif \
+            --file grype-results.sarif \
+            --fail-on critical \
+            --add-cpes-if-none \
+            2>&1 | tee grype-output.txt
+        continue-on-error: true
+        id: grype
+
+      - name: Apply baseline (suppress accepted findings)
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, sys, re
+
+          baseline_path = "tests/security/baseline-grype.json"
+          sarif_path = "grype-results.sarif"
+
+          try:
+              baseline = json.load(open(baseline_path)).get("accepted", [])
+          except Exception:
+              baseline = []
+
+          if not baseline:
+              print("No accepted findings in baseline — nothing to suppress")
+              sys.exit(0)
+
+          try:
+              sarif = json.load(open(sarif_path))
+          except Exception as e:
+              print(f"Could not read SARIF: {e}")
+              sys.exit(0)
+
+          suppressed = 0
+          for run in sarif.get("runs", []):
+              results = run.get("results", [])
+              new_results = []
+              for result in results:
+                  # Build a key from ruleId + artifact path
+                  key = result.get("ruleId", "")
+                  locations = result.get("locations", [{}])
+                  artifact = locations[0].get("physicalLocation", {}).get("artifactLocation", {}).get("uri", "")
+                  entry = f"{key}:{artifact}"
+                  if entry not in baseline:
+                      new_results.append(result)
+                  else:
+                      suppressed += 1
+              run["results"] = new_results
+
+          json.dump(sarif, open(sarif_path, "w"))
+          print(f"Suppressed {suppressed} baseline-accepted finding(s)")
+          PYEOF
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: grype-results.sarif
+          category: grype
+
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cyclonedx.json
+          retention-days: 7
+
+      - name: Fail if Grype found critical CVEs (not in baseline)
+        if: always()
+        run: |
+          # Count non-suppressed results from SARIF AFTER baseline has been applied.
+          # Checking steps.grype.outcome captures pre-baseline state and would always
+          # use the unfiltered finding count, defeating the baseline suppression.
+          python3 - <<'PYEOF'
+          import json, sys
+          try:
+              sarif = json.load(open("grype-results.sarif"))
+          except Exception as e:
+              print(f"Could not read SARIF: {e}")
+              sys.exit(0)
+          remaining = sum(len(run.get("results", [])) for run in sarif.get("runs", []))
+          if remaining > 0:
+              print(f"::error::Grype found {remaining} CRITICAL CVE(s) not in baseline.")
+              print("Review: GitHub Security tab → Code scanning alerts (grype)")
+              print("To accept a finding: update tests/security/baseline-grype.json")
+              sys.exit(1)
+          print(f"No critical CVEs remaining after baseline suppression.")
+          PYEOF
+
+      - name: Write nightly status
+        if: github.event_name == 'schedule' && always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
+          findings = 0
+          try:
+              sarif = json.load(open("grype-results.sarif"))
+              for run in sarif.get("runs", []):
+                  findings += len(run.get("results", []))
+          except Exception:
+              pass
+          payload = {
+              "job": "grype",
+              "status": status,
+              "metric": {"findings": findings},
+              "findings_url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}" if status == "fail" else None,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("nightly-status.json", "w") as f:
+              json.dump(payload, f)
+          PYEOF
+        env:
+          JOB_STATUS: ${{ job.status }}
+
+      - name: Upload nightly status artifact
+        if: github.event_name == 'schedule' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-status-grype
+          path: nightly-status.json
+          retention-days: 7
