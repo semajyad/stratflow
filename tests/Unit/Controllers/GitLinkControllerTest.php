@@ -47,8 +47,8 @@ class GitLinkControllerTest extends ControllerTestCase
         $ctrl = $this->ctrl($request);
         $ctrl->index();
 
-        // Index executes without throwing an exception
-        $this->assertTrue(true);
+        // Index executes and returns JSON response
+        $this->assertNotNull($this->response->jsonPayload);
     }
 
     public function testCreateValidatesLocalType(): void

@@ -73,6 +73,9 @@ class IntegrationControllerTest extends ControllerTestCase
     protected function tearDown(): void
     {
         $_SESSION = [];
+        if (stream_wrapper_exists('php')) {
+            stream_wrapper_unregister('php');
+        }
         parent::tearDown();
     }
 

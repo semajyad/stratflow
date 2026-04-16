@@ -26,11 +26,6 @@ final class DriftControllerTest extends ControllerTestCase
         }
         $_SESSION = [];
 
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('fetch')->willReturn(false);
-        $stmt->method('fetchAll')->willReturn([]);
-        $this->db->method('query')->willReturn($stmt);
-
         $this->actingAs([
             'id'        => 1,
             'org_id'    => 10,

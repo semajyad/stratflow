@@ -20,6 +20,8 @@ class GitHubAppClientTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Save original $_ENV
+        $this->originalEnv = $_ENV;
         $reflection = new \ReflectionClass(GitHubAppClient::class);
         $property = $reflection->getProperty('tokenCache');
         $property->setAccessible(true);
@@ -28,9 +30,12 @@ class GitHubAppClientTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($_ENV['GITHUB_APP_ID'], $_ENV['GITHUB_APP_PRIVATE_KEY'], $_ENV['GITHUB_APP_PRIVATE_KEY_PATH']);
+        // Restore original $_ENV after each test
+        $_ENV = $this->originalEnv;
         parent::tearDown();
     }
+
+    private array $originalEnv = [];
 
     // ===========================
     // JWT MINTING
@@ -97,7 +102,7 @@ class GitHubAppClientTest extends TestCase
         $parts = explode('.', $jwt);
         $this->assertCount(3, $parts);
 
-        $header = json_decode(base64_decode(strtr($parts[0], '-_', '+/') . str_repeat('=', 4 % strlen($parts[0]))), true);
+        $header = json_decode(base64_decode(strtr($parts[0], '-_', '+/') . str_repeat('=', (4 - strlen($parts[0]) % 4) % 4)), true);
         $this->assertIsArray($header);
         $this->assertSame('RS256', $header['alg'] ?? null);
     }
@@ -114,7 +119,7 @@ class GitHubAppClientTest extends TestCase
         $jwt = GitHubAppClient::mintAppJwt();
         $parts = explode('.', $jwt);
 
-        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/') . str_repeat('=', 4 % strlen($parts[1]))), true);
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/') . str_repeat('=', (4 - strlen($parts[1]) % 4) % 4)), true);
         $this->assertIsArray($payload);
         $this->assertSame('67890', $payload['iss'] ?? null);
         $this->assertArrayHasKey('iat', $payload);

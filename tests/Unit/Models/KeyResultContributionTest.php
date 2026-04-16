@@ -23,7 +23,12 @@ class KeyResultContributionTest extends TestCase
     {
         $db = $this->createMock(\StratFlow\Core\Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
-        $db->method('query')->willReturn($stmt);
+
+        // Verify that query() is called with an INSERT or UPDATE statement
+        $db->expects($this->once())
+            ->method('query')
+            ->with($this->stringContains('INSERT'))
+            ->willReturn($stmt);
 
         KeyResultContribution::upsert($db, 1, 5, 1, 15, 'High relevance');
 
@@ -34,7 +39,12 @@ class KeyResultContributionTest extends TestCase
     {
         $db = $this->createMock(\StratFlow\Core\Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
-        $db->method('query')->willReturn($stmt);
+
+        // Verify that query() is called for upsert
+        $db->expects($this->once())
+            ->method('query')
+            ->with($this->stringContains('INSERT'))
+            ->willReturn($stmt);
 
         KeyResultContribution::upsert($db, 1, 5, 1, 8, null);
 

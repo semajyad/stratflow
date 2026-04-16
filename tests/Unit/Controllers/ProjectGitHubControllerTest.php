@@ -50,6 +50,21 @@ class ProjectGitHubControllerTest extends ControllerTestCase
         $this->assertEquals('Project not found.', $_SESSION['flash_error']);
     }
 
+    public function testEditRenderPageWhenProjectFound(): void
+    {
+        $project = ['id' => 1, 'org_id' => 10, 'name' => 'Test Project'];
+        $this->db->method('query')->willReturn($this->stmt(false, []))->willReturnOnConsecutiveCalls(
+            $this->stmt($project),
+            $this->stmt(false, [])
+        );
+
+        $ctrl = $this->ctrl();
+        $ctrl->edit(1);
+
+        // When project is found and authorization passes, should render the edit page
+        $this->assertNotNull($this->response->renderedTemplate);
+    }
+
     public function testSaveReturnFlashErrorForNonExistentProject(): void
     {
         $this->db->method('query')->willReturn($this->stmt(null));

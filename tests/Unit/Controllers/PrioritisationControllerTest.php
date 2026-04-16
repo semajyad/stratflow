@@ -397,5 +397,6 @@ class PrioritisationControllerTest extends ControllerTestCase
         $ctrl->aiBaseline();
 
         $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertArrayHasKey('error', $this->response->jsonPayload ?? []);
     }
 }

@@ -99,7 +99,9 @@ final class GitWebhookControllerTest extends ControllerTestCase
         $output = ob_get_clean();
 
         // No signature should result in error response
-        $this->assertNotEmpty($output);
+        $this->assertJson($output);
+        $decoded = json_decode($output, true);
+        $this->assertArrayHasKey('error', $decoded);
     }
 
     // ===========================
@@ -167,7 +169,7 @@ final class GitWebhookControllerTest extends ControllerTestCase
         ob_start();
         try {
             $this->ctrl($req)->receiveGitHub();
-            $output = ob_get_clean();
+            ob_get_clean();
             $this->assertTrue(true);
         } catch (\Throwable $e) {
             ob_end_clean();
@@ -182,7 +184,7 @@ final class GitWebhookControllerTest extends ControllerTestCase
         ob_start();
         try {
             $this->ctrl($req)->receiveGitLab();
-            $output = ob_get_clean();
+            ob_get_clean();
             $this->assertTrue(true);
         } catch (\Throwable $e) {
             ob_end_clean();

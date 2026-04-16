@@ -36,6 +36,13 @@ class SprintControllerTest extends ControllerTestCase
         return new SprintController($r ?? $this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
     }
 
+    /**
+     * Create a PDOStatement mock with predictable fetch/fetchAll results.
+     *
+     * @param mixed $fetch Value to return from fetch() (null becomes false)
+     * @param array $all Array to return from fetchAll()
+     * @return \PDOStatement Mock statement with configured behavior
+     */
     private function stmt(mixed $fetch, array $all = []): \PDOStatement
     {
         $s = $this->createMock(\PDOStatement::class);
@@ -302,6 +309,8 @@ class SprintControllerTest extends ControllerTestCase
         );
         $this->ctrl()->delete(1);
         $this->assertSame('/app/sprints?project_id=999', $this->response->redirectedTo);
+        // Verify access denied for different project's sprint
+        $this->assertArrayHasKey('flash_error', $_SESSION);
     }
 
     // ===== assignStory() =====
