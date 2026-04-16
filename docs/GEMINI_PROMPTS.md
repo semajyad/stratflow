@@ -2,7 +2,7 @@
 
 StratFlow uses seven prompt classes in `src/Services/Prompts/`. All prompts are PHP string constants — no templating library. They are passed to `GeminiService::generate()` alongside the user-supplied content.
 
-All prompts target the `gemini-3-flash-preview model.
+All prompts target the `gemini-3-flash-preview` model.
 
 ---
 
@@ -596,13 +596,124 @@ Description: {story_description}
 
 ---
 
+## 12. KR Scoring Prompt
+
+**File:** `src/Services/Prompts/KrScoringPrompt.php`
+**Constant:** `KrScoringPrompt::PROMPT`
+**Used by:** `KrScoringService` (called once per merged PR × key result pair)
+
+### Purpose
+
+Scores how much a merged GitHub pull request contributes to a specific Key Result. Called by `KrScoringService` after `GitPrMatcherService` identifies candidate PR-to-story links. Results are stored in `key_result_contributions`.
+
+### Input format
+
+The prompt constant is the preamble. The content appended is a JSON object:
+
+```json
+{
+  "kr_title": "...",
+  "kr_description": "...",
+  "kr_target": "...",
+  "pr_title": "...",
+  "pr_body": "..."
+}
+```
+
+### Expected output
+
+A JSON object only, no prose:
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `score` | integer | 0–10 contribution score |
+| `rationale` | string | One sentence, max 120 characters |
+
+### Prompt text
+
+```
+You are an engineering performance analyst. Given a Key Result (KR) and a merged
+pull request, score how much the PR contributes to that KR.
+
+Scoring guide (integer 0–10):
+0  — No discernible connection
+1–3 — Marginal or indirect contribution
+4–6 — Moderate contribution, addresses part of the KR
+7–9 — Strong contribution, directly advances the KR
+10 — Complete or near-complete realisation of the KR
+
+Rules:
+1. Return ONLY a JSON object. No prose, no markdown.
+2. Shape: {"score": <integer 0–10>, "rationale": "<one concise sentence max 120 chars>"}
+3. Be conservative — if uncertain, score lower.
+
+Input JSON:
+```
+
+---
+
+## 13. Git PR Match Prompt
+
+**File:** `src/Services/Prompts/GitPrMatchPrompt.php`
+**Constant:** `GitPrMatchPrompt::PROMPT`
+**Used by:** `GitPrMatcherService`
+
+### Purpose
+
+Given a merged GitHub pull request and a list of candidate StratFlow work items (stories or high-level items), identifies which items the PR most likely contributes to and returns a confidence score for each match. Results above 0.5 confidence are used to create `story_git_links` records.
+
+### Input format
+
+The prompt constant is the preamble. The content appended is a JSON object:
+
+```json
+{
+  "pr_title": "...",
+  "pr_body": "...",
+  "branch": "...",
+  "candidates": [
+    {"id": 1, "type": "user_story", "title": "...", "description": "..."},
+    ...
+  ]
+}
+```
+
+### Expected output
+
+A JSON array of matched candidates (confidence > 0.5 only):
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `id` | integer | Candidate item ID |
+| `type` | string | `user_story` or `hl_work_item` |
+| `confidence` | float | 0.0–1.0 — omit candidates below 0.5 |
+
+### Prompt text
+
+```
+You are a software-delivery analyst. Given a GitHub pull request and a list of candidate
+work items (user stories or OKR work items), identify which items this PR most likely
+contributes to.
+
+Rules:
+1. Only include candidates where you are genuinely confident the PR contributes to that item.
+2. Confidence is a float from 0.0 to 1.0.
+3. Only return candidates with confidence > 0.5. Omit everything else.
+4. Respond ONLY with a JSON array. No prose, no markdown fences.
+5. Each element: {"id": <integer>, "type": "<user_story|hl_work_item>", "confidence": <float>}
+
+Input JSON:
+```
+
+---
+
 ## Tuning Notes
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| Model | `gemini-3-flash-preview | Fast, cost-effective; suitable for structured output tasks |
-| Temperature | 0.7 | Balances creativity and consistency; lower values (0.2–0.4) produce more deterministic JSON output |
-| maxOutputTokens | 4096 | Sufficient for all prompts; increase if work item lists are truncated on large diagrams |
+| Model | `gemini-3-flash-preview` | Fast, cost-effective; suitable for structured output tasks |
+| Temperature | 0.4 | Produces deterministic structured output |
+| maxOutputTokens | 8192 | Sufficient for all prompts including full board conversations |
 
 ### Improving JSON reliability
 
