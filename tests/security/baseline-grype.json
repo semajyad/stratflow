@@ -1,0 +1,4 @@
+{
+  "_comment": "Accepted Grype findings. Add entries here via: grype sbom:sbom.cyclonedx.json -o json | python3 scripts/ci/update_security_baseline.py grype",
+  "accepted": []
+}

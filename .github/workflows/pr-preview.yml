@@ -30,12 +30,35 @@ permissions:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
+  # Precheck — determine whether Railway secret is configured
+  # secrets context is unavailable in job-level if expressions; evaluate
+  # it inside a step and surface the result as a job output instead.
+  # ─────────────────────────────────────────────────────────────────────────
+  precheck:
+    name: Check Railway token presence
+    runs-on: ubuntu-latest
+    outputs:
+      railway_present: ${{ steps.check.outputs.railway_present }}
+    steps:
+      - name: Detect Railway token
+        id: check
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            echo "railway_present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "railway_present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────
   # Provision — create ephemeral environment on PR open/sync
   # ─────────────────────────────────────────────────────────────────────────
   provision:
     name: Provision PR preview
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
+    needs: precheck
+    if: github.event.action != 'closed' && needs.precheck.outputs.railway_present == 'true'
 
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
@@ -160,7 +183,8 @@ jobs:
   teardown:
     name: Teardown PR preview
     runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
+    needs: precheck
+    if: github.event.action == 'closed' && needs.precheck.outputs.railway_present == 'true'
 
     steps:
       - name: Delete Railway environment

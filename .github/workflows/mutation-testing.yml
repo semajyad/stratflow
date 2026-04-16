@@ -75,7 +75,7 @@ jobs:
           vendor/bin/infection \
             --configuration=infection.json \
             --threads=4 \
-            --only-covered \
+            --only-covering-test-cases \
             --show-mutations \
             --no-progress
         continue-on-error: true  # capture exit code; we report below

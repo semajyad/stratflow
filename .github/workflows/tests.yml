@@ -65,6 +65,16 @@ jobs:
       - name: PHP syntax lint
         run: find src public tests -name '*.php' -print0 | xargs -0 -P4 -n1 php -l > /dev/null
 
+      - name: Hadolint — Dockerfile lint
+        run: |
+          curl -sSfL \
+            https://github.com/hadolint/hadolint/releases/download/v2.14.0/hadolint-Linux-x86_64 \
+            -o /usr/local/bin/hadolint
+          echo "6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47  /usr/local/bin/hadolint" | sha256sum -c --status \
+            || { echo "::error::Hadolint binary checksum mismatch"; exit 1; }
+          chmod +x /usr/local/bin/hadolint
+          hadolint docker/php/Dockerfile
+
       - name: Composer security audit
         run: composer audit --no-dev --format=plain
 
@@ -100,6 +110,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
 
       - name: Run unit tests with coverage
         run: |
@@ -111,18 +123,22 @@ jobs:
             --log-junit junit-unit.xml \
             --colors=never
 
-      - name: Enforce coverage threshold (≥60%)
+      - name: Enforce coverage threshold (≥65% lines)
         run: |
-          COVERAGE=$(php -r "
+          RESULT=$(php -r "
             \$xml = simplexml_load_file('coverage.xml');
-            \$metrics = \$xml->project->metrics;
-            \$total = (int) \$metrics['statements'];
-            \$covered = (int) \$metrics['coveredstatements'];
-            echo \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
+            \$m = \$xml->project->metrics;
+            \$total = (int)\$m['statements'];
+            \$covered = (int)\$m['coveredstatements'];
+            \$pct = \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
+            echo \"\$covered/\$total/\$pct\";
           ")
-          echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 12" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below the 12% threshold (unit suite only; integration suite coverage is measured separately)."
+          COVERED=$(echo "$RESULT" | cut -d/ -f1)
+          TOTAL=$(echo "$RESULT" | cut -d/ -f2)
+          PCT=$(echo "$RESULT" | cut -d/ -f3)
+          echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL} statements)"
+          if awk "BEGIN { exit (${PCT} >= 65) }"; then
+            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the 65% threshold. Add unit tests to bridge the gap."
             exit 1
           fi
 
@@ -226,6 +242,7 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=15
+          --tmpfs /var/lib/mysql:rw,noexec,nosuid,size=512m
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -273,6 +290,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
 
       - name: Initialize database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
@@ -317,6 +336,16 @@ jobs:
       - name: Enforce test-touches-code rule
         run: |
           python3 scripts/ci/check_test_touches.py \
+            --base origin/main \
+            --head HEAD
+        env:
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for destructive migrations
+        run: |
+          python3 scripts/ci/check_destructive_migrations.py \
             --base origin/main \
             --head HEAD
         env:

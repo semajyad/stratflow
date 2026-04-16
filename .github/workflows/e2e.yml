@@ -5,12 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Required for GitHub Merge Queue — without this trigger the queue stalls.
+  merge_group:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ github.event.merge_group.head_sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +38,7 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=15
+          --tmpfs /var/lib/mysql:rw,noexec,nosuid,size=512m
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -81,6 +85,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database
@@ -260,6 +266,7 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=15
+          --tmpfs /var/lib/mysql:rw,noexec,nosuid,size=512m
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -306,6 +313,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database

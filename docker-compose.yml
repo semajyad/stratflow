@@ -65,6 +65,31 @@ services:
     networks:
       - stratflow
 
+  # ── GrowthBook — feature flags & A/B testing ──────────────────────────────
+  mongo:
+    image: mongo:7.0
+    volumes:
+      - ./docker/mongo-data:/data/db
+    networks:
+      - stratflow
+    # No ports exposed — only GrowthBook needs direct access
+
+  growthbook:
+    image: growthbook/growthbook:latest
+    ports:
+      - "3100:3100"   # GrowthBook UI
+      - "3101:3101"   # GrowthBook API (SDK connections)
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/growthbook
+      APP_ORIGIN: http://localhost:3100
+      API_HOST: http://localhost:3101
+    depends_on:
+      - mongo
+    volumes:
+      - ./docker/growthbook-uploads:/usr/local/src/app/packages/back-end/uploads
+    networks:
+      - stratflow
+
 networks:
   stratflow:
     driver: bridge
