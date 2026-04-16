@@ -68,6 +68,31 @@ This creates your branch from `origin/main`, registers your session in the ledge
 python scripts/agent/safe-commit.py -m "feat: ..." src/Foo.php tests/Unit/FooTest.php
 ```
 
+## CI / Branch Hygiene Rules
+
+**Rebase, never merge main into a feature branch.**
+`git merge main` creates a merge commit that makes GitHub report `CONFLICTING`
+for squash-merge PRs, requiring a clean linear branch to be recreated. Always use:
+```bash
+git fetch origin && git rebase origin/main
+```
+
+**When `pull_request:synchronize` events don't fire**, manually trigger Tests with:
+```bash
+gh workflow run tests.yml --repo semajyad/stratflow --ref <branch-name>
+```
+
+**Coverage threshold** lives in `.github/coverage-threshold.txt` — not hardcoded
+in `tests.yml`. Edit that file, not the workflow, when raising the threshold.
+
+**Playwright CI result** is parsed from `test-results.json` (written by
+`PLAYWRIGHT_JSON_OUTPUT_NAME` env var). Never trust `--reporter=json` stdout output
+or a grep-based fallback — both false-positive when git diff metadata contains "failed".
+
+**Admin merge is appropriate** when:
+- Playwright (fast) fails but the run shows 0 unexpected / 0 flaky (known false positive)
+- The branch is clean and the only failing check is a status check from a stale commit
+
 ## Continuous Improvement — Learnings
 
 When any CI/CD, security, or test failure occurs that reveals a non-obvious root cause, record it:
