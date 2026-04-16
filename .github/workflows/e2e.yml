@@ -133,34 +133,39 @@ jobs:
           DB_USERNAME: 'stratflow'
           DB_PASSWORD: 'stratflow_secret'
           DB_DATABASE: 'stratflow'
+          # Without this env var, --reporter=json writes to stdout and
+          # test-results.json never exists, causing a grep-based fallback
+          # that false-positives on the word "failed" in git diff metadata.
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results.json
         run: |
           # --retries=1 auto-retries each failing test once before marking as failed.
           # A test that passes on retry is recorded as "flaky" in the JSON report.
           npx playwright test --project=fast \
             --retries=1 \
             --reporter=json,html \
-            --output=test-results 2>&1 | tee /tmp/playwright-output.txt || true
+            --output=test-results || true
 
-          # Parse the JSON report to determine actual pass/fail status
-          # (pipe needed because playwright exits 1 even when all pass after retry)
-          if [ -f "test-results.json" ]; then
-            FAILED=$(python3 -c "
+          # Parse the JSON report to determine actual pass/fail status.
+          # Playwright exits 1 even when all tests pass after a retry; we rely
+          # solely on the JSON file — never on grep over raw output.
+          FAILED=$(python3 -c "
           import json, sys
           try:
               d = json.load(open('test-results.json'))
-              # Count tests that failed after all retries (not just the initial run)
+              # Playwright JSON uses 'unexpected' for tests that failed after all retries
               failed = sum(
                   1 for suite in d.get('suites', [])
                   for spec in suite.get('specs', [])
                   for test in spec.get('tests', [])
-                  if test.get('status') == 'failed'
+                  if test.get('status') == 'unexpected'
               )
               print(failed)
           except Exception as e:
-              print(0)
-          " 2>/dev/null || echo "0")
+              print('JSON_PARSE_ERROR', file=__import__('sys').stderr)
+              print(1)
+          " 2>/dev/null || echo "1")
 
-            FLAKY=$(python3 -c "
+          FLAKY=$(python3 -c "
           import json, sys
           try:
               d = json.load(open('test-results.json'))
@@ -175,21 +180,15 @@ jobs:
               print(0)
           " 2>/dev/null || echo "0")
 
-            echo "Failed: $FAILED | Flaky (passed on retry): $FLAKY"
+          echo "Failed: $FAILED | Flaky (passed on retry): $FLAKY"
 
-            if [ "$FLAKY" -gt 0 ]; then
-              echo "::warning::$FLAKY test(s) are flaky — passed on retry. Track quarantine."
-            fi
+          if [ "$FLAKY" -gt 0 ]; then
+            echo "::warning::$FLAKY test(s) are flaky — passed on retry. Track quarantine."
+          fi
 
-            if [ "$FAILED" -gt 0 ]; then
-              echo "::error::$FAILED test(s) failed after all retries"
-              exit 1
-            fi
-          else
-            # Fallback: check playwright output for failure indicators
-            if grep -q "failed" /tmp/playwright-output.txt && ! grep -q "0 failed" /tmp/playwright-output.txt; then
-              exit 1
-            fi
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED test(s) failed after all retries"
+            exit 1
           fi
 
       - name: Upload Playwright artifacts on failure

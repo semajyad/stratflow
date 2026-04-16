@@ -36,6 +36,77 @@ Categories: `ci`, `security`, `tests`, `quality`
 
 **Follow-up:** None — fully resolved.
 
+---
+
+## [2026-04-16] ci — Playwright false positive blocks every PR
+
+**Symptom:** Playwright (fast — Chromium) CI job reports failure on PRs even when the run shows "21 passed, 0 unexpected, 0 flaky". Every PR in the #22–#29 batch was blocked by this.
+
+**Root cause:** Three compounding bugs in `e2e.yml`:
+1. `--reporter=json` without `PLAYWRIGHT_JSON_OUTPUT_NAME` sends JSON to stdout. `test-results.json` never gets written to disk.
+2. The `if [ -f "test-results.json" ]` branch is never taken; the script falls through to the else branch.
+3. The fallback `grep -q "failed" /tmp/playwright-output.txt` matches the word "failed" inside the JSON's embedded git diff metadata (e.g., PR template diff text), triggering a false exit 1.
+4. A secondary bug: `test.get('status') == 'failed'` in the Python block is wrong — Playwright JSON uses `'unexpected'` for tests that failed after all retries.
+
+**Fix applied:** Added `PLAYWRIGHT_JSON_OUTPUT_NAME: test-results.json` env var to the Playwright run step. Removed the fallback grep entirely — we rely solely on the JSON file. Fixed the Python status key to `'unexpected'`. When JSON parsing fails, we now default to exit 1 (fail-safe) rather than silently passing.
+
+**Prevention:** `test-results.json` will always be written now. The grep fallback is gone. Added a comment in `e2e.yml` explaining why the env var is mandatory. Committed in PR #35.
+
+**Follow-up:** None.
+
+---
+
+## [2026-04-16] ci — `pull_request:synchronize` events not firing for branch pushes
+
+**Symptom:** After pushing commits (including `--allow-empty` commits and real file changes) to PR branches, the `Tests` workflow never re-triggered. Push-event workflows (multi-agent-guard, coderabbit-autofix) fired normally, but `pull_request`-event workflows did not.
+
+**Root cause:** Unknown — likely a GitHub Actions event delivery issue when pushing from a detached HEAD in a git worktree, or GitHub rate-limiting `pull_request:synchronize` events on rapid sequential pushes. Did not affect push-event workflows.
+
+**Fix applied:** Added `workflow_dispatch` trigger to `tests.yml` so it can be manually triggered via `gh workflow run tests.yml --ref <branch>`.
+
+**Prevention:** When `pull_request:synchronize` events don't fire, use:
+```bash
+gh workflow run tests.yml --repo semajyad/stratflow --ref <branch-name>
+```
+Do not waste time with `--allow-empty` commits or `gh run rerun` — neither triggers new `pull_request` event runs.
+
+**Follow-up:** None.
+
+---
+
+## [2026-04-16] ci — Merge commit in PR branch causes GitHub squash-merge CONFLICTING
+
+**Symptom:** After running `git merge origin/main` in a feature branch to resolve conflicts and pushing, GitHub reported `mergeStateStatus: DIRTY / mergeable: CONFLICTING`, preventing even admin squash-merge.
+
+**Root cause:** When you merge main INTO a branch, the branch tip is a merge commit with main as a parent. GitHub's squash-merge algorithm sees the branch as having commits that are already on main, and its three-way diff calculation reports a conflict it cannot resolve automatically.
+
+**Fix applied:** Created a clean linear branch (`git checkout -b temp-clean origin/main && git merge --squash <branch-tip>` + resolve conflicts + commit), pushed under a new branch name, opened a new PR, merged that.
+
+**Prevention:** **Always rebase, never merge main into a feature branch.** The correct workflow is:
+```bash
+git fetch origin
+git rebase origin/main
+# resolve conflicts, then git rebase --continue
+git push --force-with-lease origin HEAD:<branch>
+```
+Rebasing produces a linear history that GitHub squash-merges cleanly.
+
+**Follow-up:** Added rule to `CLAUDE.md`.
+
+---
+
+## [2026-04-16] ci — Coverage threshold conflicts across concurrent PRs
+
+**Symptom:** Multiple concurrent PRs (#22, #23, #27) all modified the coverage threshold line in `tests.yml` (28% → 27%, 28% → 65%, etc.). Every PR that came after the first needed a conflict resolution on this one line.
+
+**Root cause:** The coverage threshold was hardcoded directly in `tests.yml`, so any PR raising the threshold and any other PR touching `tests.yml` for any reason would conflict.
+
+**Fix applied:** Extracted threshold to `.github/coverage-threshold.txt`. `tests.yml` reads it at runtime: `THRESHOLD=$(cat .github/coverage-threshold.txt | tr -d '[:space:]')`.
+
+**Prevention:** Raising the coverage bar is now a one-line change to a dedicated file that no other CI changes touch. Committed in PR #35.
+
+**Follow-up:** None.
+
 **PR/Commit:** #14
 
 ---

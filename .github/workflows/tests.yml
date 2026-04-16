@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you manually triggering? (for audit log)'
+        required: false
+        default: 'manual re-run'
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -123,8 +129,11 @@ jobs:
             --log-junit junit-unit.xml \
             --colors=never
 
-      - name: Enforce coverage threshold (≥65% lines)
+      - name: Enforce coverage threshold
         run: |
+          # Threshold is stored in .github/coverage-threshold.txt so concurrent
+          # PRs raising it don't conflict inside this workflow file.
+          THRESHOLD=$(cat .github/coverage-threshold.txt | tr -d '[:space:]')
           RESULT=$(php -r "
             \$xml = simplexml_load_file('coverage.xml');
             \$m = \$xml->project->metrics;
@@ -136,9 +145,9 @@ jobs:
           COVERED=$(echo "$RESULT" | cut -d/ -f1)
           TOTAL=$(echo "$RESULT" | cut -d/ -f2)
           PCT=$(echo "$RESULT" | cut -d/ -f3)
-          echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL} statements)"
-          if awk "BEGIN { exit (${PCT} >= 65) }"; then
-            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the 65% threshold. Add unit tests to bridge the gap."
+          echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL} statements) — threshold: ${THRESHOLD}%"
+          if awk "BEGIN { exit (${PCT} >= ${THRESHOLD}) }"; then
+            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the ${THRESHOLD}% threshold. Add unit tests to bridge the gap."
             exit 1
           fi
 
