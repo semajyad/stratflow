@@ -117,12 +117,14 @@ jobs:
 
       - name: Deploy to PR environment
         id: deploy
+        continue-on-error: true
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_ENVIRONMENT: pr-${{ github.event.pull_request.number }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE_NAME }}
         run: |
-          railway up --detach --environment "$RAILWAY_ENVIRONMENT" 2>/dev/null \
-            || railway up --detach  # fallback to default if env flag unsupported
+          railway up --detach --environment "$RAILWAY_ENVIRONMENT" ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE} 2>/dev/null \
+            || railway up --detach ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE}  # fallback: no env flag
 
           # Construct preview URL (Railway naming convention)
           SLUG=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
