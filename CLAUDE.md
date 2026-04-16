@@ -59,7 +59,13 @@ This is non-negotiable. Do not open a PR, commit source changes, or mark a task 
 ```bash
 python scripts/agent/session-start.py --agent-id <your-id> --goal "<short goal>" --files "<glob>"
 ```
-This creates your branch from `origin/main`, registers your session in the ledger, and shows a briefing of other active sessions. See `docs/AGENT_WORKFLOW.md` for full details.
+This creates your branch from `origin/main`, registers your session in the ledger, shows a briefing of other active sessions, and installs git hooks automatically. See `docs/AGENT_WORKFLOW.md` for full details.
+
+**On a fresh clone (or if hooks are missing), install them manually:**
+```bash
+sh scripts/install-hooks.sh
+```
+Hooks live in `scripts/hooks/` (versioned) and are installed to `.git/hooks/`.
 
 **If you think work is "missing"**, run `python scripts/agent/recover.py` first — it scans reflog, stash, and unpushed branches before assuming data loss.
 

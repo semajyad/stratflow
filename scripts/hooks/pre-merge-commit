@@ -1,0 +1,50 @@
+#!/bin/sh
+# --- merge-guard start ---
+# Block merging main/origin-main into a feature branch.
+#
+# Merging main into a branch creates a merge commit. GitHub's squash-merge
+# algorithm sees the branch as diverged from main and reports
+# mergeable: CONFLICTING, requiring a clean linear branch to be recreated.
+#
+# Always rebase instead:
+#   git merge --abort
+#   git fetch origin && git rebase origin/main
+#
+# To bypass (e.g. intentional octopus merge): SKIP_MERGE_GUARD=1 git merge ...
+# --- merge-guard start ---
+
+if [ "${SKIP_MERGE_GUARD}" = "1" ]; then
+    exit 0
+fi
+
+MERGE_HEAD_FILE="$(git rev-parse --git-dir)/MERGE_HEAD"
+if [ ! -f "$MERGE_HEAD_FILE" ]; then
+    exit 0
+fi
+
+MERGE_HEAD=$(cat "$MERGE_HEAD_FILE")
+
+# Resolve the branch name(s) that MERGE_HEAD belongs to
+MERGING_BRANCH=$(git name-rev --name-only "$MERGE_HEAD" 2>/dev/null)
+
+case "$MERGING_BRANCH" in
+    main|origin/main|remotes/origin/main|"refs/remotes/origin/main")
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        echo "║  BLOCKED: Never merge main into a feature branch            ║"
+        echo "╠══════════════════════════════════════════════════════════════╣"
+        echo "║  Merging main creates a merge commit. GitHub squash-merge   ║"
+        echo "║  then reports CONFLICTING and blocks your PR.               ║"
+        echo "║                                                              ║"
+        echo "║  Use rebase instead:                                        ║"
+        echo "║    git merge --abort                                        ║"
+        echo "║    git fetch origin && git rebase origin/main              ║"
+        echo "║                                                              ║"
+        echo "║  To bypass: SKIP_MERGE_GUARD=1 git merge ...               ║"
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        exit 1
+        ;;
+esac
+
+exit 0
+# --- merge-guard end ---
