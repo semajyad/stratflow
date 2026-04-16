@@ -20,7 +20,7 @@ import sys
 
 # Paths that warrant a security note when changed
 SECURITY_SENSITIVE = [
-    r"^src/Controllers/Auth",
+    r"^src/Controllers/",   # all controllers touch auth/data boundaries
     r"^src/Middleware/",
     r"^src/Security/",
     r"^src/Services/Auth",
