@@ -46,7 +46,17 @@ class PermissionBoundaryTest extends TestCase
     {
         $this->db = new Database(getTestDbConfig());
 
-        // Scrub stale data
+        // Scrub stale data — FK-safe: delete children before parent
+        $this->db->query(
+            "DELETE p FROM projects p
+             JOIN organisations o ON o.id = p.org_id
+             WHERE o.name LIKE 'PermBoundaryTest%'"
+        );
+        $this->db->query(
+            "DELETE u FROM users u
+             JOIN organisations o ON o.id = u.org_id
+             WHERE o.name LIKE 'PermBoundaryTest%'"
+        );
         $this->db->query("DELETE FROM organisations WHERE name LIKE 'PermBoundaryTest%'");
 
         // Ensure the capabilities tables have the minimum rows PermissionService
