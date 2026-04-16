@@ -225,6 +225,16 @@ main.container {
     min-height: 100vh;
 }
 
+/* === Admin / Superadmin page themes ======================================== */
+.admin-theme .app-content {
+    background: #f1f5f9;
+}
+
+.superadmin-theme .app-content {
+    background: #eff6ff;
+}
+
+
 /* === Sidebar ================================================================ */
 
 .sidebar {
@@ -3958,6 +3968,16 @@ tbody tr:hover {
     margin-top: 1rem;
 }
 
+
+.settings-defaults-row-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+}
+
 .settings-flex-wrap {
     display: flex;
     flex-wrap: wrap;
@@ -4357,6 +4377,12 @@ tbody tr:hover {
 .billing-table__row {
     border-bottom: 1px solid var(--border);
 }
+
+.billing-table__row--muted td {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
 
 .billing-table__row--header {
     border-bottom: 2px solid var(--border);

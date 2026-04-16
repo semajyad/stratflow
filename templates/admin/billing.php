@@ -357,15 +357,51 @@ $billingContact  = $billing_contact ?? [];
                 </tr>
             </thead>
             <tbody>
+                <?php
+                // Base subscription row (plan included)
+                $basePriceCents     = 0; // included in per-seat price
+                $unusedSeats        = max(0, $seat_limit - $active_users);
+                $activeSeatsCents   = $pricePerSeat * $active_users;
+                $unusedSeatsCents   = $pricePerSeat * $unusedSeats;
+                $perMonthCents      = $billingPeriodMo > 1 ? (int) round($totalCostCents / $billingPeriodMo) : 0;
+                ?>
                 <tr class="billing-table__row">
                     <td class="billing-table__cell">
-                        <div class="billing-line-item-title">StratFlow <?= htmlspecialchars(ucfirst($plan)) ?></div>
-                        <div class="billing-line-item-subtitle"><?= htmlspecialchars($periodLabel) ?> subscription &mdash; <?= $active_users ?> of <?= $seat_limit ?> seats in use</div>
+                        <div class="billing-line-item-title">StratFlow <?= htmlspecialchars(ucfirst($plan)) ?> — Base Subscription</div>
+                        <div class="billing-line-item-subtitle"><?= htmlspecialchars($periodLabel) ?> plan &mdash; includes all seats</div>
                     </td>
                     <td class="billing-table__cell billing-table__cell--right">$<?= number_format($pricePerSeat / 100, 2) ?>/seat</td>
-                    <td class="billing-table__cell billing-table__cell--center"><?= $seat_limit ?></td>
-                    <td class="billing-table__cell billing-table__cell--right billing-table__cell--strong">$<?= number_format($totalCostCents / 100, 2) ?></td>
+                    <td class="billing-table__cell billing-table__cell--center">&mdash;</td>
+                    <td class="billing-table__cell billing-table__cell--right">Included</td>
                 </tr>
+                <tr class="billing-table__row">
+                    <td class="billing-table__cell">
+                        <div class="billing-line-item-title">Active Seats</div>
+                        <div class="billing-line-item-subtitle"><?= $active_users ?> of <?= $seat_limit ?> seats currently in use</div>
+                    </td>
+                    <td class="billing-table__cell billing-table__cell--right">$<?= number_format($pricePerSeat / 100, 2) ?>/seat</td>
+                    <td class="billing-table__cell billing-table__cell--center"><?= $active_users ?></td>
+                    <td class="billing-table__cell billing-table__cell--right">$<?= number_format($activeSeatsCents / 100, 2) ?></td>
+                </tr>
+                <?php if ($unusedSeats > 0): ?>
+                <tr class="billing-table__row billing-table__row--muted">
+                    <td class="billing-table__cell">
+                        <div class="billing-line-item-title">Unused Seats</div>
+                        <div class="billing-line-item-subtitle"><?= $unusedSeats ?> purchased seat<?= $unusedSeats !== 1 ? 's' : '' ?> not yet assigned</div>
+                    </td>
+                    <td class="billing-table__cell billing-table__cell--right">$<?= number_format($pricePerSeat / 100, 2) ?>/seat</td>
+                    <td class="billing-table__cell billing-table__cell--center"><?= $unusedSeats ?></td>
+                    <td class="billing-table__cell billing-table__cell--right">$<?= number_format($unusedSeatsCents / 100, 2) ?></td>
+                </tr>
+                <?php endif; ?>
+                <?php if ($perMonthCents > 0): ?>
+                <tr class="billing-table__row billing-table__row--muted">
+                    <td class="billing-table__cell" colspan="3">
+                        <div class="billing-line-item-subtitle">Monthly equivalent (<?= $billingPeriodMo ?>-month billing period)</div>
+                    </td>
+                    <td class="billing-table__cell billing-table__cell--right">~$<?= number_format($perMonthCents / 100, 2) ?>/mo</td>
+                </tr>
+                <?php endif; ?>
             </tbody>
             <tfoot>
                 <tr class="billing-total-row">

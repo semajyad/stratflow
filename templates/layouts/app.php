@@ -9,7 +9,13 @@
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= ASSET_VERSION ?>">
     <script src="/assets/js/app-preload.js?v=<?= ASSET_VERSION ?>"></script>
 </head>
-<body class="app-layout">
+<?php
+$_uri = $_SERVER['REQUEST_URI'] ?? '';
+$_bodyClass = 'app-layout';
+if (str_starts_with($_uri, '/superadmin')) { $_bodyClass .= ' superadmin-theme'; }
+elseif (str_contains($_uri, '/app/admin')) { $_bodyClass .= ' admin-theme'; }
+?>
+<body class="<?= htmlspecialchars($_bodyClass) ?>">
     <div class="app-wrapper">
         <?php require __DIR__ . '/../partials/sidebar.php'; ?>
         <div class="app-main">

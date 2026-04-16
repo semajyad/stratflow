@@ -113,7 +113,7 @@ class WorkItemController
 // Quality visibility: off when disabled at system level OR at org level
         $systemSettings = \StratFlow\Models\SystemSettings::get($this->db);
         $showQuality    = !empty($systemSettings['feature_story_quality'])
-                          && ($orgSettings['quality']['enabled'] ?? false);
+                          && ($orgSettings['quality']['hl_enabled'] ?? false);
         $teams = \StratFlow\Models\Team::findByOrgId($this->db, $orgId);
         $this->response->render('work-items', [
             'user'                 => $user,
