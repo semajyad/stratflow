@@ -65,7 +65,7 @@ jobs:
       environment_id: ${{ steps.create-env.outputs.environment_id }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli

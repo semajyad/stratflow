@@ -11,6 +11,9 @@ on:
     - cron: "30 16 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: e2e-full-nightly
   cancel-in-progress: true
@@ -22,10 +25,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
           cache: npm
@@ -95,7 +98,7 @@ jobs:
 
       - name: Upload nightly status artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: nightly-status-e2e
           path: nightly-status.json
@@ -103,7 +106,7 @@ jobs:
 
       - name: Upload Playwright artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: e2e-nightly-artifacts
           path: tests/Playwright/test-results/
