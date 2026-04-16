@@ -88,3 +88,31 @@ if [ "${SKIP_COVERAGE_CHECK}" != "1" ]; then
     esac
 fi
 # --- bug-test gate end ---
+
+# --- docs-check start ---
+# Enforce: documentation must be updated when tracked source files change.
+# See scripts/ci/check_docs.py for the full rule set.
+# Skip by setting: SKIP_DOCS_CHECK=1 git commit ...
+if [ "${SKIP_DOCS_CHECK}" != "1" ]; then
+    PYTHON=""
+    for candidate in python3 python; do
+        if command -v "$candidate" > /dev/null 2>&1; then
+            if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
+                PYTHON="$candidate"
+                break
+            fi
+        fi
+    done
+    DOCS_SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_docs.py"
+    if [ -n "$PYTHON" ] && [ -f "$DOCS_SCRIPT" ]; then
+        "$PYTHON" "$DOCS_SCRIPT" --staged
+        DOCS_EXIT=$?
+        if [ $DOCS_EXIT -ne 0 ]; then
+            echo ""
+            echo "Commit blocked: update the listed documentation files, then re-commit."
+            echo "To bypass (emergency only): SKIP_DOCS_CHECK=1 git commit ..."
+            exit 1
+        fi
+    fi
+fi
+# --- docs-check end ---

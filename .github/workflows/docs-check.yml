@@ -1,0 +1,56 @@
+name: Documentation check
+
+# Blocks merge when source files change without the corresponding doc updates.
+#
+# Rules enforced (see scripts/ci/check_docs.py for the full list):
+#   routes.php changed          →  docs/API.md must change
+#   database/migrations/*.sql   →  docs/DATABASE.md must change
+#   database/schema.sql         →  docs/DATABASE.md must change
+#   .env.example changed        →  CONTRIBUTING.md must change
+#   docker-compose.yml changed  →  README.md must change
+#   NEW src/Controllers/*.php   →  docs/ARCHITECTURE.md must change
+#   NEW src/Models/*.php        →  docs/ARCHITECTURE.md must change
+#   NEW src/Services/*.php      →  docs/ARCHITECTURE.md must change
+#   NEW src/Middleware/*.php     →  docs/ARCHITECTURE.md must change
+#   NEW src/Services/Prompts/*  →  docs/GEMINI_PROMPTS.md must change
+#
+# Bypass: set SKIP_DOCS_CHECK=1 as a repository Actions variable (emergency only).
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write  # to post advisory comment on failure
+
+concurrency:
+  group: docs-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  docs-check:
+    name: Documentation in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: Check documentation coverage
+        run: |
+          python3 scripts/ci/check_docs.py \
+            --base origin/${{ github.base_ref }} \
+            --head HEAD \
+            --post-comment
+        env:
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKIP_DOCS_CHECK: ${{ vars.SKIP_DOCS_CHECK }}

@@ -492,6 +492,298 @@ Added in Phase 5 (High Level Work Item Dependencies).
 
 ---
 
+### `password_tokens`
+
+Password reset tokens. Generated on `/forgot-password`, consumed on `/set-password/{token}`. Tokens are stored as bcrypt hashes.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `user_id` | INT UNSIGNED | NOT NULL, FK → users | |
+| `token_hash` | VARCHAR(255) | NOT NULL | bcrypt hash of the raw reset token |
+| `expires_at` | DATETIME | NOT NULL | Tokens expire after 1 hour |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `user_id` → `users.id` ON DELETE CASCADE
+
+---
+
+### `audit_logs`
+
+Tamper-evident audit event log. Each row records a user action with full context. Migration 038 added an HMAC hash chain: each row's `row_hash` is derived from its content + `prev_hash`, enabling tamper detection.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NULL, FK → organisations | Added migration 038 |
+| `user_id` | INT UNSIGNED | NULL, FK → users | NULL for system-generated events |
+| `action` | VARCHAR(100) | NOT NULL | e.g. `user.login`, `project.delete` |
+| `resource_type` | VARCHAR(50) | NULL | e.g. `project`, `user_story` |
+| `resource_id` | INT UNSIGNED | NULL | ID of the affected resource |
+| `details_json` | JSON | NULL | Additional event context |
+| `prev_hash` | CHAR(64) | NULL | SHA-256 of previous row's hash |
+| `row_hash` | CHAR(64) | NULL | HMAC-SHA256 of this row's content |
+| `ip_address` | VARCHAR(45) | NULL | |
+| `user_agent` | TEXT | NULL | |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `user_id` → `users.id` ON DELETE SET NULL; `org_id` → `organisations.id` ON DELETE SET NULL
+
+---
+
+### `sessions`
+
+PHP session storage in the database (migration 016). Replaces file-based sessions for horizontal scalability.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | VARCHAR(128) | PK | PHP session ID |
+| `data` | MEDIUMBLOB | NOT NULL | Serialised session data |
+| `last_accessed` | INT UNSIGNED | NOT NULL | Unix timestamp |
+
+---
+
+### `integrations`
+
+Stores OAuth credentials and status for third-party integrations (Jira, GitHub App). One row per provider per org.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NOT NULL, FK → organisations | |
+| `provider` | ENUM | NOT NULL | `jira`, `azure_devops` |
+| `display_name` | VARCHAR(255) | NOT NULL, DEFAULT `''` | Human-readable label |
+| `cloud_id` | VARCHAR(255) | NULL | Jira cloud site ID |
+| `access_token` | TEXT | NULL | OAuth access token (encrypted) |
+| `refresh_token` | TEXT | NULL | OAuth refresh token (encrypted) |
+| `token_expires_at` | DATETIME | NULL | |
+| `site_url` | VARCHAR(500) | NULL | e.g. `https://myorg.atlassian.net` |
+| `config_json` | JSON | NULL | Integration-specific settings |
+| `installation_id` | BIGINT UNSIGNED | NULL | GitHub App installation ID |
+| `account_login` | VARCHAR(255) | NULL | GitHub account/org login |
+| `status` | ENUM | NOT NULL, DEFAULT `disconnected` | `active`, `paused`, `error`, `disconnected`, `inactive`, `revoked` |
+| `last_sync_at` | DATETIME | NULL | |
+| `error_message` | TEXT | NULL | Last error from sync attempt |
+| `error_count` | INT UNSIGNED | NOT NULL, DEFAULT 0 | |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE  
+**Unique:** `(provider, installation_id)` — one GitHub App installation per install ID
+
+---
+
+### `integration_repos`
+
+GitHub repos visible to a GitHub App installation. Populated on install and kept live via `installation_repositories` webhook events. Added in migration 021.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `integration_id` | INT UNSIGNED | NOT NULL, FK → integrations | |
+| `org_id` | INT UNSIGNED | NOT NULL | Denormalised for fast lookups |
+| `repo_github_id` | BIGINT UNSIGNED | NOT NULL | GitHub repository ID |
+| `repo_full_name` | VARCHAR(255) | NOT NULL | e.g. `acme-corp/hello-world` |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `integration_id` → `integrations.id` ON DELETE CASCADE
+
+---
+
+### `project_repo_links`
+
+Many-to-many join: StratFlow projects subscribe to specific GitHub repos. Added in migration 021.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `integration_repo_id` | INT UNSIGNED | NOT NULL, FK → integration_repos | |
+| `org_id` | INT UNSIGNED | NOT NULL | Denormalised |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `created_by` | INT UNSIGNED | NULL, FK → users | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `integration_repo_id` → `integration_repos.id` ON DELETE CASCADE
+
+---
+
+### `sync_mappings`
+
+Maps StratFlow entity IDs to their corresponding Jira issue keys. Used by `JiraSyncService` to detect which items already exist in Jira.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `integration_id` | INT UNSIGNED | NOT NULL, FK → integrations | |
+| `local_type` | VARCHAR(50) | NOT NULL | e.g. `hl_work_item`, `user_story` |
+| `local_id` | INT UNSIGNED | NOT NULL | StratFlow entity ID |
+| `external_id` | VARCHAR(255) | NOT NULL | Jira issue key (e.g. `PROJ-123`) |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `integration_id` → `integrations.id` ON DELETE CASCADE
+
+---
+
+### `sync_log`
+
+Append-only log of Jira sync operations. One row per entity per sync run.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `integration_id` | INT UNSIGNED | NOT NULL, FK → integrations | |
+| `direction` | ENUM | NOT NULL | `push`, `pull` |
+| `action` | ENUM | NOT NULL | `create`, `update`, `delete`, `skip` |
+| `local_type` | VARCHAR(50) | NULL | StratFlow entity type |
+| `local_id` | INT UNSIGNED | NULL | StratFlow entity ID |
+| `external_id` | VARCHAR(255) | NULL | Jira issue key |
+| `details_json` | JSON | NULL | Additional context |
+| `status` | ENUM | NOT NULL | `success`, `error` |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `integration_id` → `integrations.id` ON DELETE CASCADE
+
+---
+
+### `story_git_links`
+
+Links user stories or work items to git references (PRs, commits, branches). Added in migration 018.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `local_type` | ENUM | NOT NULL | `user_story`, `hl_work_item` |
+| `local_id` | INT UNSIGNED | NOT NULL | ID of the linked entity |
+| `provider` | ENUM | NOT NULL | `github`, `gitlab`, `manual` |
+| `ref_type` | ENUM | NOT NULL | `pr`, `commit`, `branch` |
+| `ref_url` | VARCHAR(512) | NOT NULL | Full URL to the PR/commit/branch |
+| `ref_label` | VARCHAR(255) | NULL | Display label |
+| `status` | ENUM | NOT NULL, DEFAULT `unknown` | `open`, `merged`, `closed`, `unknown` |
+| `author` | VARCHAR(255) | NULL | Git author/assignee |
+| `ai_matched` | TINYINT(1) | NOT NULL, DEFAULT 0 | Set by AI PR matching service |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Unique:** `(local_type, local_id, ref_url)` — one link per entity per URL
+
+---
+
+### `key_results`
+
+OKR key results attached to High-Level Work Items. Tracks target vs current value and AI-generated momentum assessment. Added in migration 022.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NOT NULL | Denormalised for tenant scoping |
+| `hl_work_item_id` | INT UNSIGNED | NOT NULL, FK → hl_work_items | |
+| `title` | VARCHAR(500) | NOT NULL | KR title |
+| `metric_description` | TEXT | NULL | What is being measured |
+| `baseline_value` | DECIMAL(12,4) | NULL | Starting value |
+| `target_value` | DECIMAL(12,4) | NULL | Goal value |
+| `current_value` | DECIMAL(12,4) | NULL | Latest measured value |
+| `unit` | VARCHAR(50) | NULL | e.g. `%`, `users`, `NZD` |
+| `status` | ENUM | NOT NULL, DEFAULT `not_started` | `not_started`, `on_track`, `at_risk`, `off_track`, `achieved` |
+| `jira_goal_id` | VARCHAR(255) | NULL | Linked Jira Goal ID |
+| `jira_goal_url` | VARCHAR(500) | NULL | |
+| `ai_momentum` | TEXT | NULL | AI-generated progress commentary |
+| `display_order` | SMALLINT UNSIGNED | NOT NULL, DEFAULT 0 | |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+**Foreign keys:** `hl_work_item_id` → `hl_work_items.id` ON DELETE CASCADE
+
+---
+
+### `key_result_contributions`
+
+AI-scored links between merged PRs (via `story_git_links`) and key results. One row per PR × KR pair. Added in migration 022.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `key_result_id` | INT UNSIGNED | NOT NULL, FK → key_results | |
+| `story_git_link_id` | INT UNSIGNED | NOT NULL, FK → story_git_links | |
+| `org_id` | INT UNSIGNED | NOT NULL | Denormalised |
+| `ai_relevance_score` | TINYINT UNSIGNED | NOT NULL, DEFAULT 0 | 0–100 |
+| `ai_rationale` | TEXT | NULL | One-sentence AI explanation |
+| `scored_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `key_result_id` → `key_results.id` ON DELETE CASCADE; `story_git_link_id` → `story_git_links.id` ON DELETE CASCADE  
+**Unique:** `(key_result_id, story_git_link_id)`
+
+---
+
+### `story_quality_config`
+
+Org-specific story quality rules: splitting patterns (SPIDR, Happy/Unhappy Path, etc.) and mandatory conditions. Seeded with defaults on migration 023. Configurable per org via Admin → Story Quality Rules.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `org_id` | INT UNSIGNED | NOT NULL | |
+| `rule_type` | ENUM | NOT NULL | `splitting_pattern`, `mandatory_condition` |
+| `label` | VARCHAR(255) | NOT NULL | Display name of the rule |
+| `is_default` | TINYINT(1) | NOT NULL, DEFAULT 0 | 1 = seeded from StratFlow defaults |
+| `is_active` | TINYINT(1) | NOT NULL, DEFAULT 1 | |
+| `display_order` | SMALLINT UNSIGNED | NOT NULL, DEFAULT 0 | |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+---
+
+### `system_settings`
+
+Single-row table storing superadmin-managed system-wide JSON configuration. Seeded on migration 025. Accessed via `SystemSettings::get()`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, DEFAULT 1 | Always a single row (id=1) |
+| `settings_json` | JSON | NOT NULL | All system settings as a JSON object |
+| `updated_at` | DATETIME | NOT NULL, ON UPDATE NOW | |
+
+Key settings: `ai_provider`, `ai_model`, `default_seat_limit`, `quality_threshold`, `quality_enforcement`, feature flags (`feature_sounding_board`, `feature_jira`, `feature_github`, etc.), billing rates.
+
+---
+
+### `personal_access_tokens`
+
+Long-lived bearer tokens for REST API and MCP server access. Added in migration 029. Tokens are never stored in plaintext — only a SHA-256 hash is kept.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `user_id` | INT UNSIGNED | NOT NULL, FK → users | |
+| `org_id` | INT UNSIGNED | NOT NULL, FK → organisations | Denormalised for fast middleware lookup |
+| `name` | VARCHAR(100) | NOT NULL | User-supplied label |
+| `token_hash` | CHAR(64) | NOT NULL, UNIQUE | SHA-256 hex of the raw token |
+| `token_prefix` | CHAR(15) | NOT NULL | `sf_pat_` + first 8 chars — shown in UI for recognition |
+| `scopes` | JSON | NULL | NULL = full read + story status transitions |
+| `last_used_at` | DATETIME | NULL | |
+| `last_used_ip` | VARCHAR(45) | NULL | |
+| `expires_at` | DATETIME | NULL | NULL = no expiry |
+| `revoked_at` | DATETIME | NULL | NULL = active |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `user_id` → `users.id` ON DELETE CASCADE; `org_id` → `organisations.id` ON DELETE CASCADE
+
+---
+
+### `project_members`
+
+Per-project membership for organisations using restricted project visibility. Added in migration 028. When a project's `visibility = 'restricted'`, only users in this table can see it.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `user_id` | INT UNSIGNED | NOT NULL, FK → users | |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `user_id` → `users.id` ON DELETE CASCADE  
+**Unique:** `(project_id, user_id)`
+
+---
+
 ## Indexes Summary
 
 | Table | Index | Columns | Type |
@@ -502,6 +794,12 @@ Added in Phase 5 (High Level Work Item Dependencies).
 | `sprint_stories` | `uq_sprint_story` | `sprint_id, user_story_id` | UNIQUE |
 | `team_members` | `uq_team_user` | `team_id, user_id` | UNIQUE |
 | `hl_item_dependencies` | `uq_item_dependency` | `item_id, depends_on_id` | UNIQUE |
+| `integrations` | `uk_provider_installation` | `provider, installation_id` | UNIQUE |
+| `integration_repos` | `uk_integration_repo` | `integration_id, repo_github_id` | UNIQUE |
+| `project_repo_links` | `uk_project_repo` | `project_id, integration_repo_id` | UNIQUE |
+| `story_git_links` | `uniq_link` | `local_type, local_id, ref_url` | UNIQUE |
+| `key_result_contributions` | `uk_kr_link` | `key_result_id, story_git_link_id` | UNIQUE |
+| `personal_access_tokens` | `uk_token_hash` | `token_hash` | UNIQUE |
 
 All other lookups rely on primary keys and foreign key indexes created automatically by InnoDB.
 

@@ -44,6 +44,18 @@
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post_edit_security_rules.py\""
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post_push_watch_pr.py\"",
+            "asyncRewake": true,
+            "rewakeMessage": "Post-push CI watch required:",
+            "rewakeSummary": "git push detected — invoking watch-pr"
+          }
+        ]
       }
     ],
     "SessionStart": [

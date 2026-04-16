@@ -48,24 +48,24 @@ export default function () {
 
   sleep(0.5);
 
-  // 3. Register page — public, no auth required
-  const register = http.get(`${BASE_URL}/register`, { tags: { path: 'register' } });
-  const registerOk = check(register, {
-    'register 200 or 302': (r) => r.status === 200 || r.status === 302,
+  // 3. Pricing page — public, no auth required
+  const pricing = http.get(`${BASE_URL}/pricing`, { tags: { path: 'pricing' } });
+  const pricingOk = check(pricing, {
+    'pricing 200': (r) => r.status === 200,
   });
-  errorRate.add(!registerOk);
+  errorRate.add(!pricingOk);
 
   sleep(0.5);
 
-  // 4. Dashboard redirect (unauthenticated → login) — tests router/middleware
-  const dashboard = http.get(`${BASE_URL}/app/dashboard`, {
+  // 4. App home redirect (unauthenticated → login) — tests router/middleware
+  const appHome = http.get(`${BASE_URL}/app/home`, {
     redirects: 0,
-    tags: { path: 'dashboard_redirect' },
+    tags: { path: 'app_home_redirect' },
   });
-  const dashboardOk = check(dashboard, {
-    'dashboard redirects unauth': (r) => r.status === 302 || r.status === 301,
+  const appHomeOk = check(appHome, {
+    'app/home redirects unauth': (r) => r.status === 302 || r.status === 301,
   });
-  errorRate.add(!dashboardOk);
+  errorRate.add(!appHomeOk);
 
   sleep(0.5);
 }
