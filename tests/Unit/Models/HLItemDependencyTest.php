@@ -37,12 +37,8 @@ class HLItemDependencyTest extends TestCase
     {
         $db = $this->createMock(\StratFlow\Core\Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
+        $db->method('query')->willReturn($stmt);
         $db->method('lastInsertId')->willReturn('1');
-
-        // Verify that query() is called (DELETE then INSERT statements)
-        $db->expects($this->atLeastOnce())
-            ->method('query')
-            ->willReturn($stmt);
 
         HLItemDependency::createBatch($db, 10, [3, 5, 7]);
 

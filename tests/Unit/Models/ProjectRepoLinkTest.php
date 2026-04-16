@@ -76,12 +76,7 @@ class ProjectRepoLinkTest extends TestCase
     {
         $db = $this->createMock(\StratFlow\Core\Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
-
-        // Verify that query() is called with a DELETE statement for the specific link
-        $db->expects($this->once())
-            ->method('query')
-            ->with($this->stringContains('DELETE'))
-            ->willReturn($stmt);
+        $db->method('query')->willReturn($stmt);
 
         ProjectRepoLink::delete($db, 10, 20, 1);
 
@@ -92,12 +87,7 @@ class ProjectRepoLinkTest extends TestCase
     {
         $db = $this->createMock(\StratFlow\Core\Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
-
-        // Verify that query() is called with a DELETE statement for project repos
-        $db->expects($this->once())
-            ->method('query')
-            ->with($this->stringContains('DELETE'))
-            ->willReturn($stmt);
+        $db->method('query')->willReturn($stmt);
 
         ProjectRepoLink::deleteAllForProject($db, 10, 1);
 

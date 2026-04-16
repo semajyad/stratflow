@@ -31,19 +31,27 @@ class GitIntegrationControllerTest extends ControllerTestCase
         return new GitIntegrationController($r ?? $this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
     }
 
-    public function testDisconnectValidatesProvider(): void
+    private function stmt(mixed $fetch, array $all = []): \PDOStatement
     {
-        $ctrl = $this->ctrl();
-        $ctrl->disconnect('bitbucket');
-
-        $this->assertSame('/app/admin/integrations', $this->response->redirectedTo);
-        $this->assertEquals('Unknown Git provider.', $_SESSION['flash_error']);
+        $s = $this->createMock(\PDOStatement::class);
+        $s->method('fetch')->willReturn($fetch);
+        $s->method('fetchAll')->willReturn($all);
+        return $s;
     }
 
     public function testConnectRejectsInvalidProvider(): void
     {
         $ctrl = $this->ctrl();
         $ctrl->connect('bitbucket');
+
+        $this->assertSame('/app/admin/integrations', $this->response->redirectedTo);
+        $this->assertEquals('Unknown Git provider.', $_SESSION['flash_error']);
+    }
+
+    public function testDisconnectRejectsInvalidProvider(): void
+    {
+        $ctrl = $this->ctrl();
+        $ctrl->disconnect('bitbucket');
 
         $this->assertSame('/app/admin/integrations', $this->response->redirectedTo);
         $this->assertEquals('Unknown Git provider.', $_SESSION['flash_error']);
@@ -67,6 +75,16 @@ class GitIntegrationControllerTest extends ControllerTestCase
         $this->assertEquals('Unknown Git provider.', $this->response->jsonPayload['error']);
     }
 
+    public function testDisconnectValidatesProvider(): void
+    {
+        $ctrl = $this->ctrl();
+        $ctrl->disconnect('invalid');
+
+        // Validates provider before looking up integration
+        $this->assertSame('/app/admin/integrations', $this->response->redirectedTo);
+        $this->assertEquals('Unknown Git provider.', $_SESSION['flash_error']);
+    }
+
     public function testRegenerateSecretValidatesProvider(): void
     {
         $ctrl = $this->ctrl();
@@ -76,4 +94,5 @@ class GitIntegrationControllerTest extends ControllerTestCase
         $this->assertSame('/app/admin/integrations', $this->response->redirectedTo);
         $this->assertEquals('Unknown Git provider.', $_SESSION['flash_error']);
     }
+
 }

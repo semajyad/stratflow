@@ -493,4 +493,313 @@ class WorkItemControllerTest extends ControllerTestCase
 
         $this->assertStringContainsString('/app/work-items', $this->response->redirectedTo ?? '');
     }
+
+    // ===========================
+    // reorder()
+    // ===========================
+
+    #[Test]
+    public function reorderReturnsJsonErrorOnEmptyOrder(): void
+    {
+        $request = new \StratFlow\Tests\Support\FakeRequest('POST', '/', [], [], '127.0.0.1', [], json_encode(['order' => []]));
+        $ctrl = new WorkItemController($request, $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->reorder();
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(400, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function reorderReturnsNotFoundWhenFirstItemMissing(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $request = new \StratFlow\Tests\Support\FakeRequest('POST', '/', [], [], '127.0.0.1', [], json_encode(['order' => [['id' => 999, 'position' => 1]]]));
+        $ctrl = new WorkItemController($request, $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->reorder();
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(404, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function reorderReturnsAccessDeniedWhenProjectNotEditable(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeEmptyStmt()  // project not found
+        );
+        $request = new \StratFlow\Tests\Support\FakeRequest('POST', '/', [], [], '127.0.0.1', [], json_encode(['order' => [['id' => 1, 'position' => 1]]]));
+        $ctrl = new WorkItemController($request, $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->reorder();
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(403, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function reorderSucceedsAndReturnsOk(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeRowStmt($this->projectRow),
+            $this->makeEmptyStmt()  // batchUpdatePriority
+        );
+        $request = new \StratFlow\Tests\Support\FakeRequest('POST', '/', [], [], '127.0.0.1', [], json_encode(['order' => [['id' => 1, 'position' => 1]]]));
+        $ctrl = new WorkItemController($request, $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->reorder();
+
+        $this->assertSame('ok', $this->response->jsonPayload['status'] ?? '');
+    }
+
+    // ===========================
+    // refineQuality()
+    // ===========================
+
+    #[Test]
+    public function refineQualityRedirectsWhenItemNotFound(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineQuality('999');
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function refineQualityRedirectsWhenProjectNotEditable(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeEmptyStmt()  // project not editable
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineQuality('1');
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function refineQualityMarksItemPendingAndRedirects(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeRowStmt($this->projectRow),
+            $this->makeEmptyStmt()  // markQualityPending update
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineQuality('1');
+
+        $this->assertStringContainsString('/app/work-items', $this->response->redirectedTo ?? '');
+    }
+
+    // ===========================
+    // refineAll()
+    // ===========================
+
+    #[Test]
+    public function refineAllRedirectsWhenProjectNotEditable(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makePostRequest(['project_id' => '5']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineAll();
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function refineAllSetsFlashWhenNoItemsBelowThreshold(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        $_SESSION = [];
+        $this->configureDb(
+            $this->makeRowStmt($this->projectRow),
+            $this->makeEmptyStmt()  // SELECT items below threshold — empty
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(['project_id' => '5']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineAll();
+
+        $this->assertStringContainsString('already meet', $_SESSION['flash_message'] ?? '');
+    }
+
+    #[Test]
+    public function refineAllMarksItemsAndRedirects(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        $_SESSION = [];
+        $itemsBelowThreshold = [['id' => 1], ['id' => 2]];
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetch')->willReturn($this->projectRow);
+        $stmt->method('fetchAll')->willReturn($itemsBelowThreshold);
+
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->makeRowStmt($this->projectRow),  // findEditableProject
+            $stmt,                                   // SELECT items below threshold
+            $this->makeEmptyStmt(),                  // markQualityPending item 1
+            $this->makeEmptyStmt()                   // markQualityPending item 2
+        );
+
+        $ctrl = new WorkItemController($this->makePostRequest(['project_id' => '5']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->refineAll();
+
+        $this->assertStringContainsString('/app/work-items', $this->response->redirectedTo ?? '');
+        $this->assertStringContainsString('2', $_SESSION['flash_message'] ?? '');
+    }
+
+    // ===========================
+    // export()
+    // ===========================
+
+    #[Test]
+    public function exportRedirectsWhenProjectNotViewable(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makeGetRequest(['project_id' => '999']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->export();
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function exportSendsCsvDownload(): void
+    {
+        $items = [['id' => 1, 'priority_number' => 1, 'title' => 'Item A', 'description' => 'Desc', 'strategic_context' => '', 'okr_title' => '', 'owner' => '', 'estimated_sprints' => 2]];
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetch')->willReturn($this->projectRow);
+        $stmt->method('fetchAll')->willReturn($items);
+        $this->db->method('query')->willReturn($stmt);
+
+        $ctrl = new WorkItemController($this->makeGetRequest(['project_id' => '5', 'format' => 'csv']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->export();
+
+        $this->assertNotNull($this->response->downloadContent);
+        $this->assertStringContainsString('Item A', $this->response->downloadContent ?? '');
+    }
+
+    #[Test]
+    public function exportSendsJsonDownload(): void
+    {
+        $items = [['id' => 1, 'priority_number' => 1, 'title' => 'Item B', 'description' => 'Desc', 'strategic_context' => '', 'okr_title' => '', 'okr_description' => '', 'owner' => '', 'estimated_sprints' => 3]];
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetch')->willReturn($this->projectRow);
+        $stmt->method('fetchAll')->willReturn($items);
+        $this->db->method('query')->willReturn($stmt);
+
+        $ctrl = new WorkItemController($this->makeGetRequest(['project_id' => '5', 'format' => 'json']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->export();
+
+        $this->assertNotNull($this->response->downloadContent);
+        $this->assertStringContainsString('Item B', $this->response->downloadContent ?? '');
+    }
+
+    // ===========================
+    // generateDescription()
+    // ===========================
+
+    #[Test]
+    public function generateDescriptionReturnsNotFoundWhenItemMissing(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->generateDescription('999');
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(404, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function generateDescriptionReturnsAccessDeniedWhenProjectNotEditable(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeEmptyStmt()  // project not found
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->generateDescription('1');
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(403, $this->response->jsonStatus);
+    }
+
+    // ===========================
+    // score()
+    // ===========================
+
+    #[Test]
+    public function scoreReturnsNotFoundWhenItemMissing(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makeGetRequest(['id' => '999']), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->score('999');
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(404, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function scoreReturnsAccessDeniedWhenProjectNotEditable(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeEmptyStmt()  // project not found
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->score('1');
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(403, $this->response->jsonStatus);
+    }
+
+    #[Test]
+    public function scoreReturnsErrorWhenQualityDisabled(): void
+    {
+        // SystemSettings::get returns nothing (feature_story_quality not set)
+        $systemSettingsStmt = $this->createMock(\PDOStatement::class);
+        $systemSettingsStmt->method('fetch')->willReturn([]);  // empty settings
+        $orgSettingsStmt    = $this->createMock(\PDOStatement::class);
+        $orgSettingsStmt->method('fetch')->willReturn(['id' => 10, 'settings_json' => '{}']);
+
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->makeRowStmt($this->itemRow),    // HLWorkItem::findById
+            $this->makeRowStmt($this->projectRow), // findEditableProject
+            $systemSettingsStmt,                   // SystemSettings::get
+            $orgSettingsStmt                       // Organisation::findById
+        );
+
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->score('1');
+
+        $this->assertSame('error', $this->response->jsonPayload['status'] ?? '');
+        $this->assertSame(403, $this->response->jsonStatus);
+    }
+
+    // ===========================
+    // improve()
+    // ===========================
+
+    #[Test]
+    public function improveRedirectsWhenItemNotFound(): void
+    {
+        $this->configureDb($this->makeEmptyStmt());
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->improve(999);
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function improveRedirectsWhenProjectNotEditable(): void
+    {
+        $this->configureDb(
+            $this->makeRowStmt($this->itemRow),
+            $this->makeEmptyStmt()  // project not found
+        );
+        $ctrl = new WorkItemController($this->makePostRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->improve(1);
+
+        $this->assertSame('/app/home', $this->response->redirectedTo);
+    }
 }

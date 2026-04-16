@@ -50,7 +50,6 @@ class ProjectGitHubControllerTest extends ControllerTestCase
         $this->assertEquals('Project not found.', $_SESSION['flash_error']);
     }
 
-
     public function testSaveReturnFlashErrorForNonExistentProject(): void
     {
         $this->db->method('query')->willReturn($this->stmt(null));

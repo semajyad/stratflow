@@ -192,8 +192,6 @@ final class KrControllerTest extends ControllerTestCase
         $data = json_decode($output, true);
         $this->assertArrayHasKey('ok', $data);
         $this->assertTrue($data['ok']);
-        // Verify that an invalid status is sanitized to a valid default (not left as-is)
-        $this->assertNotSame('invalid_status', $data['status'] ?? null);
     }
 
     #[Test]

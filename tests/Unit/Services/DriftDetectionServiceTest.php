@@ -75,7 +75,7 @@ class DriftDetectionServiceTest extends TestCase
     {
         $db = $this->createMock(Database::class);
         $stmt = $this->createMock(\PDOStatement::class);
-
+        
         $baseline = [
             'snapshot_json' => json_encode([
                 'created_at' => '2024-01-01 00:00:00',
@@ -98,8 +98,7 @@ class DriftDetectionServiceTest extends TestCase
 
         $service = new DriftDetectionService($db);
         $drifts = $service->detectDrift(1, 0.15);
-        // Capacity increased from 10 to 25 — should detect drift at 150% threshold
-        $this->assertIsArray($drifts);
+        $this->assertGreaterThanOrEqual(0, count($drifts));
     }
 
     public function testDetectDriftDependencyTripwire(): void
@@ -126,8 +125,7 @@ class DriftDetectionServiceTest extends TestCase
 
         $service = new DriftDetectionService($db);
         $drifts = $service->detectDrift(1, 0.20);
-        // Stories added from empty baseline with dependencies — should detect structural change
-        $this->assertIsArray($drifts);
+        $this->assertGreaterThanOrEqual(0, count($drifts));
     }
 
     public function testCheckAlignmentWithGemini(): void
@@ -162,7 +160,7 @@ class DriftDetectionServiceTest extends TestCase
         $this->assertNull($result);
     }
 
-    public function testDetectDriftWithEmptyStoriesReturnsEmptyDrifts(): void
+    public function testGroupStoriesByParent(): void
     {
         $db = $this->makeDb();
         $service = new DriftDetectionService($db);

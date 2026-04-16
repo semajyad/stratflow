@@ -60,4 +60,24 @@ class UserDataExportControllerTest extends ControllerTestCase
         $this->assertTrue(true);
     }
 
+    public function testExportHandlesEmptyAuditLog(): void
+    {
+        $this->db->method('query')->willReturn(
+            $this->stmt(['id' => 1, 'email' => 'user@test.invalid'], [])
+        );
+
+        $ctrl = $this->ctrl();
+        $ctrl->export();
+
+        // Gracefully handles empty audit log
+        $this->assertTrue(true);
+    }
+
+    public function testIndexCanBeCalledByAuthenticatedUser(): void
+    {
+        $ctrl = $this->ctrl();
+        $ctrl->index();
+
+        $this->assertSame('account/export-data', $this->response->renderedTemplate);
+    }
 }

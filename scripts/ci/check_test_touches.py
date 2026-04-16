@@ -107,6 +107,31 @@ def get_files_in_commit(sha: str) -> list[str]:
     return files
 
 
+def get_commits_in_range(base: str, head: str) -> list[tuple[str, str]]:
+    """Return list of (sha, subject) for commits in base..head."""
+    result = subprocess.run(
+        ["git", "log", "--format=%H %s", f"{base}..{head}"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return []
+    commits = []
+    for line in result.stdout.strip().splitlines():
+        if line:
+            sha, _, subject = line.partition(" ")
+            commits.append((sha, subject))
+    return commits
+
+
+def get_files_in_commit(sha: str) -> list[str]:
+    """Return list of files changed in a single commit."""
+    result = subprocess.run(
+        ["git", "diff-tree", "--no-commit-id", "-r", "--name-only", sha],
+        capture_output=True, text=True
+    )
+    return [f for f in result.stdout.strip().splitlines() if f]
+
+
 def source_to_test_path(src_path: str) -> str | None:
     """Map a src/ file path to its expected test file path."""
     p = src_path.replace("\\", "/")
@@ -181,49 +206,6 @@ def is_pr_exempt() -> bool:
     reason = audit_comment[len("/no-test-required:"):].strip()
     print(f"  PR exempt — no-test-required label + audit comment: '{reason}'")
     return True
-
-
-def check_source_touch_rule(changed: list[str]) -> list[tuple[str, str]]:
-    """
-    Rule 1: every modified src/*.php must have its test file in the diff too.
-    Returns list of (src_file, expected_test) pairs that are missing.
-    """
-    missing = []
-    for f in changed:
-        expected_test = source_to_test_path(f)
-        if expected_test is None:
-            continue
-
-        if expected_test in changed:
-            print(f"  ✅ {f}  →  {expected_test}")
-        else:
-            print(f"  ❌ {f}  →  {expected_test}  (MISSING from diff)")
-            missing.append((f, expected_test))
-    return missing
-
-
-def check_bug_test_rule(base: str, head: str) -> list[tuple[str, str]]:
-    """
-    Rule 2: any commit starting with 'fix:' must include at least one test file.
-    Returns list of (sha, subject) for fix commits that have no test changes.
-    """
-    commits = get_commits_in_range(base, head)
-    violations = []
-
-    for sha, subject in commits:
-        if not BUG_COMMIT_PREFIXES.match(subject):
-            continue
-
-        files = get_files_in_commit(sha)
-        has_test = any(is_test_file(f) for f in files)
-
-        if has_test:
-            print(f"  ✅ fix commit {sha[:8]}: '{subject}' — has test changes")
-        else:
-            print(f"  ❌ fix commit {sha[:8]}: '{subject}' — NO test file changed")
-            violations.append((sha[:8], subject))
-
-    return violations
 
 
 def main():

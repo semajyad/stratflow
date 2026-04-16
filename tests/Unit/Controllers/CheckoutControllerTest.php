@@ -44,6 +44,14 @@ final class CheckoutControllerTest extends ControllerTestCase
         return new CheckoutController($r ?? $this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
     }
 
+    private function stmt(mixed $fetch, array $all = []): \PDOStatement
+    {
+        $s = $this->createMock(\PDOStatement::class);
+        $s->method('fetch')->willReturn($fetch);
+        $s->method('fetchAll')->willReturn($all);
+        return $s;
+    }
+
     // ===========================
     // Product Type Resolution
     // ===========================

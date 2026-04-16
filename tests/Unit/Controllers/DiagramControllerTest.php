@@ -26,7 +26,12 @@ class DiagramControllerTest extends ControllerTestCase
         }
         $_SESSION = [];
         $this->db->method('tableExists')->willReturn(false);
-        $this->config['gemini'] = ['api_key' => 'test-key', 'model' => 'gemini-2.0-flash'];
+        $this->config = array_merge($this->config, [
+            'gemini' => [
+                'api_key' => 'test_key_12345',
+                'model' => 'gemini-2.0-flash',
+            ],
+        ]);
         $this->actingAs($this->user);
     }
 
