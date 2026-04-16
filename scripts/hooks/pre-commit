@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# StratFlow pre-commit hook — documentation currency check
+#
+# Install once per clone:
+#   cp scripts/hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Bypass in an emergency (use sparingly):
+#   SKIP_DOCS_CHECK=1 git commit -m "..."
+#   git commit --no-verify   (skips ALL hooks)
+
+set -euo pipefail
+
+# Find Python 3
+PYTHON=""
+for candidate in python3 python; do
+  if command -v "$candidate" &>/dev/null && "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$PYTHON" ]]; then
+  echo "check_docs: Python 3.8+ not found — skipping documentation check"
+  exit 0
+fi
+
+SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_docs.py"
+
+if [[ ! -f "$SCRIPT" ]]; then
+  echo "check_docs: $SCRIPT not found — skipping"
+  exit 0
+fi
+
+exec "$PYTHON" "$SCRIPT" --staged

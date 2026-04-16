@@ -17,6 +17,35 @@ This guide covers everything a new developer needs to get StratFlow running loca
 
 ---
 
+## Install the pre-commit hook
+
+A pre-commit hook enforces that documentation is updated whenever you change source files. Install it once after cloning:
+
+```bash
+cp scripts/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The hook runs `scripts/ci/check_docs.py --staged` before every commit. If you change a tracked source file without updating the corresponding doc, the commit is blocked with a clear message explaining what to fix.
+
+**Trigger → required doc:**
+
+| If you change… | …update this doc |
+|----------------|-----------------|
+| `src/Config/routes.php` | `docs/API.md` |
+| `database/migrations/*.sql` or `database/schema.sql` | `docs/DATABASE.md` |
+| New `src/Controllers/*.php` | `docs/ARCHITECTURE.md` |
+| New `src/Models/*.php` | `docs/ARCHITECTURE.md` |
+| New `src/Services/*.php` | `docs/ARCHITECTURE.md` |
+| New `src/Middleware/*.php` | `docs/ARCHITECTURE.md` |
+| New `src/Services/Prompts/*.php` | `docs/GEMINI_PROMPTS.md` |
+| `.env.example` | `CONTRIBUTING.md` |
+| `docker-compose.yml` | `README.md` |
+
+> **Emergency bypass:** `SKIP_DOCS_CHECK=1 git commit -m "..."` or `git commit --no-verify`. Use sparingly — the same check runs in CI and will block your PR.
+
+---
+
 ## Path A — Docker (recommended for most developers)
 
 ### A-1. Clone and configure
