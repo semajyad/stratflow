@@ -123,7 +123,7 @@ jobs:
             --log-junit junit-unit.xml \
             --colors=never
 
-      - name: Enforce coverage threshold (≥27% lines)
+      - name: Enforce coverage threshold (≥65% lines)
         run: |
           RESULT=$(php -r "
             \$xml = simplexml_load_file('coverage.xml');
@@ -137,8 +137,8 @@ jobs:
           TOTAL=$(echo "$RESULT" | cut -d/ -f2)
           PCT=$(echo "$RESULT" | cut -d/ -f3)
           echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL} statements)"
-          if awk "BEGIN { exit (${PCT} >= 27) }"; then
-            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the 27% threshold. Add unit or integration tests to bridge the gap."
+          if awk "BEGIN { exit (${PCT} >= 65) }"; then
+            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the 65% threshold. Add unit tests to bridge the gap."
             exit 1
           fi
 
