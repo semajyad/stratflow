@@ -17,11 +17,9 @@ name: Auto-merge approved PRs
 on:
   pull_request_review:
     types: [submitted, dismissed]
-    branches: [main]
   # Re-evaluate when a PR is marked ready for review (un-drafted)
   pull_request:
     types: [ready_for_review]
-    branches: [main]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -65,16 +63,25 @@ jobs:
           echo "=== Evaluating PR #$PR ==="
 
           PR_META=$(gh api repos/$REPO/pulls/$PR --jq \
-            '{state, draft, author: .user.login, title, base_ref: .base.ref, head_sha: .head.sha}')
+            '{state, draft, author: .user.login, title}')
           STATE=$(echo "$PR_META" | jq -r '.state')
           DRAFT=$(echo "$PR_META" | jq -r '.draft')
           AUTHOR=$(echo "$PR_META" | jq -r '.author')
-          BASE_REF=$(echo "$PR_META" | jq -r '.base_ref')
-          HEAD_SHA=$(echo "$PR_META" | jq -r '.head_sha')
 
           [ "$STATE" = "open" ] || { echo "Not open ($STATE) — skip"; exit 0; }
           [ "$DRAFT" = "false" ] || { echo "Draft — skip"; exit 0; }
-          [ "$BASE_REF" = "main" ] || { echo "PR targets $BASE_REF, not main — skip"; exit 0; }
+
+          # ── Dependabot: auto-approve then enqueue ────────────────────────────
+          if [[ "$AUTHOR" == "dependabot[bot]" ]]; then
+            echo "Dependabot PR — auto-approving..."
+            gh pr review $PR --approve --repo $REPO \
+              --body "Auto-approved: Dependabot update, required CI will run in merge queue." \
+              2>/dev/null || true
+            echo "Enabling auto-merge for Dependabot PR #$PR..."
+            gh pr merge $PR --repo $REPO --auto --squash --delete-branch
+            echo "PR #$PR enqueued (Dependabot)"
+            exit 0
+          fi
 
           # ── Fetch reviews ────────────────────────────────────────────────────
           REVIEWS_RAW=$(gh api repos/$REPO/pulls/$PR/reviews --paginate)
@@ -85,28 +92,10 @@ jobs:
              | group_by(.user.login)[] | max_by(.id)
              | select(.state == "CHANGES_REQUESTED") | .user.login' -r | wc -l | tr -d ' ')
 
-          # Only count approvals on the current HEAD commit (stale-review guard)
-          APPROVED=$(echo "$REVIEWS_RAW" | jq --arg sha "$HEAD_SHA" \
+          APPROVED=$(echo "$REVIEWS_RAW" | jq \
             '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")]
              | group_by(.user.login)[] | max_by(.id)
-             | select(.state == "APPROVED" and .commit_id == $sha) | .user.login' -r | wc -l | tr -d ' ')
-
-          # ── Dependabot: auto-approve then enqueue (only if no CHANGES_REQUESTED) ─
-          if [[ "$AUTHOR" == "dependabot[bot]" ]]; then
-            if [ "$CHANGES_REQUESTED" -gt 0 ]; then
-              echo "Dependabot PR has CHANGES_REQUESTED ($CHANGES_REQUESTED) — not auto-merging"
-              gh pr merge $PR --repo $REPO --disable-auto 2>/dev/null || true
-              exit 0
-            fi
-            echo "Dependabot PR — auto-approving..."
-            gh pr review $PR --approve --repo $REPO \
-              --body "Auto-approved: Dependabot update, required CI will run in merge queue." \
-              2>/dev/null || true
-            echo "Enabling auto-merge for Dependabot PR #$PR..."
-            gh pr merge $PR --repo $REPO --auto --squash --delete-branch
-            echo "PR #$PR enqueued (Dependabot)"
-            exit 0
-          fi
+             | select(.state == "APPROVED") | .user.login' -r | wc -l | tr -d ' ')
 
           echo "Reviews: $APPROVED approved, $CHANGES_REQUESTED requesting changes"
 

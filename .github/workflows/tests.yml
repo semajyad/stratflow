@@ -110,6 +110,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
 
       - name: Run unit tests with coverage
         run: |
@@ -283,6 +285,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
 
       - name: Initialize database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql

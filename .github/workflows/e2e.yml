@@ -81,6 +81,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database
@@ -304,6 +306,8 @@ jobs:
           echo "MAIL_SMTP_USER=" >> .env
           echo "MAIL_SMTP_PASS=" >> .env
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
+          echo "GROWTHBOOK_API_HOST=" >> .env
+          echo "GROWTHBOOK_CLIENT_KEY=" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database
