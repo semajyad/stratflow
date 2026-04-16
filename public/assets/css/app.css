@@ -227,11 +227,11 @@ main.container {
 
 /* === Admin / Superadmin page themes ======================================== */
 .admin-theme .app-content {
-    background: #f1f5f9;
+    background: #eef2ff;
 }
 
 .superadmin-theme .app-content {
-    background: #eff6ff;
+    background: #fdf4ff;
 }
 
 
