@@ -63,11 +63,17 @@ def changed_migration_files(base: str, head: str) -> list[str]:
 
 
 def scan_file(path: str) -> list[tuple[int, str]]:
-    """Return list of (line_number, line) for destructive statements."""
+    """Return list of (line_number, line) for destructive statements, skipping SQL comments."""
     hits: list[tuple[int, str]] = []
     with open(path, encoding="utf-8") as fh:
         for i, line in enumerate(fh, 1):
-            if DESTRUCTIVE_RE.search(line):
+            # Skip pure single-line SQL comment lines to avoid false positives
+            stripped = line.lstrip()
+            if stripped.startswith("--"):
+                continue
+            # Strip trailing single-line SQL comment before testing
+            uncommented = line.split("--")[0] if "--" in line else line
+            if DESTRUCTIVE_RE.search(uncommented):
                 hits.append((i, line.rstrip()))
     return hits
 
@@ -91,7 +97,12 @@ def has_safe_label() -> bool:
             data = json.loads(resp.read())
         labels = [lbl["name"] for lbl in data.get("labels", [])]
         return SAFE_MIGRATION_LABEL in labels
-    except Exception:
+    except Exception as e:
+        print(
+            f"check_destructive_migrations: label check failed for PR {pr_number} "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
         return False
 
 
