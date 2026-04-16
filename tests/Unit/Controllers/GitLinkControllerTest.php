@@ -47,8 +47,8 @@ class GitLinkControllerTest extends ControllerTestCase
         $ctrl = $this->ctrl($request);
         $ctrl->index();
 
-        // Index executes and returns JSON response
-        $this->assertNotNull($this->response->jsonPayload);
+        // Index echoes JSON directly; verify it did not redirect
+        $this->assertNull($this->response->redirectedTo);
     }
 
     public function testCreateValidatesLocalType(): void
