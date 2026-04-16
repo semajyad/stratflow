@@ -58,6 +58,18 @@ class FeatureFlagTest extends TestCase
         $this->assertNull($flags->getValue('config-key'));
     }
 
+    #[Test]
+    public function testMissingEnabledKeyDefaultsToEnabled(): void
+    {
+        // Config without an 'enabled' key — should behave as enabled
+        $config = ['api_host' => 'http://localhost:3101', 'client_key' => 'sdk-test-key'];
+        FeatureFlag::setFeaturesForTesting(['some-flag' => ['defaultValue' => true]]);
+
+        $flags = new FeatureFlag($config);
+
+        $this->assertTrue($flags->isOn('some-flag'), 'Missing enabled key should default to true');
+    }
+
     // ===========================
     // BOOLEAN FLAGS
     // ===========================
@@ -182,16 +194,24 @@ class FeatureFlagTest extends TestCase
     #[Test]
     public function testClearCacheResetsStaticFeatureCache(): void
     {
-        FeatureFlag::setFeaturesForTesting(['my-flag' => ['defaultValue' => true]]);
-        new FeatureFlag($this->config()); // populate internal cache
+        // Seed the static feature cache directly via reflection
+        $prop = new \ReflectionProperty(FeatureFlag::class, 'featureCache');
+        $prop->setAccessible(true);
+        $prop->setValue(null, ['sdk-test-key' => ['my-flag' => ['defaultValue' => true]]]);
 
-        FeatureFlag::clearTestFeatures();
+        // Confirm cache is populated
+        $cacheAfterSeed = $prop->getValue(null);
+        $this->assertNotEmpty($cacheAfterSeed, 'Cache should be non-empty before clearCache()');
+
         FeatureFlag::clearCache();
 
-        // With no test features and empty cache, service is enabled but has no flags
+        // Cache must be empty after clear
+        $cacheAfterClear = $prop->getValue(null);
+        $this->assertEmpty($cacheAfterClear, 'Cache must be empty after clearCache()');
+
+        // A new instance with empty cache and test features sees no flags
         FeatureFlag::setFeaturesForTesting([]);
         $flags = new FeatureFlag($this->config());
-
         $this->assertFalse($flags->isOn('my-flag'));
     }
 }

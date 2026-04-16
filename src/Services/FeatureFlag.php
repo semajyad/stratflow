@@ -57,7 +57,8 @@ class FeatureFlag
      */
     public function __construct(array $config, array $attributes = [])
     {
-        $this->enabled = !empty($config['enabled']) && !empty($config['client_key']);
+        $this->enabled = (!array_key_exists('enabled', $config) || (bool) $config['enabled'])
+            && !empty($config['client_key']);
 
         $features = $this->enabled
             ? self::loadFeatures($config)
@@ -120,30 +121,51 @@ class FeatureFlag
             return self::$featureCache[$cacheKey];
         }
 
-        $url = rtrim($config['api_host'], '/') . '/api/features/' . urlencode($config['client_key']);
+        $url     = rtrim($config['api_host'], '/') . '/api/features/' . urlencode($config['client_key']);
+        $safeUrl = rtrim($config['api_host'], '/') . '/api/features/[redacted]';
 
         // @codeCoverageIgnoreStart
-        $context = stream_context_create([
-            'http' => [
-                'timeout'        => 2,
-                'ignore_errors'  => true,
-            ],
-        ]);
+        $body  = null;
+        $tries = 3;
 
-        $body = @file_get_contents($url, false, $context);
+        for ($i = 0; $i < $tries; $i++) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                \CURLOPT_RETURNTRANSFER => true,
+                \CURLOPT_TIMEOUT        => 30,
+                \CURLOPT_FAILONERROR    => false,
+            ]);
+            $response   = curl_exec($ch);
+            $httpStatus = (int) curl_getinfo($ch, \CURLINFO_HTTP_CODE);
+            $curlError  = curl_error($ch);
+            curl_close($ch);
 
-        if ($body === false) {
-            Logger::warn('GrowthBook API unreachable — all flags defaulting off', ['url' => $url]);
-            self::$featureCache[$cacheKey] = [];
-            return [];
+            if ($response === false || $curlError !== '') {
+                Logger::warn('GrowthBook API unreachable — all flags defaulting off', ['url' => $safeUrl]);
+                self::$featureCache[$cacheKey] = [];
+                return [];
+            }
+
+            if ($httpStatus >= 500) {
+                if ($i < $tries - 1) {
+                    usleep(200_000 * (2 ** $i)); // 200ms, 400ms
+                    continue;
+                }
+                Logger::warn('GrowthBook API returned 5xx after retries', ['url' => $safeUrl, 'status' => $httpStatus]);
+                self::$featureCache[$cacheKey] = [];
+                return [];
+            }
+
+            $body = $response;
+            break;
         }
 
-        $data = json_decode($body, true);
+        $data = json_decode((string) $body, true);
 
         if (!is_array($data) || !isset($data['features'])) {
             Logger::warn('GrowthBook API returned unexpected response', [
-                'url'    => $url,
-                'status' => http_response_code(),
+                'url'    => $safeUrl,
+                'status' => $httpStatus,
             ]);
             self::$featureCache[$cacheKey] = [];
             return [];
