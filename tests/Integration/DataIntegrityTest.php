@@ -27,6 +27,8 @@ class DataIntegrityTest extends TestCase
     private int $orgId   = 0;
     private int $userId  = 0;
     private int $projectId = 0;
+    /** @var list<int> Secondary org IDs created by individual tests — cleaned up in tearDown. */
+    private array $extraOrgIds = [];
 
     protected function setUp(): void
     {
@@ -63,19 +65,27 @@ class DataIntegrityTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Cascade order: child rows first, then parents.
-        // Use JOIN-based DELETEs rather than correlated subqueries — MySQL 8.4
-        // has a known crash bug with DELETE … WHERE id IN (SELECT …) on InnoDB.
-        $this->db->query(
-            "DELETE sm FROM sync_mappings sm
-             JOIN integrations i ON i.id = sm.integration_id
-             WHERE i.org_id = ?",
-            [$this->orgId]
-        );
-        $this->db->query("DELETE FROM integrations WHERE org_id = ?", [$this->orgId]);
-        $this->db->query("DELETE FROM projects WHERE org_id = ?", [$this->orgId]);
-        $this->db->query("DELETE FROM users WHERE org_id = ?", [$this->orgId]);
-        $this->db->query("DELETE FROM organisations WHERE id = ?", [$this->orgId]);
+        // Clean all org IDs — primary + any secondary created by individual tests.
+        $allOrgIds = array_unique([$this->orgId, ...$this->extraOrgIds]);
+        foreach ($allOrgIds as $oid) {
+            if ($oid === 0) {
+                continue;
+            }
+            // Cascade order: child rows first, then parents.
+            // Use JOIN-based DELETEs rather than correlated subqueries — MySQL 8.4
+            // has a known crash bug with DELETE … WHERE id IN (SELECT …) on InnoDB.
+            $this->db->query(
+                "DELETE sm FROM sync_mappings sm
+                 JOIN integrations i ON i.id = sm.integration_id
+                 WHERE i.org_id = ?",
+                [$oid]
+            );
+            $this->db->query("DELETE FROM integrations WHERE org_id = ?", [$oid]);
+            $this->db->query("DELETE FROM projects WHERE org_id = ?", [$oid]);
+            $this->db->query("DELETE FROM users WHERE org_id = ?", [$oid]);
+            $this->db->query("DELETE FROM organisations WHERE id = ?", [$oid]);
+        }
+        $this->extraOrgIds = [];
     }
 
     // ===========================
@@ -230,6 +240,7 @@ class DataIntegrityTest extends TestCase
         // Create a second org + project to simulate cross-project scenario
         $this->db->query("INSERT INTO organisations (name) VALUES (?)", ['DI Org B - ' . $this->orgId]);
         $orgBId = (int) $this->db->lastInsertId();
+        $this->extraOrgIds[] = $orgBId; // ensure tearDown cleans up if test fails mid-way
 
         $this->db->query(
             "INSERT INTO users (org_id, email, password_hash, full_name, role)
@@ -294,6 +305,7 @@ class DataIntegrityTest extends TestCase
         // Org B setup
         $this->db->query("INSERT INTO organisations (name) VALUES (?)", ['DI Org B Isolation ' . $this->orgId]);
         $orgBId = (int) $this->db->lastInsertId();
+        $this->extraOrgIds[] = $orgBId; // ensure tearDown cleans up if test fails mid-way
 
         $this->db->query(
             "INSERT INTO users (org_id, email, password_hash, full_name, role)

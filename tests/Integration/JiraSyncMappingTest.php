@@ -392,14 +392,14 @@ class JiraSyncMappingTest extends TestCase
             'cloud_id'      => 'abc-123',
             'project_key'   => 'MYPROJ',
             'field_mapping' => $fieldMapping,
-        ]);
+        ], JSON_THROW_ON_ERROR);
 
         Integration::update(self::$db, $this->integrationId, ['config_json' => $configJson]);
 
         $reloaded = Integration::findById(self::$db, $this->integrationId);
         $this->assertNotNull($reloaded);
 
-        $config = json_decode($reloaded['config_json'], true);
+        $config = json_decode($reloaded['config_json'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($config, 'config_json should decode to array');
         $this->assertArrayHasKey('field_mapping', $config);
 

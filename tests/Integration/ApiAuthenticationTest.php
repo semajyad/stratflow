@@ -80,19 +80,34 @@ class ApiAuthenticationTest extends TestCase
      * Invoke ApiAuthMiddleware with the given Authorization header value.
      * Returns the middleware result (true = authenticated, false = rejected).
      */
-    private function runMiddleware(string $authHeader): bool
+    private function runMiddleware(string $authHeader, string $remoteAddr = '127.0.0.1'): bool
     {
+        $prevAuth   = $_SERVER['HTTP_AUTHORIZATION'] ?? null;
+        $prevAddr   = $_SERVER['REMOTE_ADDR'] ?? null;
+
         $_SERVER['HTTP_AUTHORIZATION'] = $authHeader;
-        $_SERVER['REMOTE_ADDR']        = '127.0.0.1';
+        $_SERVER['REMOTE_ADDR']        = $remoteAddr;
 
         $session    = $this->createMock(\StratFlow\Core\Session::class);
         $auth       = new \StratFlow\Core\Auth($session, self::$db);
         $response   = $this->createMock(\StratFlow\Core\Response::class);
         $middleware = new \StratFlow\Middleware\ApiAuthMiddleware();
 
-        ob_start();
-        $result = $middleware->handle($auth, self::$db, $response);
-        ob_end_clean();
+        try {
+            $result = $middleware->handle($auth, self::$db, $response);
+        } finally {
+            // Restore originals so subsequent tests see a clean $_SERVER
+            if ($prevAuth === null) {
+                unset($_SERVER['HTTP_AUTHORIZATION']);
+            } else {
+                $_SERVER['HTTP_AUTHORIZATION'] = $prevAuth;
+            }
+            if ($prevAddr === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $prevAddr;
+            }
+        }
 
         return $result;
     }
@@ -209,10 +224,15 @@ class ApiAuthenticationTest extends TestCase
         )->fetch();
 
         $this->assertNotNull($row);
-        $stored = json_decode($row['scopes'], true);
+        $stored = json_decode($row['scopes'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($stored);
         $this->assertNotContains('stories:write-status', $stored, 'Write scope must not be present on read-only token');
         $this->assertNotContains('stories:assign', $stored, 'stories:assign must not be present on read-only token');
+
+        // The token is structurally valid — middleware accepts authentication
+        // (scope enforcement per-route is at the controller/policy layer, not middleware)
+        $authenticated = $this->runMiddleware('Bearer ' . $gen['raw']);
+        $this->assertTrue($authenticated, 'Read-only token must still authenticate via middleware');
     }
 
     // ===========================
@@ -232,15 +252,17 @@ class ApiAuthenticationTest extends TestCase
         )->fetch();
         $this->assertNull($before['last_used_at'], 'last_used_at should be null before first use');
 
-        // Simulate authenticated use
-        PersonalAccessToken::touchLastUsed(self::$db, (int) $created['id'], '10.0.0.1');
+        // Exercise the middleware path (not touchLastUsed directly) — middleware
+        // authenticates the token and calls touchLastUsed internally on success.
+        $result = $this->runMiddleware('Bearer ' . $gen['raw'], '10.0.0.1');
+        $this->assertTrue($result, 'Valid token must be accepted by middleware');
 
         $after = self::$db->query(
             "SELECT last_used_at, last_used_ip FROM personal_access_tokens WHERE id = ?",
             [$created['id']]
         )->fetch();
 
-        $this->assertNotNull($after['last_used_at'], 'last_used_at must be set after token use');
+        $this->assertNotNull($after['last_used_at'], 'last_used_at must be set after middleware authentication');
         $this->assertSame('10.0.0.1', $after['last_used_ip']);
     }
 

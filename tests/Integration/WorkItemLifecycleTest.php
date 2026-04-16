@@ -109,6 +109,8 @@ class WorkItemLifecycleTest extends TestCase
         // Remove all work items from both test projects after each test
         HLWorkItem::deleteByProjectId(self::$db, self::$projectId);
         HLWorkItem::deleteByProjectId(self::$db, self::$projectIdB);
+        // Clear any session flash state set during the test to avoid bleed
+        unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_warning']);
     }
 
     // ===========================
