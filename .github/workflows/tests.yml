@@ -70,7 +70,7 @@ jobs:
           curl -sSfL \
             https://github.com/hadolint/hadolint/releases/download/v2.14.0/hadolint-Linux-x86_64 \
             -o /usr/local/bin/hadolint
-          echo "27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e  /usr/local/bin/hadolint" | sha256sum -c --status \
+          echo "6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47  /usr/local/bin/hadolint" | sha256sum -c --status \
             || { echo "::error::Hadolint binary checksum mismatch"; exit 1; }
           chmod +x /usr/local/bin/hadolint
           hadolint docker/php/Dockerfile
