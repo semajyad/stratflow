@@ -51,7 +51,14 @@ try {
             foreach ($statements as $stmt) {
                 if ($stmt === '') continue;
                 try {
-                    $pdo->exec($stmt);
+                    // Use query() instead of exec() so we get a PDOStatement
+                    // whose cursor we can close. exec() leaves PREPARE/EXECUTE
+                    // result sets open, causing PDO 2014 errors on the next
+                    // statement in migrations that use dynamic SQL.
+                    $result = $pdo->query($stmt);
+                    if ($result instanceof PDOStatement) {
+                        $result->closeCursor();
+                    }
                 } catch (PDOException $e) {
                     // 1060 = Duplicate column, 1061 = Duplicate key, 1826 = Duplicate FK name — safe to skip
                     if (in_array($e->errorInfo[1] ?? 0, [1060, 1061, 1826])) {
