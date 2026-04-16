@@ -53,15 +53,24 @@ BUG_COMMIT_PREFIXES = re.compile(r"^fix(\([^)]+\))?!?:", re.IGNORECASE)
 
 
 def get_changed_files(base: str, head: str) -> list[str]:
-    """Return list of changed files between base and head."""
+    """Return list of non-deleted changed files between base and head."""
     result = subprocess.run(
-        ["git", "diff", "--name-only", f"{base}...{head}"],
+        ["git", "diff", "--name-status", f"{base}...{head}"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
         print(f"::error::git diff failed: {result.stderr}", file=sys.stderr)
         sys.exit(2)
-    return [f for f in result.stdout.strip().splitlines() if f]
+    files = []
+    for line in result.stdout.strip().splitlines():
+        if not line:
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            status, path = parts
+            if not status.startswith("D"):   # exclude deleted files
+                files.append(path.strip())
+    return files
 
 
 def get_commits_in_range(base: str, head: str) -> list[tuple[str, str]]:
@@ -81,12 +90,21 @@ def get_commits_in_range(base: str, head: str) -> list[tuple[str, str]]:
 
 
 def get_files_in_commit(sha: str) -> list[str]:
-    """Return list of files changed in a single commit."""
+    """Return list of non-deleted files changed in a single commit."""
     result = subprocess.run(
-        ["git", "diff-tree", "--no-commit-id", "-r", "--name-only", sha],
+        ["git", "diff-tree", "--no-commit-id", "-r", "--name-status", sha],
         capture_output=True, text=True
     )
-    return [f for f in result.stdout.strip().splitlines() if f]
+    files = []
+    for line in result.stdout.strip().splitlines():
+        if not line:
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            status, path = parts
+            if not status.startswith("D"):   # exclude deleted files
+                files.append(path.strip())
+    return files
 
 
 def source_to_test_path(src_path: str) -> str | None:
@@ -116,7 +134,10 @@ def is_test_file(path: str) -> bool:
 
 
 def is_pr_exempt() -> bool:
-    """Check if the PR has the no-test-required label via GH CLI."""
+    """
+    Check if the PR is exempt: requires BOTH the no-test-required label AND
+    a PR comment starting with '/no-test-required:' (the audit trail comment).
+    """
     pr_number = os.environ.get("GH_PR_NUMBER", "")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     if not pr_number or not repo:
@@ -125,14 +146,41 @@ def is_pr_exempt() -> bool:
     result = subprocess.run(
         ["gh", "pr", "view", pr_number,
          "--repo", repo,
-         "--json", "labels",
-         "--jq", "[.labels[].name] | contains([\"no-test-required\"])"],
+         "--json", "labels,comments"],
         capture_output=True, text=True
     )
-    if result.returncode == 0 and result.stdout.strip() == "true":
-        print("  PR has 'no-test-required' label — exempted from all test checks.")
-        return True
-    return False
+    if result.returncode != 0 or not result.stdout.strip():
+        return False
+
+    import json as _json
+    try:
+        data = _json.loads(result.stdout)
+    except ValueError:
+        return False
+
+    label_names = [lbl["name"] for lbl in data.get("labels", [])]
+    if "no-test-required" not in label_names:
+        return False
+
+    # Also require an audit-trail comment starting with /no-test-required:
+    audit_comment = None
+    for comment in data.get("comments", []):
+        body = comment.get("body", "")
+        if body.startswith("/no-test-required:"):
+            audit_comment = body
+            break
+
+    if audit_comment is None:
+        print(
+            "  PR has 'no-test-required' label but no '/no-test-required: <reason>' "
+            "comment — exemption denied. Add a comment with the reason.",
+            file=sys.stderr,
+        )
+        return False
+
+    reason = audit_comment[len("/no-test-required:"):].strip()
+    print(f"  PR exempt — no-test-required label + audit comment: '{reason}'")
+    return True
 
 
 def check_source_touch_rule(changed: list[str]) -> list[tuple[str, str]]:
