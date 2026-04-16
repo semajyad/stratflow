@@ -1,0 +1,28 @@
+# CODEOWNERS — defines who must review changes to sensitive paths.
+#
+# GitHub requires these reviewers to approve before merge can proceed
+# (when "require code owner review" is enabled in branch protection).
+# Reviews are requested automatically when a PR touches a listed path.
+#
+# Format: <pattern> <@user or @org/team>
+
+# Security-critical: auth, sessions, middleware, billing, webhooks
+src/Core/Auth*.php                      @semajyad
+src/Core/Session*.php                   @semajyad
+src/Middleware/                         @semajyad
+src/Services/StripeService.php          @semajyad
+src/Services/EmailService.php           @semajyad
+src/Controllers/CheckoutController.php  @semajyad
+src/Controllers/GitWebhookController.php @semajyad
+src/Controllers/GitHubAppController.php @semajyad
+
+# Database schema and migrations — irreversible changes
+database/schema.sql                     @semajyad
+database/migrations/                    @semajyad
+
+# CI/CD pipeline and branch protection
+.github/workflows/                      @semajyad
+.github/CODEOWNERS                      @semajyad
+
+# Secrets and configuration
+src/Config/                             @semajyad
