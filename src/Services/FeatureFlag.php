@@ -165,7 +165,7 @@ class FeatureFlag
         if (!is_array($data) || !isset($data['features'])) {
             Logger::warn('GrowthBook API returned unexpected response', [
                 'url'    => $safeUrl,
-                'status' => $httpStatus ?? 0,
+                'status' => $httpStatus,
             ]);
             self::$featureCache[$cacheKey] = [];
             return [];
