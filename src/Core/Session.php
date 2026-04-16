@@ -44,8 +44,13 @@ class Session
             ini_set('session.use_only_cookies', '1');
             ini_set('session.cookie_httponly', '1');
             ini_set('session.cookie_samesite', 'Lax');
-            ini_set('session.sid_length', '48');
-            ini_set('session.sid_bits_per_character', '6');
+            // session.sid_length and session.sid_bits_per_character were
+            // deprecated in PHP 8.4 — the equivalent is now set via
+            // session_set_cookie_params or left at PHP defaults (128-bit).
+            if (PHP_VERSION_ID < 80400) {
+                ini_set('session.sid_length', '48');
+                ini_set('session.sid_bits_per_character', '6');
+            }
 
             session_set_cookie_params([
                 'lifetime' => 0,           // Browser session only
