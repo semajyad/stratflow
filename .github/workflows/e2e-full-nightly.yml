@@ -39,6 +39,25 @@ jobs:
         working-directory: tests/Playwright
         run: npx playwright install --with-deps
 
+      # ZAP (16:00) and Shannon AI (14:00) are authenticated and mutate staging
+      # state (create/delete records). Re-seed the staging database before
+      # running Playwright to prevent state bleed from those scans.
+      - name: Re-seed staging database
+        env:
+          STAGING_SEED_URL: ${{ secrets.STAGING_SEED_URL }}
+          STAGING_SEED_TOKEN: ${{ secrets.STAGING_SEED_TOKEN }}
+        run: |
+          if [ -n "$STAGING_SEED_URL" ] && [ -n "$STAGING_SEED_TOKEN" ]; then
+            echo "Re-seeding staging database via seed endpoint..."
+            curl -sSf -X POST "$STAGING_SEED_URL" \
+              -H "Authorization: Bearer $STAGING_SEED_TOKEN" \
+              -H "Content-Type: application/json" \
+              --max-time 120 \
+              && echo "Seed complete." || echo "::warning::Seed endpoint unavailable — proceeding with current state."
+          else
+            echo "::notice::STAGING_SEED_URL/TOKEN not set — skipping re-seed. State from ZAP/Shannon may affect results."
+          fi
+
       - name: Run Playwright full suite against staging
         working-directory: tests/Playwright
         env:

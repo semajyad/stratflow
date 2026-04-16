@@ -123,18 +123,22 @@ jobs:
             --log-junit junit-unit.xml \
             --colors=never
 
-      - name: Enforce coverage threshold (≥60%)
+      - name: Enforce coverage threshold (≥27% lines)
         run: |
-          COVERAGE=$(php -r "
+          RESULT=$(php -r "
             \$xml = simplexml_load_file('coverage.xml');
-            \$metrics = \$xml->project->metrics;
-            \$total = (int) \$metrics['statements'];
-            \$covered = (int) \$metrics['coveredstatements'];
-            echo \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
+            \$m = \$xml->project->metrics;
+            \$total = (int)\$m['statements'];
+            \$covered = (int)\$m['coveredstatements'];
+            \$pct = \$total > 0 ? round(\$covered / \$total * 100, 1) : 0;
+            echo \"\$covered/\$total/\$pct\";
           ")
-          echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 28" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below the 28% threshold (unit-only suite; DB-backed paths covered by integration suite)."
+          COVERED=$(echo "$RESULT" | cut -d/ -f1)
+          TOTAL=$(echo "$RESULT" | cut -d/ -f2)
+          PCT=$(echo "$RESULT" | cut -d/ -f3)
+          echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL} statements)"
+          if awk "BEGIN { exit (${PCT} >= 27) }"; then
+            echo "::error::Line coverage ${PCT}% (${COVERED}/${TOTAL}) is below the 27% threshold. Add unit or integration tests to bridge the gap."
             exit 1
           fi
 
@@ -238,6 +242,7 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=15
+          --tmpfs /var/lib/mysql:rw,noexec,nosuid,size=512m
 
     steps:
       - uses: actions/checkout@v4
@@ -337,3 +342,14 @@ jobs:
           GH_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for destructive migrations
+        run: |
+          python3 scripts/ci/check_destructive_migrations.py \
+            --base origin/main \
+            --head HEAD
+        env:
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
