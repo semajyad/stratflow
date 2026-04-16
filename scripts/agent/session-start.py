@@ -279,6 +279,20 @@ def main() -> None:
     """Entry point: create session branch, register in ledger, print briefing."""
     print("=== StratFlow Agent Session Start ===")
 
+    # 0. Install/refresh git hooks from scripts/hooks/
+    install_script = REPO_ROOT / "scripts" / "install-hooks.sh"
+    if install_script.exists():
+        result = subprocess.run(
+            ["sh", str(install_script), "--quiet"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print("Git hooks installed.")
+        else:
+            print(f"Warning: install-hooks.sh failed: {result.stderr.strip()}", file=sys.stderr)
+
     # 1. Fetch origin/main
     print("\nFetching origin/main...")
     run(["git", "fetch", "origin", "main", "--prune"], capture=False)
