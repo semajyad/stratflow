@@ -147,8 +147,8 @@
                         <p class="settings-defaults-row-label">Sprint</p>
                         <div class="settings-flex-wrap">
                             <div class="form-group">
-                                <label class="form-label">Sprint Length (weeks)</label>
-                                <input type="number" name="sprint_length_weeks" class="form-input settings-input-width-xs"
+                                <label class="form-label" for="sprint-length-weeks">Sprint Length (weeks)</label>
+                                <input type="number" name="sprint_length_weeks" id="sprint-length-weeks" class="form-input settings-input-width-xs"
                                        value="<?= (int) ($settings['sprint_length_weeks'] ?? 2) ?>" min="1" max="12">
                                 <small class="text-muted">Used for sprint planning and capacity calculations.</small>
                             </div>
@@ -160,8 +160,8 @@
                         <p class="settings-defaults-row-label">High Level Items</p>
                         <div class="settings-flex-wrap">
                             <div class="form-group">
-                                <label class="form-label">Sizing Method</label>
-                                <select name="hl_item_sizing_method" class="form-input">
+                                <label class="form-label" for="hl-item-sizing-method">Sizing Method</label>
+                                <select name="hl_item_sizing_method" id="hl-item-sizing-method" class="form-input">
                                     <option value="sprints" <?= ($settings['hl_item_sizing_method'] ?? 'sprints') === 'sprints' ? 'selected' : '' ?>>Sprints</option>
                                     <option value="weeks"   <?= ($settings['hl_item_sizing_method'] ?? '') === 'weeks'   ? 'selected' : '' ?>>Weeks</option>
                                     <option value="months"  <?= ($settings['hl_item_sizing_method'] ?? '') === 'months'  ? 'selected' : '' ?>>Months</option>
@@ -170,8 +170,8 @@
                                 <small class="text-muted">Controls the size field in the work item modal.</small>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Default Size (months)</label>
-                                <select name="hl_item_default_months" class="form-input">
+                                <label class="form-label" for="hl-item-default-months">Default Size (months)</label>
+                                <select name="hl_item_default_months" id="hl-item-default-months" class="form-input">
                                     <?php for ($m = 1; $m <= 6; $m++): ?>
                                         <option value="<?= $m ?>" <?= (int) ($settings['hl_item_default_months'] ?? 2) === $m ? 'selected' : '' ?>>
                                             <?= $m ?> month<?= $m !== 1 ? 's' : '' ?>
@@ -187,8 +187,8 @@
                         <p class="settings-defaults-row-label">Stories</p>
                         <div class="settings-flex-wrap">
                             <div class="form-group">
-                                <label class="form-label">Max Size (points)</label>
-                                <select name="user_story_max_size" class="form-input">
+                                <label class="form-label" for="user-story-max-size">Max Size (points)</label>
+                                <select name="user_story_max_size" id="user-story-max-size" class="form-input">
                                     <?php
                                     $fibonacci = [1, 2, 3, 5, 8, 13, 20];
                                     $currentMax = (int) ($settings['user_story_max_size'] ?? 13);

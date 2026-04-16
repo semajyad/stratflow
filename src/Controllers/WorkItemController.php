@@ -754,7 +754,7 @@ class WorkItemController
         $orgSettings    = $orgRow && !empty($orgRow['settings_json'])
             ? (json_decode($orgRow['settings_json'], true) ?? []) : [];
         $showQuality = !empty($systemSettings['feature_story_quality'])
-                       && ($orgSettings['quality']['enabled'] ?? false);
+                       && ($orgSettings['quality']['hl_enabled'] ?? false);
         if (!$showQuality) {
             $this->response->json(['status' => 'error', 'message' => 'Quality scoring is disabled'], 403);
             return;

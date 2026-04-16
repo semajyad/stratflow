@@ -244,10 +244,10 @@ $billingContact  = $billing_contact ?? [];
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <div class="billing-inline-row">
                     <div>
-                        <label class="billing-field-label">Seats to Add</label>
+                        <label class="billing-field-label" for="invoice-seats-input">Seats to Add</label>
                         <input type="number" name="seats_to_add" id="invoice-seats-input"
-                               min="1" max="1000" value="1" class="form-control billing-seat-input"
-                               class="js-invoice-seats-input"
+                               min="1" max="1000" value="1"
+                               class="form-control billing-seat-input js-invoice-seats-input"
                                data-period-label="<?= htmlspecialchars(strtolower($periodLabel), ENT_QUOTES, 'UTF-8') ?>"
                                data-price-per-seat="<?= (int) $pricePerSeat ?>">
                     </div>
@@ -359,9 +359,9 @@ $billingContact  = $billing_contact ?? [];
             <tbody>
                 <?php
                 // Base subscription row (plan included)
-                $basePriceCents     = 0; // included in per-seat price
+                $billableSeats      = max($active_users, $seat_limit); // never charge more than purchased
                 $unusedSeats        = max(0, $seat_limit - $active_users);
-                $activeSeatsCents   = $pricePerSeat * $active_users;
+                $activeSeatsCents   = $pricePerSeat * min($active_users, $seat_limit);
                 $unusedSeatsCents   = $pricePerSeat * $unusedSeats;
                 $perMonthCents      = $billingPeriodMo > 1 ? (int) round($totalCostCents / $billingPeriodMo) : 0;
                 ?>
@@ -501,7 +501,7 @@ $billingContact  = $billing_contact ?? [];
                             </td>
                             <td class="billing-table__cell billing-actions-cell">
                                 <?php if (!empty($inv->invoice_pdf)): ?>
-                                    <a href="<?= htmlspecialchars($inv->invoice_pdf) ?>" target="_blank"
+                                    <a href="<?= htmlspecialchars($inv->invoice_pdf, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer"
                                        class="billing-pdf-link">PDF</a>
                                 <?php endif; ?>
                                 <?php if ($xero_connected): ?>

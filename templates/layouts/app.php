@@ -10,12 +10,12 @@
     <script src="/assets/js/app-preload.js?v=<?= ASSET_VERSION ?>"></script>
 </head>
 <?php
-$_uri = $_SERVER['REQUEST_URI'] ?? '';
+$_uri = strtok($_SERVER['REQUEST_URI'] ?? '', '?');
 $_bodyClass = 'app-layout';
-if (str_starts_with($_uri, '/superadmin')) { $_bodyClass .= ' superadmin-theme'; }
-elseif (str_contains($_uri, '/app/admin')) { $_bodyClass .= ' admin-theme'; }
+if (str_starts_with($_uri, '/superadmin/') || $_uri === '/superadmin') { $_bodyClass .= ' superadmin-theme'; }
+elseif (str_starts_with($_uri, '/app/admin/') || $_uri === '/app/admin') { $_bodyClass .= ' admin-theme'; }
 ?>
-<body class="<?= htmlspecialchars($_bodyClass) ?>">
+<body class="<?= htmlspecialchars($_bodyClass, ENT_QUOTES, 'UTF-8') ?>">
     <div class="app-wrapper">
         <?php require __DIR__ . '/../partials/sidebar.php'; ?>
         <div class="app-main">
