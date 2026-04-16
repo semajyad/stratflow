@@ -73,7 +73,6 @@ jobs:
             --project "StratFlow" \
             --failOnCVSS 9 \
             --enableRetired \
-            --suppression /src/../composer.lock \
             2>&1 | tee dc-output.txt
           EXIT=${PIPESTATUS[0]}
           echo "Dependency-Check exit: $EXIT"

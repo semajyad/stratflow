@@ -18,6 +18,7 @@ on:
       - 'tests/Lighthouse/**'
       - 'database/schema.sql'
       - 'database/migrations/**'
+      - '.github/workflows/lighthouse.yml'
 
 permissions:
   contents: read
@@ -114,7 +115,7 @@ jobs:
           sleep 2
 
       - name: Install Lighthouse CI
-        run: npm install -g @lhci/cli --quiet
+        run: npm install -g @lhci/cli@0.14.0 --quiet
 
       - name: Run Lighthouse CI
         run: lhci autorun --config tests/Lighthouse/lighthouserc.yml

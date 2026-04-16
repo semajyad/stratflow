@@ -20,6 +20,8 @@ on:
     paths:
       - 'composer.lock'
       - 'composer.json'
+      - 'tests/security/baseline-grype.json'
+      - '.github/workflows/sbom.yml'
   pull_request:
     branches: [main]
     paths:

@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Checkov
-        run: pip install checkov --quiet
+        run: pip install checkov==3.2.513 --quiet
 
       - name: Run Checkov (Dockerfile + docker-compose + GH Actions)
         run: |
