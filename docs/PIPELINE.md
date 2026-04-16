@@ -6,7 +6,7 @@ _Last updated: 2026-04-15 (rev 2)_
 
 ## 1. PR → Merge flow
 
-```ascii
+```text
 PR opened
   │
   ├─ multi-agent-guard      branch naming, claim advisory (non-blocking)
@@ -17,14 +17,13 @@ PR opened
   │   PHPUnit integration (PHP 8.4)   ~3 m    MySQL
   │   Playwright fast (Chromium)      ~10 m   MySQL + PHP dev server (timeout: 15 min)
   │   PHPStan · PHPCS PSR-12          ~1 m    static only
-  │   Test-touch gate                 instant  changed src/ must have test diff
   │   Destructive migration gate      instant  DROP/RENAME ops need safe-migration-reviewed label
-  │   Codecov patch coverage          ≥ 80% on new lines
-  │   k6 smoke (30 s, 1 VU)          p95 < 2 s  login · pricing · dashboard
+  │   Codecov patch coverage          ≥ 80% on new lines (enforced via codecov.yml)
   │
   ├─ ADVISORY (never blocks merge) ────────────────────────────────────────────
   │   TruffleHog secret scan          on every push + PR
   │   Semgrep PHP (changed files)     ~60 s   p/php + p/owasp-top-ten
+  │   k6 smoke (30 s, 1 VU)          p95 < 800 ms  nightly baseline / advisory
   │   Hadolint                        ~5 s    Dockerfile lint
   │   Checkov IaC                     ~30 s   when Docker/GH Actions files change
   │   Syft + Grype SBOM               ~2 m    when composer.lock changes
@@ -69,7 +68,12 @@ CHANGES_REQUESTED disables auto-merge on that PR until re-approved.
 | 17:30     | morning-summary   | Single ntfy digest — **silent if all green** |
 | Sun 20:00 | performance-load  | k6 50-VU peak load (weekly) |
 
-All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
+Seven jobs emit `nightly-status.json` artifacts consumed by `nightly-triage.yml`:
+`nightly-status-smoke`, `nightly-status-shannon`, `nightly-status-snyk`,
+`nightly-status-perf`, `nightly-status-e2e`, `nightly-status-mutation`,
+`nightly-status-perf-load`. `nightly-self-heal` and `morning-summary` emit no
+artifacts; `nightly-triage` emits `triage-report`. Missing artifacts are handled
+gracefully by the triage workflow — jobs that did not run are not treated as failures.
 
 > **Staging data hygiene**: Shannon AI (14:00) and ZAP (16:00) are authenticated and mutate
 > staging state. The e2e-full-nightly job re-seeds the staging database at 16:30 via
@@ -108,7 +112,8 @@ All nightly jobs emit `nightly-status.json` artifacts consumed by triage.
 | Lighthouse CI | WCAG 2.1 accessibility violations, Core Web Vitals | Planned |
 
 ### Baselines
-Accepted findings stored in `tests/security/baseline-{zap,shannon,snyk,grype}.json`.  
+Accepted findings stored in `tests/security/baseline-zap.json`,
+`tests/security/baseline-snyk.json`, and `tests/security/baseline-shannon.json`.
 Update via: `python3 scripts/ci/update_security_baseline.py <scan>` → PR with human review.
 
 ---
@@ -117,9 +122,8 @@ Update via: `python3 scripts/ci/update_security_baseline.py <scan>` → PR with 
 
 | Gate | Threshold | Blocks merge? |
 |------|-----------|--------------|
-| PHPUnit unit coverage | ≥ 80% line coverage (unit suite) | Yes |
-| Codecov patch coverage | ≥ 80% on new lines | Yes |
-| Test-touch rule | Every changed `src/*.php` needs a test diff | Yes (override: `no-test-required` label) |
+| PHPUnit unit coverage | ≥ 12% line coverage (CI check, not hard-gated in phpunit.xml) | Advisory |
+| Codecov patch coverage | ≥ 80% on new lines (enforced via `codecov.yml`) | Yes |
 | Destructive migration gate | `DROP`/`RENAME` ops require `safe-migration-reviewed` label | Yes |
 | Infection PHP MSI | Tracked, not gated | No (advisory) |
 | Playwright flake quarantine | 3 flakes in 7 days → skip + open issue | Auto-managed |
@@ -149,7 +153,6 @@ After a deliberate destructive migration merges, update `LAST_GOOD_SHA` immediat
 
 ```bash
 gh variable set LAST_GOOD_SHA --body "<new SHA>" --repo semajyad/stratflow
-
 ```
 
 ---
@@ -183,12 +186,13 @@ Results in `tests/performance/history/YYYY-MM-DD.json`.
 
 ## 8. Notification budget
 
-| Priority | Fires on |
-|----------|---------|
-| CRITICAL | Deploy rollback failed · pipeline paused |
-| HIGH | Deploy rolled back · self-heal exhausted · autofix-failed · new security HIGH CVE |
-| DEFAULT | Morning summary when failures exist |
-| **SILENT** | All nightly green · successful deploys · recurring (already-ticketed) failures |
+| ntfy priority | Fires on |
+|---------------|---------|
+| `urgent` | Deploy rollback failed · pipeline paused (`DEPLOY_PAUSED` set) |
+| `high` | Deploy rolled back to last-good SHA · any failure in morning summary |
+| `default` | Morning summary when warnings only (no failures) |
+| `min` | Successful deploy (silent low-priority confirmation) |
+| **silent (no ntfy)** | All nightly jobs green · recurring already-ticketed failures |
 
 Topic: `stratflow-ci` on local ntfy instance.
 
@@ -198,7 +202,6 @@ Topic: `stratflow-ci` on local ntfy instance.
 
 | Situation | Override |
 |-----------|---------|
-| PR with no test change | `no-test-required` label + `/no-test-required: <reason>` comment |
 | Destructive migration | `safe-migration-reviewed` label; update `LAST_GOOD_SHA` post-merge |
 | Accept a security finding | `python3 scripts/ci/update_security_baseline.py <scan>` → PR |
 | Deploy paused | `gh workflow run deploy.yml -f confirm=deploy -f clear_pause=yes` |
