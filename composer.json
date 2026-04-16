@@ -37,3 +37,4 @@
         "test:integration": "phpunit --configuration tests/phpunit.xml --testsuite integration"
     }
 }
+
