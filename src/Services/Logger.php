@@ -141,8 +141,19 @@ class Logger
             $entry['ctx'] = $ctx;
         }
 
-        // Write to stdout — container platform captures this
-        $stream = self::$outputStream ?? \STDOUT;
-        fwrite($stream, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+        // Write to stdout — container platform captures this.
+        // STDOUT constant is unavailable in php-fpm and the built-in web
+        // server's forked request workers, so we open php://stdout which
+        // is always available regardless of SAPI.
+        static $stdoutHandle = null;
+        if ($stdoutHandle === null) {
+            $stdoutHandle = fopen('php://stdout', 'wb');
+        }
+        $stream = self::$outputStream ?? $stdoutHandle;
+        if ($stream !== false && $stream !== null) {
+            fwrite($stream, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+        } else {
+            error_log(json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
     }
 }
