@@ -1,20 +1,25 @@
 # Contributing to StratFlow
 
-This guide covers everything a new developer needs to get StratFlow running locally and make their first contribution.
-
-## Prerequisites
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Run the full stack (PHP, MySQL, Nginx) | Required |
-| [Git](https://git-scm.com/) | Version control | Required |
-| PHP 8.4 (local) | IDE autocomplete and `php -l` linting | Optional |
-| [Stripe CLI](https://stripe.com/docs/stripe-cli) | Test Stripe webhooks locally | Optional |
-| [Composer](https://getcomposer.org/) | Install PHP dependencies locally (IDE support) | Optional |
+This guide covers everything a new developer needs to get StratFlow running locally and make their first contribution. Two setup paths are available: Docker (quickest) or bare-metal (no Docker required).
 
 ---
 
-## 1. Clone and configure
+## Prerequisites
+
+| Tool | Docker path | Bare-metal path | Install |
+|------|-------------|-----------------|---------|
+| [Git](https://git-scm.com/) | Required | Required | [git-scm.com](https://git-scm.com/) |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Required | Not needed | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| PHP 8.4 | Not needed | Required | See §B-1 below |
+| MySQL 8.x | Not needed | Required | See §B-2 below |
+| [Composer](https://getcomposer.org/) | Not needed | Required | [getcomposer.org](https://getcomposer.org/) |
+| [Stripe CLI](https://stripe.com/docs/stripe-cli) | Optional | Optional | For local webhook testing |
+
+---
+
+## Path A — Docker (recommended for most developers)
+
+### A-1. Clone and configure
 
 ```bash
 git clone https://github.com/semajyad/stratflow.git
@@ -22,57 +27,51 @@ cd stratflow
 cp .env.example .env
 ```
 
-Open `.env` and fill in the required values (minimum for local dev):
+Open `.env` and set the minimum required values:
 
 ```env
-GEMINI_API_KEY=your-key-here          # https://aistudio.google.com/apikey
+GEMINI_API_KEY=your-key-here           # https://aistudio.google.com/apikey
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...       # from Stripe CLI (see step 4)
-TOKEN_ENCRYPTION_KEY=replace-with-32-bytes   # any 32-char random string for dev
+STRIPE_WEBHOOK_SECRET=whsec_...        # from Stripe CLI (see §A-4)
+STRIPE_PRICE_PRODUCT=price_...         # from your Stripe test products
+STRIPE_PRICE_EVAL_BOARD=price_...
+TOKEN_ENCRYPTION_KEY=replace-with-32-bytes  # any 32-char random string
 ```
 
-Everything else in `.env.example` has working defaults for local Docker.
+All other variables in `.env.example` have working Docker defaults — leave them as-is.
 
----
-
-## 2. Start the Docker stack
+### A-2. Start the Docker stack
 
 ```bash
 docker compose up -d --build
 ```
 
-This starts four containers:
+Four containers start:
 
 | Container | Port | Purpose |
 |-----------|------|---------|
 | `nginx` | **8890** | Web server |
 | `php` | — | PHP-FPM app server |
 | `mysql` | **3307** | MySQL 8.4 |
-| `quality-worker` | — | Async quality scoring (background loop) |
+| `quality-worker` | — | Async quality scoring (runs every 2 min) |
 
-MySQL auto-initialises from `database/schema.sql` on first start. Watch for readiness:
+MySQL auto-initialises from `database/schema.sql` plus all migrations on first start. Wait for it to be ready:
 
 ```bash
 docker compose logs -f mysql
 # Wait until you see: ready for connections
 ```
 
----
-
-## 3. Create your admin user
+### A-3. Create your admin user
 
 ```bash
 docker compose exec php php scripts/create-admin.php
 ```
 
-Follow the prompts to set email, password, and name. Then open [http://localhost:8890](http://localhost:8890) and log in.
+Follow the prompts to set email, password, name, and organisation. Then open [http://localhost:8890](http://localhost:8890) and log in.
 
----
-
-## 4. Set up Stripe webhooks (optional)
-
-To test subscription flows locally, forward Stripe events to your local server:
+### A-4. Set up Stripe webhooks (optional)
 
 ```bash
 stripe listen --forward-to http://localhost:8890/webhook/stripe
@@ -84,96 +83,265 @@ The CLI prints a `whsec_...` signing secret — paste it into `STRIPE_WEBHOOK_SE
 docker compose restart php
 ```
 
----
-
-## 5. Run the test suite
+### A-5. Run the test suite
 
 ```bash
 docker compose exec php vendor/bin/phpunit
-```
-
-Or run specific suites:
-
-```bash
+# Or by suite:
 docker compose exec php vendor/bin/phpunit --testsuite unit
 docker compose exec php vendor/bin/phpunit --testsuite integration
 ```
 
-Tests are in `tests/Unit/` and `tests/Integration/`. See [docs/TESTING.md](docs/TESTING.md) for details.
-
----
-
-## 6. Database access
+### A-6. Database access (Docker)
 
 MySQL is exposed on `localhost:3307` (non-standard port to avoid conflicts with a local MySQL install).
 
 | Setting | Value |
 |---------|-------|
-| Host | `localhost` |
+| Host | `127.0.0.1` |
 | Port | `3307` |
 | Database | `stratflow` |
 | User | `stratflow` |
 | Password | `stratflow_secret` |
 
-Connect with any MySQL client (TablePlus, DBeaver, DataGrip, etc.) or via CLI:
-
 ```bash
 mysql -h 127.0.0.1 -P 3307 -u stratflow -pstratflow_secret stratflow
 ```
 
----
-
-## 7. Applying schema changes
-
-New migrations go in `database/migrations/` following the existing sequential naming convention (e.g. `041_my_change.sql`). Migrations run automatically during Railway deploys via `scripts/init-db.php`.
-
-For local development, apply migrations manually:
+### A-7. Common Docker commands
 
 ```bash
-docker compose exec mysql mysql -u stratflow -pstratflow_secret stratflow < database/migrations/041_my_change.sql
-```
-
-To reset from scratch (destroys all data):
-
-```bash
-docker compose down -v
-docker compose up -d --build
-```
-
----
-
-## 8. Common development commands
-
-```bash
-# View all container logs
-docker compose logs -f
-
-# View PHP application logs only
-docker compose logs -f php
-
-# Restart PHP after config changes
-docker compose restart php
-
-# Open a shell in the PHP container
-docker compose exec php bash
-
-# Run Composer commands
+docker compose logs -f              # All container logs
+docker compose logs -f php          # PHP logs only
+docker compose restart php          # Restart PHP after .env changes
+docker compose exec php bash        # Shell inside PHP container
 docker compose exec php composer install
-docker compose exec php composer require vendor/package
-
-# Lint a PHP file
 docker compose exec php php -l src/Controllers/MyController.php
+docker compose down                 # Stop stack
+docker compose down -v              # Stop + destroy database (full reset)
+```
 
-# Stop the stack
-docker compose down
+### A-8. Applying schema changes (Docker)
 
-# Stop and destroy database (full reset)
-docker compose down -v
+```bash
+docker compose exec mysql mysql -u stratflow -pstratflow_secret stratflow \
+  < database/migrations/041_my_change.sql
 ```
 
 ---
 
-## 9. Project structure
+## Path B — Bare-metal (no Docker)
+
+Use this path if you cannot or prefer not to run Docker.
+
+### B-1. Install PHP 8.4
+
+**Windows:**
+1. Download the latest PHP 8.4 Non-Thread Safe ZIP from [windows.php.net/download](https://windows.php.net/download/)
+2. Extract to `C:\php`
+3. Add `C:\php` to your `PATH`
+4. Copy `php.ini-development` → `php.ini`
+5. Enable the following extensions in `php.ini` (uncomment each line):
+   ```ini
+   extension=curl
+   extension=fileinfo
+   extension=gd
+   extension=intl
+   extension=mbstring
+   extension=openssl
+   extension=pdo_mysql
+   extension=zip
+   ```
+6. Verify: `php -v`
+
+**macOS (Homebrew):**
+```bash
+brew install php@8.4
+brew link php@8.4 --force
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo add-apt-repository ppa:ondrej/php
+sudo apt update
+sudo apt install php8.4 php8.4-cli php8.4-pdo php8.4-pdo-mysql \
+     php8.4-mbstring php8.4-xml php8.4-curl php8.4-zip \
+     php8.4-gd php8.4-intl php8.4-bcmath
+```
+
+Verify: `php -v` (should show `PHP 8.4.x`)
+
+### B-2. Install MySQL 8.x
+
+**Windows:** Download MySQL 8.x Installer from [dev.mysql.com/downloads](https://dev.mysql.com/downloads/installer/)
+
+**macOS:**
+```bash
+brew install mysql@8.4
+brew services start mysql@8.4
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt install mysql-server
+sudo systemctl start mysql
+sudo systemctl enable mysql
+```
+
+### B-3. Create the database and user
+
+Connect to MySQL as root:
+```bash
+mysql -u root -p
+```
+
+Run these SQL statements (replace `stratflow_secret` with a password of your choice):
+```sql
+CREATE DATABASE stratflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'stratflow'@'127.0.0.1' IDENTIFIED BY 'stratflow_secret';
+GRANT ALL PRIVILEGES ON stratflow.* TO 'stratflow'@'127.0.0.1';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+### B-4. Clone and install dependencies
+
+```bash
+git clone https://github.com/semajyad/stratflow.git
+cd stratflow
+composer install
+```
+
+### B-5. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` — set these values for bare-metal (the defaults assume Docker hostnames):
+
+```env
+APP_ENV=local
+APP_URL=http://localhost:8890
+APP_DEBUG=true
+
+# Database — use 127.0.0.1 not 'mysql' (Docker hostname)
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=stratflow
+DB_USERNAME=stratflow
+DB_PASSWORD=stratflow_secret
+
+# AI — required
+GEMINI_API_KEY=your-key-here           # https://aistudio.google.com/apikey
+GEMINI_MODEL=gemini-3-flash-preview
+
+# Stripe — required for billing flows
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PRODUCT=price_...
+STRIPE_PRICE_CONSULTANCY=price_...
+STRIPE_PRICE_USER_PACK=price_...
+STRIPE_PRICE_EVAL_BOARD=price_...
+
+# Security — required, any 32-character random string
+TOKEN_ENCRYPTION_KEY=replace-with-a-32-byte-random-secret
+
+# Email (optional for local dev — leave blank to disable email sending)
+RESEND_API_KEY=
+MAIL_FROM_EMAIL=noreply@localhost
+MAIL_FROM_NAME=StratFlow
+
+# Optional integrations — leave blank to disable
+GITHUB_APP_ID=
+GITHUB_APP_SLUG=
+GITHUB_APP_WEBHOOK_SECRET=
+GITHUB_APP_PRIVATE_KEY=
+JIRA_CLIENT_ID=
+JIRA_CLIENT_SECRET=
+XERO_CLIENT_ID=
+XERO_CLIENT_SECRET=
+
+UPLOAD_MAX_SIZE=52428800
+
+# GrowthBook feature flags — leave blank to disable
+GROWTHBOOK_API_HOST=
+GROWTHBOOK_CLIENT_KEY=
+```
+
+### B-6. Initialise the database
+
+Run the init script — it applies `database/schema.sql` and all 40 migrations automatically:
+
+```bash
+php scripts/init-db.php
+```
+
+Expected output:
+```
+Connected to database: stratflow@127.0.0.1
+Schema applied successfully.
+Running migration: 001_v1_completion.sql
+Running migration: 002_admin_features.sql
+...
+Running migration: 040_org_soft_delete.sql
+Database initialisation complete.
+```
+
+If you see `Skipped (already applied)` lines for individual statements — that is normal; the migrations are idempotent.
+
+### B-7. Create your admin user
+
+```bash
+php scripts/create-admin.php
+```
+
+Follow the interactive prompts for email, password, name, and organisation name. Alternatively, pass arguments directly:
+
+```bash
+php scripts/create-admin.php \
+  --email=admin@example.com \
+  --password=YourSecurePassword1! \
+  --name="Admin User" \
+  --org="My Organisation"
+```
+
+### B-8. Start the development server
+
+PHP has a built-in web server suitable for local development:
+
+```bash
+php -S localhost:8890 -t public public/router.php
+```
+
+Open [http://localhost:8890](http://localhost:8890) and log in with the credentials you just created.
+
+> **Note:** The built-in server is single-threaded and not suitable for production. Use it only for local development.
+
+### B-9. Start the quality worker (optional)
+
+The quality scoring worker runs as a background process. For local development you can run it once manually, or in a loop in a separate terminal:
+
+```bash
+# Run one batch
+php bin/score_quality.php
+
+# Run continuously (Ctrl+C to stop)
+php bin/score_quality.php --loop
+```
+
+### B-10. Run the test suite
+
+```bash
+vendor/bin/phpunit
+vendor/bin/phpunit --testsuite unit
+vendor/bin/phpunit --testsuite integration
+```
+
+---
+
+## Project structure
 
 ```
 stratflow/
@@ -189,24 +357,24 @@ stratflow/
 │       ├── StoryQualityScorer.php    Async quality scoring
 │       └── Prompts/                  AI prompt constants
 ├── templates/          PHP templates (layouts/, partials/, *.php)
-├── public/             Web root (index.php + assets/)
+├── public/             Web root served by Nginx/Apache (index.php + assets/)
 ├── database/
-│   ├── schema.sql      Canonical schema
-│   └── migrations/     Sequential ALTER/CREATE scripts
+│   ├── schema.sql      Canonical full schema
+│   └── migrations/     Sequential ALTER/CREATE scripts (001–040+)
 ├── tests/
 │   ├── Unit/
 │   ├── Integration/
 │   └── phpunit.xml
 ├── bin/                Background worker scripts
 ├── scripts/            CLI tools (create-admin.php, init-db.php, ...)
-└── docker/             Nginx and PHP-FPM Dockerfile
+└── docker/             Nginx config and PHP-FPM Dockerfile
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed walkthrough.
 
 ---
 
-## 10. Adding a new feature
+## Adding a new feature
 
 ### Backend (PHP)
 
@@ -229,7 +397,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed walkthrough.
 
 ---
 
-## 11. Code standards
+## Code standards
 
 - **PHP 8.4** with strict types (`declare(strict_types=1)` at the top of every file)
 - **PSR-4 autoloading** — namespace `StratFlow\Controllers\`, `StratFlow\Models\`, etc.
@@ -244,7 +412,7 @@ See [docs/SECURE_CODING.md](docs/SECURE_CODING.md) for the full security rules.
 
 ---
 
-## 12. Unit test rule
+## Unit test rule
 
 **Every new or modified `src/**/*.php` file requires a matching PHPUnit test.**
 
@@ -260,9 +428,7 @@ Do not open a PR without the accompanying test file.
 
 ---
 
-## 13. Pull request checklist
-
-Before submitting a PR:
+## Pull request checklist
 
 - [ ] `vendor/bin/phpunit` passes with no failures
 - [ ] Every modified `src/**/*.php` has a corresponding test
@@ -275,35 +441,54 @@ Before submitting a PR:
 
 ---
 
-## 14. Environment variables reference
+## Environment variables reference
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Google AI Studio API key |
-| `GEMINI_MODEL` | No | Default: `gemini-3-flash-preview` |
-| `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key (`pk_test_...`) |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret key (`sk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
-| `STRIPE_PRICE_PRODUCT` | Yes | Stripe price ID for product plan |
-| `STRIPE_PRICE_EVAL_BOARD` | Yes | Stripe price ID for evaluation board add-on |
-| `TOKEN_ENCRYPTION_KEY` | Yes | 32-byte key for encrypting OAuth tokens at rest |
-| `DB_HOST` | No | Default: `mysql` (Docker service name) |
-| `DB_DATABASE` | No | Default: `stratflow` |
-| `DB_USERNAME` | No | Default: `stratflow` |
-| `DB_PASSWORD` | No | Default: `stratflow_secret` |
+| `APP_ENV` | No | `local`, `staging`, or `production` |
+| `APP_URL` | No | Full URL including scheme (e.g. `http://localhost:8890`) |
+| `APP_DEBUG` | No | `true` enables detailed error pages |
+| `TOKEN_ENCRYPTION_KEY` | **Yes** | 32-byte key for encrypting OAuth tokens at rest |
+| `ALLOW_EXTERNAL_AI_PROCESSING` | No | Default `false`; set `true` to allow AI on uploaded data |
+| `DB_HOST` | No | Default `mysql` (Docker) or `127.0.0.1` (bare-metal) |
+| `DB_PORT` | No | Default `3306` |
+| `DB_DATABASE` | No | Default `stratflow` |
+| `DB_USERNAME` | No | Default `stratflow` |
+| `DB_PASSWORD` | No | Default `stratflow_secret` |
+| `GEMINI_API_KEY` | **Yes** | Google AI Studio API key — [get one here](https://aistudio.google.com/apikey) |
+| `GEMINI_MODEL` | No | Default `gemini-3-flash-preview` |
+| `STRIPE_PUBLISHABLE_KEY` | **Yes** | Stripe publishable key (`pk_test_...`) |
+| `STRIPE_SECRET_KEY` | **Yes** | Stripe secret key (`sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | **Yes** | Stripe webhook signing secret (`whsec_...`) |
+| `STRIPE_PRICE_PRODUCT` | **Yes** | Stripe price ID for the product plan |
+| `STRIPE_PRICE_CONSULTANCY` | **Yes** | Stripe price ID for the consultancy plan |
+| `STRIPE_PRICE_USER_PACK` | **Yes** | Stripe price ID for additional user packs |
+| `STRIPE_PRICE_EVAL_BOARD` | **Yes** | Stripe price ID for evaluation board add-on |
 | `RESEND_API_KEY` | No | Transactional email via Resend |
+| `MAILERSEND_API_KEY` | No | Alternative transactional email provider |
+| `MAIL_FROM_NAME` | No | Default `StratFlow System` |
+| `MAIL_FROM_EMAIL` | No | Default `support@4168411.xyz` |
+| `MAIL_SMTP_HOST` | No | SMTP server host |
+| `MAIL_SMTP_PORT` | No | SMTP port (default `587`) |
+| `MAIL_SMTP_ENCRYPTION` | No | `auto`, `tls`, or `ssl` |
+| `MAIL_SMTP_USER` | No | SMTP username |
+| `MAIL_SMTP_PASS` | No | SMTP password |
 | `GITHUB_APP_ID` | No | Required for GitHub App integration |
+| `GITHUB_APP_SLUG` | No | GitHub App slug name |
+| `GITHUB_APP_WEBHOOK_SECRET` | No | Secret for verifying GitHub App webhook payloads |
 | `GITHUB_APP_PRIVATE_KEY` | No | PEM content for GitHub App (newlines as `\n`) |
+| `GITHUB_APP_PRIVATE_KEY_PATH` | No | Path to PEM file (Docker only — use instead of inline key) |
 | `JIRA_CLIENT_ID` | No | Required for Jira OAuth integration |
 | `JIRA_CLIENT_SECRET` | No | Required for Jira OAuth integration |
 | `XERO_CLIENT_ID` | No | Required for Xero integration |
 | `XERO_CLIENT_SECRET` | No | Required for Xero integration |
-| `APP_ENV` | No | `local`, `staging`, or `production` |
-| `APP_DEBUG` | No | `true` enables detailed error pages |
+| `UPLOAD_MAX_SIZE` | No | Max file upload bytes (default `52428800` = 50 MB) |
+| `GROWTHBOOK_API_HOST` | No | GrowthBook feature flag API host |
+| `GROWTHBOOK_CLIENT_KEY` | No | GrowthBook client key (leave empty to disable all flags) |
 
 ---
 
-## 15. Getting help
+## Getting help
 
 - Read the docs in `docs/` — especially [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the system design
 - Check `docs/ci-learnings.md`, `docs/security-learnings.md`, and `docs/test-learnings.md` for known issues and their fixes
