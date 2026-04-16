@@ -1,0 +1,76 @@
+name: Checkov IaC Scan
+
+# Scans Dockerfiles, docker-compose.yml, and GitHub Actions workflows for
+# infrastructure-as-code misconfigurations: running as root, unpinned images,
+# missing health checks, GHA injection risks, etc.
+#
+# Findings surface in GitHub Security tab (SARIF). PRs fail on HIGH/CRITICAL.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+      - '.checkov.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+      - '.checkov.yml'
+  schedule:
+    # Weekly on Monday at 05:00 UTC — catches new Checkov rules against unchanged IaC
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # for SARIF upload to GitHub Security tab
+
+concurrency:
+  group: checkov-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkov:
+    name: Checkov IaC
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Checkov
+        run: pip install checkov==3.2.513 --quiet
+
+      - name: Run Checkov (Dockerfile + docker-compose + GH Actions)
+        run: |
+          checkov \
+            --config-file .checkov.yml \
+            --directory . \
+            --output sarif \
+            --output-file-path checkov-results.sarif \
+            --quiet \
+            2>&1 | tee checkov-output.txt
+          EXIT=${PIPESTATUS[0]}
+          echo "Checkov exit code: $EXIT"
+          exit $EXIT
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+      - name: Show summary on failure
+        if: failure()
+        run: |
+          echo "::group::Checkov findings"
+          cat checkov-output.txt
+          echo "::endgroup::"
+          echo "Review findings in the GitHub Security tab → Code scanning alerts."
+          echo "To skip a check: add it to .checkov.yml skip-check with a justification."
