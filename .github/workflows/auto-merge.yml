@@ -52,7 +52,7 @@ jobs:
           if [ -n "${FORCED_PR:-}" ]; then
             PR="${FORCED_PR}"
           elif [ "$EVENT" = "pull_request_review" ]; then
-            PR="${{ github.event.review.pull_request.number }}"
+            PR="${{ github.event.pull_request.number }}"
           elif [ "$EVENT" = "pull_request" ]; then
             PR="${{ github.event.pull_request.number }}"
           else

@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze PHP
+    name: Analyze JavaScript
     runs-on: ubuntu-latest
 
     steps:
@@ -24,18 +24,18 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13  # v4
+        uses: github/codeql-action/init@66b39da20ccc656acc90dd27ea30f5d458ec33ce  # v3.28.19
         with:
-          languages: php
+          languages: javascript
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@c10b8064de6f491fea524254123dbe5e09572f13  # v4
+        uses: github/codeql-action/autobuild@66b39da20ccc656acc90dd27ea30f5d458ec33ce  # v3.28.19
 
       - name: Perform CodeQL Analysis
         id: codeql
-        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13  # v4
+        uses: github/codeql-action/analyze@66b39da20ccc656acc90dd27ea30f5d458ec33ce  # v3.28.19
         with:
-          category: "/language:php"
+          category: "/language:javascript"
 
       # -----------------------------------------------------------------------
       # Emit nightly-status artifact on scheduled runs only.

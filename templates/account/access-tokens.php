@@ -210,65 +210,219 @@
 </script>
 <?php endif; ?>
 
-<!-- Claude Code MCP setup guide — always visible, collapsible -->
+<?php
+$mcp_token = $new_token_raw
+    ? htmlspecialchars($new_token_raw, ENT_QUOTES, 'UTF-8')
+    : '&lt;your-token&gt;';
+$mcp_url = htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8');
+?>
+
+<!-- MCP Setup Guides -->
 <section class="card mb-4">
-    <button type="button"
-            class="js-toggle-mcp-guide access-token-guide-toggle">
-        <div class="access-token-guide-head">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary,#2563eb)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-            <span class="access-token-guide-label">Claude Code MCP setup</span>
-        </div>
-        <svg id="mcp-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="access-token-guide-chevron<?= empty($tokens) ? '' : ' mcp-chevron--expanded' ?>">
-            <polyline points="6 9 12 15 18 9"/>
-        </svg>
-    </button>
-    <div id="mcp-guide" class="access-token-guide<?= empty($tokens) ? '' : ' hidden' ?>">
-        <div class="card-body access-token-guide-body">
+    <div class="card-body pb-2">
+        <h2 class="card-title access-token-form-title">MCP Setup Guides</h2>
+        <p class="text-muted" style="font-size:.875rem;margin-bottom:0;">
+            Connect StratFlow to your AI coding tool. Create a token above, then follow the guide for your IDE.
+        </p>
+    </div>
 
-            <div>
-                <p class="access-token-step-copy"><strong>Step 1</strong> — Create a token above, then add this to your project's <code>.mcp.json</code>:</p>
-                <div class="access-token-snippet-wrap">
-                    <pre id="mcp-snippet" class="access-token-snippet">{
-  "mcpServers": {
-    "stratflow": {
-      "command": "npx",
-      "args": ["-y", "stratflow-mcp"],
-      "env": {
-        "STRATFLOW_URL": "<?= htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8') ?>",
-        "STRATFLOW_TOKEN": "<?= $new_token_raw ? htmlspecialchars($new_token_raw, ENT_QUOTES, 'UTF-8') : '&lt;your-token&gt;' ?>"
-      }
-    }
-  }
-}</pre>
-                    <button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet" data-copy-default-label="Copy" id="copy-snippet-btn">Copy</button>
-                </div>
+    <?php
+    $mcp_accordions = [
+        // IMPORTANT: 'sublabel', 'content', and 'logo' are developer-defined static HTML strings.
+        // They MUST NOT be sourced from user input or the database — they are rendered unescaped.
+        [
+            'id'      => 'copilot',
+            'label'   => 'GitHub Copilot',
+            'sublabel'=> 'VS Code &middot; <code>.vscode/mcp.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to your project\'s <code>.vscode/mcp.json</code>:</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-copilot" class="access-token-snippet">{'
+                . "\n  \"servers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"type\": \"stdio\","
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-copilot" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Reload VS Code. StratFlow tools will appear in Copilot Chat.</p>',
+        ],
+        [
+            'id'      => 'claude-code',
+            'label'   => 'Claude Code',
+            'sublabel'=> 'Project <code>.mcp.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary,#2563eb)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to your project\'s <code>.mcp.json</code>:</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-claude-code" class="access-token-snippet">{'
+                . "\n  \"mcpServers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-claude-code" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Restart Claude Code. StratFlow tools will be available in any project.</p>'
+                . '<div class="access-token-tools-grid">'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">list_my_stories</code><p class="access-token-tool-copy">Stories assigned to you</p></div>'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">list_team_stories</code><p class="access-token-tool-copy">Unassigned stories for your team</p></div>'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">claim_story</code><p class="access-token-tool-copy">Assign + start in one step</p></div>'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">get_story</code><p class="access-token-tool-copy">Full story + AC + KR + git links</p></div>'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">start_story</code><p class="access-token-tool-copy">Set status &rarr; in progress</p></div>'
+                . '<div class="access-token-tool-card"><code class="access-token-tool-name">complete_story</code><p class="access-token-tool-copy">Set status &rarr; in review</p></div>'
+                . '</div>'
+                . '<p class="access-token-footnote">When you run <code>start_story</code>, a git hook is automatically installed in your repo. Every commit will include <code>Refs SF-{id}</code> until you run <code>complete_story</code>.</p>',
+        ],
+        [
+            'id'      => 'cursor',
+            'label'   => 'Cursor',
+            'sublabel'=> '<code>~/.cursor/mcp.json</code> or project <code>.cursor/mcp.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h5"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to <code>~/.cursor/mcp.json</code> (global) or <code>.cursor/mcp.json</code> (project):</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-cursor" class="access-token-snippet">{'
+                . "\n  \"mcpServers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-cursor" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Restart Cursor. StratFlow tools appear under MCP in the Cursor settings panel.</p>',
+        ],
+        [
+            'id'      => 'windsurf',
+            'label'   => 'Windsurf',
+            'sublabel'=> '<code>~/.codeium/windsurf/mcp_config.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3L4 9v12h16V9L12 3z"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to <code>~/.codeium/windsurf/mcp_config.json</code>:</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-windsurf" class="access-token-snippet">{'
+                . "\n  \"mcpServers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-windsurf" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Restart Windsurf. The StratFlow MCP server will appear in Cascade\'s tool panel.</p>',
+        ],
+        [
+            'id'      => 'amazonq',
+            'label'   => 'Amazon Q Developer',
+            'sublabel'=> '<code>~/.aws/amazonq/mcp.json</code> or project <code>.amazonq/mcp.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to <code>~/.aws/amazonq/mcp.json</code> (global) or <code>.amazonq/mcp.json</code> (project):</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-amazonq" class="access-token-snippet">{'
+                . "\n  \"mcpServers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-amazonq" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Restart your IDE. StratFlow tools will appear in the Amazon Q chat panel.</p>',
+        ],
+        [
+            'id'      => 'jetbrains',
+            'label'   => 'JetBrains AI Assistant',
+            'sublabel'=> 'IntelliJ IDEA &middot; PyCharm &middot; WebStorm &middot; configured via IDE UI',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="6" y="6" width="4" height="4"/><rect x="14" y="6" width="4" height="4"/><rect x="6" y="14" width="12" height="4"/></svg>',
+            'content' => '<p class="access-token-step-copy">JetBrains is configured through the IDE settings UI, not a config file.</p>'
+                . '<ol class="access-token-step-list">'
+                . '<li>Open <strong>Settings</strong> (&#8984;, on Mac / Ctrl+Alt+S on Windows)</li>'
+                . '<li>Navigate to <strong>Tools &rarr; AI Assistant &rarr; Model Context Protocol</strong></li>'
+                . '<li>Click <strong>+</strong> &rarr; <strong>Add new MCP server</strong></li>'
+                . '<li>Set <strong>Name</strong> to <code>stratflow</code></li>'
+                . '<li>Set <strong>Command</strong> to <code>npx</code></li>'
+                . '<li>Set <strong>Arguments</strong> to <code>-y stratflow-mcp</code></li>'
+                . '<li>Add environment variables:<br><code>STRATFLOW_URL</code> = <code>' . $mcp_url . '</code><br><code>STRATFLOW_TOKEN</code> = <code>' . $mcp_token . '</code></li>'
+                . '<li>Click <strong>OK</strong>, then restart the IDE</li>'
+                . '</ol>'
+                . '<p class="access-token-footnote">Requires JetBrains IDE 2025.1 or later with AI Assistant plugin installed.</p>',
+        ],
+        [
+            'id'      => 'claude-desktop',
+            'label'   => 'Claude Desktop',
+            'sublabel'=> 'macOS: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>',
+            'logo'    => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary,#2563eb)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>',
+            'content' => '<p class="access-token-step-copy"><strong>Step 1</strong> &mdash; Create a token above, then add this to your Claude Desktop config file:</p>'
+                . '<div class="access-token-snippet-wrap">'
+                . '<pre id="mcp-snippet-claude-desktop" class="access-token-snippet">{'
+                . "\n  \"mcpServers\": {"
+                . "\n    \"stratflow\": {"
+                . "\n      \"command\": \"npx\","
+                . "\n      \"args\": [\"-y\", \"stratflow-mcp\"],"
+                . "\n      \"env\": {"
+                . "\n        \"STRATFLOW_URL\": \"" . $mcp_url . "\","
+                . "\n        \"STRATFLOW_TOKEN\": \"" . $mcp_token . "\""
+                . "\n      }"
+                . "\n    }"
+                . "\n  }"
+                . "\n}</pre>"
+                . '<button type="button" class="btn btn-secondary btn-sm js-copy-text access-token-copy-btn" data-copy-target-id="mcp-snippet-claude-desktop" data-copy-default-label="Copy">Copy</button>'
+                . '</div>'
+                . '<p class="access-token-step-copy" style="margin-top:1rem;"><strong>Step 2</strong> &mdash; Quit and relaunch Claude Desktop. StratFlow tools will appear in the tools panel.</p>',
+        ],
+    ];
+    ?>
+
+    <?php foreach ($mcp_accordions as $accordion): ?>
+    <div class="mcp-accordion-item">
+        <button type="button"
+                class="js-mcp-accordion access-token-guide-toggle"
+                data-target="mcp-guide-<?= htmlspecialchars($accordion['id'], ENT_QUOTES, 'UTF-8') ?>">
+            <div class="access-token-guide-head">
+                <?= $accordion['logo'] ?>
+                <span class="access-token-guide-label"><?= htmlspecialchars($accordion['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="access-token-guide-sublabel"><?= $accordion['sublabel'] ?></span>
             </div>
-
-            <div>
-                <p class="access-token-step-copy"><strong>Step 2</strong> — Restart Claude Code. The following tools will be available in any project:</p>
-                <div class="access-token-tools-grid">
-                    <?php foreach ([
-                        ['list_my_stories',   'Stories assigned to you'],
-                        ['list_team_stories', 'Unassigned stories for your team'],
-                        ['claim_story',       'Assign + start in one step'],
-                        ['get_story',         'Full story + AC + KR + git links'],
-                        ['start_story',       'Set status → in progress'],
-                        ['complete_story',    'Set status → in review'],
-                    ] as [$tool, $desc]): ?>
-                    <div class="access-token-tool-card">
-                        <code class="access-token-tool-name"><?= $tool ?></code>
-                        <p class="access-token-tool-copy"><?= $desc ?></p>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 class="access-token-guide-chevron">
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </button>
+        <div id="mcp-guide-<?= htmlspecialchars($accordion['id'], ENT_QUOTES, 'UTF-8') ?>"
+             class="access-token-guide hidden">
+            <div class="card-body access-token-guide-body">
+                <?= $accordion['content'] ?>
             </div>
-
-            <p class="access-token-footnote">
-                When you run <code>start_story</code>, a git hook is automatically installed in your repo. Every commit will include <code>Refs SF-{id}</code> until you run <code>complete_story</code> — no manual copy-paste needed.
-            </p>
-
         </div>
     </div>
+    <?php endforeach; ?>
+
 </section>
 
 <!-- Create new token form -->

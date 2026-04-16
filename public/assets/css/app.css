@@ -8553,6 +8553,25 @@ a.okr-title:hover {
     margin: 0;
 }
 
+.mcp-accordion-item + .mcp-accordion-item {
+    border-top: 1px solid var(--border);
+}
+
+.access-token-guide-sublabel {
+    font-size: .75rem;
+    color: var(--text-muted, #6b7280);
+    margin-left: .5rem;
+}
+
+.access-token-step-list {
+    margin: .5rem 0 0 1.25rem;
+    font-size: .875rem;
+    line-height: 1.75;
+}
+.access-token-step-list li {
+    margin-bottom: .25rem;
+}
+
 .access-token-form-title {
     font-size: 1rem;
     margin-bottom: 1rem;

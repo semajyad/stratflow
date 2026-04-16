@@ -272,9 +272,10 @@ document.addEventListener('click', function(e) {
         return;
     }
 
-    if (e.target.closest('.js-toggle-mcp-guide')) {
+    var mcpAccordionBtn = e.target.closest('.js-mcp-accordion');
+    if (mcpAccordionBtn) {
         e.preventDefault();
-        toggleMcpGuide();
+        toggleMcpAccordion(mcpAccordionBtn);
         return;
     }
 
@@ -2912,15 +2913,15 @@ function closeDiagramOkrModal() {
     }
 }
 
-function toggleMcpGuide() {
-    var body = document.getElementById('mcp-guide');
-    var chevron = document.getElementById('mcp-chevron');
-    if (!body) {
-        return;
-    }
-    body.classList.toggle('hidden');
+function toggleMcpAccordion(btn) {
+    var targetId = btn.dataset.target;
+    if (!targetId) { return; }
+    var body = document.getElementById(targetId);
+    if (!body) { return; }
+    var isHidden = body.classList.toggle('hidden');
+    var chevron = btn.querySelector('.access-token-guide-chevron');
     if (chevron) {
-        chevron.classList.toggle('mcp-chevron--expanded', !body.classList.contains('hidden'));
+        chevron.classList.toggle('mcp-chevron--expanded', !isHidden);
     }
 }
 

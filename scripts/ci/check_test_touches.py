@@ -208,6 +208,58 @@ def is_pr_exempt() -> bool:
     return True
 
 
+def check_source_touch_rule(changed: list[str]) -> list[tuple[str, str]]:
+    """Return (src_file, expected_test_path) for each src file changed without a test change."""
+    changed_set = {f.replace("\\", "/") for f in changed}
+    missing = []
+    for f in changed:
+        f_norm = f.replace("\\", "/")
+        test_path = source_to_test_path(f_norm)
+        if test_path is None:
+            continue  # not a mappable src/ PHP file
+        if test_path not in changed_set:
+            missing.append((f_norm, test_path))
+    return missing
+
+
+def touches_php_source(files: list[str]) -> bool:
+    """Return True if any file is a PHP source file in src/ (excluding SKIP_DIRS)."""
+    for f in files:
+        f_norm = f.replace("\\", "/")
+        if not f_norm.endswith(".php"):
+            continue
+        if not f_norm.startswith("src/"):
+            continue
+        skip = False
+        for d in SKIP_DIRS:
+            if f_norm.startswith(d + "/") or f_norm == d:
+                skip = True
+                break
+        if not skip:
+            return True
+    return False
+
+
+def check_bug_test_rule(base: str, head: str) -> list[tuple[str, str]]:
+    """Return (sha, subject) for fix: commits that include no test file changes.
+
+    Exempt: fix: commits that only modify CI/workflow/script files and don't
+    touch any PHP source under src/. A CI workflow fix doesn't need a PHP test.
+    """
+    commits = get_commits_in_range(base, head)
+    violations = []
+    for sha, subject in commits:
+        if not BUG_COMMIT_PREFIXES.match(subject):
+            continue
+        files = get_files_in_commit(sha)
+        # Exempt commits that don't touch any PHP source files
+        if not touches_php_source(files):
+            continue
+        if not any(is_test_file(f) for f in files):
+            violations.append((sha[:8], subject))
+    return violations
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="origin/main")
