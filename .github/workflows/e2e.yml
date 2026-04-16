@@ -241,6 +241,8 @@ jobs:
     # Only run on merge to main, not on every PR
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: e2e-fast
+    permissions:
+      contents: write  # required to push updated visual snapshots
 
     services:
       mysql:

@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Semgrep
-        run: pip install semgrep --quiet
+        run: pip install semgrep==1.90.0 --quiet
 
       - name: Determine scan scope
         id: scope
@@ -57,13 +57,16 @@ jobs:
 
       - name: Run Semgrep (PR — changed files only)
         if: steps.scope.outputs.no_php_changes != 'true' && github.event_name == 'pull_request'
+        env:
+          SEMGREP_TARGETS: ${{ steps.scope.outputs.targets }}
         run: |
+          # shellcheck disable=SC2086  # word-splitting is intentional here
           semgrep scan \
             --config "p/php" \
             --config "p/owasp-top-ten" \
             --error \
             --timeout 300 \
-            ${{ steps.scope.outputs.targets }}
+            $SEMGREP_TARGETS
 
       - name: Run Semgrep and emit SARIF (nightly / push to main)
         if: steps.scope.outputs.no_php_changes != 'true' && github.event_name != 'pull_request'
