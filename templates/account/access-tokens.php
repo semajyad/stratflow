@@ -414,8 +414,10 @@ $mcp_url = htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8');
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </button>
-            <div class="accordion-body access-token-guide-body">
-                <?= $accordion['content'] ?>
+            <div class="accordion-body">
+                <div class="access-token-guide-body">
+                    <?= $accordion['content'] ?>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>

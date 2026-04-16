@@ -888,6 +888,7 @@ class AdminController
             'dependency_tripwire_enabled'  => true,
             'quality' => [
                 'enabled'     => true,
+                'hl_enabled'  => false,
                 'threshold'   => 70,
                 'enforcement' => 'warn',
             ],
@@ -1031,6 +1032,7 @@ class AdminController
             'dependency_tripwire_enabled' => $this->request->post('dependency_tripwire_enabled') === '1',
             'quality' => [
                 'enabled'     => $this->request->post('quality_enabled') === '1',
+                'hl_enabled'  => $this->request->post('hl_quality_enabled') === '1',
                 'threshold'   => min(100, max(0, (int) $this->request->post('quality_threshold', 70))),
                 'enforcement' => in_array($this->request->post('quality_enforcement'), ['warn', 'block'], true)
                     ? $this->request->post('quality_enforcement') : 'warn',

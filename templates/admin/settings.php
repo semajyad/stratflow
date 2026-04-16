@@ -141,47 +141,64 @@
                 </svg>
             </button>
             <div class="accordion-body">
-                <div class="settings-flex-wrap">
-                    <div class="form-group">
-                        <label class="form-label">Sprint Length (weeks)</label>
-                        <input type="number" name="sprint_length_weeks" class="form-input settings-input-width-xs"
-                               value="<?= (int) ($settings['sprint_length_weeks'] ?? 2) ?>" min="1" max="12">
-                        <small class="text-muted">Used for sprint planning and capacity calculations.</small>
+                <div class="settings-stack">
+                    <!-- Row 1: Sprint defaults -->
+                    <div>
+                        <p class="settings-defaults-row-label">Sprint</p>
+                        <div class="settings-flex-wrap">
+                            <div class="form-group">
+                                <label class="form-label" for="sprint-length-weeks">Sprint Length (weeks)</label>
+                                <input type="number" name="sprint_length_weeks" id="sprint-length-weeks" class="form-input settings-input-width-xs"
+                                       value="<?= (int) ($settings['sprint_length_weeks'] ?? 2) ?>" min="1" max="12">
+                                <small class="text-muted">Used for sprint planning and capacity calculations.</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">High Level Work Item Sizing</label>
-                        <select name="hl_item_sizing_method" class="form-input">
-                            <option value="sprints" <?= ($settings['hl_item_sizing_method'] ?? 'sprints') === 'sprints' ? 'selected' : '' ?>>Sprints</option>
-                            <option value="weeks"   <?= ($settings['hl_item_sizing_method'] ?? '') === 'weeks'   ? 'selected' : '' ?>>Weeks</option>
-                            <option value="months"  <?= ($settings['hl_item_sizing_method'] ?? '') === 'months'  ? 'selected' : '' ?>>Months</option>
-                            <option value="t_shirt" <?= ($settings['hl_item_sizing_method'] ?? '') === 't_shirt' ? 'selected' : '' ?>>T-Shirt Sizes (XS → XXL)</option>
-                        </select>
-                        <small class="text-muted">Controls the size field in the work item modal.</small>
+                    <!-- Row 2: High Level Item defaults -->
+                    <div>
+                        <p class="settings-defaults-row-label">High Level Items</p>
+                        <div class="settings-flex-wrap">
+                            <div class="form-group">
+                                <label class="form-label" for="hl-item-sizing-method">Sizing Method</label>
+                                <select name="hl_item_sizing_method" id="hl-item-sizing-method" class="form-input">
+                                    <option value="sprints" <?= ($settings['hl_item_sizing_method'] ?? 'sprints') === 'sprints' ? 'selected' : '' ?>>Sprints</option>
+                                    <option value="weeks"   <?= ($settings['hl_item_sizing_method'] ?? '') === 'weeks'   ? 'selected' : '' ?>>Weeks</option>
+                                    <option value="months"  <?= ($settings['hl_item_sizing_method'] ?? '') === 'months'  ? 'selected' : '' ?>>Months</option>
+                                    <option value="t_shirt" <?= ($settings['hl_item_sizing_method'] ?? '') === 't_shirt' ? 'selected' : '' ?>>T-Shirt Sizes (XS &rarr; XXL)</option>
+                                </select>
+                                <small class="text-muted">Controls the size field in the work item modal.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="hl-item-default-months">Default Size (months)</label>
+                                <select name="hl_item_default_months" id="hl-item-default-months" class="form-input">
+                                    <?php for ($m = 1; $m <= 6; $m++): ?>
+                                        <option value="<?= $m ?>" <?= (int) ($settings['hl_item_default_months'] ?? 2) === $m ? 'selected' : '' ?>>
+                                            <?= $m ?> month<?= $m !== 1 ? 's' : '' ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">High Level Item Default Size (months)</label>
-                        <select name="hl_item_default_months" class="form-input">
-                            <?php for ($m = 1; $m <= 6; $m++): ?>
-                                <option value="<?= $m ?>" <?= (int) ($settings['hl_item_default_months'] ?? 2) === $m ? 'selected' : '' ?>>
-                                    <?= $m ?> month<?= $m !== 1 ? 's' : '' ?>
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">User Story Max Size (points)</label>
-                        <select name="user_story_max_size" class="form-input">
-                            <?php
-                            $fibonacci = [1, 2, 3, 5, 8, 13, 20];
-                            $currentMax = (int) ($settings['user_story_max_size'] ?? 13);
-                            ?>
-                            <?php foreach ($fibonacci as $f): ?>
-                                <option value="<?= $f ?>" <?= $currentMax === $f ? 'selected' : '' ?>><?= $f ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <!-- Row 3: Story defaults -->
+                    <div>
+                        <p class="settings-defaults-row-label">Stories</p>
+                        <div class="settings-flex-wrap">
+                            <div class="form-group">
+                                <label class="form-label" for="user-story-max-size">Max Size (points)</label>
+                                <select name="user_story_max_size" id="user-story-max-size" class="form-input">
+                                    <?php
+                                    $fibonacci = [1, 2, 3, 5, 8, 13, 20];
+                                    $currentMax = (int) ($settings['user_story_max_size'] ?? 13);
+                                    ?>
+                                    <?php foreach ($fibonacci as $f): ?>
+                                        <option value="<?= $f ?>" <?= $currentMax === $f ? 'selected' : '' ?>><?= $f ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -314,6 +331,17 @@
                                    data-target-id="quality-options">
                             <label for="quality-enabled-check" class="settings-quality-toggle-label">
                                 Enable story quality checks for this organisation
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="settings-quality-toggle">
+                            <input type="hidden" name="hl_quality_enabled" value="0">
+                            <input type="checkbox" name="hl_quality_enabled" value="1"
+                                   id="hl-quality-enabled-check"
+                                   <?= !empty($settings['quality']['hl_enabled']) ? 'checked' : '' ?>>
+                            <label for="hl-quality-enabled-check" class="settings-quality-toggle-label">
+                                Enable high level item quality checks for this organisation
                             </label>
                         </div>
                     </div>

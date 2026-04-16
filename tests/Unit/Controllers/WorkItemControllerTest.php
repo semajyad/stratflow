@@ -802,4 +802,35 @@ class WorkItemControllerTest extends ControllerTestCase
 
         $this->assertSame('/app/home', $this->response->redirectedTo);
     }
+    #[Test]
+    public function indexShowsQualityOnlyWhenHlEnabledIsTrue(): void
+    {
+        // showQuality requires feature_story_quality AND quality.hl_enabled (not quality.enabled)
+        $orgSettings = json_encode(['quality' => ['enabled' => true, 'hl_enabled' => false]]);
+        $this->configureDb(
+            $this->makeRowStmt($this->projectRow),
+            $this->makeEmptyStmt(),  // HLWorkItem::findByProjectId
+            $this->makeEmptyStmt(),  // StrategyDiagram::findByProjectId
+            $this->makeEmptyStmt(),  // StoryGitLink::countsByLocalIds
+            $this->makeEmptyStmt(),  // KeyResult::findByWorkItemIds
+            $this->makeRowStmt(['id' => 10, 'settings_json' => $orgSettings]),
+            $this->makeRowStmt(['feature_story_quality' => true]),  // SystemSettings::get
+            $this->makeEmptyStmt(),  // Team::findByOrgId
+            $this->makeEmptyStmt()   // Subscription::hasEvaluationBoard
+        );
+
+        $ctrl = new WorkItemController(
+            $this->makeGetRequest(['project_id' => '5']),
+            $this->response,
+            $this->auth,
+            $this->db,
+            $this->config
+        );
+        $ctrl->index();
+
+        $this->assertSame('work-items', $this->response->renderedTemplate);
+        // hl_enabled=false => showQuality must be false even though story quality.enabled=true
+        $this->assertFalse($this->response->renderedData['showQuality'] ?? false);
+    }
+
 }
