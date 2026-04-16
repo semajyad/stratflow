@@ -5429,9 +5429,6 @@ select.kr-field--compact {
     border-color: var(--primary, #3b82f6);
 }
 
-.mcp-chevron--expanded {
-    transform: rotate(180deg);
-}
 
 .jira-sync-preview-card {
     margin: 0;
@@ -8457,36 +8454,18 @@ a.okr-title:hover {
     width: 220px;
 }
 
-.access-token-guide-toggle {
-    width: 100%;
+.mcp-guide-info {
+    flex: 1;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
-.access-token-guide-head {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-}
-
-.access-token-guide-label {
+.mcp-guide-name {
     font-weight: 600;
-    font-size: 0.9375rem;
-}
-
-.access-token-guide-chevron {
-    flex-shrink: 0;
-    transition: transform 0.2s;
-}
-
-.access-token-guide {
-    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 
 .access-token-guide-body {
@@ -8553,14 +8532,19 @@ a.okr-title:hover {
     margin: 0;
 }
 
-.mcp-accordion-item + .mcp-accordion-item {
-    border-top: 1px solid var(--border);
+
+.mcp-guide-sublabel {
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.access-token-guide-sublabel {
-    font-size: .75rem;
-    color: var(--text-muted, #6b7280);
-    margin-left: .5rem;
+.mcp-guide-sublabel code {
+    font-size: 0.75rem;
+    background: none;
+    color: inherit;
 }
 
 .access-token-step-list {

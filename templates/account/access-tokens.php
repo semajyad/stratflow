@@ -399,29 +399,28 @@ $mcp_url = htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8');
     ];
     ?>
 
-    <?php foreach ($mcp_accordions as $accordion): ?>
-    <div class="mcp-accordion-item">
-        <button type="button"
-                class="js-mcp-accordion access-token-guide-toggle"
-                data-target="mcp-guide-<?= htmlspecialchars($accordion['id'], ENT_QUOTES, 'UTF-8') ?>">
-            <div class="access-token-guide-head">
-                <?= $accordion['logo'] ?>
-                <span class="access-token-guide-label"><?= htmlspecialchars($accordion['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                <span class="access-token-guide-sublabel"><?= $accordion['sublabel'] ?></span>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                 class="access-token-guide-chevron">
-                <polyline points="6 9 12 15 18 9"/>
-            </svg>
-        </button>
-        <div id="mcp-guide-<?= htmlspecialchars($accordion['id'], ENT_QUOTES, 'UTF-8') ?>"
-             class="access-token-guide hidden">
-            <div class="card-body access-token-guide-body">
+    <div class="card-body pt-0">
+        <div class="settings-stack">
+        <?php foreach ($mcp_accordions as $accordion): ?>
+        <div class="accordion-item">
+            <button type="button" class="accordion-header js-accordion-toggle">
+                <span class="mcp-guide-logo" aria-hidden="true"><?= $accordion['logo'] ?></span>
+                <span class="mcp-guide-info">
+                    <span class="mcp-guide-name"><?= htmlspecialchars($accordion['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="mcp-guide-sublabel"><?= $accordion['sublabel'] ?></span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     class="accordion-chevron">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-body access-token-guide-body">
                 <?= $accordion['content'] ?>
             </div>
         </div>
+        <?php endforeach; ?>
+        </div>
     </div>
-    <?php endforeach; ?>
 
 </section>
 
