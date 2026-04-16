@@ -228,6 +228,8 @@ $mcp_url = htmlspecialchars($app_url, ENT_QUOTES, 'UTF-8');
 
     <?php
     $mcp_accordions = [
+        // IMPORTANT: 'sublabel', 'content', and 'logo' are developer-defined static HTML strings.
+        // They MUST NOT be sourced from user input or the database — they are rendered unescaped.
         [
             'id'      => 'copilot',
             'label'   => 'GitHub Copilot',
