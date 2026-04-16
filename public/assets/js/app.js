@@ -272,13 +272,6 @@ document.addEventListener('click', function(e) {
         return;
     }
 
-    var mcpAccordionBtn = e.target.closest('.js-mcp-accordion');
-    if (mcpAccordionBtn) {
-        e.preventDefault();
-        toggleMcpAccordion(mcpAccordionBtn);
-        return;
-    }
-
     if (e.target.closest('.js-close-node-okr-panel')) {
         e.preventDefault();
         closeNodeOkrPanel();
@@ -2910,18 +2903,6 @@ function closeDiagramOkrModal() {
     var modal = document.getElementById('add-okr-modal');
     if (modal) {
         modal.classList.add('hidden');
-    }
-}
-
-function toggleMcpAccordion(btn) {
-    var targetId = btn.dataset.target;
-    if (!targetId) { return; }
-    var body = document.getElementById(targetId);
-    if (!body) { return; }
-    var isHidden = body.classList.toggle('hidden');
-    var chevron = btn.querySelector('.access-token-guide-chevron');
-    if (chevron) {
-        chevron.classList.toggle('mcp-chevron--expanded', !isHidden);
     }
 }
 
