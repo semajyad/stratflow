@@ -1438,6 +1438,37 @@ class AdminControllerTest extends ControllerTestCase
         $this->assertSame('/app/admin/settings', $this->response->redirectedTo);
     }
 
+    public function testSaveSettingsPersistsHlQualityEnabled(): void
+    {
+        $org = $this->orgRow(['settings_json' => '{}']);
+        $this->stubQuerySequence([
+            $this->stmt($org),  // Organisation::findById (for existing AI key)
+            $this->stmt(false), // Organisation::update
+            $this->stmt(false), // AuditLogger::log
+        ]);
+
+        $r = $this->makePostRequest([
+            'persona_agile_product_manager'          => '',
+            'persona_technical_project_manager'      => '',
+            'persona_expert_system_architect'        => '',
+            'persona_enterprise_risk_manager'        => '',
+            'persona_agile_product_owner'            => '',
+            'persona_enterprise_business_strategist' => '',
+            'hl_item_sizing_method'    => 'sprints',
+            'hl_quality_enabled'       => '1',
+            'quality_enabled'          => '0',
+            'quality_threshold'        => '70',
+            'quality_enforcement'      => 'warn',
+            'ai_provider'              => '',
+            'ai_model'                 => '',
+            'ai_api_key'               => '',
+        ]);
+        $this->ctrl($r)->saveSettings();
+
+        $this->assertSame('/app/admin/settings', $this->response->redirectedTo);
+        $this->assertArrayHasKey('flash_message', $_SESSION);
+    }
+
     // =========================================================================
     // exportAuditLogs() — with date filters
     // =========================================================================
