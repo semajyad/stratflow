@@ -100,9 +100,15 @@ jobs:
       - name: Fail on CRITICAL CVEs
         if: steps.depcheck.outcome == 'failure'
         run: |
-          echo "::error::OWASP Dependency-Check found CVSS ≥ 9.0 findings."
-          echo "Review: GitHub Security tab → Code scanning alerts (dependency-check)"
-          echo "HTML report: download artifact 'dependency-check-report'"
+          # Distinguish between real CVE findings and infra/network failures
+          if grep -q "One or more dependencies were identified with known vulnerabilities" dc-output.txt 2>/dev/null; then
+            echo "::error::OWASP Dependency-Check found CVSS ≥ 9.0 findings."
+            echo "Review: GitHub Security tab → Code scanning alerts (dependency-check)"
+            echo "HTML report: download artifact 'dependency-check-report'"
+          else
+            echo "::error::OWASP Dependency-Check container failed (possible network/infra issue — not a CVE finding)."
+            echo "Check dc-output.txt in the run log for details."
+          fi
           exit 1
 
       - name: Write nightly status

@@ -230,5 +230,5 @@ jobs:
             echo "No changes to shannon-latest.md — skipping commit."
           else
             git commit -m "chore: Shannon overnight report $(date -u '+%Y-%m-%d')"
-            git push
+            git push || echo "::warning::Could not push shannon-latest.md to main (branch protection) — report saved as artifact"
           fi

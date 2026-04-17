@@ -187,7 +187,7 @@ jobs:
             echo "No changes to zap-latest.md"
           else
             git commit -m "chore: ZAP baseline report $(date -u '+%Y-%m-%d')"
-            git push
+            git push || echo "::warning::Could not push zap-latest.md to main (branch protection) — report saved as artifact"
           fi
 
   zap-full:

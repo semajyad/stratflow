@@ -194,11 +194,12 @@ jobs:
 
           # For each issue, check if the hash-based finding is still active
           # Issues created by triage_nightly.py have [ci-nightly:<hash>] in their title
-          echo "$OPEN_ISSUES" | python3 - <<'PYEOF'
+          echo "$OPEN_ISSUES" > /tmp/open_issues.json
+          python3 - <<'PYEOF'
           import json, sys, os, subprocess
           from pathlib import Path
 
-          issues = json.load(sys.stdin)
+          issues = json.load(open("/tmp/open_issues.json"))
           repo = os.environ["REPO"]
 
           for issue in issues:
