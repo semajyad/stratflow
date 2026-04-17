@@ -312,7 +312,7 @@ See [GEMINI_PROMPTS.md](GEMINI_PROMPTS.md) for full prompt text and tuning notes
 
 ### Async Quality Scoring
 
-`bin/score_quality.php` runs as a Docker `quality-worker` service in a loop (every 2 minutes). It picks up stories/work items with `quality_status = 'pending'`, calls `StoryQualityScorer::score()` via Gemini, and writes the result back. This decouples quality scoring from the HTTP request lifecycle.
+`bin/score_quality.php` runs as a Docker `quality-worker` service in a loop (every 2 minutes). It picks up stories/work items with `quality_status = 'pending'`, calls `StoryQualityScorer::scoreStory()` / `scoreWorkItem()` via Gemini, and writes the result back. This decouples quality scoring from the HTTP request lifecycle.
 
 ---
 

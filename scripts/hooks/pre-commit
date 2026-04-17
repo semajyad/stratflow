@@ -104,15 +104,21 @@ if [ "${SKIP_DOCS_CHECK}" != "1" ]; then
         fi
     done
     DOCS_SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_docs.py"
-    if [ -n "$PYTHON" ] && [ -f "$DOCS_SCRIPT" ]; then
-        "$PYTHON" "$DOCS_SCRIPT" --staged
-        DOCS_EXIT=$?
-        if [ $DOCS_EXIT -ne 0 ]; then
-            echo ""
-            echo "Commit blocked: update the listed documentation files, then re-commit."
-            echo "To bypass (emergency only): SKIP_DOCS_CHECK=1 git commit ..."
-            exit 1
-        fi
+    if [ -z "$PYTHON" ]; then
+        echo "check_docs: Python 3.8+ not found — cannot run docs check. Install Python or set SKIP_DOCS_CHECK=1."
+        exit 1
+    fi
+    if [ ! -f "$DOCS_SCRIPT" ]; then
+        echo "check_docs: $DOCS_SCRIPT not found — cannot run docs check."
+        exit 1
+    fi
+    "$PYTHON" "$DOCS_SCRIPT" --staged
+    DOCS_EXIT=$?
+    if [ $DOCS_EXIT -ne 0 ]; then
+        echo ""
+        echo "Commit blocked: update the listed documentation files, then re-commit."
+        echo "To bypass (emergency only): SKIP_DOCS_CHECK=1 git commit ..."
+        exit 1
     fi
 fi
 # --- docs-check end ---

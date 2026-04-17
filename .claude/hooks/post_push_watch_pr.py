@@ -14,7 +14,10 @@ def main() -> None:
         sys.exit(0)
 
     cmd = data.get("tool_input", {}).get("command", "")
-    if "git push" not in cmd:
+    # Match git push as a standalone command, not as a substring of other text.
+    # Handles: "git push", "git push origin branch", "git push -u origin ..."
+    import re
+    if not re.search(r'\bgit\s+push\b', cmd):
         sys.exit(0)
 
     print(

@@ -128,7 +128,7 @@ def get_staged_changes() -> list[tuple[str, str]]:
     )
     if result.returncode != 0:
         print(f"check_docs: git diff --cached failed: {result.stderr.strip()}", file=sys.stderr)
-        return []
+        sys.exit(1)
     return _parse_name_status(result.stdout)
 
 
@@ -140,7 +140,7 @@ def get_diff_changes(base: str, head: str) -> list[tuple[str, str]]:
     )
     if result.returncode != 0:
         print(f"check_docs: git diff failed: {result.stderr.strip()}", file=sys.stderr)
-        return []
+        sys.exit(1)
     return _parse_name_status(result.stdout)
 
 
@@ -191,8 +191,11 @@ def check_changes(changes: list[tuple[str, str]]) -> list[Violation]:
         if not candidates:
             continue  # Rule not triggered
 
-        # Doc must also be in the changeset (added or modified)
-        if rule.doc_file in all_paths:
+        # Doc must also be in the changeset (added or modified — not deleted)
+        if rule.doc_file in all_paths and any(
+            path == rule.doc_file and status != "D"
+            for status, path in changes
+        ):
             continue  # Satisfied
 
         violations.append(Violation(rule=rule, triggering_files=candidates))
