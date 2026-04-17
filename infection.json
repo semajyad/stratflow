@@ -18,6 +18,9 @@
     "minMsi": 70,
     "minCoveredMsi": 80,
     "testFramework": "phpunit",
+    "phpUnit": {
+        "configDir": "tests"
+    },
     "testFrameworkOptions": "--configuration tests/phpunit.xml",
     "threads": 2
 }

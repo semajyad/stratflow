@@ -157,7 +157,7 @@ jobs:
           git add tests/performance/history/ tests/performance/summary-peak-latest.json || true
           if ! git diff --cached --quiet; then
             git commit -m "chore: k6 peak load history ${DATE}"
-            git push
+            git push || echo "::warning::Could not push k6 history to main (branch protection) — results saved as artifact"
           fi
 
       - name: Upload k6 peak results artifact
