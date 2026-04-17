@@ -100,16 +100,16 @@ CREATE TABLE board_reviews (
 - [ ] **Step 2: Run the migration**
 
 ```bash
-mysql -u root sentinel < database/migrations/041_board_reviews.sql
+mysql -u root stratflow < database/migrations/041_board_reviews.sql
 ```
 
 Expected: No errors. Confirm with:
 
 ```bash
-mysql -u root sentinel -e "DESCRIBE board_reviews;"
+mysql -u root stratflow -e "DESCRIBE board_reviews;"
 ```
 
-Expected: 12 columns including `board_type`, `proposed_changes`, `responded_by`.
+Expected: 14 columns including `board_type`, `proposed_changes`, `responded_by`.
 
 - [ ] **Step 3: Commit**
 
@@ -1007,7 +1007,7 @@ class BoardReviewControllerTest extends TestCase
 
         $row = \StratFlow\Models\BoardReview::findById($this->db, $id);
         $this->assertSame('rejected', $row['status']);
-        $this->assertNull(json_decode($row['proposed_changes'], true) ? null : null); // no changes applied
+        $this->assertSame('rejected', $row['status']); // status updated to rejected
         // Verify ai_summary NOT changed
         $doc = $this->db->query("SELECT ai_summary FROM documents WHERE project_id = 1 ORDER BY id DESC LIMIT 1")->fetch();
         $this->assertNotSame('', $doc['ai_summary'] ?? ''); // original untouched
@@ -1210,33 +1210,40 @@ class BoardReviewController
     {
         $user   = $this->auth->user();
         $userId = (int) $user['id'];
-        $review = BoardReview::findById($this->db, $id);
 
-        if ($review === null) {
-            $this->response->json(['error' => 'Review not found'], 404);
-            return;
-        }
-        if ($review['status'] !== 'pending') {
-            $this->response->json(['error' => 'Review already responded to'], 409);
-            return;
-        }
-
-        $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $review['project_id']);
-        if ($project === null) {
-            $this->response->json(['error' => 'Access denied'], 403);
-            return;
-        }
-
-        $changes = json_decode($review['proposed_changes'], true) ?? [];
-
+        // Use FOR UPDATE to prevent TOCTOU: two concurrent accepts both passing the pending check
+        $this->db->beginTransaction();
         try {
+            $review = BoardReview::findByIdForUpdate($this->db, $id); // SELECT … FOR UPDATE
+
+            if ($review === null) {
+                $this->db->rollback();
+                $this->response->json(['error' => 'Review not found'], 404);
+                return;
+            }
+            if ($review['status'] !== 'pending') {
+                $this->db->rollback();
+                $this->response->json(['error' => 'Review already responded to'], 409);
+                return;
+            }
+
+            $project = ProjectPolicy::findEditableProject($this->db, $user, (int) $review['project_id']);
+            if ($project === null) {
+                $this->db->rollback();
+                $this->response->json(['error' => 'Access denied'], 403);
+                return;
+            }
+
+            $changes = json_decode($review['proposed_changes'], true) ?? [];
             $this->applyChanges($review['screen_context'], (int) $review['project_id'], $changes);
+            BoardReview::updateStatus($this->db, $id, 'accepted', $userId);
+            $this->db->commit();
         } catch (\RuntimeException $e) {
+            $this->db->rollback();
             $this->response->json(['error' => 'Failed to apply changes: ' . $e->getMessage()], 500);
             return;
         }
 
-        BoardReview::updateStatus($this->db, $id, 'accepted', $userId);
         $this->response->json(['status' => 'accepted', 'id' => $id]);
     }
 
@@ -1372,9 +1379,11 @@ class BoardReviewController
                 $action = $item['action'] ?? '';
                 match ($action) {
                     'add' => $this->db->query(
-                        "INSERT INTO hl_work_items (project_id, title, description, created_at)
-                         VALUES (:project_id, :title, :description, NOW())",
-                        [':project_id' => $projectId, ':title' => $item['title'] ?? '', ':description' => $item['description'] ?? '']
+                        "INSERT INTO hl_work_items (project_id, priority_number, title, description, created_at)
+                         VALUES (:project_id,
+                                 COALESCE((SELECT MAX(priority_number) FROM hl_work_items WHERE project_id = :project_id2), 0) + 100,
+                                 :title, :description, NOW())",
+                        [':project_id' => $projectId, ':project_id2' => $projectId, ':title' => $item['title'] ?? '', ':description' => $item['description'] ?? '']
                     ),
                     'modify' => $this->db->query(
                         "UPDATE hl_work_items SET title = :title, description = :description
@@ -1412,9 +1421,11 @@ class BoardReviewController
                 $action = $story['action'] ?? '';
                 match ($action) {
                     'add' => $this->db->query(
-                        "INSERT INTO user_stories (project_id, title, description, created_at)
-                         VALUES (:project_id, :title, :description, NOW())",
-                        [':project_id' => $projectId, ':title' => $story['title'] ?? '', ':description' => $story['description'] ?? '']
+                        "INSERT INTO user_stories (project_id, priority_number, title, description, created_at)
+                         VALUES (:project_id,
+                                 COALESCE((SELECT MAX(priority_number) FROM user_stories WHERE project_id = :project_id2), 0) + 100,
+                                 :title, :description, NOW())",
+                        [':project_id' => $projectId, ':project_id2' => $projectId, ':title' => $story['title'] ?? '', ':description' => $story['description'] ?? '']
                     ),
                     'modify' => $this->db->query(
                         "UPDATE user_stories SET title = :title, description = :description

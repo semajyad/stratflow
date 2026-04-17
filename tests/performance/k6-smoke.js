@@ -64,6 +64,7 @@ export default function () {
   });
   const appHomeOk = check(appHome, {
     'app/home redirects unauth': (r) => r.status === 302 || r.status === 301,
+    'app/home redirects to login': (r) => (r.headers['Location'] || '').includes('/login'),
   });
   errorRate.add(!appHomeOk);
 

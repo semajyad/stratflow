@@ -2,7 +2,7 @@
 
 StratFlow uses seven prompt classes in `src/Services/Prompts/`. All prompts are PHP string constants — no templating library. They are passed to `GeminiService::generate()` alongside the user-supplied content.
 
-All prompts target the `gemini-3-flash-preview` model.
+The model is configured via the `GEMINI_MODEL` environment variable (defaults to `gemini-2.0-flash`).
 
 ---
 

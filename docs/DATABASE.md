@@ -551,7 +551,7 @@ Stores OAuth credentials and status for third-party integrations (Jira, GitHub A
 |--------|------|-------------|-------|
 | `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
 | `org_id` | INT UNSIGNED | NOT NULL, FK → organisations | |
-| `provider` | ENUM | NOT NULL | `jira`, `azure_devops` |
+| `provider` | ENUM | NOT NULL | `jira`, `azure_devops`, `github` |
 | `display_name` | VARCHAR(255) | NOT NULL, DEFAULT `''` | Human-readable label |
 | `cloud_id` | VARCHAR(255) | NULL | Jira cloud site ID |
 | `access_token` | TEXT | NULL | OAuth access token (encrypted) |

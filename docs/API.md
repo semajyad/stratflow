@@ -10,7 +10,7 @@ All routes are defined in `src/Config/routes.php`. The application uses a custom
 | `csrf` | `CSRFMiddleware` | Validates the `_csrf_token` field in POST requests; aborts with 403 on mismatch |
 | `admin` | `AdminMiddleware` | Requires `org_admin` or `superadmin` role; redirects to `/app/home` if unauthorised |
 | `superadmin` | `SuperadminMiddleware` | Requires the `superadmin` role; redirects to `/app/home` if unauthorised |
-| `workflow_write` | `WorkflowWriteMiddleware` | Requires the user has write access to the project (not viewer-only); returns 403 otherwise |
+| `workflow_write` | `WorkflowWriteMiddleware` | Requires the user has write access to the project (not viewer-only); redirects to `/app/home` if unauthorised |
 | `billing` | `BillingMiddleware` | Requires `has_billing_access` flag or `org_admin`/`superadmin` role |
 | `executive` | `ExecutiveMiddleware` | Requires `has_executive_access` flag or `superadmin` role |
 | `project_create` | `ProjectCreateMiddleware` | Requires `is_project_admin`, `org_admin`, or `superadmin` role |
