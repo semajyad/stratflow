@@ -2362,10 +2362,15 @@ function memberPickerSearch(input) {
         return;
     }
 
-    resultsEl.innerHTML = matches.map(function(user) {
-        return '<div class="member-result-item" data-id="' + String(user.id) + '" data-label="' + escapeHtml(user.label) + '"' +
-            '>' + escapeHtml(user.label) + '</div>';
-    }).join('');
+    resultsEl.textContent = '';
+    matches.forEach(function(user) {
+        var div = document.createElement('div');
+        div.className = 'member-result-item';
+        div.dataset.id = String(user.id);
+        div.dataset.label = user.label;
+        div.textContent = user.label;
+        resultsEl.appendChild(div);
+    });
     setHiddenState(resultsEl, false);
 }
 
@@ -3047,12 +3052,19 @@ function showProcessingOverlay(message) {
     var overlay = document.createElement('div');
     overlay.className = 'processing-overlay';
     overlay.id = 'processing-overlay';
-    overlay.innerHTML =
-        '<div class="processing-card">' +
-            '<div class="loading-spinner"></div>' +
-            '<p>' + message + '</p>' +
-            '<p class="processing-card__note">Please don\'t close this page</p>' +
-        '</div>';
+    var card = document.createElement('div');
+    card.className = 'processing-card';
+    var spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    var msg = document.createElement('p');
+    msg.textContent = message;
+    var note = document.createElement('p');
+    note.className = 'processing-card__note';
+    note.textContent = "Please don't close this page";
+    card.appendChild(spinner);
+    card.appendChild(msg);
+    card.appendChild(note);
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 }
 
@@ -3139,7 +3151,8 @@ function navigateToExecutiveProject(selectEl) {
     if (!value) {
         return;
     }
-    window.location = baseUrl + value + '/executive';
+    var path = baseUrl + value + '/executive';
+    if (/^\//.test(path)) { window.location = path; }
 }
 
 function syncGithubRepoLabel(checkbox) {
@@ -3352,7 +3365,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 var loadingText = form.getAttribute('data-loading') || 'Processing...';
                 btn.disabled = true;
                 btn.dataset.originalText = btn.textContent || btn.innerText;
-                btn.innerHTML = '<span class="loading-spinner-inline"></span> ' + loadingText;
+                btn.textContent = '';
+                var s = document.createElement('span');
+                s.className = 'loading-spinner-inline';
+                btn.appendChild(s);
+                btn.appendChild(document.createTextNode(' ' + loadingText));
                 btn.classList.add('btn-loading');
             }
         });

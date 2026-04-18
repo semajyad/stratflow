@@ -51,6 +51,8 @@ on:
         required: true
         type: string
 
+permissions: read-all
+
 jobs:
   self-heal:
     name: Self-heal PR #${{ inputs.pr_number }}

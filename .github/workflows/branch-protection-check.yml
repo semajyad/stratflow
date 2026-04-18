@@ -10,6 +10,8 @@ on:
     # 17:00 UTC daily = ~5 am NZT
     - cron: "0 17 * * *"
 
+permissions: read-all
+
 jobs:
   assert:
     runs-on: ubuntu-latest

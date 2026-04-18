@@ -256,3 +256,20 @@ if s["fail"] == 0 and s["warn"] == 0:
 **Follow-up:** None.
 
 **PR/Commit:** N/A
+
+
+---
+
+## [2026-04-19] ci — Branch divergence from concurrent PR merges
+
+**Symptom:** PR shows CONFLICTING/DIRTY merge state; git rebase hits conflicts in many doc files
+
+**Root cause:** Long-lived feature branch (28 commits ahead of merge-base) while other PRs merged the same feature code into main via different branches. Result: same content, diverged history, rebase fights itself.
+
+**Fix applied:** Save exact file diff for all unique files, create new clean branch from origin/main, apply files directly, commit once, open new PR, close old one.
+
+**Prevention:** Never keep a feature branch alive after its core work is merged. As soon as you see PRs being merged to main that contain work from your branch, immediately rebase or cut a new branch. Check branch divergence with: git diff --name-only origin/main HEAD. If it shows nothing but github reports CONFLICTING, recreate the branch.
+
+**Follow-up:** None.
+
+**PR/Commit:** N/A

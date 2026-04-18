@@ -40,6 +40,8 @@ concurrency:
   group: deploy-railway
   cancel-in-progress: false   # never cancel a deploy in flight; queue instead
 
+permissions: read-all
+
 jobs:
   gate:
     name: Pre-deploy gate

@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const mysql = require('mysql2/promise');
 const { DB_CONFIG, ADMIN_EMAIL, ADMIN_PASS, REGULAR_EMAIL, REGULAR_PASS } = require('../test-constants');
 
-const BASE           = 'http://localhost:8890';
+const BASE           = process.env.BASE_URL || 'http://localhost:8890';
 
 async function loginAs(page, email, password) {
   await page.goto(`${BASE}/login`);

@@ -20,6 +20,8 @@ concurrency:
   group: morning-summary
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   summary:
     name: Post morning digest

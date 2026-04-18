@@ -10,6 +10,8 @@ concurrency:
   group: snyk
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   snyk:
     runs-on: ubuntu-latest

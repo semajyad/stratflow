@@ -5,7 +5,7 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 
-const BASE        = 'http://localhost:8890';
+const BASE        = process.env.BASE_URL || 'http://localhost:8890';
 // Seed project — always exists
 const SEED_PROJECT_ID = '1';
 

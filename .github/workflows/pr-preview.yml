@@ -122,13 +122,15 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_ENVIRONMENT: pr-${{ github.event.pull_request.number }}
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE_NAME }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           railway up --detach --environment "$RAILWAY_ENVIRONMENT" ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE} 2>/dev/null \
             || railway up --detach ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE}  # fallback: no env flag
 
           # Construct preview URL (Railway naming convention)
-          SLUG=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
-          PREVIEW_URL="https://stratflow-pr-${{ github.event.pull_request.number }}.up.railway.app"
+          SLUG=$(echo "$PR_HEAD_REF" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+          PREVIEW_URL="https://stratflow-pr-${PR_NUMBER}.up.railway.app"
           echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "Preview URL: $PREVIEW_URL"
 
@@ -154,6 +156,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           BODY="## 🚀 Preview Environment
 
@@ -161,8 +165,8 @@ jobs:
           |---|---|
           | **Preview URL** | [$PREVIEW_URL]($PREVIEW_URL) |
           | **Environment** | \`pr-$PR_NUMBER\` |
-          | **Branch** | \`${{ github.event.pull_request.head.ref }}\` |
-          | **SHA** | \`${{ github.event.pull_request.head.sha }}\` |
+          | **Branch** | \`$PR_HEAD_REF\` |
+          | **SHA** | \`$PR_HEAD_SHA\` |
 
           This environment is automatically torn down when the PR closes.
           <sub>Updated: $(date -u '+%Y-%m-%d %H:%M UTC')</sub>"

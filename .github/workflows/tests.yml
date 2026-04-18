@@ -16,6 +16,8 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
 
   # ─────────────────────────────────────────────────────────────────────────
