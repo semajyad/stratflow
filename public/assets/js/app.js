@@ -2845,6 +2845,11 @@ function renderSoundingBoardResults(data) {
         var rightSpan = document.createElement('span');
         rightSpan.className = 'sb-accordion-meta';
 
+        // Status badge: hidden until accepted/rejected by respondToPersona
+        var statusBadge = document.createElement('span');
+        statusBadge.className = 'persona-status badge hidden';
+        rightSpan.appendChild(statusBadge);
+
         if (risk) {
             var riskBadge = document.createElement('span');
             riskBadge.className = 'badge ' + (riskBadgeClass[risk] || 'badge-secondary');
@@ -2988,8 +2993,11 @@ function respondToPersona(evalId, memberIndex, action) {
             var card = document.querySelector('[data-eval-id="' + evalId + '"][data-index="' + memberIndex + '"]');
             if (card) {
                 var statusBadge = card.querySelector('.persona-status');
-                statusBadge.textContent = action + 'ed';
-                statusBadge.className = 'persona-status badge ' + (action === 'accept' ? 'badge-success' : 'badge-muted');
+                if (statusBadge) {
+                    statusBadge.textContent = action + 'ed';
+                    statusBadge.className = 'persona-status badge ' + (action === 'accept' ? 'badge-success' : 'badge-muted');
+                    setHiddenState(statusBadge, false);
+                }
                 setHiddenState(card.querySelector('.persona-actions'), true);
             }
         }
