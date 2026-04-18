@@ -85,6 +85,7 @@ components:
       properties:
         stories:
           type: array
+          maxItems: 1000
           items:
             $ref: '#/components/schemas/Story'
 
@@ -106,6 +107,7 @@ components:
       properties:
         projects:
           type: array
+          maxItems: 1000
           items:
             $ref: '#/components/schemas/Project'
 

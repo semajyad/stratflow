@@ -13,6 +13,9 @@ name: Self-heal PR branch
 # 'self-heal-failed' and a HIGH ntfy alert fires. The workflow exits 0
 # so it doesn't shadow the real test failure.
 
+# Explicit permissions at workflow level (restrict defaults; job overrides with write).
+permissions: {}
+
 on:
   workflow_call:
     inputs:
