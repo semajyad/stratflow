@@ -49,6 +49,7 @@ class WorkItemLifecycleTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         self::$db = new Database(getTestDbConfig());
+        self::seedPermissionCapabilities();
 
         // Clean up any leftovers from a previous failed run (FK-safe order)
         foreach (['Test Org - WorkItemLifecycleTest A', 'Test Org - WorkItemLifecycleTest B'] as $orgName) {
@@ -68,8 +69,8 @@ class WorkItemLifecycleTest extends TestCase
         self::$orgId = (int) self::$db->lastInsertId();
 
         self::$db->query(
-            "INSERT INTO users (org_id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)",
-            [self::$orgId, 'wil_actor@test.invalid', password_hash('pass', PASSWORD_DEFAULT), 'Actor User', 'org_admin']
+            "INSERT INTO users (org_id, email, password_hash, full_name, role, account_type) VALUES (?, ?, ?, ?, ?, ?)",
+            [self::$orgId, 'wil_actor@test.invalid', password_hash('pass', PASSWORD_DEFAULT), 'Actor User', 'org_admin', 'org_admin']
         );
         self::$userId = (int) self::$db->lastInsertId();
 
@@ -84,8 +85,8 @@ class WorkItemLifecycleTest extends TestCase
         self::$orgIdB = (int) self::$db->lastInsertId();
 
         self::$db->query(
-            "INSERT INTO users (org_id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)",
-            [self::$orgIdB, 'wil_other@test.invalid', password_hash('pass', PASSWORD_DEFAULT), 'Other User', 'org_admin']
+            "INSERT INTO users (org_id, email, password_hash, full_name, role, account_type) VALUES (?, ?, ?, ?, ?, ?)",
+            [self::$orgIdB, 'wil_other@test.invalid', password_hash('pass', PASSWORD_DEFAULT), 'Other User', 'org_admin', 'org_admin']
         );
         self::$userIdB = (int) self::$db->lastInsertId();
 
@@ -113,6 +114,21 @@ class WorkItemLifecycleTest extends TestCase
         unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_warning']);
     }
 
+    private static function seedPermissionCapabilities(): void
+    {
+        self::$db->query(
+            "INSERT IGNORE INTO capabilities (`key`, description) VALUES
+             ('workflow.view', 'View workflow'),
+             ('workflow.edit', 'Edit workflow'),
+             ('project.view_all', 'View all projects')"
+        );
+        self::$db->query(
+            "INSERT IGNORE INTO account_type_capabilities (account_type, capability_id)
+             SELECT 'org_admin', id FROM capabilities
+             WHERE `key` IN ('workflow.view', 'workflow.edit', 'project.view_all')"
+        );
+    }
+
     // ===========================
     // HELPERS
     // ===========================
@@ -128,6 +144,7 @@ class WorkItemLifecycleTest extends TestCase
             'id'                  => self::$userId,
             'org_id'              => self::$orgId,
             'role'                => 'org_admin',
+            'account_type'        => 'org_admin',
             'is_active'           => 1,
             'has_billing_access'  => 0,
             'has_executive_access'=> 0,
@@ -149,6 +166,7 @@ class WorkItemLifecycleTest extends TestCase
             'id'                  => self::$userIdB,
             'org_id'              => self::$orgIdB,
             'role'                => 'org_admin',
+            'account_type'        => 'org_admin',
             'is_active'           => 1,
             'has_billing_access'  => 0,
             'has_executive_access'=> 0,

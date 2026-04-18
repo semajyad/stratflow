@@ -111,7 +111,6 @@ class ApiAuthMiddleware
         http_response_code(401);
         header('Content-Type: application/json');
         echo json_encode(['error' => 'unauthorized', 'message' => $message], JSON_UNESCAPED_SLASHES);
-        exit;
     }
 
     private function forbidden(Response $response, string $message): void
@@ -119,7 +118,6 @@ class ApiAuthMiddleware
         http_response_code(403);
         header('Content-Type: application/json');
         echo json_encode(['error' => 'forbidden', 'message' => $message], JSON_UNESCAPED_SLASHES);
-        exit;
     }
 
     private function isScopeAllowed(array $token): bool

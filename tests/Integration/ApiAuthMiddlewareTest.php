@@ -30,6 +30,7 @@ class ApiAuthMiddlewareTest extends TestCase
 {
     private static Database $db;
     private static int $orgId;
+    private static int $otherOrgId;
     private static int $userId;
 
     public static function setUpBeforeClass(): void
@@ -37,8 +38,11 @@ class ApiAuthMiddlewareTest extends TestCase
         self::$db = new Database(getTestDbConfig());
 
         self::$db->query("DELETE FROM organisations WHERE name = 'Test Org - ApiAuthMW'");
+        self::$db->query("DELETE FROM organisations WHERE name = 'Test Org - ApiAuthMW Other'");
         self::$db->query("INSERT INTO organisations (name) VALUES (?)", ['Test Org - ApiAuthMW']);
         self::$orgId = (int) self::$db->lastInsertId();
+        self::$db->query("INSERT INTO organisations (name) VALUES (?)", ['Test Org - ApiAuthMW Other']);
+        self::$otherOrgId = (int) self::$db->lastInsertId();
 
         self::$db->query(
             "INSERT INTO users (org_id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)",
@@ -51,7 +55,7 @@ class ApiAuthMiddlewareTest extends TestCase
     {
         self::$db->query("DELETE FROM personal_access_tokens WHERE user_id = ?", [self::$userId]);
         self::$db->query("DELETE FROM users WHERE id = ?", [self::$userId]);
-        self::$db->query("DELETE FROM organisations WHERE id = ?", [self::$orgId]);
+        self::$db->query("DELETE FROM organisations WHERE id IN (?, ?)", [self::$orgId, self::$otherOrgId]);
     }
 
     protected function tearDown(): void
@@ -59,7 +63,10 @@ class ApiAuthMiddlewareTest extends TestCase
         self::$db->query("DELETE FROM personal_access_tokens WHERE user_id = ?", [self::$userId]);
     }
 
-    private function runMiddleware(string $authHeader): bool
+    /**
+     * @return array{0: bool, 1: string}
+     */
+    private function runMiddleware(string $authHeader): array
     {
         // Set the header in $_SERVER
         $_SERVER['HTTP_AUTHORIZATION'] = $authHeader;
@@ -74,9 +81,9 @@ class ApiAuthMiddlewareTest extends TestCase
         // Capture output buffering to prevent JSON from polluting test output
         ob_start();
         $result = $middleware->handle($auth, self::$db, $response);
-        ob_end_clean();
+        $output = (string) ob_get_clean();
 
-        return $result;
+        return [$result, $output];
     }
 
     // ===========================
@@ -89,7 +96,7 @@ class ApiAuthMiddlewareTest extends TestCase
         $gen     = PersonalAccessToken::generate();
         PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'valid', $gen['raw'], $gen['prefix']);
 
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+        [$result] = $this->runMiddleware('Bearer ' . $gen['raw']);
         $this->assertTrue($result);
     }
 
@@ -100,9 +107,9 @@ class ApiAuthMiddlewareTest extends TestCase
     #[Test]
     public function testMissingAuthHeaderFails(): void
     {
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('');
+        [$result, $output] = $this->runMiddleware('');
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 
     // ===========================
@@ -112,9 +119,9 @@ class ApiAuthMiddlewareTest extends TestCase
     #[Test]
     public function testWrongPrefixFails(): void
     {
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('Bearer ghp_somegithubtoken');
+        [$result, $output] = $this->runMiddleware('Bearer ghp_somegithubtoken');
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 
     // ===========================
@@ -128,9 +135,9 @@ class ApiAuthMiddlewareTest extends TestCase
         $created = PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'revoked', $gen['raw'], $gen['prefix']);
         PersonalAccessToken::revoke(self::$db, (int) $created['id'], self::$userId, self::$orgId);
 
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+        [$result, $output] = $this->runMiddleware('Bearer ' . $gen['raw']);
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 
     // ===========================
@@ -153,9 +160,9 @@ class ApiAuthMiddlewareTest extends TestCase
             ]
         );
 
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+        [$result, $output] = $this->runMiddleware('Bearer ' . $gen['raw']);
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 
     // ===========================
@@ -170,15 +177,15 @@ class ApiAuthMiddlewareTest extends TestCase
         $gen     = PersonalAccessToken::generate();
         $created = PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'cross', $gen['raw'], $gen['prefix']);
 
-        // Corrupt: set org_id to a different value so user.org_id != token.org_id
+        // Corrupt: set org_id to a different valid org so user.org_id != token.org_id
         self::$db->query(
-            "UPDATE personal_access_tokens SET org_id = 99999 WHERE id = ?",
-            [$created['id']]
+            "UPDATE personal_access_tokens SET org_id = ? WHERE id = ?",
+            [self::$otherOrgId, $created['id']]
         );
 
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+        [$result, $output] = $this->runMiddleware('Bearer ' . $gen['raw']);
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 
     #[Test]
@@ -188,10 +195,10 @@ class ApiAuthMiddlewareTest extends TestCase
         PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'inactive', $gen['raw'], $gen['prefix']);
         self::$db->query("UPDATE users SET is_active = 0 WHERE id = ?", [self::$userId]);
 
-        $this->expectOutputRegex('/unauthorized/');
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+        [$result, $output] = $this->runMiddleware('Bearer ' . $gen['raw']);
 
         self::$db->query("UPDATE users SET is_active = 1 WHERE id = ?", [self::$userId]);
         $this->assertFalse($result);
+        $this->assertMatchesRegularExpression('/unauthorized/', $output);
     }
 }
