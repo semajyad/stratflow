@@ -29,6 +29,19 @@ Answer whichever of these apply (3–5 bullet points, not an essay):
 
 For pure refactors, tests, docs, or config-only changes: delete the section.
 
+## Quick Browser Test — Before Committing
+
+**Before committing any user-facing change, do a ~30 second manual browser check of just the feature.**
+
+Use Chrome DevTools or equivalent — navigate to the page, trigger the feature, verify it works. This is not a full regression run; it's the sanity check every developer does before they commit real work.
+
+**Workflow order:**
+1. Quick browser test (30 s) — catch obvious breakage before any hooks fire
+2. `git commit` (pre-commit hook enforces test-touch)
+3. `git push` → open PR → CI runs Playwright fast suite + PHPUnit
+
+Do NOT rely on CI alone — by the time CI fails, the PR is already open.
+
 ## Playwright / Integration Test Rule — MANDATORY for major features
 
 **Every major new feature must have at least one Playwright or integration test before the PR is merged.**

@@ -26,6 +26,8 @@ async function globalSetup() {
       'INSERT INTO users (org_id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)',
       [1, REGULAR_USER_EMAIL, REGULAR_USER_HASH, 'Playwright Regular', 'user']
     );
+    // Enable evaluation board for test org so UI smoke tests can verify feature elements
+    await conn.execute('UPDATE subscriptions SET has_evaluation_board = 1 WHERE org_id = 1');
     console.log('[globalSetup] regular test user created');
   } catch (err) {
     throw new Error(`[globalSetup] DB setup failed — is Docker running on port 3307? ${err.message}`);

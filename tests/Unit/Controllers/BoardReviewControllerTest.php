@@ -152,6 +152,46 @@ class BoardReviewControllerTest extends ControllerTestCase
         $this->assertStringContainsString('screen_context', $this->response->jsonPayload['error'] ?? '');
     }
 
+    #[Test]
+    public function evaluateReturns500WhenPanelMembersEmpty(): void
+    {
+        $sub   = ['id' => 1, 'org_id' => 10, 'has_evaluation_board' => 1];
+        $panel = ['id' => 7, 'panel_type' => 'executive', 'name' => 'Executive Panel', 'org_id' => 10];
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),
+            $this->stmt($sub),
+            $this->stmt(false, [$panel]),  // PersonaPanel::findByOrgId
+            $this->stmt(false, []),         // PersonaMember::findByPanelId (empty)
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'screen_context' => 'summary', 'screen_content' => 'content']);
+        $this->ctrl($request)->evaluate();
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('No panel members', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function evaluateReturns500WhenAiServiceThrows(): void
+    {
+        $sub    = ['id' => 1, 'org_id' => 10, 'has_evaluation_board' => 1];
+        $panel  = ['id' => 7, 'panel_type' => 'executive', 'name' => 'Executive Panel', 'org_id' => 10];
+        $member = ['id' => 1, 'panel_id' => 7, 'role_title' => 'CEO', 'prompt_description' => 'Strategy'];
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),
+            $this->stmt($sub),
+            $this->stmt(false, [$panel]),    // PersonaPanel::findByOrgId
+            $this->stmt(false, [$member]),   // PersonaMember::findByPanelId
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'screen_context' => 'summary', 'screen_content' => 'content']);
+        $this->ctrl($request)->evaluate();
+
+        // GeminiService constructor throws TypeError (no gemini.api_key in test config) → caught
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertArrayHasKey('error', $this->response->jsonPayload);
+    }
+
     // ===========================
     // results($id) — all paths
     // ===========================
@@ -276,6 +316,196 @@ class BoardReviewControllerTest extends ControllerTestCase
         $this->assertSame(200, $this->response->jsonStatus);
         $this->assertSame('accepted', $this->response->jsonPayload['status'] ?? null);
         $this->assertSame(1, $this->response->jsonPayload['id'] ?? null);
+    }
+
+    #[Test]
+    public function acceptAppliesRoadmapChangesOnSuccess(): void
+    {
+        $roadmapRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'roadmap',
+            'proposed_changes' => '{"revised_mermaid_code":"gantt\n  section A\n  Task: 0, 7"}',
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($roadmapRow),     // findByIdForUpdate
+            $this->stmt($this->project),  // findEditableProject
+            $this->stmt(null),             // UPDATE strategy_diagrams
+            $this->stmt(null),             // updateStatus
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(200, $this->response->jsonStatus);
+        $this->assertSame('accepted', $this->response->jsonPayload['status'] ?? null);
+    }
+
+    #[Test]
+    public function acceptReturns500WhenRoadmapMissingCode(): void
+    {
+        $roadmapRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'roadmap',
+            'proposed_changes' => '{}',
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($roadmapRow),
+            $this->stmt($this->project),
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('Failed to apply changes', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function acceptAppliesWorkItemChangesOnSuccess(): void
+    {
+        $workItemsRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'work_items',
+            'proposed_changes' => json_encode(['items' => [
+                ['action' => 'add',    'title' => 'New item', 'description' => 'Desc'],
+                ['action' => 'modify', 'id' => 1, 'title' => 'Updated', 'description' => 'New desc'],
+                ['action' => 'remove', 'id' => 2],
+            ]]),
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($workItemsRow),   // findByIdForUpdate
+            $this->stmt($this->project),  // findEditableProject
+            $this->stmt(null),             // INSERT (add)
+            $this->stmt(null),             // UPDATE (modify)
+            $this->stmt(null),             // DELETE (remove)
+            $this->stmt(null),             // updateStatus
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(200, $this->response->jsonStatus);
+        $this->assertSame('accepted', $this->response->jsonPayload['status'] ?? null);
+    }
+
+    #[Test]
+    public function acceptReturns500WhenWorkItemsKeyMissing(): void
+    {
+        $workItemsRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'work_items',
+            'proposed_changes' => '{"wrong_key": []}',
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($workItemsRow),
+            $this->stmt($this->project),
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('Failed to apply changes', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function acceptReturns500WhenWorkItemActionIsUnknown(): void
+    {
+        $workItemsRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'work_items',
+            'proposed_changes' => json_encode(['items' => [
+                ['action' => 'unknown', 'title' => 'x'],
+            ]]),
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($workItemsRow),
+            $this->stmt($this->project),
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('Failed to apply changes', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function acceptAppliesUserStoryChangesOnSuccess(): void
+    {
+        $storiesRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'user_stories',
+            'proposed_changes' => json_encode(['stories' => [
+                ['action' => 'add',    'title' => 'As a user', 'description' => '...'],
+                ['action' => 'modify', 'id' => 1, 'title' => 'Updated story', 'description' => '...'],
+                ['action' => 'remove', 'id' => 2],
+            ]]),
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($storiesRow),     // findByIdForUpdate
+            $this->stmt($this->project),  // findEditableProject
+            $this->stmt(null),             // INSERT (add)
+            $this->stmt(null),             // UPDATE (modify)
+            $this->stmt(null),             // DELETE (remove)
+            $this->stmt(null),             // updateStatus
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(200, $this->response->jsonStatus);
+        $this->assertSame('accepted', $this->response->jsonPayload['status'] ?? null);
+    }
+
+    #[Test]
+    public function acceptReturns500WhenStoriesKeyMissing(): void
+    {
+        $storiesRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'user_stories',
+            'proposed_changes' => '{}',
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($storiesRow),
+            $this->stmt($this->project),
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('Failed to apply changes', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function acceptReturns500WhenUserStoryActionIsUnknown(): void
+    {
+        $storiesRow = array_merge($this->reviewRow, [
+            'screen_context'   => 'user_stories',
+            'proposed_changes' => json_encode(['stories' => [
+                ['action' => 'unknown', 'title' => 'x'],
+            ]]),
+        ]);
+        $this->db = $this->createMock(\StratFlow\Core\Database::class);
+        $this->actingAs($this->user);
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($storiesRow),
+            $this->stmt($this->project),
+        );
+
+        $ctrl = new BoardReviewController($this->makeGetRequest(), $this->response, $this->auth, $this->db, $this->config);
+        $ctrl->accept(1);
+
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertStringContainsString('Failed to apply changes', $this->response->jsonPayload['error'] ?? '');
     }
 
     // ===========================

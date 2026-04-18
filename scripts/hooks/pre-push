@@ -1,0 +1,4 @@
+#!/bin/sh
+# pre-push — no-op. Playwright runs in CI (fast suite required check).
+# Local browser test should be done manually before committing.
+exit 0
