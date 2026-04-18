@@ -28,6 +28,12 @@ class CSRFMiddleware
         if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
             $token = $request->post('_csrf_token', '');
 
+            // JSON requests (Content-Type: application/json) don't populate $_POST —
+            // fall back to the decoded JSON body.
+            if ($token === '' || $token === null) {
+                $token = $request->json()['_csrf_token'] ?? '';
+            }
+
             if (!$csrf->validateToken($token)) {
                 Response::applySecurityHeaders('app');
                 http_response_code(403);

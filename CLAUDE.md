@@ -29,6 +29,22 @@ Answer whichever of these apply (3–5 bullet points, not an essay):
 
 For pure refactors, tests, docs, or config-only changes: delete the section.
 
+## Playwright / Integration Test Rule — MANDATORY for major features
+
+**Every major new feature must have at least one Playwright or integration test before the PR is merged.**
+
+"Major feature" means: any user-facing flow with a new AJAX endpoint, form submission, or multi-step interaction (e.g. Sounding Board, Board Review, auth flows, billing actions).
+
+The test must exercise the real HTTP stack — not mocked controllers. Minimum bar:
+- Open the page as an authenticated user
+- Trigger the feature (click button, submit form)
+- Assert the response is correct (modal opens, no error alert, expected DB change)
+
+Place tests in `tests/Playwright/` (`.spec.ts`) or `tests/Integration/` (PHPUnit).
+Do not open a PR for a major feature without this test.
+
+**Why:** unit tests mock Request/Response and never catch HTTP-layer bugs like CSRF token parsing (Content-Type: application/json bypasses `$_POST`). Integration/Playwright tests catch these on day one.
+
 ## Unit Test Rule — MANDATORY
 
 **Every new or modified `src/**/*.php` file must have a unit test written before the task is considered complete.**
