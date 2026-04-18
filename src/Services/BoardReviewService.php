@@ -30,7 +30,7 @@ class BoardReviewService
      * @throws \RuntimeException       If the AI response is missing required keys
      */
     public function run(
-        array  $members,
+        array $members,
         string $evaluationLevel,
         string $screenContext,
         string $screenContent

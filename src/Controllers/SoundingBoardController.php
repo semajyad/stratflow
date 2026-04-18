@@ -247,5 +247,4 @@ class SoundingBoardController
 
         $this->response->json($evaluations);
     }
-
 }
