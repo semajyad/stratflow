@@ -7,15 +7,21 @@ node_modules/
 .vscode/
 *.log
 docker/mysql-data/
+docker/mongo-data/
+docker/growthbook-uploads/
 C/
 
 # Playwright
 tests/Playwright/node_modules/
 tests/Playwright/test-results/
+.playwright-cli/
+
+# Security scan outputs
 security-reports/
 # Track the latest Shannon and ZAP summary reports so Claude Code can read them
 !security-reports/shannon-latest.md
 !security-reports/zap-latest.md
+deliverables/
 
 # Python bytecode
 __pycache__/
@@ -23,11 +29,23 @@ __pycache__/
 *.pyo
 .pytest_cache/
 
-# Claude Code — ephemeral markers
+# PHPUnit cache
+tests/.phpunit.result.cache
+
+# Logs
+logs/
+storage/logs/*.jsonl
+
+# Claude Code — ephemeral markers and AI tooling state
 .claude/.security-audit-ok
 .claude/.playwright-ok
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/
+.claude/.vexp/
+MEMORY.md
+
+# Superpowers brainstorming session state
+.superpowers/
 
 # Private keys and certificates
 *.pem
