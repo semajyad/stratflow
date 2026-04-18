@@ -34,12 +34,15 @@ jobs:
 
       - name: Direct push to main guard
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          HEAD_SHA: ${{ github.sha }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Detect if this push came from a PR merge (has 2 parents) or is direct
-          PARENTS=$(git log -1 --format="%P" "${{ github.sha }}" | wc -w | tr -d ' ')
-          if [ "$PARENTS" -lt 2 ] && [[ "${{ github.event.head_commit.message }}" != *"Merge pull request"* ]]; then
+          PARENTS=$(git log -1 --format="%P" "$HEAD_SHA" | wc -w | tr -d ' ')
+          if [ "$PARENTS" -lt 2 ] && [[ "$HEAD_MSG" != *"Merge pull request"* ]]; then
             echo "::error::Direct push to main detected. All changes must go through PRs."
-            echo "::error::Commit: ${{ github.sha }} | Message: $(git log -1 --format='%s' ${{ github.sha }})"
+            echo "::error::Commit: $HEAD_SHA | Message: $(git log -1 --format='%s' "$HEAD_SHA")"
             exit 1
           fi
           echo "Push to main is a merge commit — OK"
@@ -48,8 +51,11 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
+          BRANCH="$PR_REF"
           echo "Checking branch: $BRANCH"
 
           # Allowed patterns
@@ -59,9 +65,9 @@ jobs:
             echo "::warning::Branch '$BRANCH' doesn't follow naming convention."
             echo "::warning::Expected: agent/<id>/<topic>, feat/<topic>, fix/<topic>, chore/<topic>, etc."
             # Advisory only — post comment but don't fail
-            gh pr comment ${{ github.event.pull_request.number }} \
+            gh pr comment "$PR_NUMBER" \
               --body "⚠️ Branch name \`$BRANCH\` doesn't follow the convention (\`agent/<id>/<topic>\` or \`feat/\`, \`fix/\`, \`chore/\`, etc.). This is advisory only — CI will still run." \
-              --repo ${{ github.repository }} 2>/dev/null || true
+              --repo "$REPO" 2>/dev/null || true
           fi
 
       - name: Agent claim advisory
@@ -69,6 +75,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          CHANGED_FILES_JSON: ${{ toJson(github.event.pull_request.changed_files) }}
         run: |
           # Skip if agent-claims.json doesn't exist
           if [ ! -f ".github/agent-claims.json" ]; then
@@ -77,7 +86,7 @@ jobs:
           fi
 
           # Get the files changed in this PR
-          CHANGED_FILES=$(gh api repos/$REPO/pulls/${{ github.event.pull_request.number }}/files \
+          CHANGED_FILES=$(gh api repos/$REPO/pulls/$PR_NUMBER/files \
             --jq '[.[] | .filename]' 2>/dev/null || echo "[]")
 
           if [ "$CHANGED_FILES" = "[]" ]; then
@@ -144,11 +153,8 @@ jobs:
           EXIT_CODE=$?
           if [ "$EXIT_CODE" -eq 2 ]; then
             # Post advisory comment but don't fail the job
-            gh pr comment ${{ github.event.pull_request.number }} \
+            gh pr comment "$PR_NUMBER" \
               --body "⚠️ Agent claim overlap detected. Another agent has claimed files touched by this PR. This is **advisory only** — coordinate if editing the same code paths." \
-              --repo $REPO 2>/dev/null || true
+              --repo "$REPO" 2>/dev/null || true
           fi
           exit 0   # Always exit 0 — advisory only
-        env:
-          CHANGED_FILES_JSON: ${{ toJson(github.event.pull_request.changed_files) }}
-          PR_BRANCH: ${{ github.event.pull_request.head.ref }}

@@ -8,7 +8,7 @@
 const { test, expect } = require('@playwright/test');
 const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
 
-const BASE = 'http://localhost:8890';
+const BASE = process.env.BASE_URL || 'http://localhost:8890';
 
 async function loginAsAdmin(page) {
   await page.goto(`${BASE}/login`);
