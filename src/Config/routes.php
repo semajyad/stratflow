@@ -222,6 +222,7 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('POST', '/superadmin/organisations/create', 'SuperadminController@createOrg', ['auth', 'superadmin', 'csrf']);
     $router->add('GET', '/superadmin/organisations/{id}/export', 'SuperadminController@exportOrg', ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/organisations/{id}/jira', 'SuperadminController@toggleJira', ['auth', 'superadmin', 'csrf']);
+    $router->add('POST', '/superadmin/organisations/{id}/evaluation-board', 'SuperadminController@toggleEvaluationBoard', ['auth', 'superadmin', 'csrf']);
     $router->add('POST', '/superadmin/organisations/{id}', 'SuperadminController@updateOrg', ['auth', 'superadmin', 'csrf']);
     $router->add('GET', '/superadmin/defaults', 'SuperadminController@defaults', ['auth', 'superadmin']);
     $router->add('POST', '/superadmin/defaults', 'SuperadminController@saveDefaults', ['auth', 'superadmin', 'csrf']);

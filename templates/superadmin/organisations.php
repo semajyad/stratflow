@@ -96,6 +96,7 @@
                         <th class="org-table-head org-table-head--standard">Plan</th>
                         <th class="org-table-head org-table-head--standard org-table-head--center">Users / Seats</th>
                         <th class="org-table-head org-table-head--standard">Billing</th>
+                        <th class="org-table-head org-table-head--standard">Features</th>
                         <th class="org-table-head org-table-head--standard">Status</th>
                         <th class="org-table-head org-table-head--standard">Created</th>
                         <th class="org-table-head org-table-head--actions"></th>
@@ -114,6 +115,7 @@
                             $isInvoiced = (empty($subId) || str_starts_with($subId, 'manual_'));
                             $billingLabel = $isInvoiced ? 'Invoiced' : 'Stripe';
                             $createdAt = date('j M Y', strtotime($org['created_at'] ?? 'now'));
+                            $hasEvalBoard = (bool) ($sub['has_evaluation_board'] ?? false);
                         ?>
                         <!-- Main row -->
                         <tr class="org-table-row" id="org-row-<?= $orgId ?>">
@@ -130,6 +132,13 @@
                                 <progress class="org-seat-meter org-seat-meter--<?= htmlspecialchars($barTone) ?>" max="100" value="<?= (int) $pct ?>"><?= (int) $pct ?>%</progress>
                             </td>
                             <td class="org-table-cell org-table-cell--standard org-billing-copy"><?= htmlspecialchars($billingLabel) ?></td>
+                            <td class="org-table-cell org-table-cell--standard">
+                                <?php if ($hasEvalBoard): ?>
+                                    <span class="badge badge-success">Eval Board</span>
+                                <?php else: ?>
+                                    <span class="badge badge-secondary">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="org-table-cell org-table-cell--standard">
                                 <?php if ($isActive): ?>
                                     <span class="badge badge-success">Active</span>
@@ -154,7 +163,7 @@
 
                         <!-- Inline edit row (hidden by default) -->
                         <tr id="org-edit-<?= $orgId ?>" class="hidden org-edit-row">
-                            <td colspan="7" class="org-edit-cell">
+                            <td colspan="8" class="org-edit-cell">
                                 <div class="org-form-row">
                                     <!-- Edit form -->
                                     <form method="POST" action="/superadmin/organisations/<?= $orgId ?>"
@@ -228,6 +237,21 @@
                                             <button type="submit" class="btn btn-sm btn-success">Enable</button>
                                         <?php endif; ?>
                                     </form>
+
+                                    <!-- Evaluation Board toggle — separate form -->
+                                    <?php if ($sub): ?>
+                                    <form method="POST" action="/superadmin/organisations/<?= $orgId ?>/evaluation-board"
+                                          class="org-edit-spacer">
+                                        <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <?php if ($hasEvalBoard): ?>
+                                            <input type="hidden" name="action" value="disable">
+                                            <button type="submit" class="btn btn-sm btn-secondary">Disable Eval Board</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="action" value="enable">
+                                            <button type="submit" class="btn btn-sm btn-success">Enable Eval Board</button>
+                                        <?php endif; ?>
+                                    </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

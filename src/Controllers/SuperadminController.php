@@ -276,6 +276,42 @@ class SuperadminController
     }
 
     /**
+     * Enable or disable Evaluation Board access for an organisation.
+     *
+     * @param string $id Organisation primary key (from route param)
+     */
+    public function toggleEvaluationBoard($id): void
+    {
+        $orgId = (int) $id;
+        $org = Organisation::findById($this->db, $orgId);
+        if (!$org) {
+            $_SESSION['flash_error'] = 'Organisation not found.';
+            $this->response->redirect('/superadmin/organisations');
+            return;
+        }
+
+        $action = (string) $this->request->post('action', '');
+        $newValue = $action === 'enable' ? 1 : 0;
+        $this->db->query(
+            "UPDATE subscriptions SET has_evaluation_board = :val WHERE org_id = :org ORDER BY id DESC LIMIT 1",
+            [':val' => $newValue, ':org' => $orgId]
+        );
+
+        $label = $newValue ? 'enabled' : 'disabled';
+        $user = $this->auth->user();
+        AuditLogger::log(
+            $this->db,
+            (int) $user['id'],
+            AuditLogger::ADMIN_ACTION,
+            $this->request->ip(),
+            $_SERVER['HTTP_USER_AGENT'] ?? '',
+            ['action' => 'evaluation_board_toggle', 'org_id' => $orgId, 'value' => $newValue]
+        );
+        $_SESSION['flash_message'] = "Evaluation Board {$label} for \"{$org['name']}\".";
+        $this->response->redirect('/superadmin/organisations');
+    }
+
+    /**
      * Handle organisation actions: suspend, enable, or delete.
      *
      * @param string $id Organisation primary key (from route param)

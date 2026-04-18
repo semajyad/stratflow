@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     started_at DATETIME NOT NULL,
     expires_at DATETIME NULL,
     user_seat_limit INT UNSIGNED NOT NULL DEFAULT 5,
-    has_evaluation_board TINYINT(1) NOT NULL DEFAULT 0,
+    has_evaluation_board TINYINT(1) NOT NULL DEFAULT 1,
     FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
