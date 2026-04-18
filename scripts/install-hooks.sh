@@ -33,6 +33,7 @@ fi
 
 INSTALLED=0
 for src in "$HOOKS_SRC"/*; do
+    [ -f "$src" ] || continue
     name="$(basename "$src")"
     dst="$HOOKS_DST/$name"
     cp "$src" "$dst"
@@ -42,3 +43,4 @@ for src in "$HOOKS_SRC"/*; do
 done
 
 [ "$QUIET" = "0" ] && echo "[install-hooks] $INSTALLED hooks installed to $HOOKS_DST"
+exit 0

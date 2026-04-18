@@ -23,7 +23,7 @@ from pathlib import Path
 
 # === Constants ===
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / ".github" / "agent-ledger.json"
 AUTO_PUSH_THRESHOLD = 5
 

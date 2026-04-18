@@ -1,4 +1,5 @@
 *.sh text eol=lf
+scripts/hooks/* text eol=lf
 Dockerfile text eol=lf
 
 # Generated / auto-managed files — prefer ours on merge conflict so self-heal
