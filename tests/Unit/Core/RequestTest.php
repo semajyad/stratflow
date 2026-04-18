@@ -190,15 +190,19 @@ class RequestTest extends TestCase {
 
     // ========== json() Tests ==========
 
+    /** @return Request with body() stubbed — avoids PHPUnit 12 MethodNamedMethodException */
+    private function makeRequestWithBody(string $body): Request
+    {
+        return new class($body) extends Request {
+            private string $fakeBody;
+            public function __construct(string $body) { $this->fakeBody = $body; }
+            public function body(): string { return $this->fakeBody; }
+        };
+    }
+
     public function testJsonDecodesRequestBody(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $request = $this->getMockBuilder(Request::class)
-            ->onlyMethods(['body'])
-            ->getMock();
-        $request
-            ->expects($this->once())
-            ->method('body')
-            ->willReturn('{"key":"value","num":42}');
+        $request = $this->makeRequestWithBody('{"key":"value","num":42}');
 
         $result = $request->json();
         $this->assertIsArray($result);
@@ -208,55 +212,21 @@ class RequestTest extends TestCase {
 
     public function testJsonReturnsEmptyArrayForEmptyBody(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $request = $this->getMockBuilder(Request::class)
-            ->onlyMethods(['body'])
-            ->getMock();
-        $request
-            ->expects($this->once())
-            ->method('body')
-            ->willReturn('');
-
-        $this->assertSame([], $request->json());
+        $this->assertSame([], $this->makeRequestWithBody('')->json());
     }
 
     public function testJsonReturnsEmptyArrayForNullBody(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        // The code checks for empty string; a null body would be caught
-        // by testing with empty string
-        $request = $this->getMockBuilder(Request::class)
-            ->onlyMethods(['body'])
-            ->getMock();
-        $request
-            ->expects($this->once())
-            ->method('body')
-            ->willReturn('');
-
-        $this->assertSame([], $request->json());
+        $this->assertSame([], $this->makeRequestWithBody('')->json());
     }
 
     public function testJsonReturnsEmptyArrayForInvalidJson(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $request = $this->getMockBuilder(Request::class)
-            ->onlyMethods(['body'])
-            ->getMock();
-        $request
-            ->expects($this->once())
-            ->method('body')
-            ->willReturn('not-valid-json');
-
-        $this->assertSame([], $request->json());
+        $this->assertSame([], $this->makeRequestWithBody('not-valid-json')->json());
     }
 
     public function testJsonReturnsEmptyArrayForNonArrayJson(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $request = $this->getMockBuilder(Request::class)
-            ->onlyMethods(['body'])
-            ->getMock();
-        $request
-            ->expects($this->once())
-            ->method('body')
-            ->willReturn('"string-value"');
-
-        $this->assertSame([], $request->json());
+        $this->assertSame([], $this->makeRequestWithBody('"string-value"')->json());
     }
 }
