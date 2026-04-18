@@ -97,6 +97,7 @@ stratflow/
 │   │   ├── WorkItemController.php          High-level work item CRUD, AI generation, quality
 │   │   ├── KrController.php               Key results CRUD
 │   │   ├── AdminController.php            User/team management, settings, audit logs, billing
+│   │   ├── BoardReviewController.php      Virtual board review: evaluate, results, accept (transactional apply), reject, history
 │   │   ├── SoundingBoardController.php    AI persona evaluation panels; seeds defaults on first use
 │   │   ├── SuperadminController.php       Cross-org management, persona defaults, role assignment
 │   │   ├── DriftController.php            Governance dashboard, baseline, drift detection
@@ -135,6 +136,7 @@ stratflow/
 │   │   └── ApiAuthMiddleware.php           Bearer token validation for REST API
 │   ├── Models/                 Thin data-access objects; all static methods, PDO prepared statements
 │   │   ├── AuditLog.php                  Tamper-evident audit event log (hash chain)
+│   │   ├── BoardReview.php               Virtual board review results; create/find/findForUpdate/updateStatus
 │   │   ├── DiagramNode.php               Mermaid diagram nodes with OKR metadata
 │   │   ├── Document.php                  Uploaded files with extracted text and AI summary
 │   │   ├── DriftAlert.php                Alerts raised by the drift detection engine
@@ -171,6 +173,8 @@ stratflow/
 │   │   └── UserStory.php                 User stories with quality score and assignee
 │   └── Services/
 │       ├── AuditLogger.php               Structured audit event logging with HMAC hash chain
+│       ├── BoardReviewService.php         Builds BoardReviewPrompt, calls Gemini, validates conversation+recommendation response
+│       ├── PanelResolverService.php       Resolves persona panel for an org (org-specific → system default → seeded); extracted from SoundingBoardController
 │       ├── DriftDetectionService.php     Baseline snapshots, capacity/dependency tripwires, AI alignment
 │       ├── EmailService.php              Transactional email via Resend / MailerSend
 │       ├── FileProcessor.php             PDF/DOCX/PPTX/XLSX text extraction
@@ -202,7 +206,8 @@ stratflow/
 │           ├── SprintPrompt.php          Sprint auto-allocation
 │           ├── DriftPrompt.php           OKR alignment assessment for drift detection
 │           ├── KrScoringPrompt.php       AI scoring of PR contributions to key results
-│           └── GitPrMatchPrompt.php      AI matching of PRs to user stories
+│           ├── GitPrMatchPrompt.php      AI matching of PRs to user stories
+│           └── BoardReviewPrompt.php     Virtual boardroom prompt with per-context proposed_changes schema
 ├── templates/
 │   ├── layouts/
 │   │   ├── app.php             Authenticated shell (nav, sidebar, modals)
@@ -210,7 +215,9 @@ stratflow/
 │   ├── partials/
 │   │   ├── workflow-nav.php    Step-by-step navigation bar across app screens
 │   │   ├── sounding-board-modal.php   Sounding board evaluation modal
-│   │   └── sounding-board-button.php  Sounding board trigger button
+│   │   ├── sounding-board-button.php  Sounding board trigger button
+│   │   ├── board-review-modal.php     Virtual board review modal (config, loading, results, responded states)
+│   │   └── board-review-button.php    Board review trigger button (subscription-gated, data-screen attribute)
 │   └── *.php                   Page-level templates
 ├── database/
 │   ├── schema.sql              Canonical schema (applied by Docker on first start)

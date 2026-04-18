@@ -546,7 +546,57 @@ Content to evaluate:
 
 ---
 
-## 11. Drift Prompt
+## 11. Board Review Prompt
+
+**File:** `src/Services/Prompts/BoardReviewPrompt.php`
+**Class:** `BoardReviewPrompt`
+**Used by:** `BoardReviewService::run()` (single call per review)
+
+### Purpose
+
+Builds a complete LLM prompt that simulates a multi-persona boardroom deliberation. The board discusses the provided screen content, challenges it with the selected review level, and produces a structured consensus recommendation including context-specific proposed changes. Unlike `PersonaPrompt` (one prompt per persona), `BoardReviewPrompt` generates a single prompt that produces the full multi-turn conversation and collective recommendation in one Gemini call.
+
+### Review levels
+
+| Key | Board instruction |
+|-----|-------------------|
+| `devils_advocate` | Push back hard but remain constructive |
+| `red_teaming` | Identify every failure mode; assume adversarial conditions |
+| `gordon_ramsay` | Brutally direct, no sugar-coating, hold nothing back |
+
+### Context-specific `proposed_changes` schema
+
+The prompt instructs the model to produce a `proposed_changes` object whose shape varies by `screen_context`:
+
+| `screen_context` | `proposed_changes` shape |
+|-----------------|--------------------------|
+| `summary` | `{ "revised_summary": "<full rewritten text>" }` |
+| `roadmap` | `{ "revised_mermaid_code": "<complete Mermaid diagram code>" }` |
+| `work_items` | `{ "items": [ { "action": "add|modify|remove", "id": null, "title": "...", "description": "..." } ] }` |
+| `user_stories` | `{ "stories": [ { "action": "add|modify|remove", "id": null, "title": "...", "description": "..." } ] }` |
+
+### Expected output format
+
+Single JSON object (no markdown fences):
+
+```json
+{
+  "conversation": [
+    { "speaker": "<role_title>", "message": "<message text>" }
+  ],
+  "recommendation": {
+    "summary": "<1-2 sentence board verdict>",
+    "rationale": "<2-3 sentence reasoning>",
+    "proposed_changes": { ... }
+  }
+}
+```
+
+The `conversation` array must contain 10–14 entries.
+
+---
+
+## 12. Drift Prompt
 
 **File:** `src/Services/Prompts/DriftPrompt.php`
 **Constant:** `DriftPrompt::ALIGNMENT_PROMPT`
@@ -596,7 +646,7 @@ Description: {story_description}
 
 ---
 
-## 12. KR Scoring Prompt
+## 13. KR Scoring Prompt
 
 **File:** `src/Services/Prompts/KrScoringPrompt.php`
 **Constant:** `KrScoringPrompt::PROMPT`
@@ -652,7 +702,7 @@ Input JSON:
 
 ---
 
-## 13. Git PR Match Prompt
+## 14. Git PR Match Prompt
 
 **File:** `src/Services/Prompts/GitPrMatchPrompt.php`
 **Constant:** `GitPrMatchPrompt::PROMPT`

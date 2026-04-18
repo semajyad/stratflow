@@ -90,6 +90,7 @@ final class UploadControllerTest extends ControllerTestCase
         $this->assertSame('upload', $this->response->renderedTemplate);
         $this->assertArrayHasKey('project', $this->response->renderedData);
         $this->assertArrayHasKey('documents', $this->response->renderedData);
+        $this->assertArrayHasKey('has_evaluation_board', $this->response->renderedData);
     }
 
     #[Test]
