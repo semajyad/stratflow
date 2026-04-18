@@ -26,11 +26,14 @@ function formatFileSize(int $bytes): string {
             <span class="page-info-popover" role="tooltip">Upload your strategy documents (PDF, DOCX, PPTX, TXT) or paste text directly. StratFlow extracts the content and generates an AI summary — the foundation for your entire roadmap.</span>
         </span>
     </h1>
-    <?php if ($hasSummary): ?>
-        <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-sm">
-            Continue to Strategy Roadmap &rarr;
-        </a>
-    <?php endif; ?>
+    <div class="flex items-center gap-2">
+        <?php if ($hasSummary): ?>
+            <a href="/app/diagram?project_id=<?= (int) $project['id'] ?>" class="btn btn-primary btn-sm">
+                Continue to Strategy Roadmap &rarr;
+            </a>
+        <?php endif; ?>
+        <?php $board_review_screen = 'summary'; include __DIR__ . '/partials/board-review-button.php'; ?>
+    </div>
 </div>
 
 <!-- ===========================

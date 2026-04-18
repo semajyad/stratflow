@@ -34,6 +34,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
     <div class="flex items-center gap-2">
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
+        <?php $board_review_screen = 'user_stories'; include __DIR__ . '/partials/board-review-button.php'; ?>
         <?php if (!empty($stories)): ?>
         <form method="POST" action="/app/user-stories/delete-all" class="inline-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">

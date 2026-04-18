@@ -26,6 +26,7 @@
     <div class="flex items-center gap-2">
         <?php $sync_type = 'work_items'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
         <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
+        <?php $board_review_screen = 'work_items'; include __DIR__ . '/partials/board-review-button.php'; ?>
     </div>
 </div>
 
