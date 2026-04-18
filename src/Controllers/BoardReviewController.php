@@ -108,26 +108,25 @@ class BoardReviewController
         $service = new BoardReviewService($gemini);
 
         try {
-            $result = $service->run($members, $evaluationLevel, $screenContext, $screenContent);
-        } catch (\RuntimeException $e) {
+            $result   = $service->run($members, $evaluationLevel, $screenContext, $screenContent);
+            $reviewId = BoardReview::create($this->db, [
+                'project_id'          => $projectId,
+                'panel_id'            => (int) $panel['id'],
+                'board_type'          => $boardType,
+                'evaluation_level'    => $evaluationLevel,
+                'screen_context'      => $screenContext,
+                'content_snapshot'    => $screenContent,
+                'conversation_json'   => json_encode($result['conversation']),
+                'recommendation_json' => json_encode([
+                    'summary'   => $result['recommendation']['summary']   ?? '',
+                    'rationale' => $result['recommendation']['rationale'] ?? '',
+                ]),
+                'proposed_changes'    => json_encode($result['recommendation']['proposed_changes']),
+            ]);
+        } catch (\Throwable $e) {
             $this->response->json(['error' => 'Board review failed: ' . $e->getMessage()], 500);
             return;
         }
-
-        $reviewId = BoardReview::create($this->db, [
-            'project_id'          => $projectId,
-            'panel_id'            => (int) $panel['id'],
-            'board_type'          => $boardType,
-            'evaluation_level'    => $evaluationLevel,
-            'screen_context'      => $screenContext,
-            'content_snapshot'    => $screenContent,
-            'conversation_json'   => json_encode($result['conversation']),
-            'recommendation_json' => json_encode([
-                'summary'   => $result['recommendation']['summary']   ?? '',
-                'rationale' => $result['recommendation']['rationale'] ?? '',
-            ]),
-            'proposed_changes'    => json_encode($result['recommendation']['proposed_changes']),
-        ]);
 
         $this->response->json([
             'id'             => $reviewId,

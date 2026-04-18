@@ -110,16 +110,20 @@ class SoundingBoardController
         // Run the AI evaluation
         $gemini  = new GeminiService($this->config);
         $service = new SoundingBoardService($gemini);
-        $results = $service->evaluate($members, $evaluationLevel, $screenContent, $customLevels);
-// Store results
-        $evalId = EvaluationResult::create($this->db, [
-            'project_id'       => $projectId,
-            'panel_id'         => (int) $panel['id'],
-            'evaluation_level' => $evaluationLevel,
-            'screen_context'   => $screenContext,
-            'results_json'     => json_encode($results),
-            'status'           => 'pending',
-        ]);
+        try {
+            $results = $service->evaluate($members, $evaluationLevel, $screenContent, $customLevels);
+            $evalId  = EvaluationResult::create($this->db, [
+                'project_id'       => $projectId,
+                'panel_id'         => (int) $panel['id'],
+                'evaluation_level' => $evaluationLevel,
+                'screen_context'   => $screenContext,
+                'results_json'     => json_encode($results),
+                'status'           => 'pending',
+            ]);
+        } catch (\Throwable $e) {
+            $this->response->json(['error' => 'Evaluation failed: ' . $e->getMessage()], 500);
+            return;
+        }
         $this->response->json([
             'id'      => $evalId,
             'results' => $results,

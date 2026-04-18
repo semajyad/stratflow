@@ -29,6 +29,19 @@ Answer whichever of these apply (3–5 bullet points, not an essay):
 
 For pure refactors, tests, docs, or config-only changes: delete the section.
 
+## Browser Test Before Push — MANDATORY
+
+**Before pushing any feature branch, run the Playwright fast suite locally:**
+
+```bash
+cd tests/Playwright && npx playwright test --project=fast
+```
+
+The `pre-push` git hook (`scripts/hooks/pre-push`) enforces this automatically — it blocks the push if the fast suite fails.
+Bypass only in genuine emergencies: `SKIP_PLAYWRIGHT=1 git push` (must leave a comment why).
+
+This is the equivalent of the basic browser smoke test every developer does before committing real work.
+
 ## Playwright / Integration Test Rule — MANDATORY for major features
 
 **Every major new feature must have at least one Playwright or integration test before the PR is merged.**
