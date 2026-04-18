@@ -2756,36 +2756,49 @@ function runSoundingBoard() {
  * Handles bold, bullet lists, numbered lists, and headings.
  */
 function renderPersonaMarkdown(text) {
-    var lines = escapeHtml(text).split('\n');
+    var normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\\n/g, '\n');
+    var lines = escapeHtml(normalized).split('\n');
     var out = [];
     var inUl = false;
     var inOl = false;
+
+    function inlineMarkdown(value) {
+        return value
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>');
+    }
+
+    function closeLists() {
+        if (inUl) { out.push('</ul>'); inUl = false; }
+        if (inOl) { out.push('</ol>'); inOl = false; }
+    }
 
     lines.forEach(function(line) {
         var ul = line.match(/^\s*[-*]\s+(.+)/);
         var ol = line.match(/^\s*\d+\.\s+(.+)/);
         var h = line.match(/^\s*#{1,4}\s+(.+)/);
+        var boldHeading = line.match(/^\s*\*\*([^*]+)\*\*\s*$/);
 
         if (ul) {
             if (!inUl) { if (inOl) { out.push('</ol>'); inOl = false; } out.push('<ul>'); inUl = true; }
-            out.push('<li>' + ul[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</li>');
+            out.push('<li>' + inlineMarkdown(ul[1]) + '</li>');
         } else if (ol) {
             if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol>'); inOl = true; }
-            out.push('<li>' + ol[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</li>');
+            out.push('<li>' + inlineMarkdown(ol[1]) + '</li>');
         } else {
-            if (inUl) { out.push('</ul>'); inUl = false; }
-            if (inOl) { out.push('</ol>'); inOl = false; }
+            closeLists();
             if (h) {
-                out.push('<p class="sb-section-heading">' + h[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p>');
+                out.push('<p class="sb-section-heading">' + inlineMarkdown(h[1]) + '</p>');
+            } else if (boldHeading) {
+                out.push('<p class="sb-section-heading">' + inlineMarkdown(boldHeading[0]) + '</p>');
             } else if (line.trim() === '') {
                 out.push('<br>');
             } else {
-                out.push('<p>' + line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p>');
+                out.push('<p>' + inlineMarkdown(line) + '</p>');
             }
         }
     });
-    if (inUl) out.push('</ul>');
-    if (inOl) out.push('</ol>');
+    closeLists();
     return out.join('');
 }
 
@@ -2828,13 +2841,12 @@ function renderSoundingBoardResults(data) {
         var risk = extractRiskRating(result.response);
         if (risk) { riskCounts[risk] = (riskCounts[risk] || 0) + 1; }
 
-        var item = document.createElement('div');
+        var item = document.createElement('details');
         item.className = 'sb-accordion-item persona-result';
         item.dataset.evalId = String(data.id);
         item.dataset.index = String(index);
 
-        var header = document.createElement('button');
-        header.type = 'button';
+        var header = document.createElement('summary');
         header.className = 'sb-accordion-header';
         header.setAttribute('aria-expanded', 'false');
 
@@ -2851,6 +2863,11 @@ function renderSoundingBoardResults(data) {
             riskBadge.textContent = risk;
             rightSpan.appendChild(riskBadge);
         }
+
+        var statusBadge = document.createElement('span');
+        statusBadge.className = 'persona-status badge badge-muted';
+        statusBadge.textContent = result.status || 'pending';
+        rightSpan.appendChild(statusBadge);
 
         var chevron = document.createElement('span');
         chevron.className = 'sb-accordion-chevron';
@@ -2892,10 +2909,8 @@ function renderSoundingBoardResults(data) {
         item.appendChild(body);
         container.appendChild(item);
 
-        header.addEventListener('click', function() {
-            var isOpen = item.classList.contains('sb-open');
-            item.classList.toggle('sb-open', !isOpen);
-            header.setAttribute('aria-expanded', String(!isOpen));
+        item.addEventListener('toggle', function() {
+            header.setAttribute('aria-expanded', String(item.open));
         });
     });
 
@@ -2904,11 +2919,11 @@ function renderSoundingBoardResults(data) {
     var summaryParts = summaryRisks.map(function(r) { return riskCounts[r] + '× ' + r; });
     var topRisk = summaryRisks[0] || null;
 
-    var conclusionItem = document.createElement('div');
-    conclusionItem.className = 'sb-accordion-item sb-conclusion sb-open';
+    var conclusionItem = document.createElement('details');
+    conclusionItem.className = 'sb-accordion-item sb-conclusion';
+    conclusionItem.open = true;
 
-    var conclusionHeader = document.createElement('button');
-    conclusionHeader.type = 'button';
+    var conclusionHeader = document.createElement('summary');
     conclusionHeader.className = 'sb-accordion-header';
     conclusionHeader.setAttribute('aria-expanded', 'true');
 
@@ -2955,10 +2970,8 @@ function renderSoundingBoardResults(data) {
     conclusionItem.appendChild(conclusionBody);
     container.appendChild(conclusionItem);
 
-    conclusionHeader.addEventListener('click', function() {
-        var isOpen = conclusionItem.classList.contains('sb-open');
-        conclusionItem.classList.toggle('sb-open', !isOpen);
-        conclusionHeader.setAttribute('aria-expanded', String(!isOpen));
+    conclusionItem.addEventListener('toggle', function() {
+        conclusionHeader.setAttribute('aria-expanded', String(conclusionItem.open));
     });
 }
 
