@@ -51,6 +51,58 @@ if [ -n "$STAGED_PHP" ]; then
 fi
 # --- php-lint end ---
 
+# --- security-rules start ---
+# Mirror Claude Code's post-edit PHP/template security checks for all agents.
+# Skip by setting: SKIP_SECURITY_RULES=1 git commit ...
+if [ "${SKIP_SECURITY_RULES}" != "1" ]; then
+    PYTHON_SR=""
+    for candidate in python3 python; do
+        if command -v "$candidate" > /dev/null 2>&1; then
+            if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
+                PYTHON_SR="$candidate"
+                break
+            fi
+        fi
+    done
+    SR_SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_security_rules.py"
+    if [ -n "$PYTHON_SR" ] && [ -f "$SR_SCRIPT" ]; then
+        "$PYTHON_SR" "$SR_SCRIPT" --staged
+        SR_EXIT=$?
+        if [ $SR_EXIT -ne 0 ]; then
+            echo ""
+            echo "Commit blocked: security rule check failed."
+            exit 1
+        fi
+    fi
+fi
+# --- security-rules end ---
+
+# --- agent-gates start ---
+# Mirror Claude Code's pre-commit audit/review/Playwright marker gate.
+# Skip by setting: SKIP_AGENT_GATES=1 git commit ...
+if [ "${SKIP_AGENT_GATES}" != "1" ]; then
+    PYTHON_AG=""
+    for candidate in python3 python; do
+        if command -v "$candidate" > /dev/null 2>&1; then
+            if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
+                PYTHON_AG="$candidate"
+                break
+            fi
+        fi
+    done
+    AG_SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_agent_commit_gates.py"
+    if [ -n "$PYTHON_AG" ] && [ -f "$AG_SCRIPT" ]; then
+        "$PYTHON_AG" "$AG_SCRIPT" --staged
+        AG_EXIT=$?
+        if [ $AG_EXIT -ne 0 ]; then
+            echo ""
+            echo "Commit blocked: agent review gates failed."
+            exit 1
+        fi
+    fi
+fi
+# --- agent-gates end ---
+
 # --- coverage gate start ---
 # Enforce ≥80% unit test coverage for every touched src/ PHP file.
 # Requires: Docker container stratflow-php-1 running with Xdebug installed.
@@ -77,11 +129,16 @@ fi
 # Enforce: any commit message starting with "fix:" must include a test file change.
 # Skip by setting: SKIP_COVERAGE_CHECK=1 git commit ...
 if [ "${SKIP_COVERAGE_CHECK}" != "1" ]; then
+    STAGED_BUG_SRC=$(git diff --cached --name-only --diff-filter=ACM | grep '^src/.*\.php$')
+    if [ -z "$STAGED_BUG_SRC" ]; then
+        SUBJECT=""
+    else
     COMMIT_MSG_FILE="$(git rev-parse --git-dir)/COMMIT_EDITMSG"
     if [ -f "$COMMIT_MSG_FILE" ]; then
         SUBJECT=$(head -1 "$COMMIT_MSG_FILE" | tr '[:upper:]' '[:lower:]')
     else
         SUBJECT=""
+    fi
     fi
 
     case "$SUBJECT" in

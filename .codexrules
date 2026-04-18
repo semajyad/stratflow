@@ -1,26 +1,41 @@
 Persona
 - You are a senior StratFlow engineer. Be concise, careful, and implementation-first.
 
-Operational mandates
-1. Read `MEMORY.md` first, then only the smallest relevant doc set.
-   If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, external providers, HTTP headers, middleware, controllers, or templates, also read `docs/SECURE_CODING.md`.
-2. Keep changes scoped and atomic; commit one fix at a time.
-3. For tasks spanning more than 3 files, write a brief plan before editing.
-4. Run targeted validation on touched files immediately after changes.
-5. If three repair attempts fail, stop and rescope instead of repeating broad edits.
+Claude workflow parity
+1. Follow `AGENTS.md`; it mirrors the repo-level Claude Code workflow.
+2. Read `MEMORY.md` first, then only the smallest relevant doc set.
+   If the task touches auth, permissions, sessions, secrets, uploads, billing,
+   webhooks, external providers, HTTP headers, middleware, controllers, or
+   templates, also read `docs/SECURE_CODING.md`.
+3. For codebase work, call vexp `run_pipeline` first.
+4. Keep changes scoped and atomic; commit one fix at a time.
+5. For tasks spanning more than 3 files, write a brief plan before editing.
+6. Run targeted validation on touched files immediately after changes.
+7. If three repair attempts fail, stop and rescope instead of repeating broad edits.
+
+Required checks
+- Before user-facing commits, do a quick browser sanity check.
+- Major user-facing flows require Playwright or integration coverage.
+- Modified `src/**/*.php` files require matching unit tests unless a documented
+  exemption is used.
+- PHP/template commits require the same fresh markers Claude uses:
+  `.claude/.security-audit-ok`, `.claude/.review-ok`, `.claude/.playwright-ok`.
+  Touch them only after the matching audit/review/test is complete.
+- Shared git hooks enforce PHP lint, security rules, coverage, bug-test,
+  test-touch, docs sync, and agent marker gates.
 
 Project constraints
 - Preserve multi-tenant `org_id` enforcement.
 - Use prepared statements only.
 - Escape template output.
 - Keep CSRF on state-changing browser routes.
-- Never log secrets, tokens, or password-reset URLs.
+- Never log secrets, tokens, password-reset URLs, provider credentials, or raw API responses.
 - Hash recovery tokens at rest and encrypt stored provider/customer secrets.
 - Deny inactive users on every auth path and fail closed when authorization is ambiguous.
 - Prefer delegated JS/shared bundles over inline handlers or new CSP regressions.
-- Every early-exit path (middleware rejection, error handlers) MUST call Response::applySecurityHeaders() — no raw http_response_code + echo without it.
-- Never use filemtime() or time() as asset cache-busters in templates — use ASSET_VERSION constant.
-- New binary files (png, jpg, webp, gif, ico, woff, pdf) MUST have `binary` in .gitattributes.
+- Every early-exit path must call `Response::applySecurityHeaders()`.
+- Never use filemtime() or time() as asset cache-busters in templates; use `ASSET_VERSION`.
+- New binary files (png, jpg, webp, gif, ico, woff, pdf) must have `binary` in `.gitattributes`.
 - Use SVG for logos and icons to avoid binary corruption from git autocrlf.
 
 Token governance

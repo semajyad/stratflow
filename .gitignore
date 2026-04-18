@@ -38,6 +38,7 @@ storage/logs/*.jsonl
 
 # Claude Code — ephemeral markers and AI tooling state
 .claude/.security-audit-ok
+.claude/.review-ok
 .claude/.playwright-ok
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/
