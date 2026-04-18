@@ -186,17 +186,19 @@ test.describe('Evaluation Board modal — UI smoke', () => {
 
   test('Sounding Board button and modal are present on work-items page', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/work-items`);
-    // Button must exist (requires has_evaluation_board = 1)
-    await expect(page.locator('.sounding-board-trigger, [data-screen="work_items"]').first()).toBeVisible();
+    // project_id=1 is the seeded demo project — required so the controller renders the template
+    await page.goto(`${BASE}/app/work-items?project_id=1`);
+    // Button must exist (requires has_evaluation_board = 1, set by globalSetup)
+    await expect(page.locator('.sounding-board-trigger').first()).toBeVisible();
     // Modal must be in DOM
     await expect(page.locator('#sounding-board-modal')).toBeAttached();
   });
 
   test('Board Review button and modal are present on work-items page', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/work-items`);
-    await expect(page.locator('.board-review-trigger, .br-trigger').first()).toBeVisible();
+    // project_id=1 is the seeded demo project — required so the controller renders the template
+    await page.goto(`${BASE}/app/work-items?project_id=1`);
+    await expect(page.locator('.board-review-trigger').first()).toBeVisible();
     await expect(page.locator('#board-review-modal')).toBeAttached();
   });
 
