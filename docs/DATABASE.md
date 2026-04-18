@@ -98,7 +98,7 @@ Tracks Stripe subscription state per organisation.
 | `started_at` | DATETIME | NOT NULL | |
 | `expires_at` | DATETIME | NULL | NULL = ongoing subscription |
 | `user_seat_limit` | INT UNSIGNED | NOT NULL, DEFAULT 5 | Maximum number of user accounts allowed for this subscription tier |
-| `has_evaluation_board` | TINYINT(1) | NOT NULL, DEFAULT 0 | 1 = org has access to the Sounding Board AI evaluation feature |
+| `has_evaluation_board` | TINYINT(1) | NOT NULL, DEFAULT 1 | 1 = org has access to Sounding Board and Virtual Board Review (on by default; toggled per-org via superadmin) |
 
 **Foreign keys:** `org_id` → `organisations.id` ON DELETE CASCADE
 

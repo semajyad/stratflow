@@ -338,6 +338,7 @@ Middleware is run in the order listed in the route definition.
 | POST | `/superadmin/organisations/{id}` | `SuperadminController@updateOrg` | auth, superadmin, csrf | Suspend, enable, or soft-delete an organisation |
 | GET | `/superadmin/organisations/{id}/export` | `SuperadminController@exportOrg` | auth, superadmin | Download all organisation data as JSON |
 | POST | `/superadmin/organisations/{id}/jira` | `SuperadminController@toggleJira` | auth, superadmin, csrf | Enable or disable Jira integration for an org |
+| POST | `/superadmin/organisations/{id}/evaluation-board` | `SuperadminController@toggleEvaluationBoard` | auth, superadmin, csrf | Enable or disable Evaluation Board (Sounding Board + Virtual Board Review) for an org |
 | GET | `/superadmin/defaults` | `SuperadminController@defaults` | auth, superadmin | View and edit system-wide default settings |
 | POST | `/superadmin/defaults` | `SuperadminController@saveDefaults` | auth, superadmin, csrf | Save system-wide default settings |
 | POST | `/superadmin/defaults/test-ai` | `SuperadminController@testAiConnection` | auth, superadmin, csrf | Test AI connection from superadmin panel |
