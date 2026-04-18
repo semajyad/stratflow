@@ -27,6 +27,12 @@ import re
 import subprocess
 import sys
 
+# Windows cp1252 terminals can't render box-drawing chars; reconfigure to UTF-8.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 # Source files in these directories don't have matching test files
 SKIP_DIRS = {
@@ -260,15 +266,74 @@ def check_bug_test_rule(base: str, head: str) -> list[tuple[str, str]]:
     return violations
 
 
+def get_staged_files() -> list[str]:
+    """Return list of staged (non-deleted) files for pre-commit use."""
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return []
+    return [f for f in result.stdout.strip().splitlines() if f]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="origin/main")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument(
+        "--staged", action="store_true",
+        help="Check staged files only (pre-commit mode — skips PR exemption and bug-test rule)"
+    )
     args = parser.parse_args()
 
-    print(f"=== Test discipline check: {args.base}...{args.head} ===\n")
+    if args.staged:
+        _run_staged_check()
+    else:
+        _run_pr_check(args.base, args.head)
 
-    changed = get_changed_files(args.base, args.head)
+
+def _run_staged_check():
+    """Pre-commit mode: check staged files for source-touch rule only."""
+    # Local bypass: SKIP_TEST_TOUCH=1 env var
+    if os.environ.get("SKIP_TEST_TOUCH") == "1":
+        print("[test-touch] Skipped (SKIP_TEST_TOUCH=1)")
+        sys.exit(0)
+
+    staged = get_staged_files()
+    if not staged:
+        sys.exit(0)
+
+    missing = check_source_touch_rule(staged)
+    if not missing:
+        sys.exit(0)
+
+    # Allow bypass via [no-test-required: reason] tag in commit message file
+    commit_msg_file = os.path.join(
+        subprocess.run(["git", "rev-parse", "--git-dir"], capture_output=True, text=True).stdout.strip(),
+        "COMMIT_EDITMSG"
+    )
+    if os.path.isfile(commit_msg_file):
+        with open(commit_msg_file) as f:
+            msg = f.read()
+        if "[no-test-required:" in msg:
+            print("[test-touch] Bypassed via [no-test-required:] tag in commit message.")
+            sys.exit(0)
+
+    print("\n[test-touch] BLOCKED: source file(s) modified without corresponding tests:")
+    for src, test in missing:
+        print(f"  {src}")
+        print(f"    -> expected: {test}")
+    print("\n  Fix: add or update the test file(s) listed above.")
+    print("  Bypass: SKIP_TEST_TOUCH=1  or  add [no-test-required: why] to commit message.")
+    sys.exit(1)
+
+
+def _run_pr_check(base: str, head: str):
+    """CI/PR mode: full check including bug-test rule and PR exemption."""
+    print(f"=== Test discipline check: {base}...{head} ===\n")
+
+    changed = get_changed_files(base, head)
     print(f"Changed files: {len(changed)}")
 
     if is_pr_exempt():
@@ -289,7 +354,7 @@ def main():
 
     # ── Rule 2: Bug-test ──────────────────────────────────────────────────────
     print("\n── Rule 2: Bug-test (every fix: commit must include a test) ──")
-    bug_violations = check_bug_test_rule(args.base, args.head)
+    bug_violations = check_bug_test_rule(base, head)
     if bug_violations:
         all_failures = True
         print(f"\n  ✗ {len(bug_violations)} fix commit(s) without test changes:")

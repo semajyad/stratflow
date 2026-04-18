@@ -89,6 +89,34 @@ if [ "${SKIP_COVERAGE_CHECK}" != "1" ]; then
 fi
 # --- bug-test gate end ---
 
+# --- test-touch gate start ---
+# Enforce: every modified src/*.php file must have a corresponding test change.
+# Delegates to check_test_touches.py --staged (single source of truth).
+# Skip by setting: SKIP_TEST_TOUCH=1 git commit ...
+# Or add [no-test-required: reason] anywhere in the commit message.
+if [ "${SKIP_TEST_TOUCH}" != "1" ]; then
+    PYTHON_TT=""
+    for candidate in python3 python; do
+        if command -v "$candidate" > /dev/null 2>&1; then
+            if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
+                PYTHON_TT="$candidate"
+                break
+            fi
+        fi
+    done
+    TT_SCRIPT="$(git rev-parse --show-toplevel)/scripts/ci/check_test_touches.py"
+    if [ -n "$PYTHON_TT" ] && [ -f "$TT_SCRIPT" ]; then
+        "$PYTHON_TT" "$TT_SCRIPT" --staged
+        TT_EXIT=$?
+        if [ $TT_EXIT -ne 0 ]; then
+            echo ""
+            echo "Commit blocked: satisfy the test-touch rule above, then re-commit."
+            exit 1
+        fi
+    fi
+fi
+# --- test-touch gate end ---
+
 # --- docs-check start ---
 # Enforce: documentation must be updated when tracked source files change.
 # See scripts/ci/check_docs.py for the full rule set.

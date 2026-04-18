@@ -41,6 +41,17 @@ After writing or modifying any source file:
 
 This is non-negotiable. Do not open a PR, commit source changes, or mark a task done without the accompanying test file.
 
+## Test-on-Touch Enforcement (pre-commit + CI)
+
+The pre-commit hook (`scripts/hooks/pre-commit`) enforces the above rule locally:
+- Staged `src/*.php` changes without a staged `tests/` change will **block the commit**.
+- Bypass locally with `SKIP_TEST_TOUCH=1 git commit ...` (emergency only).
+- Or add `[no-test-required: <reason>]` anywhere in the commit message.
+- CI also enforces this via the `test-touch-check` job (no label/comment bypass needed for local work).
+
+When generating commits, always stage the test file alongside the source file.
+Never use `SKIP_TEST_TOUCH=1` for new feature work — only for doc-only or config-only commits.
+
 ## Project Rules
 
 - Keep all tenant-scoped queries filtered by `org_id`.
