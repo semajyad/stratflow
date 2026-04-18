@@ -55,12 +55,6 @@ parameters:
 			path: src/Controllers/SoundingBoardController.php
 
 		-
-			message: '#^Undefined variable\: \$orgId$#'
-			identifier: variable.undefined
-			count: 2
-			path: src/Controllers/SoundingBoardController.php
-
-		-
 			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1

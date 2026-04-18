@@ -126,6 +126,12 @@ return function (\StratFlow\Core\Router $router) {
     $router->add('GET', '/app/sounding-board/results/{id}', 'SoundingBoardController@results', ['auth']);
     $router->add('POST', '/app/sounding-board/results/{id}/respond', 'SoundingBoardController@respond', ['auth', 'workflow_write', 'csrf']);
     $router->add('GET', '/app/sounding-board/history', 'SoundingBoardController@history', ['auth']);
+// Board Review — virtual boardroom AI evaluation
+    $router->add('POST', '/app/board-review/evaluate', 'BoardReviewController@evaluate', ['auth', 'workflow_write', 'csrf']);
+    $router->add('GET', '/app/board-review/results/{id}', 'BoardReviewController@results', ['auth']);
+    $router->add('POST', '/app/board-review/{id}/accept', 'BoardReviewController@accept', ['auth', 'workflow_write', 'csrf']);
+    $router->add('POST', '/app/board-review/{id}/reject', 'BoardReviewController@reject', ['auth', 'workflow_write', 'csrf']);
+    $router->add('GET', '/app/board-review/history', 'BoardReviewController@history', ['auth']);
 // Jira sync from workflow pages
     $router->add('POST', '/app/jira/sync', 'IntegrationController@contextualSync', ['auth', 'workflow_write', 'csrf']);
     $router->add('POST', '/app/jira/sync/preview', 'IntegrationController@syncPreview', ['auth', 'workflow_write', 'csrf']);

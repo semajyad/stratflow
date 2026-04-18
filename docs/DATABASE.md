@@ -419,6 +419,32 @@ Added in Phase 3 (Sounding Board).
 
 ---
 
+### `board_reviews`
+
+Stores the output of a virtual board review session. Each row records the full boardroom conversation, the board's collective recommendation, the proposed changes, and the user's accept/reject response. `content_snapshot` captures the exact page content that was sent to the AI — used for audit purposes and is distinct from project-wide governance baselines in `strategic_baselines`.
+Added in Phase 5 (Virtual Board Review).
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | INT UNSIGNED | PK, AUTO_INCREMENT | |
+| `project_id` | INT UNSIGNED | NOT NULL, FK → projects | |
+| `panel_id` | INT UNSIGNED | NOT NULL, FK → persona_panels | Panel used for the review |
+| `board_type` | ENUM | NOT NULL | `executive`, `product_management` — derived from `screen_context` |
+| `evaluation_level` | ENUM | NOT NULL | `devils_advocate`, `red_teaming`, `gordon_ramsay` |
+| `screen_context` | VARCHAR(100) | NOT NULL | `summary`, `roadmap`, `work_items`, `user_stories` |
+| `content_snapshot` | MEDIUMTEXT | NOT NULL | Exact content sent to AI (per-review audit record) |
+| `conversation_json` | JSON | NOT NULL | Array of `{speaker, message}` objects from the boardroom simulation |
+| `recommendation_json` | JSON | NOT NULL | Board's collective `{summary, rationale}` |
+| `proposed_changes` | JSON | NOT NULL | Context-specific changes object (e.g. `{revised_summary}` for summary, `{items:[]}` for work_items) |
+| `status` | ENUM | NOT NULL, DEFAULT `pending` | `pending`, `accepted`, `rejected` |
+| `responded_by` | INT UNSIGNED | NULL, FK → users | Set on accept or reject |
+| `responded_at` | DATETIME | NULL | Timestamp of accept/reject |
+| `created_at` | DATETIME | NOT NULL, DEFAULT NOW | |
+
+**Foreign keys:** `project_id` → `projects.id` ON DELETE CASCADE; `panel_id` → `persona_panels.id` ON DELETE CASCADE; `responded_by` → `users.id` ON DELETE SET NULL
+
+---
+
 ### `strategic_baselines`
 
 Point-in-time snapshots of a project's scope and plan. Created manually by users via the governance dashboard. The Drift Engine compares the current project state against the latest baseline to detect deviations.

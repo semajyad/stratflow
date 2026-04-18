@@ -167,6 +167,16 @@ Middleware is run in the order listed in the route definition.
 | POST | `/app/sounding-board/results/{id}/respond` | `SoundingBoardController@respond` | auth, workflow_write, csrf | Accept or reject an individual persona response; expects JSON body: `member_index`, `action` (`accept`\|`reject`) |
 | GET | `/app/sounding-board/history` | `SoundingBoardController@history` | auth | Return evaluation history for a project; expects query param `project_id` |
 
+### Board Review
+
+| Method | Path | Controller | Middleware | Description |
+|--------|------|------------|------------|-------------|
+| POST | `/app/board-review/evaluate` | `BoardReviewController@evaluate` | auth, workflow_write, csrf | Run a virtual boardroom review; expects JSON body: `project_id`, `evaluation_level`, `screen_context`, `screen_content`; returns `{id, conversation, recommendation}` |
+| GET | `/app/board-review/results/{id}` | `BoardReviewController@results` | auth | Fetch a stored board review by ID; returns decoded conversation, recommendation, proposed_changes |
+| POST | `/app/board-review/{id}/accept` | `BoardReviewController@accept` | auth, workflow_write, csrf | Accept a board review — apply `proposed_changes` transactionally to the underlying data (documents, diagrams, work items, or stories) |
+| POST | `/app/board-review/{id}/reject` | `BoardReviewController@reject` | auth, workflow_write, csrf | Reject a board review — record the outcome without applying any changes |
+| GET | `/app/board-review/history` | `BoardReviewController@history` | auth | Return board review history for a project; expects query param `project_id`; viewable by all project members |
+
 ### Governance & Drift Detection
 
 | Method | Path | Controller | Middleware | Description |

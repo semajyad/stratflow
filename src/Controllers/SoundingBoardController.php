@@ -17,12 +17,10 @@ use StratFlow\Core\Database;
 use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\EvaluationResult;
-use StratFlow\Models\PersonaMember;
-use StratFlow\Models\PersonaPanel;
-use StratFlow\Models\Project;
 use StratFlow\Models\Subscription;
 use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
+use StratFlow\Services\PanelResolverService;
 use StratFlow\Services\SoundingBoardService;
 
 class SoundingBoardController
@@ -46,33 +44,6 @@ class SoundingBoardController
     }
 
     // ===========================
-    // DEFAULT PANEL DEFINITIONS
-    // ===========================
-
-    private const DEFAULT_PANELS = [
-        'executive' => [
-            'name'         => 'Executive Panel',
-            'review_scope' => 'strategy_okrs',
-            'members' => [
-                ['role_title' => 'CEO',          'prompt_description' => 'You focus on overall strategic vision, market positioning, competitive advantage, and long-term value creation. Evaluate whether this aligns with organisational goals and sustainable growth.'],
-                ['role_title' => 'CFO',          'prompt_description' => 'You focus on financial viability, ROI, cost structures, budget implications, and resource allocation efficiency. Evaluate the financial soundness and risk-adjusted returns.'],
-                ['role_title' => 'COO',          'prompt_description' => 'You focus on operational feasibility, execution risk, process efficiency, scalability, and resource constraints. Evaluate whether this can be delivered practically.'],
-                ['role_title' => 'CMO',          'prompt_description' => 'You focus on market fit, customer value proposition, competitive differentiation, and go-to-market strategy. Evaluate the commercial viability and customer impact.'],
-                ['role_title' => 'Enterprise Business Strategist', 'prompt_description' => 'You focus on strategic coherence, portfolio alignment, capability gaps, and transformation readiness. Evaluate how this fits the broader enterprise strategy.'],
-            ],
-        ],
-        'product_management' => [
-            'name'         => 'Product Management Panel',
-            'review_scope' => 'hl_items_stories',
-            'members' => [
-                ['role_title' => 'Agile Product Manager',   'prompt_description' => 'You focus on backlog prioritisation, stakeholder value, iterative delivery, and outcome-driven planning. Evaluate whether the right things are being built in the right order.'],
-                ['role_title' => 'Product Owner',           'prompt_description' => 'You focus on user needs, acceptance criteria clarity, story completeness, and sprint readiness. Evaluate whether requirements are well-defined and deliverable.'],
-                ['role_title' => 'Expert System Architect', 'prompt_description' => 'You focus on technical architecture, system design, integration complexity, technical debt, and non-functional requirements. Evaluate the technical soundness and scalability.'],
-                ['role_title' => 'Senior Developer',        'prompt_description' => 'You focus on implementation complexity, code quality, testing strategy, and delivery estimates. Evaluate whether the work is practically implementable and well-scoped.'],
-            ],
-        ],
-    ];
-// ===========================
     // ACTIONS
     // ===========================
 
@@ -91,6 +62,7 @@ class SoundingBoardController
         }
 
         $user      = $this->auth->user();
+        $orgId     = (int) $user['org_id'];
         $projectId = (int) ($body['project_id'] ?? 0);
         $project = ProjectPolicy::findEditableProject($this->db, $user, $projectId);
         if ($project === null) {
@@ -119,14 +91,9 @@ class SoundingBoardController
             $evaluationLevel = 'devils_advocate';
         }
 
-        // Load panel members: try org-specific first, then system defaults
-        $panel   = $this->findPanel($orgId, $panelType);
-        $members = $panel ? PersonaMember::findByPanelId($this->db, (int) $panel['id']) : [];
-// If no panel or members exist, seed system defaults
-        if (empty($members)) {
-            $panel   = $this->seedDefaultPanel($panelType);
-            $members = PersonaMember::findByPanelId($this->db, (int) $panel['id']);
-        }
+        // Load panel members: org-specific → system default → seeded
+        $resolver          = new PanelResolverService($this->db);
+        [$panel, $members] = $resolver->resolveWithMembers($orgId, $panelType);
 
         if (empty($members)) {
             $this->response->json(['error' => 'No panel members configured'], 400);
@@ -279,62 +246,5 @@ class SoundingBoardController
         }
 
         $this->response->json($evaluations);
-    }
-
-    // ===========================
-    // HELPERS
-    // ===========================
-
-    /**
-     * Find a panel by org + type, falling back to system defaults.
-     *
-     * @param int    $orgId     Organisation ID
-     * @param string $panelType Panel type key (e.g. 'executive', 'product_management')
-     * @return array|null       Panel row or null
-     */
-    private function findPanel(int $orgId, string $panelType): ?array
-    {
-        // Try org-specific first
-        $orgPanels = PersonaPanel::findByOrgId($this->db, $orgId);
-        foreach ($orgPanels as $panel) {
-            if ($panel['panel_type'] === $panelType) {
-                return $panel;
-            }
-        }
-
-        // Fall back to system defaults
-        $defaults = PersonaPanel::findDefaults($this->db);
-        foreach ($defaults as $panel) {
-            if ($panel['panel_type'] === $panelType) {
-                return $panel;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Seed a system-default panel and its members from the built-in definitions.
-     *
-     * @param string $panelType Panel type key to seed
-     * @return array            The created panel row
-     */
-    private function seedDefaultPanel(string $panelType): array
-    {
-        $definition = self::DEFAULT_PANELS[$panelType] ?? self::DEFAULT_PANELS['executive'];
-        $panelId = PersonaPanel::create($this->db, [
-            'org_id'     => null,
-            'panel_type' => $panelType,
-            'name'       => $definition['name'],
-        ]);
-        foreach ($definition['members'] as $member) {
-            PersonaMember::create($this->db, [
-                'panel_id'           => $panelId,
-                'role_title'         => $member['role_title'],
-                'prompt_description' => $member['prompt_description'],
-            ]);
-        }
-
-        return PersonaPanel::findById($this->db, $panelId);
     }
 }

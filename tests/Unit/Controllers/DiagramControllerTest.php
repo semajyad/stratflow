@@ -95,7 +95,8 @@ class DiagramControllerTest extends ControllerTestCase
             $this->makeStmt($this->project),
             $this->makeStmt($this->diagram),
             $this->makeStmt([$this->node]),
-            $this->makeStmt([$doc])
+            $this->makeStmt([$doc]),
+            $this->makeStmt(false) // Subscription::hasEvaluationBoard
         );
         $req = $this->makeGetRequest(['project_id' => '5']);
         $ctrl = $this->makeCtrl($req);
@@ -112,7 +113,8 @@ class DiagramControllerTest extends ControllerTestCase
         $this->db->method('query')->willReturnOnConsecutiveCalls(
             $this->makeStmt($this->project),
             $this->makeStmt(false),
-            $this->makeStmt([$doc])
+            $this->makeStmt([$doc]),
+            $this->makeStmt(false) // Subscription::hasEvaluationBoard
         );
         $req = $this->makeGetRequest(['project_id' => '5']);
         $ctrl = $this->makeCtrl($req);

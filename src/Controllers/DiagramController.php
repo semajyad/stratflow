@@ -19,6 +19,7 @@ use StratFlow\Core\Response;
 use StratFlow\Models\DiagramNode;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
+use StratFlow\Models\Subscription;
 use StratFlow\Models\StrategyDiagram;
 use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\GeminiService;
@@ -80,15 +81,17 @@ class DiagramController
             return;
         }
 
+        $orgId = (int) $user['org_id'];
         $this->response->render('diagram', [
-            'user'             => $user,
-            'project'          => $project,
-            'diagram'          => $diagram,
-            'nodes'            => $nodes,
-            'document_summary' => $documentSummary,
-            'active_page'      => 'diagram',
-            'flash_message'    => $_SESSION['flash_message'] ?? null,
-            'flash_error'      => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'diagram'              => $diagram,
+            'nodes'                => $nodes,
+            'document_summary'     => $documentSummary,
+            'active_page'          => 'diagram',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }

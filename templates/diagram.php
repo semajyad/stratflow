@@ -30,6 +30,7 @@ $hasSummary = !empty($document_summary);
         <?php if ($hasDiagram): ?>
             <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-sm js-generate-diagram">Regenerate</button>
         <?php endif; ?>
+        <?php $board_review_screen = 'roadmap'; include __DIR__ . '/partials/board-review-button.php'; ?>
     </div>
 </div>
 

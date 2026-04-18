@@ -111,6 +111,16 @@ class SoundingBoardControllerTest extends ControllerTestCase
         $this->assertStringContainsString('Project not found', $this->response->jsonPayload['error'] ?? '');
     }
 
+    #[Test]
+    public function evaluateReturnsJsonErrorWhenBodyMissingAfterRefactor(): void
+    {
+        // Verify the refactored controller (uses PanelResolverService) still rejects empty body correctly
+        $request = new FakeRequest('POST', '/', [], [], '127.0.0.1', [], '');
+        $this->ctrl($request)->evaluate();
+
+        $this->assertSame(400, $this->response->jsonStatus);
+        $this->assertArrayHasKey('error', $this->response->jsonPayload);
+    }
 
     // ===========================
     // results($id) — ALL PATHS

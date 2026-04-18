@@ -20,6 +20,7 @@ use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Models\Document;
 use StratFlow\Models\Project;
+use StratFlow\Models\Subscription;
 use StratFlow\Security\ProjectPolicy;
 use StratFlow\Services\AuditLogger;
 use StratFlow\Services\FileProcessor;
@@ -63,14 +64,16 @@ class UploadController
             return;
         }
 
+        $orgId     = (int) $user['org_id'];
         $documents = Document::findByProjectId($this->db, $projectId);
         $this->response->render('upload', [
-            'user'          => $user,
-            'project'       => $project,
-            'documents'     => $documents,
-            'active_page'   => 'upload',
-            'flash_message' => $_SESSION['flash_message'] ?? null,
-            'flash_error'   => $_SESSION['flash_error']   ?? null,
+            'user'                 => $user,
+            'project'              => $project,
+            'documents'            => $documents,
+            'active_page'          => 'upload',
+            'has_evaluation_board' => Subscription::hasEvaluationBoard($this->db, $orgId),
+            'flash_message'        => $_SESSION['flash_message'] ?? null,
+            'flash_error'          => $_SESSION['flash_error']   ?? null,
         ], 'app');
         unset($_SESSION['flash_message'], $_SESSION['flash_error']);
     }
