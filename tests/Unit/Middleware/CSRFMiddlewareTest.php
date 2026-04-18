@@ -66,4 +66,24 @@ class CSRFMiddlewareTest extends TestCase
         $result  = (new CSRFMiddleware())->handle($request, $this->makeCsrf(false), $this->makeResponse());
         $this->assertTrue($result);
     }
+
+    #[Test]
+    public function validTokenInJsonBodyPassesPost(): void
+    {
+        $body    = json_encode(['project_id' => 1, '_csrf_token' => 'valid-token']);
+        $request = new FakeRequest('POST', '/app/sounding-board/evaluate', [], [], '127.0.0.1', [], $body);
+        $result  = (new CSRFMiddleware())->handle($request, $this->makeCsrf(true), $this->makeResponse());
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function missingTokenInJsonBodyBlocksPost(): void
+    {
+        $body    = json_encode(['project_id' => 1]);
+        $request = new FakeRequest('POST', '/app/sounding-board/evaluate', [], [], '127.0.0.1', [], $body);
+        ob_start();
+        $result = (new CSRFMiddleware())->handle($request, $this->makeCsrf(false), $this->makeResponse());
+        ob_end_clean();
+        $this->assertFalse($result);
+    }
 }
