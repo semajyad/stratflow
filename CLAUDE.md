@@ -7,6 +7,22 @@ Only open the specific docs linked from there that match the task.
 Do not read the whole repo documentation set by default.
 If the task touches auth, permissions, sessions, secrets, uploads, billing, webhooks, external providers, HTTP headers, middleware, controllers, or templates — **read `docs/SECURE_CODING.md` first**.
 
+## Repo Health Check — MANDATORY Before Any Commit
+
+**Before committing anything, verify the repo is clean:**
+
+```bash
+gh issue list --repo semajyad/stratflow --state open --json number,title --jq 'length'
+gh api repos/semajyad/stratflow/code-scanning/alerts --jq '[.[] | select(.state=="open")] | length'
+```
+
+Both must return `0`. If either returns a non-zero count:
+1. List the items: `gh issue list` / `gh api repos/semajyad/stratflow/code-scanning/alerts --jq '.[] | select(.state=="open") | "\(.number) \(.rule.severity) \(.rule.description)"'`
+2. Fix or triage every item before committing your feature work
+3. Only proceed once both counters are zero
+
+**Why:** Open issues and security alerts are technical debt. Committing new features on top of known issues compounds them.
+
 ## Context Discipline
 
 - Prefer the smallest relevant context slice.
