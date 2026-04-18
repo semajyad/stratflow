@@ -149,6 +149,30 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    if (e.target.closest('.js-close-board-review')) {
+        e.preventDefault();
+        closeBoardReview();
+        return;
+    }
+
+    if (e.target.closest('.js-run-board-review')) {
+        e.preventDefault();
+        runBoardReview();
+        return;
+    }
+
+    if (e.target.closest('.js-accept-board-review')) {
+        e.preventDefault();
+        respondToBoardReview('accept');
+        return;
+    }
+
+    if (e.target.closest('.js-reject-board-review')) {
+        e.preventDefault();
+        respondToBoardReview('reject');
+        return;
+    }
+
     var personaAction = e.target.closest('.js-persona-response');
     if (personaAction) {
         e.preventDefault();
@@ -2792,6 +2816,177 @@ function respondToPersona(evalId, memberIndex, action) {
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.sounding-board-trigger').forEach(function(btn) {
         btn.addEventListener('click', openSoundingBoard);
+    });
+});
+
+// ===========================
+// Board Review
+// ===========================
+
+var _brCurrentReviewId = null;
+var _brCurrentTrigger  = null;
+
+function openBoardReview(trigger) {
+    _brCurrentTrigger  = trigger;
+    _brCurrentReviewId = null;
+    setHiddenState(document.getElementById('board-review-modal'), false);
+    setHiddenState(document.getElementById('br-config'),    false);
+    setHiddenState(document.getElementById('br-loading'),   true);
+    setHiddenState(document.getElementById('br-results'),   true);
+    setHiddenState(document.getElementById('br-responded'), true);
+}
+
+function closeBoardReview() {
+    setHiddenState(document.getElementById('board-review-modal'), true);
+}
+
+/**
+ * Collect page content for the given screen context using corrected selectors.
+ *
+ * @param {string} screenContext  summary | roadmap | work_items | user_stories
+ * @returns {string}
+ */
+function collectBoardReviewContent(screenContext) {
+    if (screenContext === 'summary') {
+        var el = document.querySelector('.upload-summary-text');
+        return el ? (el.textContent || '').trim() : '';
+    }
+    if (screenContext === 'roadmap') {
+        var mc = document.getElementById('mermaid-code');
+        return mc ? (mc.value || '').trim() : '';
+    }
+    if (screenContext === 'work_items') {
+        var rows = document.querySelectorAll('.work-item-row');
+        var items = [];
+        rows.forEach(function(row) {
+            items.push({
+                id:          row.dataset.id          || '',
+                title:       row.dataset.title       || '',
+                description: row.dataset.description || ''
+            });
+        });
+        return JSON.stringify(items);
+    }
+    if (screenContext === 'user_stories') {
+        var srows = document.querySelectorAll('.story-row');
+        var stories = [];
+        srows.forEach(function(row) {
+            stories.push({
+                id:          row.dataset.id          || '',
+                title:       row.dataset.title       || '',
+                description: row.dataset.description || ''
+            });
+        });
+        return JSON.stringify(stories);
+    }
+    return '';
+}
+
+function runBoardReview() {
+    var trigger      = _brCurrentTrigger;
+    var projectId    = trigger ? trigger.dataset.projectId : '';
+    var screenContext = trigger ? trigger.dataset.screen   : '';
+    var reviewLevel  = document.getElementById('br-review-level').value;
+    var screenContent = collectBoardReviewContent(screenContext);
+
+    if (!screenContent) {
+        alert('No content found to review on this page.');
+        return;
+    }
+
+    setHiddenState(document.getElementById('br-config'),  true);
+    setHiddenState(document.getElementById('br-loading'), false);
+
+    fetch('/app/board-review/evaluate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            project_id:       parseInt(projectId),
+            evaluation_level: reviewLevel,
+            screen_context:   screenContext,
+            screen_content:   screenContent,
+            _csrf_token:      getCsrfTokenValue()
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        setHiddenState(document.getElementById('br-loading'), true);
+        if (data.error) {
+            setHiddenState(document.getElementById('br-config'), false);
+            alert('Board review failed: ' + data.error);
+            return;
+        }
+        _brCurrentReviewId = data.id;
+        setHiddenState(document.getElementById('br-results'), false);
+        renderBoardReviewResults(data);
+    })
+    .catch(function(err) {
+        setHiddenState(document.getElementById('br-loading'), true);
+        setHiddenState(document.getElementById('br-config'),  false);
+        alert('Board review failed: ' + err.message);
+    });
+}
+
+function renderBoardReviewResults(data) {
+    var convEl = document.getElementById('br-conversation');
+    var recEl  = document.getElementById('br-recommendation');
+    var convHtml = '<h4>Board Deliberation</h4><div class="br-conversation-list">';
+    (data.conversation || []).forEach(function(turn) {
+        convHtml += '<div class="br-turn">'
+            + '<strong class="br-speaker">' + escapeHtml(turn.speaker || '') + '</strong>'
+            + '<p class="br-message">' + escapeHtml(turn.message || '').replace(/\n/g, '<br>') + '</p>'
+            + '</div>';
+    });
+    convHtml += '</div>';
+    convEl.innerHTML = convHtml;
+
+    var rec = data.recommendation || {};
+    recEl.innerHTML = '<h4>Board Recommendation</h4>'
+        + '<p><strong>Summary:</strong> ' + escapeHtml(rec.summary   || '') + '</p>'
+        + '<p><strong>Rationale:</strong> ' + escapeHtml(rec.rationale || '') + '</p>';
+}
+
+function respondToBoardReview(action) {
+    if (!_brCurrentReviewId) { return; }
+    var reviewId = _brCurrentReviewId;
+
+    setHiddenState(document.getElementById('br-actions'), true);
+
+    fetch('/app/board-review/' + reviewId + '/' + action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ _csrf_token: getCsrfTokenValue() })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        setHiddenState(document.getElementById('br-results'),   true);
+        setHiddenState(document.getElementById('br-responded'), false);
+        var msg = action === 'accept'
+            ? 'Changes accepted and applied.'
+            : 'Review rejected. No changes were made.';
+        document.getElementById('br-responded').innerHTML =
+            '<p class="br-response-msg">' + escapeHtml(msg) + '</p>'
+            + '<button class="btn btn-secondary js-close-board-review" type="button">Close</button>';
+        if (action === 'accept') {
+            setTimeout(function() { window.location.reload(); }, 1200);
+        }
+    })
+    .catch(function(err) {
+        setHiddenState(document.getElementById('br-actions'), false);
+        alert('Failed: ' + err.message);
+    });
+}
+
+// Wire up board review trigger buttons on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.board-review-trigger').forEach(function(btn) {
+        btn.addEventListener('click', function() { openBoardReview(btn); });
     });
 });
 
