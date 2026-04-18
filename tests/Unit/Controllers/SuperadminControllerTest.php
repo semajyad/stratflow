@@ -193,6 +193,23 @@ class SuperadminControllerTest extends ControllerTestCase
         $this->assertArrayHasKey('orgs', $this->response->renderedData);
     }
 
+    #[Test]
+    public function testOrganisationsLoadsSubscriptionForEachOrg(): void
+    {
+        // org row returned from findAll, then subscription lookup for that org
+        $org     = ['id' => 7, 'name' => 'Acme', 'is_active' => 1, 'created_at' => '2025-01-01 00:00:00', 'user_count' => 2];
+        $orgStmt = $this->makeStmt(false, [$org]);
+        $subStmt = $this->makeStmt(false, []);   // Subscription::findByOrgId returns null
+        $usersStmt = $this->makeStmt(false, []); // getAllUsers
+        $this->queueStmts($orgStmt, $subStmt, $usersStmt);
+        $this->setDefault(false, []);
+
+        $this->ctrl()->organisations();
+
+        $data = $this->response->renderedData;
+        $this->assertArrayHasKey(7, $data['org_subs']);
+    }
+
     // =========================================================================
     // users()
     // =========================================================================
@@ -355,10 +372,12 @@ class SuperadminControllerTest extends ControllerTestCase
         $org = ['id' => 1, 'name' => 'Org', 'is_active' => 1];
         $sub = ['id' => 10, 'org_id' => 1, 'plan_type' => 'product'];
 
-        // Queue: findById -> org, findByOrgId -> sub; rest use default (false)
-        $orgStmt = $this->makeStmt($org, []);
-        $subStmt = $this->makeStmt($sub, []);
-        $this->queueStmts($orgStmt, $subStmt);
+        // Queue order: findById, Organisation::update, Subscription::findByOrgId
+        // then UPDATE subscriptions + AuditLogger.log fall through to default
+        $orgStmt    = $this->makeStmt($org, []);
+        $updateStmt = $this->makeStmt(false, []);
+        $subStmt    = $this->makeStmt($sub, []);
+        $this->queueStmts($orgStmt, $updateStmt, $subStmt);
         $this->setDefault(false, []);
 
         $this->postCtrl([
@@ -436,6 +455,21 @@ class SuperadminControllerTest extends ControllerTestCase
         $orgStmt   = $this->makeStmt($org, []);
         $noIntStmt = $this->makeStmt(false, []);
         $this->queueStmts($orgStmt, $noIntStmt);
+        $this->setDefault(false, []);
+
+        $this->postCtrl(['action' => 'enable'])->toggleJira(1);
+
+        $this->assertSame('/superadmin/organisations', $this->response->redirectedTo);
+    }
+
+    #[Test]
+    public function testToggleJiraEnableUpdatesExistingIntegration(): void
+    {
+        $org         = ['id' => 1, 'name' => 'Jira Org'];
+        $integration = ['id' => 3, 'org_id' => 1, 'provider' => 'jira', 'status' => 'active'];
+        $orgStmt = $this->makeStmt($org, []);
+        $intStmt = $this->makeStmt($integration, []);
+        $this->queueStmts($orgStmt, $intStmt);
         $this->setDefault(false, []);
 
         $this->postCtrl(['action' => 'enable'])->toggleJira(1);
@@ -810,5 +844,46 @@ class SuperadminControllerTest extends ControllerTestCase
         $this->ctrl($req)->exportAuditLogs();
 
         $this->assertNotNull($this->response->downloadContent);
+    }
+
+    // =========================================================================
+    // toggleEvaluationBoard()
+    // =========================================================================
+
+    #[Test]
+    public function testToggleEvaluationBoardOrgNotFound(): void
+    {
+        $this->setDefault(false, []);
+
+        $this->postCtrl(['action' => 'enable'])->toggleEvaluationBoard(99);
+
+        $this->assertSame('/superadmin/organisations', $this->response->redirectedTo);
+        $this->assertSame('Organisation not found.', $_SESSION['flash_error'] ?? '');
+    }
+
+    #[Test]
+    public function testToggleEvaluationBoardEnable(): void
+    {
+        $org = ['id' => 1, 'name' => 'Acme'];
+        $this->queueStmts($this->makeStmt($org, []));
+        $this->setDefault(false, []);
+
+        $this->postCtrl(['action' => 'enable'])->toggleEvaluationBoard(1);
+
+        $this->assertSame('/superadmin/organisations', $this->response->redirectedTo);
+        $this->assertStringContainsString('enabled', $_SESSION['flash_message'] ?? '');
+    }
+
+    #[Test]
+    public function testToggleEvaluationBoardDisable(): void
+    {
+        $org = ['id' => 1, 'name' => 'Acme'];
+        $this->queueStmts($this->makeStmt($org, []));
+        $this->setDefault(false, []);
+
+        $this->postCtrl(['action' => 'disable'])->toggleEvaluationBoard(1);
+
+        $this->assertSame('/superadmin/organisations', $this->response->redirectedTo);
+        $this->assertStringContainsString('disabled', $_SESSION['flash_message'] ?? '');
     }
 }
