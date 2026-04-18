@@ -38,7 +38,7 @@ Use Chrome DevTools or equivalent — navigate to the page, trigger the feature,
 **Workflow order:**
 1. Quick browser test (30 s) — catch obvious breakage before any hooks fire
 2. `git commit` (pre-commit hook enforces test-touch)
-3. `git push` (CI runs Playwright fast suite + PHPUnit)
+3. `git push` → open PR → CI runs Playwright fast suite + PHPUnit
 
 Do NOT rely on CI alone — by the time CI fails, the PR is already open.
 
