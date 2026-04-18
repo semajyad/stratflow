@@ -13,6 +13,8 @@ concurrency:
   group: nightly-triage
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   triage:
     name: Aggregate nightly results

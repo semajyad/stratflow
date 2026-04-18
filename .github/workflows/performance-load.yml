@@ -22,6 +22,8 @@ concurrency:
   group: performance-load
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   k6-peak:
     name: k6 50-VU peak load

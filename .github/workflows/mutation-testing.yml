@@ -15,6 +15,8 @@ concurrency:
   group: mutation-testing
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   mutation:
     runs-on: ubuntu-latest
@@ -72,6 +74,7 @@ jobs:
       - name: Run Infection mutation testing (full src/)
         id: infection
         run: |
+          mkdir -p var
           vendor/bin/infection \
             --configuration=infection.json \
             --threads=4 \

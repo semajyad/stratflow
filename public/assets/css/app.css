@@ -2981,20 +2981,64 @@ tbody tr:hover {
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
 }
 
-.persona-header {
+/* Accordion header (replaces .persona-header) */
+.sb-accordion-item .sb-accordion-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    color: var(--text);
+    text-align: left;
+    gap: 0.5rem;
 }
 
-.persona-header strong {
-    font-size: 1rem;
-    color: var(--text);
+.sb-accordion-item .sb-accordion-header:hover {
+    background: var(--surface-hover, rgba(0,0,0,0.04));
+}
+
+.sb-accordion-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.sb-accordion-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sb-accordion-chevron {
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    transform: rotate(0deg);
+    color: var(--text-muted, #666);
+}
+
+.sb-accordion-item.sb-open .sb-accordion-chevron {
+    transform: rotate(90deg);
+}
+
+/* Accordion body */
+.sb-accordion-body {
+    display: none;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.sb-accordion-item.sb-open .sb-accordion-body {
+    display: block;
 }
 
 .persona-response {
@@ -3002,8 +3046,27 @@ tbody tr:hover {
     line-height: 1.6;
     color: var(--text);
     margin-bottom: 0.75rem;
-    white-space: pre-wrap;
-    word-break: break-word;
+}
+
+.persona-response p {
+    margin: 0 0 0.4rem;
+}
+
+.persona-response ul,
+.persona-response ol {
+    margin: 0.25rem 0 0.5rem 1.25rem;
+    padding: 0;
+}
+
+.persona-response li {
+    margin-bottom: 0.2rem;
+}
+
+.sb-section-heading {
+    font-weight: 600;
+    color: var(--text);
+    margin: 0.6rem 0 0.2rem;
+    font-size: 0.875rem;
 }
 
 .persona-actions {
@@ -3011,6 +3074,34 @@ tbody tr:hover {
     gap: 0.5rem;
     padding-top: 0.5rem;
     border-top: 1px solid var(--border);
+    margin-top: 0.75rem;
+}
+
+/* Conclusion panel */
+.sb-conclusion {
+    background: var(--surface);
+    border-color: var(--primary, #4f46e5);
+}
+
+.sb-conclusion .sb-accordion-header {
+    background: var(--primary-bg, rgba(79,70,229,0.06));
+}
+
+.sb-conclusion .sb-accordion-title {
+    color: var(--primary, #4f46e5);
+}
+
+.sb-conclusion-summary {
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.sb-conclusion-hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #666);
+    margin: 0.5rem 0 0;
+    font-style: italic;
 }
 
 /* === Board Review =========================================================== */

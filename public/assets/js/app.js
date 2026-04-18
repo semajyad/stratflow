@@ -2362,10 +2362,15 @@ function memberPickerSearch(input) {
         return;
     }
 
-    resultsEl.innerHTML = matches.map(function(user) {
-        return '<div class="member-result-item" data-id="' + String(user.id) + '" data-label="' + escapeHtml(user.label) + '"' +
-            '>' + escapeHtml(user.label) + '</div>';
-    }).join('');
+    resultsEl.textContent = '';
+    matches.forEach(function(user) {
+        var div = document.createElement('div');
+        div.className = 'member-result-item';
+        div.dataset.id = String(user.id);
+        div.dataset.label = user.label;
+        div.textContent = user.label;
+        resultsEl.appendChild(div);
+    });
     setHiddenState(resultsEl, false);
 }
 
@@ -2747,35 +2752,214 @@ function runSoundingBoard() {
 }
 
 /**
- * Render persona evaluation results into the modal results container.
+ * Convert simple persona-response markdown to safe HTML.
+ * Handles bold, bullet lists, numbered lists, and headings.
+ */
+function renderPersonaMarkdown(text) {
+    var lines = escapeHtml(text).split('\n');
+    var out = [];
+    var inUl = false;
+    var inOl = false;
+
+    lines.forEach(function(line) {
+        var ul = line.match(/^\s*[-*]\s+(.+)/);
+        var ol = line.match(/^\s*\d+\.\s+(.+)/);
+        var h = line.match(/^\s*#{1,4}\s+(.+)/);
+
+        if (ul) {
+            if (!inUl) { if (inOl) { out.push('</ol>'); inOl = false; } out.push('<ul>'); inUl = true; }
+            out.push('<li>' + ul[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</li>');
+        } else if (ol) {
+            if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol>'); inOl = true; }
+            out.push('<li>' + ol[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</li>');
+        } else {
+            if (inUl) { out.push('</ul>'); inUl = false; }
+            if (inOl) { out.push('</ol>'); inOl = false; }
+            if (h) {
+                out.push('<p class="sb-section-heading">' + h[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p>');
+            } else if (line.trim() === '') {
+                out.push('<br>');
+            } else {
+                out.push('<p>' + line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p>');
+            }
+        }
+    });
+    if (inUl) out.push('</ul>');
+    if (inOl) out.push('</ol>');
+    return out.join('');
+}
+
+/**
+ * Extract risk rating string from a persona response (Low/Medium/High/Critical).
+ */
+function extractRiskRating(response) {
+    var m = response.match(/Risk Rating[:\s*]+\**(Low|Medium|High|Critical)\**/i);
+    return m ? m[1] : null;
+}
+
+/**
+ * Render persona evaluation results as accordions into the modal results container.
+ * Each persona is a collapsed accordion; a conclusion panel is open at the bottom.
  *
  * @param {Object} data Response from the evaluate endpoint: {id, results}
  */
 function renderSoundingBoardResults(data) {
     var container = document.getElementById('sb-results');
-    var html = '<h4>Evaluation Results</h4>';
+
+    while (container.firstChild) { container.removeChild(container.firstChild); }
 
     if (data.error) {
-        html += '<p class="text-danger">' + escapeHtml(data.error) + '</p>';
-        container.innerHTML = html;
+        var errP = document.createElement('p');
+        errP.className = 'text-danger';
+        errP.textContent = data.error;
+        container.appendChild(errP);
         return;
     }
 
+    var title = document.createElement('h4');
+    title.textContent = 'Evaluation Results';
+    container.appendChild(title);
+
+    var riskCounts = {};
+    var riskOrder = ['Critical', 'High', 'Medium', 'Low'];
+    var riskBadgeClass = { Critical: 'badge-danger', High: 'badge-warning', Medium: 'badge-info', Low: 'badge-success' };
+
     data.results.forEach(function(result, index) {
-        html += '<div class="persona-result" data-eval-id="' + data.id + '" data-index="' + index + '">'
-            + '<div class="persona-header">'
-            + '<strong>' + escapeHtml(result.role_title) + '</strong>'
-            + '<span class="persona-status badge badge-secondary">' + escapeHtml(result.status) + '</span>'
-            + '</div>'
-            + '<div class="persona-response">' + escapeHtml(result.response).replace(/\n/g, '<br>') + '</div>'
-            + '<div class="persona-actions">'
-            + '<button class="btn btn-sm btn-primary js-persona-response" data-eval-id="' + data.id + '" data-member-index="' + index + '" data-action="accept">Accept</button>'
-            + '<button class="btn btn-sm btn-secondary js-persona-response" data-eval-id="' + data.id + '" data-member-index="' + index + '" data-action="reject">Reject</button>'
-            + '</div>'
-            + '</div>';
+        var risk = extractRiskRating(result.response);
+        if (risk) { riskCounts[risk] = (riskCounts[risk] || 0) + 1; }
+
+        var item = document.createElement('div');
+        item.className = 'sb-accordion-item persona-result';
+        item.dataset.evalId = String(data.id);
+        item.dataset.index = String(index);
+
+        var header = document.createElement('button');
+        header.type = 'button';
+        header.className = 'sb-accordion-header';
+        header.setAttribute('aria-expanded', 'false');
+
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'sb-accordion-title';
+        nameSpan.textContent = result.role_title;
+
+        var rightSpan = document.createElement('span');
+        rightSpan.className = 'sb-accordion-meta';
+
+        if (risk) {
+            var riskBadge = document.createElement('span');
+            riskBadge.className = 'badge ' + (riskBadgeClass[risk] || 'badge-secondary');
+            riskBadge.textContent = risk;
+            rightSpan.appendChild(riskBadge);
+        }
+
+        var chevron = document.createElement('span');
+        chevron.className = 'sb-accordion-chevron';
+        chevron.textContent = '›';
+        rightSpan.appendChild(chevron);
+
+        header.appendChild(nameSpan);
+        header.appendChild(rightSpan);
+
+        var body = document.createElement('div');
+        body.className = 'sb-accordion-body';
+
+        var responseDiv = document.createElement('div');
+        responseDiv.className = 'persona-response';
+        responseDiv.innerHTML = renderPersonaMarkdown(result.response);
+
+        var actions = document.createElement('div');
+        actions.className = 'persona-actions';
+        var acceptBtn = document.createElement('button');
+        acceptBtn.type = 'button';
+        acceptBtn.className = 'btn btn-sm btn-primary js-persona-response';
+        acceptBtn.dataset.evalId = String(data.id);
+        acceptBtn.dataset.memberIndex = String(index);
+        acceptBtn.dataset.action = 'accept';
+        acceptBtn.textContent = 'Accept';
+        var rejectBtn = document.createElement('button');
+        rejectBtn.type = 'button';
+        rejectBtn.className = 'btn btn-sm btn-secondary js-persona-response';
+        rejectBtn.dataset.evalId = String(data.id);
+        rejectBtn.dataset.memberIndex = String(index);
+        rejectBtn.dataset.action = 'reject';
+        rejectBtn.textContent = 'Reject';
+        actions.appendChild(acceptBtn);
+        actions.appendChild(rejectBtn);
+
+        body.appendChild(responseDiv);
+        body.appendChild(actions);
+        item.appendChild(header);
+        item.appendChild(body);
+        container.appendChild(item);
+
+        header.addEventListener('click', function() {
+            var isOpen = item.classList.contains('sb-open');
+            item.classList.toggle('sb-open', !isOpen);
+            header.setAttribute('aria-expanded', String(!isOpen));
+        });
     });
 
-    container.innerHTML = html;
+    // Conclusion accordion — open by default
+    var summaryRisks = riskOrder.filter(function(r) { return riskCounts[r]; });
+    var summaryParts = summaryRisks.map(function(r) { return riskCounts[r] + '× ' + r; });
+    var topRisk = summaryRisks[0] || null;
+
+    var conclusionItem = document.createElement('div');
+    conclusionItem.className = 'sb-accordion-item sb-conclusion sb-open';
+
+    var conclusionHeader = document.createElement('button');
+    conclusionHeader.type = 'button';
+    conclusionHeader.className = 'sb-accordion-header';
+    conclusionHeader.setAttribute('aria-expanded', 'true');
+
+    var conclusionTitle = document.createElement('span');
+    conclusionTitle.className = 'sb-accordion-title';
+    conclusionTitle.textContent = 'Board Conclusion';
+
+    var conclusionMeta = document.createElement('span');
+    conclusionMeta.className = 'sb-accordion-meta';
+    if (topRisk) {
+        var topBadge = document.createElement('span');
+        topBadge.className = 'badge ' + (riskBadgeClass[topRisk] || 'badge-secondary');
+        topBadge.textContent = 'Overall: ' + topRisk;
+        conclusionMeta.appendChild(topBadge);
+    }
+    var conclusionChevron = document.createElement('span');
+    conclusionChevron.className = 'sb-accordion-chevron';
+    conclusionChevron.textContent = '›';
+    conclusionMeta.appendChild(conclusionChevron);
+
+    conclusionHeader.appendChild(conclusionTitle);
+    conclusionHeader.appendChild(conclusionMeta);
+
+    var conclusionBody = document.createElement('div');
+    conclusionBody.className = 'sb-accordion-body';
+
+    var summaryP = document.createElement('p');
+    summaryP.className = 'sb-conclusion-summary';
+    summaryP.textContent = data.results.length + ' reviewer' + (data.results.length !== 1 ? 's' : '') + ' evaluated this content.';
+    if (summaryParts.length) {
+        var riskP = document.createElement('p');
+        riskP.textContent = 'Risk ratings: ' + summaryParts.join(', ') + '.';
+        conclusionBody.appendChild(summaryP);
+        conclusionBody.appendChild(riskP);
+    } else {
+        conclusionBody.appendChild(summaryP);
+    }
+    var hintP = document.createElement('p');
+    hintP.className = 'sb-conclusion-hint';
+    hintP.textContent = 'Expand each reviewer above to read their full assessment and accept or reject it individually.';
+    conclusionBody.appendChild(hintP);
+
+    conclusionItem.appendChild(conclusionHeader);
+    conclusionItem.appendChild(conclusionBody);
+    container.appendChild(conclusionItem);
+
+    conclusionHeader.addEventListener('click', function() {
+        var isOpen = conclusionItem.classList.contains('sb-open');
+        conclusionItem.classList.toggle('sb-open', !isOpen);
+        conclusionHeader.setAttribute('aria-expanded', String(!isOpen));
+    });
 }
 
 /**
@@ -3047,12 +3231,19 @@ function showProcessingOverlay(message) {
     var overlay = document.createElement('div');
     overlay.className = 'processing-overlay';
     overlay.id = 'processing-overlay';
-    overlay.innerHTML =
-        '<div class="processing-card">' +
-            '<div class="loading-spinner"></div>' +
-            '<p>' + message + '</p>' +
-            '<p class="processing-card__note">Please don\'t close this page</p>' +
-        '</div>';
+    var card = document.createElement('div');
+    card.className = 'processing-card';
+    var spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    var msg = document.createElement('p');
+    msg.textContent = message;
+    var note = document.createElement('p');
+    note.className = 'processing-card__note';
+    note.textContent = "Please don't close this page";
+    card.appendChild(spinner);
+    card.appendChild(msg);
+    card.appendChild(note);
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 }
 
@@ -3135,11 +3326,11 @@ function copyTextFromTarget(button) {
 
 function navigateToExecutiveProject(selectEl) {
     var baseUrl = selectEl.dataset.baseUrl || '/app/projects/';
-    var value = selectEl.value || '';
-    if (!value) {
+    var id = parseInt(selectEl.value, 10);
+    if (!id) {
         return;
     }
-    window.location = baseUrl + value + '/executive';
+    window.location.href = baseUrl + id + '/executive';
 }
 
 function syncGithubRepoLabel(checkbox) {
@@ -3352,7 +3543,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 var loadingText = form.getAttribute('data-loading') || 'Processing...';
                 btn.disabled = true;
                 btn.dataset.originalText = btn.textContent || btn.innerText;
-                btn.innerHTML = '<span class="loading-spinner-inline"></span> ' + loadingText;
+                btn.textContent = '';
+                var s = document.createElement('span');
+                s.className = 'loading-spinner-inline';
+                btn.appendChild(s);
+                btn.appendChild(document.createTextNode(' ' + loadingText));
                 btn.classList.add('btn-loading');
             }
         });
