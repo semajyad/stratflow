@@ -194,6 +194,33 @@ test.describe('Evaluation Board modal — UI smoke', () => {
     await expect(page.locator('#sounding-board-modal')).toBeAttached();
   });
 
+  test('Sounding Board results render as closed formatted accordions', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto(`${BASE}/app/work-items?project_id=1`);
+
+    await page.evaluate(() => {
+      renderSoundingBoardResults({
+        id: 123,
+        results: [{
+          role_title: 'CEO',
+          member_id: 1,
+          status: 'pending',
+          response: '1. **Overall Assessment**\\nThis is **important**.\\n\\n* **Key Concern:** prove the market.'
+        }]
+      });
+    });
+
+    const persona = page.locator('#sb-results details.persona-result').first();
+    await expect(persona).toBeAttached();
+    await expect(persona).not.toHaveAttribute('open', '');
+    await expect(persona.locator('summary')).toContainText('CEO');
+    await expect(persona.locator('strong').first()).toHaveText('Overall Assessment');
+    await expect(persona.locator('.persona-response')).toBeHidden();
+
+    const conclusion = page.locator('#sb-results details.sb-conclusion').first();
+    await expect(conclusion).toHaveAttribute('open', '');
+  });
+
   test('Board Review button and modal are present on work-items page', async ({ page }) => {
     await loginAsAdmin(page);
     // project_id=1 is the seeded demo project — required so the controller renders the template

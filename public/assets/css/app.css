@@ -2985,6 +2985,10 @@ tbody tr:hover {
     overflow: hidden;
 }
 
+.sb-accordion-item {
+    display: block;
+}
+
 /* Accordion header (replaces .persona-header) */
 .sb-accordion-item .sb-accordion-header {
     display: flex;
@@ -2999,10 +3003,15 @@ tbody tr:hover {
     color: var(--text);
     text-align: left;
     gap: 0.5rem;
+    list-style: none;
 }
 
 .sb-accordion-item .sb-accordion-header:hover {
     background: var(--surface-hover, rgba(0,0,0,0.04));
+}
+
+.sb-accordion-item .sb-accordion-header::-webkit-details-marker {
+    display: none;
 }
 
 .sb-accordion-title {
@@ -3026,6 +3035,7 @@ tbody tr:hover {
     color: var(--text-muted, #666);
 }
 
+.sb-accordion-item[open] .sb-accordion-chevron,
 .sb-accordion-item.sb-open .sb-accordion-chevron {
     transform: rotate(90deg);
 }
@@ -3037,6 +3047,7 @@ tbody tr:hover {
     border-top: 1px solid var(--border);
 }
 
+.sb-accordion-item[open] .sb-accordion-body,
 .sb-accordion-item.sb-open .sb-accordion-body {
     display: block;
 }
