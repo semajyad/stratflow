@@ -16,6 +16,7 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+# Default everything to read-only; jobs that need write access override below.
 permissions: read-all
 
 jobs:
@@ -28,6 +29,11 @@ jobs:
   self-heal:
     name: Self-heal branch
     if: github.event_name == 'pull_request'
+    # Override workflow-level read-all: self-heal needs to push commits and
+    # edit PR labels. Job-level permissions override the workflow-level grant.
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/self-heal.yml
     with:
       pr_number: ${{ github.event.pull_request.number }}

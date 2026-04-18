@@ -3147,12 +3147,11 @@ function copyTextFromTarget(button) {
 
 function navigateToExecutiveProject(selectEl) {
     var baseUrl = selectEl.dataset.baseUrl || '/app/projects/';
-    var value = selectEl.value || '';
-    if (!value) {
+    var id = parseInt(selectEl.value, 10);
+    if (!id) {
         return;
     }
-    var path = baseUrl + value + '/executive';
-    if (/^\//.test(path)) { window.location = path; }
+    window.location.href = baseUrl + id + '/executive';
 }
 
 function syncGithubRepoLabel(checkbox) {
