@@ -8,11 +8,11 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use StratFlow\Core\Auth;
 use StratFlow\Core\Database;
-use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Core\Session;
 use StratFlow\Controllers\WorkItemController;
 use StratFlow\Models\HLWorkItem;
+use StratFlow\Tests\Support\FakeRequest;
 
 /**
  * PermissionBoundaryTest
@@ -123,7 +123,7 @@ class PermissionBoundaryTest extends TestCase
             "INSERT INTO users (org_id, email, password_hash, full_name, role, account_type)
              VALUES (?, ?, ?, ?, ?, ?)",
             [$this->orgId, 'pb_viewer_' . $this->orgId . '@test.invalid',
-             password_hash('pass', PASSWORD_DEFAULT), 'Viewer', 'viewer', 'viewer']
+             password_hash('pass', PASSWORD_DEFAULT), 'Viewer', 'user', 'viewer']
         );
         $this->viewerId = (int) $this->db->lastInsertId();
 
@@ -227,16 +227,7 @@ class PermissionBoundaryTest extends TestCase
         // We cannot use ->method('method') shorthand because 'method' is itself
         // in onlyMethods — doing so would call the mocked method rather than
         // configure it. Use expects($this->any()) to stay explicit.
-        $request = $this->getMockBuilder(Request::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['post', 'get', 'method'])
-            ->getMock();
-        $request->expects($this->any())->method('post')
-            ->willReturnCallback(function (string $key, $default = null) use ($newTitle) {
-                return $key === 'title' ? $newTitle : $default;
-            });
-        $request->expects($this->any())->method('get')->willReturn(null);
-        $request->expects($this->any())->method('method')->willReturn('POST');
+        $request = new FakeRequest('POST', '/', ['title' => $newTitle]);
 
         return new WorkItemController($request, $response, $auth, $this->db, []);
     }

@@ -140,4 +140,38 @@ class ApiAuthMiddlewareTest extends TestCase
 
         $this->assertTrue($result);
     }
+
+    #[Test]
+    public function validTokenWithoutRequiredScopeReturnsForbidden(): void
+    {
+        $tokenRow = [
+            'id'      => 3,
+            'user_id' => 42,
+            'org_id'  => 5,
+            'scopes'  => json_encode(['profile:read']),
+        ];
+        $userRow = [
+            'id' => 42, 'org_id' => 5, 'full_name' => 'Scoped User', 'email' => 'scoped@test.invalid',
+            'role' => 'user', 'has_billing_access' => 0, 'has_executive_access' => 0,
+            'is_project_admin' => 0, 'jira_account_id' => null, 'team' => null,
+        ];
+
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer sf_pat_scopedtoken12345678901234567';
+        $_SERVER['REMOTE_ADDR']        = '127.0.0.1';
+        $_SERVER['REQUEST_URI']        = '/api/v1/stories/123/status';
+        $_SERVER['REQUEST_METHOD']     = 'POST';
+
+        ob_start();
+        $result = (new ApiAuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeDb($tokenRow, $userRow),
+            $this->makeResponse()
+        );
+        $output = (string) ob_get_clean();
+
+        unset($_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REMOTE_ADDR'], $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('forbidden', $output);
+    }
 }

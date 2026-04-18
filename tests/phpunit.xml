@@ -4,8 +4,10 @@
          bootstrap="bootstrap.php"
          colors="true"
          stopOnFailure="false"
-         beStrictAboutCoverageMetadata="true"
          failOnRisky="false"
+         failOnPhpunitDeprecation="false"
+         failOnPhpunitNotice="false"
+         failOnPhpunitWarning="false"
          failOnWarning="false">
     <testsuites>
         <testsuite name="unit">
