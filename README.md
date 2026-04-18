@@ -82,7 +82,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions including opt
 | Doc | Description |
 |-----|-------------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | New developer setup guide |
-| [docs/SETUP.md](docs/SETUP.md) | Detailed local development setup |
+| [docs/SETUP.md](docs/SETUP.md) | Local development setup (Docker) |
+| [docs/SETUP_MACOS.md](docs/SETUP_MACOS.md) | Local development setup (macOS, no Docker) |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment (Railway / cPanel) |
 | [docs/API.md](docs/API.md) | All application routes (200+) |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema, tables, and relationships |

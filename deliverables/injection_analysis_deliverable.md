@@ -1,1 +1,0 @@
-# Injection Analysis Report\n\nAnalysis complete. No injection vulnerabilities identified.
