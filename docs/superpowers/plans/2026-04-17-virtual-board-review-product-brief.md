@@ -45,7 +45,7 @@ The right board is selected automatically based on which page the user is on.
 A **"Virtual Executive Board"** or **"Virtual Product Management Board"** button appears alongside existing action buttons. It only shows if the user's subscription includes the Evaluation Board feature.
 
 ### 2. User opens the review
-Clicking the button opens a panel. The user picks a **criticism level**:
+Clicking the button opens a panel. The user picks a **criticism level**: ** MR (can we call it review level instead of criticism?)**
 - **Devil's Advocate** — constructive pushback
 - **Red Teaming** — stress-test for failure modes
 - **Gordon Ramsay** — brutally direct, no filter
@@ -66,13 +66,16 @@ The panel displays:
 ### 5. Accept or Reject
 Two buttons at the bottom:
 
-**Accept Recommendation** → the app immediately applies the proposed changes:
+**Accept Recommendation** → The app immediately applies the proposed changes:
 | Page | What changes |
 |------|-------------|
 | Strategy Summary | The summary text is rewritten |
 | Roadmap Diagram | The Mermaid diagram is replaced with the revised version |
 | Work Items | Items are added, updated, or removed as recommended |
 | User Stories | Stories are added, updated, or removed as recommended |
+
+MR - Before making any changes, we do need to take a snapshot to remember the original version. Not sure if we're going to address it as a part of the drift engine?
+
 
 **Reject** → nothing changes. The outcome is recorded for audit purposes.
 
@@ -97,6 +100,8 @@ This means users can always look back at past reviews.
 - It does **not** run multiple AI calls per review (one call, simulated conversation — cost-controlled)
 - It does **not** auto-apply changes without the user clicking Accept
 
+MR - The functionality of virtual boards is exactly the sounding board, so we should use/merge whatever is already built.
+
 ---
 
 ## Pages Affected
@@ -114,7 +119,7 @@ This means users can always look back at past reviews.
 
 | Risk | Mitigation |
 |------|-----------|
-| AI proposes poor changes that user accidentally accepts | User must explicitly click Accept — no auto-apply. Rejected state is also stored. |
+| AI proposes poor changes that the user accidentally accepts | User must explicitly click Accept — no auto-apply. Rejected state is also stored. |
 | AI returns garbled output | Existing retry logic handles this; error state shown to user if it fails |
 | Work item / user story changes fail halfway | Changes are wrapped in a database transaction — either all apply or none do |
 
@@ -123,12 +128,17 @@ This means users can always look back at past reviews.
 ## Open Questions for PO/PM
 
 1. Should the board review history be visible to all team members on a project, or only the person who ran it?
-2. Should there be a character/length cap on the content sent for review (e.g. very long work item lists)?
-3. Should users be able to re-run a review on the same content, or only after content has changed?
+ MR - Review history should be available to all people who have access to the project
+ 
+3. Should there be a character/length cap on the content sent for review (e.g. very long work item lists)?
+ MR - No, unless it will be larger than the content window
+
+4. Should users be able to re-run a review on the same content, or only after the content has changed?
+ MR - User should be able to rerun a review at any time, regardless of whether they accept the changes.
 
 ---
 
 ## Approval
 
 To approve this feature for implementation, reply or comment: **"Approved"**.  
-To request changes, note them below and the brief will be updated before implementation begins.
+To request changes, note them below, and the brief will be updated before implementation begins.
