@@ -122,6 +122,79 @@ class SoundingBoardControllerTest extends ControllerTestCase
         $this->assertArrayHasKey('error', $this->response->jsonPayload);
     }
 
+    #[Test]
+    public function evaluateReturns403WhenNoEvaluationBoard(): void
+    {
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),  // ProjectPolicy
+            $this->stmt(false),            // Subscription::hasEvaluationBoard → false
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'screen_content' => 'test']);
+        $this->ctrl($request)->evaluate();
+
+        $this->assertSame(403, $this->response->jsonStatus);
+        $this->assertStringContainsString('Evaluation board not available', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function evaluateReturns400WhenScreenContentEmpty(): void
+    {
+        $sub = ['id' => 1, 'org_id' => 10, 'has_evaluation_board' => 1];
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),
+            $this->stmt($sub),
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'panel_type' => 'executive', 'screen_content' => '']);
+        $this->ctrl($request)->evaluate();
+
+        $this->assertSame(400, $this->response->jsonStatus);
+        $this->assertStringContainsString('No screen content', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function evaluateReturns400WhenPanelMembersEmpty(): void
+    {
+        $sub   = ['id' => 1, 'org_id' => 10, 'has_evaluation_board' => 1];
+        $panel = ['id' => 7, 'panel_type' => 'executive', 'name' => 'Executive Panel', 'org_id' => 10];
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),
+            $this->stmt($sub),
+            $this->stmt(false, [$panel]),  // PersonaPanel::findByOrgId
+            $this->stmt(false, []),         // PersonaMember::findByPanelId (empty)
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'panel_type' => 'executive', 'screen_content' => 'content']);
+        $this->ctrl($request)->evaluate();
+
+        $this->assertSame(400, $this->response->jsonStatus);
+        $this->assertStringContainsString('No panel members', $this->response->jsonPayload['error'] ?? '');
+    }
+
+    #[Test]
+    public function evaluateReturns500WhenAiServiceThrows(): void
+    {
+        $sub      = ['id' => 1, 'org_id' => 10, 'has_evaluation_board' => 1];
+        $panel    = ['id' => 7, 'panel_type' => 'executive', 'name' => 'Executive Panel', 'org_id' => 10];
+        $member   = ['id' => 1, 'panel_id' => 7, 'role_title' => 'CEO', 'prompt_description' => 'Strategy'];
+        $settings = ['settings_json' => '{}'];
+        $this->db->method('query')->willReturnOnConsecutiveCalls(
+            $this->stmt($this->project),
+            $this->stmt($sub),
+            $this->stmt(false, [$panel]),    // PersonaPanel::findByOrgId
+            $this->stmt(false, [$member]),   // PersonaMember::findByPanelId
+            $this->stmt($settings),           // SystemSettings::get
+        );
+
+        $request = $this->jsonReq(['project_id' => 5, 'panel_type' => 'executive', 'screen_content' => 'content']);
+        $this->ctrl($request)->evaluate();
+
+        // GeminiService constructor throws TypeError (no gemini.api_key in test config) → caught
+        $this->assertSame(500, $this->response->jsonStatus);
+        $this->assertArrayHasKey('error', $this->response->jsonPayload);
+    }
+
     // ===========================
     // results($id) — ALL PATHS
     // ===========================
