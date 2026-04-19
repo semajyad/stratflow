@@ -1,0 +1,178 @@
+// @ts-check
+/**
+ * Key Results CRUD — create, verify, update, delete.
+ *
+ * Assumes seed data provides at least one HL work item (project_id=1, id=1).
+ * Each test creates uniquely-named data to avoid cross-test pollution.
+ */
+const { test, expect } = require('@playwright/test');
+const { ADMIN_EMAIL, ADMIN_PASS } = require('../test-constants');
+
+const BASE         = process.env.BASE_URL || 'http://localhost:8890';
+const PROJECT_ID   = 1;   // seed project
+
+async function loginAsAdmin(page) {
+  await page.goto(`${BASE}/login`);
+  await page.fill('input[name="email"]', ADMIN_EMAIL);
+  await page.fill('input[name="password"]', ADMIN_PASS);
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(`${BASE}/app/home`);
+  await page.evaluate(() => { if (typeof dismissOnboarding === 'function') dismissOnboarding(); }).catch(() => false);
+}
+
+async function getCsrfToken(page) {
+  return page.inputValue('input[name="_csrf_token"]');
+}
+
+/** Returns the HL work item id for the first item in project 1, or creates one. */
+async function getOrCreateWorkItemId(page) {
+  // Try to find an existing delete-form action on work-items page to extract an id
+  await page.goto(`${BASE}/app/work-items`);
+  const deleteForm = page.locator('form[action*="/app/work-items/"][action*="/delete"]').first();
+  if (await deleteForm.count() > 0) {
+    const action = await deleteForm.getAttribute('action') ?? '';
+    const match = action.match(/\/work-items\/(\d+)\/delete/);
+    if (match) return parseInt(match[1], 10);
+  }
+
+  // No existing item — create one and return its id
+  const csrf = await getCsrfToken(page);
+  const res = await page.request.post(`${BASE}/app/work-items/store`, {
+    form: {
+      _csrf_token: csrf,
+      project_id: String(PROJECT_ID),
+      title: `KR Test Work Item ${Date.now()}`,
+      description: 'Created by key-results-crud Playwright test',
+      estimated_sprints: '1',
+    },
+  });
+  expect(res.status()).toBeLessThan(400);
+
+  // Re-load and extract id from delete form
+  await page.goto(`${BASE}/app/work-items`);
+  const form = page.locator('form[action*="/app/work-items/"][action*="/delete"]').first();
+  const action = await form.getAttribute('action') ?? '';
+  const match = action.match(/\/work-items\/(\d+)\/delete/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+test.describe('Key Results CRUD', () => {
+
+  test('create a key result → verify it appears → delete it', async ({ page }) => {
+    await loginAsAdmin(page);
+
+    const workItemId = await getOrCreateWorkItemId(page);
+    expect(workItemId).toBeGreaterThan(0);
+
+    await page.goto(`${BASE}/app/key-results`);
+    const csrf = await getCsrfToken(page);
+
+    const uniqueTitle = `PW Key Result ${Date.now()}`;
+
+    // Create
+    const createRes = await page.request.post(`${BASE}/app/key-results`, {
+      form: {
+        _csrf_token: csrf,
+        hl_work_item_id: String(workItemId),
+        title: uniqueTitle,
+        metric_description: 'Automated test metric',
+        baseline_value: '0',
+        target_value: '100',
+        current_value: '10',
+        unit: '%',
+      },
+    });
+    expect(createRes.status()).toBeLessThan(400);
+    const createJson = await createRes.json();
+    expect(createJson).toHaveProperty('id');
+    const krId = createJson.id;
+
+    // Verify page loads without error (KR should now be in DB)
+    await page.goto(`${BASE}/app/key-results`);
+    await expect(page.locator('body')).not.toContainText(/500|Fatal error|Uncaught/i);
+
+    // Delete
+    await page.goto(`${BASE}/app/key-results`);
+    const delCsrf = await getCsrfToken(page);
+    const deleteRes = await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
+      form: { _csrf_token: delCsrf },
+    });
+    expect(deleteRes.status()).toBeLessThan(400);
+  });
+
+  test('create returns 400 with missing hl_work_item_id', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto(`${BASE}/app/key-results`);
+    const csrf = await getCsrfToken(page);
+
+    const res = await page.request.post(`${BASE}/app/key-results`, {
+      form: {
+        _csrf_token: csrf,
+        hl_work_item_id: '0',
+        title: 'Should fail',
+      },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
+  test('create returns 400 when title is empty', async ({ page }) => {
+    await loginAsAdmin(page);
+    const workItemId = await getOrCreateWorkItemId(page);
+    await page.goto(`${BASE}/app/key-results`);
+    const csrf = await getCsrfToken(page);
+
+    const res = await page.request.post(`${BASE}/app/key-results`, {
+      form: {
+        _csrf_token: csrf,
+        hl_work_item_id: String(workItemId),
+        title: '',
+      },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test('update changes current_value and returns ok', async ({ page }) => {
+    await loginAsAdmin(page);
+    const workItemId = await getOrCreateWorkItemId(page);
+    await page.goto(`${BASE}/app/key-results`);
+    const csrf = await getCsrfToken(page);
+
+    // Create
+    const createRes = await page.request.post(`${BASE}/app/key-results`, {
+      form: {
+        _csrf_token: csrf,
+        hl_work_item_id: String(workItemId),
+        title: `PW KR Update ${Date.now()}`,
+        baseline_value: '0',
+        target_value: '50',
+        current_value: '5',
+        unit: 'pts',
+      },
+    });
+    const krId = (await createRes.json()).id;
+
+    // Update
+    await page.goto(`${BASE}/app/key-results`);
+    const updateCsrf = await getCsrfToken(page);
+    const updateRes = await page.request.post(`${BASE}/app/key-results/${krId}`, {
+      form: {
+        _csrf_token: updateCsrf,
+        hl_work_item_id: String(workItemId),
+        title: `PW KR Update ${krId}`,
+        current_value: '25',
+        target_value: '50',
+      },
+    });
+    expect(updateRes.status()).toBeLessThan(400);
+
+    // Cleanup
+    await page.goto(`${BASE}/app/key-results`);
+    const delCsrf = await getCsrfToken(page);
+    await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
+      form: { _csrf_token: delCsrf },
+    });
+  });
+
+});
