@@ -157,8 +157,9 @@ REVIEW_ID=$(gh api repos/semajyad/stratflow/pulls/<N>/reviews \
 gh api repos/semajyad/stratflow/pulls/<N>/reviews/${REVIEW_ID} --jq '.body'
 
 # Read all inline comments on the current HEAD SHA
+HEAD_SHA=$(gh pr view <N> --repo semajyad/stratflow --json headRefOid --jq '.headRefOid')
 gh api repos/semajyad/stratflow/pulls/<N>/comments \
-  --jq '.[] | select(.commit_id | startswith("<HEAD_SHA_PREFIX>")) | "FILE: \(.path)\nLINE: \(.original_line)\nBODY: \(.body)\n---"'
+  --jq --arg sha "$HEAD_SHA" '.[] | select(.commit_id == $sha) | "FILE: \(.path)\nLINE: \(.original_line)\nBODY: \(.body)\n---"'
 ```
 
 ### 6B — Triage each finding
