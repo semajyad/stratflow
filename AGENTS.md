@@ -17,8 +17,8 @@ agents operate with the same guardrails.
 
 - Keep changes scoped and atomic.
 - Rebase from `origin/main`; do not merge `main` into a feature branch.
-- Use `python scripts/agent/session-start.py --agent-id <id> --goal "<goal>" --files "<glob>"`
-  when starting a fresh agent session.
+- Codex starts new work with `python scripts/agent/codex-start.py --goal "<goal>" --files "<glob>"`.
+- Other agents use `python scripts/agent/session-start.py --agent-id <id> --goal "<goal>" --files "<glob>"`.
 - Prefer `python scripts/agent/safe-commit.py -m "..." <explicit files>` over raw
   `git commit`.
 - Before assuming work is lost, run `python scripts/agent/recover.py`.
@@ -62,15 +62,22 @@ agents operate with the same guardrails.
 
 - For security-touching PRs, include `## Security notes` with 3-5 bullets covering
   data access, abuse risk, and controls.
+- Every code commit must be pushed to a PR unless it is pushed to an existing PR
+  branch. The repository owner is the only person who merges to `main` after CI.
+- Agents must not merge PRs, admin-merge, or enable auto-merge.
 - Record non-obvious CI, security, or test failures with
   `python scripts/ci/record_learning.py`.
 - If GitHub `pull_request:synchronize` does not fire, trigger Tests manually with
   `gh workflow run tests.yml --repo semajyad/stratflow --ref <branch>`.
+- Use `python scripts/agent/preview-url.py --pr <number>` to retrieve the PR
+  preview URL after the preview job posts its comment.
 
 ## Useful Commands
 
 ```bash
 sh scripts/install-hooks.sh
+python scripts/agent/codex-start.py --goal "..." --files "..."
+python scripts/agent/preview-url.py --pr <number>
 python scripts/ci/check_security_rules.py --staged
 python scripts/ci/check_agent_commit_gates.py --staged
 python scripts/ci/check_test_touches.py --staged
