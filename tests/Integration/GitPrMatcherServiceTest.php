@@ -20,6 +20,33 @@ class GitPrMatcherServiceTest extends TestCase
     {
         self::$db = new Database(getTestDbConfig());
 
+        self::$db->query(
+            "DELETE FROM story_git_links WHERE local_type = 'user_story' AND local_id IN (
+                SELECT us.id
+                FROM user_stories us
+                JOIN projects p ON p.id = us.project_id
+                JOIN organisations o ON o.id = p.org_id
+                WHERE o.name = 'Test Org - GitPrMatcherServiceTest'
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM user_stories WHERE project_id IN (
+                SELECT p.id
+                FROM projects p
+                JOIN organisations o ON o.id = p.org_id
+                WHERE o.name = 'Test Org - GitPrMatcherServiceTest'
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM projects WHERE org_id IN (
+                SELECT id FROM organisations WHERE name = 'Test Org - GitPrMatcherServiceTest'
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM users WHERE org_id IN (
+                SELECT id FROM organisations WHERE name = 'Test Org - GitPrMatcherServiceTest'
+            )"
+        );
         self::$db->query("DELETE FROM organisations WHERE name = 'Test Org - GitPrMatcherServiceTest'");
         self::$db->query("INSERT INTO organisations (name) VALUES (?)", ['Test Org - GitPrMatcherServiceTest']);
         self::$orgId = (int) self::$db->lastInsertId();

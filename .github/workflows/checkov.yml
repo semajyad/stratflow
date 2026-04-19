@@ -9,18 +9,8 @@ name: Checkov IaC Scan
 on:
   push:
     branches: [main]
-    paths:
-      - 'docker/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/**'
-      - '.checkov.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'docker/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/**'
-      - '.checkov.yml'
   schedule:
     # Weekly on Monday at 05:00 UTC — catches new Checkov rules against unchanged IaC
     - cron: '0 5 * * 1'

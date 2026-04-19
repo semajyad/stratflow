@@ -65,36 +65,36 @@ jobs:
           STATUS=$([ "$MERGED" = "true" ] && echo "merged" || echo "closed without merge")
 
           cat > "$HANDOFF_FILE" <<MARKDOWN
-# PR #$PR_NUMBER: $PR_TITLE
+          # PR #$PR_NUMBER: $PR_TITLE
 
-**Status:** $STATUS
-**Branch:** $BRANCH
-**Author:** $AUTHOR
-**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
-$([ -n "$MERGE_COMMIT" ] && echo "**Merge commit:** \`${MERGE_COMMIT:0:8}\`" || echo "")
+          **Status:** $STATUS
+          **Branch:** $BRANCH
+          **Author:** $AUTHOR
+          **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          $([ -n "$MERGE_COMMIT" ] && echo "**Merge commit:** \`${MERGE_COMMIT:0:8}\`" || echo "")
 
-## Description
+          ## Description
 
-$PR_BODY
+          $PR_BODY
 
-## Commits
+          ## Commits
 
-\`\`\`
-$COMMITS
-\`\`\`
+          \`\`\`
+          $COMMITS
+          \`\`\`
 
-## Key decisions (auto-extracted from commit trailers)
+          ## Key decisions (auto-extracted from commit trailers)
 
-$(git log --format='%B' "${BASE_SHA}..${HEAD_SHA}" 2>/dev/null | \
-  grep -E '^(Decision|Rationale|Trade-off|Note|Observation):' | \
-  sed 's/^/- /' || echo "_None recorded in commit trailers._")
+          $(git log --format='%B' "${BASE_SHA}..${HEAD_SHA}" 2>/dev/null | \
+            grep -E '^(Decision|Rationale|Trade-off|Note|Observation):' | \
+            sed 's/^/- /' || echo "_None recorded in commit trailers._")
 
-## Reviewers
+          ## Reviewers
 
-$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews \
-  --jq '[.[] | select(.state == "APPROVED") | "- \(.user.login) approved"] | join("\n")' \
-  2>/dev/null || echo "_Review data unavailable._")
-MARKDOWN
+          $(gh api repos/$REPO/pulls/$PR_NUMBER/reviews \
+            --jq '[.[] | select(.state == "APPROVED") | "- \(.user.login) approved"] | join("\n")' \
+            2>/dev/null || echo "_Review data unavailable._")
+          MARKDOWN
 
           echo "Handoff written to $HANDOFF_FILE"
 
