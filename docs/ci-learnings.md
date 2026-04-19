@@ -277,7 +277,7 @@ if s["fail"] == 0 and s["warn"] == 0:
 
 ---
 
-## [2026-04-19] ci — CodeRabbit APPROVED blocks auto-merge — use @coderabbitai approve when only duplicate findings remain
+## [2026-04-19] ci — CodeRabbit COMMENTED prevents auto-merge — use @coderabbitai approve when only duplicate findings remain
 
 **Symptom:** PR stays BLOCKED after all CI checks pass and all CHANGES_REQUESTED are dismissed. mergeStateStatus never becomes CLEAN. CodeRabbit posts COMMENTED state (not CHANGES_REQUESTED) but never APPROVEs.
 

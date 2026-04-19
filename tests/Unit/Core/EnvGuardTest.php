@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace StratFlow\Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use StratFlow\Core\EnvGuard;
@@ -33,27 +34,44 @@ class EnvGuardTest extends TestCase
         }
     }
 
-    #[Test]
-    public function noOpInDevelopment(): void
+    /** @return array<string,array{string}> */
+    public static function nonProductionEnvProvider(): array
     {
-        unset($_ENV['AUDIT_HMAC_KEY'], $_ENV['TOKEN_ENCRYPTION_KEYS'], $_ENV['TOKEN_ENCRYPTION_KEY']);
-        EnvGuard::assertProductionRequirements('development');
-        $this->assertTrue(true);
+        return [
+            'development' => ['development'],
+            'test'        => ['test'],
+            'staging'     => ['staging'],
+        ];
     }
 
     #[Test]
-    public function noOpInTest(): void
+    #[DataProvider('nonProductionEnvProvider')]
+    public function noOpForNonProductionEnvironments(string $env): void
     {
         unset($_ENV['AUDIT_HMAC_KEY'], $_ENV['TOKEN_ENCRYPTION_KEYS'], $_ENV['TOKEN_ENCRYPTION_KEY']);
-        EnvGuard::assertProductionRequirements('test');
+        EnvGuard::assertProductionRequirements($env);
         $this->assertTrue(true);
     }
 
-    #[Test]
-    public function noOpInStagingWithMissingKeys(): void
+    /** @return array<string,array{string}> */
+    public static function productionEnvVariantsProvider(): array
     {
-        unset($_ENV['AUDIT_HMAC_KEY'], $_ENV['TOKEN_ENCRYPTION_KEYS'], $_ENV['TOKEN_ENCRYPTION_KEY']);
-        EnvGuard::assertProductionRequirements('staging');
+        return [
+            'lowercase'  => ['production'],
+            'mixed-case' => ['Production'],
+            'uppercase'  => ['PRODUCTION'],
+            'padded'     => [' production '],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('productionEnvVariantsProvider')]
+    public function treatsAllProductionCasingVariantsAsProduction(string $env): void
+    {
+        $_ENV['AUDIT_HMAC_KEY']        = 'test-hmac-key';
+        $_ENV['TOKEN_ENCRYPTION_KEYS'] = 'kid1:' . base64_encode(str_repeat('a', 32));
+
+        EnvGuard::assertProductionRequirements($env);
         $this->assertTrue(true);
     }
 
@@ -70,7 +88,7 @@ class EnvGuardTest extends TestCase
     #[Test]
     public function acceptsLegacyEncryptionKeyInProduction(): void
     {
-        $_ENV['AUDIT_HMAC_KEY']      = 'test-hmac-key';
+        $_ENV['AUDIT_HMAC_KEY']       = 'test-hmac-key';
         $_ENV['TOKEN_ENCRYPTION_KEY'] = str_repeat('b', 32);
         unset($_ENV['TOKEN_ENCRYPTION_KEYS']);
 
@@ -90,10 +108,56 @@ class EnvGuardTest extends TestCase
     }
 
     #[Test]
+    public function throwsWhenAuditKeyIsEmptyStringInProduction(): void
+    {
+        $_ENV['AUDIT_HMAC_KEY']        = '';
+        $_ENV['TOKEN_ENCRYPTION_KEYS'] = 'kid1:' . base64_encode(str_repeat('a', 32));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/AUDIT_HMAC_KEY/');
+        EnvGuard::assertProductionRequirements('production');
+    }
+
+    #[Test]
+    public function throwsWhenAuditKeyIsWhitespaceOnlyInProduction(): void
+    {
+        $_ENV['AUDIT_HMAC_KEY']        = '   ';
+        $_ENV['TOKEN_ENCRYPTION_KEYS'] = 'kid1:' . base64_encode(str_repeat('a', 32));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/AUDIT_HMAC_KEY/');
+        EnvGuard::assertProductionRequirements('production');
+    }
+
+    #[Test]
     public function throwsWhenEncryptionKeyMissingInProduction(): void
     {
         $_ENV['AUDIT_HMAC_KEY'] = 'test-hmac-key';
         unset($_ENV['TOKEN_ENCRYPTION_KEYS'], $_ENV['TOKEN_ENCRYPTION_KEY']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/TOKEN_ENCRYPTION_KEYS/');
+        EnvGuard::assertProductionRequirements('production');
+    }
+
+    #[Test]
+    public function throwsWhenEncryptionKeyIsEmptyStringInProduction(): void
+    {
+        $_ENV['AUDIT_HMAC_KEY']        = 'test-hmac-key';
+        $_ENV['TOKEN_ENCRYPTION_KEYS'] = '';
+        $_ENV['TOKEN_ENCRYPTION_KEY']  = '';
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/TOKEN_ENCRYPTION_KEYS/');
+        EnvGuard::assertProductionRequirements('production');
+    }
+
+    #[Test]
+    public function throwsWhenEncryptionKeyIsWhitespaceOnlyInProduction(): void
+    {
+        $_ENV['AUDIT_HMAC_KEY']        = 'test-hmac-key';
+        $_ENV['TOKEN_ENCRYPTION_KEYS'] = '   ';
+        $_ENV['TOKEN_ENCRYPTION_KEY']  = '   ';
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/TOKEN_ENCRYPTION_KEYS/');

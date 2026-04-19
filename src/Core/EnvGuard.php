@@ -32,18 +32,18 @@ final class EnvGuard
      */
     public static function assertProductionRequirements(string $appEnv): void
     {
-        if ($appEnv !== 'production') {
+        if (strtolower(trim($appEnv)) !== 'production') {
             return;
         }
 
         $missing = [];
 
-        if ((string) ($_ENV['AUDIT_HMAC_KEY'] ?? '') === '') {
+        if (trim((string) ($_ENV['AUDIT_HMAC_KEY'] ?? '')) === '') {
             $missing[] = 'AUDIT_HMAC_KEY';
         }
 
-        $hasEncKey = (string) ($_ENV['TOKEN_ENCRYPTION_KEYS'] ?? '') !== ''
-                  || (string) ($_ENV['TOKEN_ENCRYPTION_KEY']  ?? '') !== '';
+        $hasEncKey = trim((string) ($_ENV['TOKEN_ENCRYPTION_KEYS'] ?? '')) !== ''
+                  || trim((string) ($_ENV['TOKEN_ENCRYPTION_KEY']  ?? '')) !== '';
         if (!$hasEncKey) {
             $missing[] = 'TOKEN_ENCRYPTION_KEYS';
         }
