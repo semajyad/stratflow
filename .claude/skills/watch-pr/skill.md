@@ -128,7 +128,7 @@ python scripts/agent/safe-commit.py -m "fix(scope): <description>" <files>
 git push origin <branch>
 ```
 
-- Dismiss any stale CHANGES_REQUESTED reviews (they are now stale after the push anyway — Step 6A).
+- Dismiss any stale CHANGES_REQUESTED reviews (they are now stale after the push anyway — Step 6D).
 - Post `@coderabbitai review` to restart the review clock.
 - Return to Step 2.
 
