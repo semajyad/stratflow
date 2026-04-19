@@ -127,6 +127,7 @@ python scripts/agent/safe-commit.py -m "fix(scope): <description>" <files>
 ```bash
 git push origin <branch>
 ```
+
 - Dismiss any stale CHANGES_REQUESTED reviews (they are now stale after the push anyway — Step 6A).
 - Post `@coderabbitai review` to restart the review clock.
 - Return to Step 2.
@@ -195,7 +196,7 @@ git push origin <branch>
 
 ```bash
 for id in $(gh api repos/semajyad/stratflow/pulls/<N>/reviews \
-  --jq '.[] | select(.state == "CHANGES_REQUESTED" and .user.type == "Bot") | .id'); do
+  --jq '.[] | select(.state == "CHANGES_REQUESTED" and (.user.login | ascii_downcase) == "coderabbitai[bot]") | .id'); do
   gh api "repos/semajyad/stratflow/pulls/<N>/reviews/${id}/dismissals" \
     --method PUT \
     --field message="All findings addressed or declined with reason in latest commit." \
