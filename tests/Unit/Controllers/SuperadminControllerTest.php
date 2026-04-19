@@ -828,6 +828,12 @@ class SuperadminControllerTest extends ControllerTestCase
         $this->ctrl()->exportAuditLogs();
 
         $this->assertNotNull($this->response->downloadContent);
+        $this->assertMatchesRegularExpression(
+            '/^Timestamp,Event,User,Email,"?IP Address"?,Details/',
+            $this->response->downloadContent
+        );
+        $this->assertStringContainsString('Alice', $this->response->downloadContent);
+        $this->assertStringNotContainsString('Deprecated', $this->response->downloadContent);
         $this->assertStringContainsString('.csv', $this->response->downloadFilename ?? '');
     }
 

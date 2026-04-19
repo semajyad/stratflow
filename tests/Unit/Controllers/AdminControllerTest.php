@@ -1492,7 +1492,12 @@ class AdminControllerTest extends ControllerTestCase
         $this->ctrl($r)->exportAuditLogs();
 
         $this->assertNotNull($this->response->downloadContent);
+        $this->assertMatchesRegularExpression(
+            '/^Timestamp,Event,User,Email,"?IP Address"?,Details/',
+            $this->response->downloadContent
+        );
         $this->assertStringContainsString('Bob', $this->response->downloadContent);
+        $this->assertStringNotContainsString('Deprecated', $this->response->downloadContent);
     }
 
     // =========================================================================

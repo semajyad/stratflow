@@ -5,6 +5,7 @@
   "scripts": {
     "test:fast": "npx playwright test --project=fast",
     "test:full": "npx playwright test --project=fast --project=full",
+    "test:nightly": "npx playwright test --project=fast --project=full --project=firefox --project=webkit --project=mobile-chrome",
     "test": "npx playwright test"
   },
   "devDependencies": {

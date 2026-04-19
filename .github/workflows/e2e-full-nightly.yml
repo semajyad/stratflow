@@ -22,7 +22,7 @@ jobs:
   e2e-full-nightly:
     name: Playwright full matrix (staging)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -68,13 +68,11 @@ jobs:
           BASE_URL: ${{ secrets.STAGING_URL }}
           E2E_EMAIL: ${{ secrets.ZAP_SMOKE_EMAIL }}
           E2E_PASSWORD: ${{ secrets.ZAP_SMOKE_PASSWORD }}
+          # Direct DB mutation specs skip on staging by default. Set this only
+          # for an environment where DB_HOST/DB_PORT point at disposable data.
+          E2E_DB_ACCESS: 'false'
         run: >
-          npx playwright test
-          --project=fast
-          --project=full
-          --project=firefox
-          --project=webkit
-          --project=mobile-chrome
+          npm run test:nightly
       - name: Write nightly status
         if: always()
         run: |

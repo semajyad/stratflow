@@ -106,24 +106,24 @@ jobs:
             fi
 
             cat <<PROMPT
-You are fixing CodeRabbit review findings on PR #${PR_NUMBER} (branch: ${PR_BRANCH}) of the StratFlow repository.
-${RETRY_NOTE}
+          You are fixing CodeRabbit review findings on PR #${PR_NUMBER} (branch: ${PR_BRANCH}) of the StratFlow repository.
+          ${RETRY_NOTE}
 
-CodeRabbit review body:
-${REVIEW_BODY}
+          CodeRabbit review body:
+          ${REVIEW_BODY}
 
-Inline comments (JSON — path, line, body):
-${COMMENTS}
+          Inline comments (JSON — path, line, body):
+          ${COMMENTS}
 
-Instructions:
-1. For each finding, read the relevant file and apply the fix CodeRabbit suggested.
-2. Only fix what CodeRabbit flagged — do not refactor unrelated code.
-3. After all fixes, run: php -l <file> on any changed PHP files to verify syntax.
-4. Do not commit — just make the file changes. The next step will commit and push.
-5. If a finding is a false positive that doesn't need a code change, skip it.
+          Instructions:
+          1. For each finding, read the relevant file and apply the fix CodeRabbit suggested.
+          2. Only fix what CodeRabbit flagged — do not refactor unrelated code.
+          3. After all fixes, run: php -l <file> on any changed PHP files to verify syntax.
+          4. Do not commit — just make the file changes. The next step will commit and push.
+          5. If a finding is a false positive that doesn't need a code change, skip it.
 
-Make the fixes now.
-PROMPT
+          Make the fixes now.
+          PROMPT
           }
 
           MAX_ATTEMPTS=2
