@@ -42,49 +42,25 @@ async function postJson(page, url, body) {
 
 test.describe('Board Review button — visible on subscription-gated pages', () => {
 
-  test('button appears on /app/upload (summary screen)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/upload`);
-    await expect(page.locator('body')).not.toContainText(/500|Fatal error|exception/i);
-    const btn = page.locator('button.board-review-trigger');
-    if (await btn.count() > 0) {
-      await expect(btn.first()).toBeVisible();
-      expect(await btn.first().getAttribute('data-screen')).toBe('summary');
-    }
-  });
+  for (const { path, screen } of [
+    { path: '/app/upload',       screen: 'summary'      },
+    { path: '/app/diagram',      screen: 'roadmap'      },
+    { path: '/app/work-items',   screen: 'work_items'   },
+    { path: '/app/user-stories', screen: 'user_stories' },
+  ]) {
+    test(`button appears on ${path} (${screen} screen)`, async ({ page }) => {
+      await loginAsAdmin(page);
+      await page.goto(`${BASE}${path}`);
+      await expect(page.locator('body')).not.toContainText(/500|Fatal error|exception/i);
 
-  test('button appears on /app/diagram (roadmap screen)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/diagram`);
-    await expect(page.locator('body')).not.toContainText(/500|Fatal error|exception/i);
-    const btn = page.locator('button.board-review-trigger');
-    if (await btn.count() > 0) {
-      await expect(btn.first()).toBeVisible();
-      expect(await btn.first().getAttribute('data-screen')).toBe('roadmap');
-    }
-  });
+      // Pages redirect to /app/home when no project exists in seed — skip button check
+      if (!page.url().includes(path)) return;
 
-  test('button appears on /app/work-items (work_items screen)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/work-items`);
-    await expect(page.locator('body')).not.toContainText(/500|Fatal error|exception/i);
-    const btn = page.locator('button.board-review-trigger');
-    if (await btn.count() > 0) {
+      const btn = page.locator('button.board-review-trigger');
       await expect(btn.first()).toBeVisible();
-      expect(await btn.first().getAttribute('data-screen')).toBe('work_items');
-    }
-  });
-
-  test('button appears on /app/user-stories (user_stories screen)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto(`${BASE}/app/user-stories`);
-    await expect(page.locator('body')).not.toContainText(/500|Fatal error|exception/i);
-    const btn = page.locator('button.board-review-trigger');
-    if (await btn.count() > 0) {
-      await expect(btn.first()).toBeVisible();
-      expect(await btn.first().getAttribute('data-screen')).toBe('user_stories');
-    }
-  });
+      expect(await btn.first().getAttribute('data-screen')).toBe(screen);
+    });
+  }
 
 });
 

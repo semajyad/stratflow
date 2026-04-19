@@ -67,19 +67,28 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
 
     const json = JSON.parse(res.text);
 
-    // Possible outcomes: AI evaluation succeeded, or subscription gate / project gate
+    // Possible outcomes: AI evaluation succeeded, or known environment gates
     if (res.status === 201) {
-      // Successful AI evaluation — verify response shape
-      expect(json).toHaveProperty('id');
-      expect(json).toHaveProperty('recommendation');
-      // recommendation is an object: {summary, rationale, proposed_changes}
-      expect(json.recommendation).toHaveProperty('summary');
-      expect(json.recommendation).toHaveProperty('rationale');
-      expect(typeof json.recommendation.summary).toBe('string');
-      expect(json.recommendation.summary.length).toBeGreaterThan(10);
+      const reviewId = json.id;
+      try {
+        // Verify response shape
+        expect(json).toHaveProperty('id');
+        expect(json).toHaveProperty('recommendation');
+        // recommendation is an object: {summary, rationale, proposed_changes}
+        expect(json.recommendation).toHaveProperty('summary');
+        expect(json.recommendation).toHaveProperty('rationale');
+        expect(typeof json.recommendation.summary).toBe('string');
+        expect(json.recommendation.summary.length).toBeGreaterThan(10);
+      } finally {
+        // Clean up the pending review so it doesn't pollute seed state
+        const cleanupCsrf = await getCsrfToken(page);
+        await page.request.post(`${BASE}/app/board-review/${reviewId}/reject`, {
+          form: { _csrf_token: cleanupCsrf },
+        }).catch(() => {});
+      }
     } else {
-      // Acceptable failures: 403 (no subscription), 404 (no project), 400 (validation)
-      expect([400, 403, 404]).toContain(res.status);
+      // Only known environment gates are acceptable non-201 outcomes
+      expect([403, 404]).toContain(res.status);
       expect(json).toHaveProperty('error');
     }
   });
@@ -119,7 +128,6 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
 
     const evalJson = JSON.parse(evalRes.text);
 
-    // If the evaluate succeeded (has id), test the reject flow
     if (evalRes.status === 201 && evalJson.id) {
       const reviewId = evalJson.id;
 
@@ -134,9 +142,12 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
       const rejectJson = await rejectRes.json();
       expect(rejectJson).toHaveProperty('status', 'rejected');
       expect(rejectJson).toHaveProperty('id', reviewId);
-    } else {
-      // Subscription not enabled for seed org — skip gracefully
+    } else if ([403, 404].includes(evalRes.status)) {
+      // Known environment gates (no subscription or no project in seed) — skip
       test.skip(true, `Board Review not available (evaluate returned ${evalRes.status})`);
+    } else {
+      // Any other status is an unexpected failure — surface it
+      throw new Error(`Unexpected evaluate status ${evalRes.status}: ${evalRes.text}`);
     }
   });
 

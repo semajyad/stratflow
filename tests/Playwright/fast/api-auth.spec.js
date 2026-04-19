@@ -24,10 +24,8 @@ test.describe('API auth — unauthenticated requests return 401 JSON', () => {
 
   for (const path of ['/api/v1/me', '/api/v1/stories', '/api/v1/projects', '/api/v1/stories/team']) {
     test(`GET ${path} without token → 401 JSON (not HTML redirect)`, async ({ page }) => {
-      await page.goto(`${BASE}/login`); // establishes page context without session
-      await page.evaluate(() => document.cookie.split(';').forEach(c => {
-        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
-      }));
+      await page.goto(`${BASE}/login`);
+      await page.context().clearCookies(); // clearCookies removes HttpOnly cookies too
 
       const res = await fetchApi(page, path, null);
 
