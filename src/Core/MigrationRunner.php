@@ -73,7 +73,7 @@ final class MigrationRunner
     {
         $stmt = $this->pdo->query('SELECT filename, checksum FROM schema_migrations');
         $rows = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
-        return is_array($rows) ? $rows : [];
+        return $rows ?: [];
     }
 
     private function applyMigration(string $name, string $content, string $checksum): void
@@ -82,9 +82,6 @@ final class MigrationRunner
         $statements = array_filter(array_map('trim', explode(';', $sql)));
 
         foreach ($statements as $stmt) {
-            if ($stmt === '') {
-                continue;
-            }
             try {
                 $result = $this->pdo->query($stmt);
                 if ($result instanceof \PDOStatement) {
