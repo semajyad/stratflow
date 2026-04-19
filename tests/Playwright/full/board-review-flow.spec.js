@@ -2,8 +2,10 @@
 /**
  * Board Review — end-to-end flow tests.
  *
- * Runs in the full/nightly suite only. Makes REAL Gemini API calls (1 per test).
- * Limited to 2 tests to keep nightly Gemini spend low.
+ * Runs in the full/nightly suite only. 2 Gemini calls across 3 tests:
+ *   - Test 1 (evaluate work_items): 1 Gemini call
+ *   - Test 2 (invalid screen_context): no Gemini call (fails validation first)
+ *   - Test 3 (reject flow): 1 Gemini call (evaluate to obtain a review id, then reject)
  *
  * Assumes: seed project_id=1 with at least one HL work item.
  */
@@ -128,8 +130,10 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
         form: { _csrf_token: rejectCsrf },
       });
 
-      expect(rejectRes.status()).toBeLessThan(400);
-      await expect(page.locator('body')).not.toContainText(/500|Fatal error/i);
+      expect(rejectRes.status()).toBe(200);
+      const rejectJson = await rejectRes.json();
+      expect(rejectJson).toHaveProperty('status', 'rejected');
+      expect(rejectJson).toHaveProperty('id', reviewId);
     } else {
       // Subscription not enabled for seed org — skip gracefully
       test.skip(true, `Board Review not available (evaluate returned ${evalRes.status})`);
