@@ -1,9 +1,10 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const mysql = require('mysql2/promise');
-const { DB_CONFIG, ADMIN_EMAIL, ADMIN_PASS, REGULAR_EMAIL, REGULAR_PASS } = require('../test-constants');
+const { DB_CONFIG, ADMIN_EMAIL, ADMIN_PASS, REGULAR_EMAIL, REGULAR_PASS, canUseDb } = require('../test-constants');
 
 const BASE           = process.env.BASE_URL || 'http://localhost:8890';
+const HAS_DB_ACCESS  = canUseDb(BASE);
 
 async function loginAs(page, email, password) {
   await page.goto(`${BASE}/login`);
@@ -20,6 +21,7 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   let project2Id;
 
   test.beforeAll(async () => {
+    if (!HAS_DB_ACCESS) return;
     let conn;
     try {
       conn = await mysql.createConnection(DB_CONFIG);
@@ -40,6 +42,7 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   });
 
   test.afterAll(async () => {
+    if (!HAS_DB_ACCESS || !org2Id) return;
     let conn;
     try {
       conn = await mysql.createConnection(DB_CONFIG);
@@ -53,6 +56,7 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   });
 
   test('org 1 user cannot view org 2 diagram by guessing project_id', async ({ page }) => {
+    test.skip(!HAS_DB_ACCESS, 'Direct DB setup is available only for localhost or E2E_DB_ACCESS=true runs.');
     await loginAs(page, ADMIN_EMAIL, ADMIN_PASS);
     await page.goto(`${BASE}/app/diagram?project_id=${project2Id}`);
     await expect(page.locator('body')).not.toContainText('Org2 Secret Project');
@@ -60,6 +64,7 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   });
 
   test('org 1 user cannot view org 2 work items by guessing project_id', async ({ page }) => {
+    test.skip(!HAS_DB_ACCESS, 'Direct DB setup is available only for localhost or E2E_DB_ACCESS=true runs.');
     await loginAs(page, ADMIN_EMAIL, ADMIN_PASS);
     await page.goto(`${BASE}/app/work-items?project_id=${project2Id}`);
     await expect(page.locator('body')).not.toContainText('Org2 Secret Project');
@@ -67,6 +72,7 @@ test.describe('Multi-tenant isolation (IDOR prevention)', () => {
   });
 
   test('regular org 1 user cannot view org 2 upload page for org 2 project', async ({ page }) => {
+    test.skip(!HAS_DB_ACCESS, 'Direct DB setup is available only for localhost or E2E_DB_ACCESS=true runs.');
     await loginAs(page, REGULAR_EMAIL, REGULAR_PASS);
     await page.goto(`${BASE}/app/upload?project_id=${project2Id}`);
     await expect(page).not.toHaveURL(/app\/upload\?project_id=/);

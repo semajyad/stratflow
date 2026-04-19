@@ -961,7 +961,7 @@ class AdminController
             ['type' => 'audit_logs', 'count' => count($logs)]
         );
         $csv = fopen('php://temp', 'r+');
-        fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details']);
+        fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details'], ',', '"', '');
         foreach ($logs as $log) {
             fputcsv($csv, [
                 $log['created_at'],
@@ -970,7 +970,7 @@ class AdminController
                 $log['email'] ?? '',
                 $log['ip_address'],
                 $log['details_json'] ?? '',
-            ]);
+            ], ',', '"', '');
         }
         rewind($csv);
         $content = stream_get_contents($csv);

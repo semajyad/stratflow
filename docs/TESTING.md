@@ -168,4 +168,6 @@ Python helper tests (`scripts/ci/*`) also run in CI via `python -m pytest tests/
 
 Playwright fast E2E runs in `.github/workflows/e2e.yml`. Staging smoke intentionally runs only `fast/healthz.spec.js` and `fast/smoke.spec.js` against `STAGING_URL`, using `E2E_EMAIL`/`E2E_PASSWORD` or the more specific `E2E_ADMIN_*` / `E2E_REGULAR_*` credentials when provided.
 
+The nightly E2E regression suite runs `npm run test:nightly` from `tests/Playwright`, which covers fast Chromium, full Chromium, and fast cross-browser/mobile projects. Full-suite specs should be staging-safe unless they explicitly guard direct DB setup with `canUseDb(BASE_URL)`. Corporate regression coverage lives in `tests/Playwright/full/corporate-regression.spec.js` and covers executive/governance rollups, audit log export, DSAR export, and privileged CSRF rejection.
+
 See `.github/workflows/tests.yml` for the full configuration.

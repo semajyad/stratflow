@@ -1,5 +1,23 @@
 // Shared constants for Playwright globalSetup and globalTeardown
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8890';
+
+function isLocalBaseUrl(baseUrl = BASE_URL) {
+  try {
+    const hostname = new URL(baseUrl).hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch (_) {
+    return false;
+  }
+}
+
+function canUseDb(baseUrl = BASE_URL) {
+  return process.env.E2E_DB_ACCESS === 'true' || isLocalBaseUrl(baseUrl);
+}
+
 module.exports = {
+  BASE_URL,
+  isLocalBaseUrl,
+  canUseDb,
   REGULAR_USER_EMAIL: 'pw_regular@test.invalid',
   REGULAR_USER_HASH: '$2y$12$iu6uq/e8YF48/fBVtgVgvOcavOH1KoGCGLTMfjxRDCy0aZrZgMor6', // bcrypt of "password123" — keep in sync with database/seed.sql
   ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL || process.env.E2E_EMAIL || 'admin@stratflow.test',
