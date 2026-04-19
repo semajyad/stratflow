@@ -38,6 +38,8 @@ Codex should verify:
 - The branch is pushed.
 - A PR exists, or the commit was pushed to an existing PR.
 - CI has been checked.
+- Open issues count is 0 and code-scanning alerts count is 0, or all items are
+  explicitly triaged.
 - Any preview URL needed for a browser check was retrieved with
   `python scripts/agent/preview-url.py --pr <number>`.
 - Generated artifacts such as Playwright reports are not left in the working tree.

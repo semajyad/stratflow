@@ -21,23 +21,34 @@ URL_RE = re.compile(r"https://stratflow-pr-\d+\.up\.railway\.app")
 
 
 def run_gh(args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["gh", *args],
-        cwd=str(REPO_ROOT),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    """Run gh CLI and return a controlled failure instead of raising."""
+    cmd = ["gh", *args]
+    try:
+        return subprocess.run(
+            cmd,
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+    except FileNotFoundError:
+        return subprocess.CompletedProcess(cmd, 127, "", "preview-url: GitHub CLI `gh` is not installed.")
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(cmd, 124, "", "preview-url: GitHub CLI timed out.")
 
 
 def current_pr_number() -> str | None:
     result = run_gh(["pr", "view", "--json", "number"])
     if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr.strip(), file=sys.stderr)
         return None
     try:
         return str(json.loads(result.stdout)["number"])
-    except (KeyError, ValueError, TypeError):
+    except (KeyError, json.JSONDecodeError, TypeError):
+        print("preview-url: failed to parse current PR JSON from GitHub CLI.", file=sys.stderr)
         return None
 
 
@@ -46,7 +57,11 @@ def preview_from_comments(pr_number: str) -> str | None:
     if result.returncode != 0:
         print(result.stderr.strip(), file=sys.stderr)
         return None
-    data = json.loads(result.stdout)
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        print("preview-url: failed to parse PR comments JSON from GitHub CLI.", file=sys.stderr)
+        return None
     comments = data.get("comments", [])
     for comment in reversed(comments):
         body = comment.get("body", "")
