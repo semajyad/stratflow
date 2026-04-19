@@ -66,12 +66,15 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
     const json = JSON.parse(res.text);
 
     // Possible outcomes: AI evaluation succeeded, or subscription gate / project gate
-    if (res.status === 200) {
+    if (res.status === 201) {
       // Successful AI evaluation — verify response shape
       expect(json).toHaveProperty('id');
       expect(json).toHaveProperty('recommendation');
-      expect(typeof json.recommendation).toBe('string');
-      expect(json.recommendation.length).toBeGreaterThan(10);
+      // recommendation is an object: {summary, rationale, proposed_changes}
+      expect(json.recommendation).toHaveProperty('summary');
+      expect(json.recommendation).toHaveProperty('rationale');
+      expect(typeof json.recommendation.summary).toBe('string');
+      expect(json.recommendation.summary.length).toBeGreaterThan(10);
     } else {
       // Acceptable failures: 403 (no subscription), 404 (no project), 400 (validation)
       expect([400, 403, 404]).toContain(res.status);
@@ -115,7 +118,7 @@ test.describe('Board Review — evaluate flow (nightly, real Gemini call)', () =
     const evalJson = JSON.parse(evalRes.text);
 
     // If the evaluate succeeded (has id), test the reject flow
-    if (evalRes.status === 200 && evalJson.id) {
+    if (evalRes.status === 201 && evalJson.id) {
       const reviewId = evalJson.id;
 
       await page.goto(`${BASE}/app/work-items`);
