@@ -1,6 +1,6 @@
 # Testing
 
-StratFlow uses [PHPUnit 11](https://phpunit.de/) for automated testing, with a multi-layer test pyramid running in CI on every PR.
+StratFlow uses [PHPUnit 12](https://phpunit.de/) for automated testing, with a multi-layer test pyramid running in CI on every PR.
 
 ## Running the Test Suite
 
@@ -15,7 +15,12 @@ docker compose exec php composer test:unit
 
 # Run only integration tests
 docker compose exec php composer test:integration
+
+# Apply schema + migrations first, then run integration tests
+docker compose exec php composer test:integration:fresh
 ```
+
+If local integration tests fail with missing tables or columns after new migrations land, run `docker compose exec php composer db:init` or use `test:integration:fresh`. The Docker MySQL volume is persistent, so `docker compose up` does not automatically replay migrations against an existing database.
 
 Coverage measurement requires [pcov](https://github.com/krakjoe/pcov), which is enabled in CI via `shivammathur/setup-php`. It is **not** available in the local Docker image — run coverage in CI or install pcov locally.
 
@@ -29,6 +34,7 @@ Integration (PHPUnit) → tests/Integration/
 E2E (Playwright)   → tests/Playwright/
 Performance (k6)   → tests/performance/
 Security (ZAP)     → tests/zap/
+Python CI helpers  -> tests/Python/
 ```
 
 ### Coverage Targets (line coverage, enforced in CI)
@@ -155,5 +161,9 @@ CI runs on every push/PR to `main` via `.github/workflows/tests.yml` against PHP
 2. PHPUnit full suite with pcov coverage
 3. Coverage gate: overall line coverage ≥ **60%** against the whitelisted `src/` (ratchets up each wave — never decreases)
 4. Mutation testing (Infection) — nightly, `minMsi=70`, scoped via `infection.json`
+
+Python helper tests (`scripts/ci/*`) also run in CI via `python -m pytest tests/Python -q`.
+
+Playwright fast E2E runs in `.github/workflows/e2e.yml`. Staging smoke intentionally runs only `fast/healthz.spec.js` and `fast/smoke.spec.js` against `STAGING_URL`, using `E2E_EMAIL`/`E2E_PASSWORD` or the more specific `E2E_ADMIN_*` / `E2E_REGULAR_*` credentials when provided.
 
 See `.github/workflows/tests.yml` for the full configuration.

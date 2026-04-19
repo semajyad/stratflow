@@ -38,14 +38,23 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           HEAD_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # Detect if this push came from a PR merge (has 2 parents) or is direct
+          # Detect if this push came from a PR merge or squash merge.
           PARENTS=$(git log -1 --format="%P" "$HEAD_SHA" | wc -w | tr -d ' ')
-          if [ "$PARENTS" -lt 2 ] && [[ "$HEAD_MSG" != *"Merge pull request"* ]]; then
-            echo "::error::Direct push to main detected. All changes must go through PRs."
-            echo "::error::Commit: $HEAD_SHA | Message: $(git log -1 --format='%s' "$HEAD_SHA")"
-            exit 1
+          SUBJECT=$(git log -1 --format='%s' "$HEAD_SHA")
+
+          if [ "$PARENTS" -ge 2 ] || [[ "$HEAD_MSG" == *"Merge pull request"* ]]; then
+            echo "Push to main is a merge commit - OK"
+            exit 0
           fi
-          echo "Push to main is a merge commit — OK"
+
+          if [[ "$SUBJECT" =~ \(\#[0-9]+\)$ ]]; then
+            echo "Push to main appears to be a squash-merged PR - OK"
+            exit 0
+          fi
+
+          echo "::error::Direct push to main detected. All changes must go through PRs."
+          echo "::error::Commit: $HEAD_SHA | Message: $SUBJECT"
+          exit 1
 
       - name: Branch naming convention
         if: github.event_name == 'pull_request'

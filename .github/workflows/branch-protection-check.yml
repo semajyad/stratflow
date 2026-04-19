@@ -1,8 +1,8 @@
 name: Branch Protection Assertion
 
-# Runs daily to confirm that required status checks on main haven't drifted.
+# Runs daily to confirm that required status checks on main have not drifted.
 # Alerts via a workflow failure (visible in Actions + GitHub notifications) if
-# any required check is missing.
+# any required check is missing from the active main ruleset.
 
 on:
   workflow_dispatch:
@@ -19,51 +19,39 @@ jobs:
       contents: read
 
     steps:
-      - name: Check required status checks on main
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Check required status checks on main ruleset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          REQUIRED_CHECKS=(
-            "test"
-            "review"
-            "gitleaks"
-            "dependency-review"
-            # "snyk" removed: snyk.yml runs on schedule only and never posts a PR check
-            # context, so listing it here caused the assertion to report a false gap.
-            # Snyk coverage is maintained by the nightly scheduled run + SARIF upload.
-          )
+          mapfile -t REQUIRED_CHECKS < <(grep -Ev '^\s*(#|$)' .github/auto-merge-required.txt)
 
-          PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || FETCH_FAILED=1
+          RULESET_ID=$(gh api "repos/$REPO/rulesets" \
+            --jq '.[] | select(.target == "branch" and .enforcement == "active" and .name == "main-protection") | .id' \
+            | head -n1)
 
-          if [ "${FETCH_FAILED:-0}" = "1" ]; then
-            if echo "$PROTECTION" | grep -qE "403|Upgrade to GitHub Pro|not found"; then
-              echo "::warning::Branch protection rules require GitHub Pro for private repos."
-              echo "Protection is enforced via the auto-merge.yml workflow instead."
-              exit 0
-            else
-              echo "::error::Unexpected gh api failure: $PROTECTION"
-              exit 1
-            fi
+          if [ -z "$RULESET_ID" ]; then
+            echo "::error::Active branch ruleset 'main-protection' was not found."
+            exit 1
           fi
 
-          CONFIGURED=$(echo "$PROTECTION" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          checks = data.get('required_status_checks', {}).get('checks', [])
-          print(' '.join(c['context'] for c in checks))
-          " 2>/dev/null || echo "")
+          CONFIGURED=$(gh api "repos/$REPO/rulesets/$RULESET_ID" \
+            --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' \
+            2>/dev/null || true)
 
           MISSING=()
           for check in "${REQUIRED_CHECKS[@]}"; do
-            if ! echo "$CONFIGURED" | grep -qw "$check"; then
+            if ! echo "$CONFIGURED" | grep -Fxq "$check"; then
               MISSING+=("$check")
             fi
           done
 
           if [ ${#MISSING[@]} -gt 0 ]; then
-            echo "::error::Branch protection missing required checks: ${MISSING[*]}"
-            echo "Go to Settings → Branches → main → Edit to add them."
+            echo "::error::main-protection ruleset is missing required checks: ${MISSING[*]}"
+            echo "Update Settings -> Rules -> Rulesets -> main-protection."
             exit 1
           fi
 
-          echo "✅ All required status checks are configured on main: ${REQUIRED_CHECKS[*]}"
+          echo "All required status checks are configured on main: ${REQUIRED_CHECKS[*]}"

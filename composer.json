@@ -33,9 +33,14 @@
         }
     },
     "scripts": {
+        "db:init": "php scripts/init-db.php",
         "test": "phpunit --configuration tests/phpunit.xml",
         "test:unit": "phpunit --configuration tests/phpunit.xml --testsuite unit",
-        "test:integration": "phpunit --configuration tests/phpunit.xml --testsuite integration"
+        "test:integration": "phpunit --configuration tests/phpunit.xml --testsuite integration",
+        "test:integration:fresh": [
+            "@db:init",
+            "@test:integration"
+        ]
     }
 }
 

@@ -46,6 +46,9 @@ jobs:
   gate:
     name: Pre-deploy gate
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       (github.event_name == 'workflow_dispatch' && inputs.confirm == 'deploy')
@@ -84,6 +87,75 @@ jobs:
             echo "paused=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Wait for required main workflows
+        if: github.event_name == 'workflow_run' && steps.pause-check.outputs.paused != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          REQUIRED_WORKFLOWS=(
+            "Tests"
+            "E2E Tests"
+            "Secret Scan (trufflehog)"
+            "Semgrep PHP"
+            "CodeQL Security Analysis"
+            "Checkov IaC Scan"
+            "Multi-agent guard"
+          )
+
+          DEADLINE=$((SECONDS + 1800))
+
+          while true; do
+            PENDING=()
+            FAILED=()
+
+            for WORKFLOW in "${REQUIRED_WORKFLOWS[@]}"; do
+              RUN_JSON=$(gh run list \
+                --repo "$REPO" \
+                --workflow "$WORKFLOW" \
+                --commit "$HEAD_SHA" \
+                --limit 1 \
+                --json status,conclusion,databaseId,url \
+                --jq '.[0] // empty')
+
+              if [ -z "$RUN_JSON" ]; then
+                PENDING+=("$WORKFLOW (not started)")
+                continue
+              fi
+
+              STATUS=$(echo "$RUN_JSON" | jq -r '.status')
+              CONCLUSION=$(echo "$RUN_JSON" | jq -r '.conclusion // ""')
+              URL=$(echo "$RUN_JSON" | jq -r '.url')
+
+              if [ "$STATUS" != "completed" ]; then
+                PENDING+=("$WORKFLOW ($STATUS)")
+              elif [ "$CONCLUSION" != "success" ]; then
+                FAILED+=("$WORKFLOW ($CONCLUSION) $URL")
+              else
+                echo "$WORKFLOW passed"
+              fi
+            done
+
+            if [ ${#FAILED[@]} -gt 0 ]; then
+              printf '::error::Required workflow failed before deploy: %s\n' "${FAILED[@]}"
+              exit 1
+            fi
+
+            if [ ${#PENDING[@]} -eq 0 ]; then
+              echo "All required workflows passed for $HEAD_SHA"
+              exit 0
+            fi
+
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              printf '::error::Timed out waiting for required workflows: %s\n' "${PENDING[@]}"
+              exit 1
+            fi
+
+            printf 'Waiting for required workflows: %s\n' "${PENDING[*]}"
+            sleep 20
+          done
+
   deploy:
     name: Deploy to Railway (test env)
     needs: gate
@@ -91,6 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: railway-test   # <- set required reviewers here for manual approval
     permissions:
+      actions: write
       contents: read
 
     steps:

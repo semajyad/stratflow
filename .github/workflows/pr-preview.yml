@@ -35,17 +35,18 @@ jobs:
   # it inside a step and surface the result as a job output instead.
   # ─────────────────────────────────────────────────────────────────────────
   precheck:
-    name: Check Railway token presence
+    name: Check Railway configuration
     runs-on: ubuntu-latest
     outputs:
       railway_present: ${{ steps.check.outputs.railway_present }}
     steps:
-      - name: Detect Railway token
+      - name: Detect Railway configuration
         id: check
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          if [ -n "$RAILWAY_TOKEN" ]; then
+          if [ -n "$RAILWAY_TOKEN" ] && [ -n "$RAILWAY_PROJECT_ID" ]; then
             echo "railway_present=true" >> "$GITHUB_OUTPUT"
           else
             echo "railway_present=false" >> "$GITHUB_OUTPUT"
@@ -80,6 +81,11 @@ jobs:
         run: |
           ENV_NAME="pr-$PR_NUMBER"
 
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::RAILWAY_PROJECT_ID secret is required for PR previews."
+            exit 1
+          fi
+
           # Check if environment already exists via GraphQL API
           EXISTING=$(curl -sf \
             -H "Authorization: Bearer $RAILWAY_TOKEN" \
@@ -107,8 +113,8 @@ jobs:
               | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['environmentCreate']['id'])" 2>/dev/null || echo "")
 
             if [ -z "$ENV_ID" ]; then
-              echo "::warning::Could not create Railway environment via GraphQL — falling back to shared staging"
-              echo "environment_id=" >> "$GITHUB_OUTPUT"
+              echo "::error::Could not create Railway environment via GraphQL."
+              exit 1
             else
               echo "Created environment: $ENV_ID"
               echo "environment_id=$ENV_ID" >> "$GITHUB_OUTPUT"
@@ -117,7 +123,6 @@ jobs:
 
       - name: Deploy to PR environment
         id: deploy
-        continue-on-error: true
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_ENVIRONMENT: pr-${{ github.event.pull_request.number }}
@@ -125,8 +130,11 @@ jobs:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          railway up --detach --environment "$RAILWAY_ENVIRONMENT" ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE} 2>/dev/null \
-            || railway up --detach ${RAILWAY_SERVICE:+--service $RAILWAY_SERVICE}  # fallback: no env flag
+          CMD=(railway up --detach --environment "$RAILWAY_ENVIRONMENT")
+          if [ -n "${RAILWAY_SERVICE:-}" ]; then
+            CMD+=(--service "$RAILWAY_SERVICE")
+          fi
+          "${CMD[@]}"
 
           # Construct preview URL (Railway naming convention)
           SLUG=$(echo "$PR_HEAD_REF" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
@@ -149,7 +157,8 @@ jobs:
             fi
             sleep 5
           done
-          echo "::warning::Preview did not become healthy within 120s — tests may fail"
+          echo "::error::Preview did not become healthy within 120s"
+          exit 1
 
       - name: Post preview URL to PR
         env:

@@ -26,6 +26,35 @@ class KrScoringServiceTest extends TestCase
     {
         self::$db = new Database(getTestDbConfig());
 
+        self::$db->query(
+            "DELETE FROM key_result_contributions WHERE org_id IN (
+                SELECT id FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM key_results WHERE org_id IN (
+                SELECT id FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+            )"
+        );
+        self::$db->query("DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'");
+        self::$db->query(
+            "DELETE FROM hl_work_items WHERE project_id IN (
+                SELECT p.id
+                FROM projects p
+                JOIN organisations o ON o.id = p.org_id
+                WHERE o.name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM projects WHERE org_id IN (
+                SELECT id FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+            )"
+        );
+        self::$db->query(
+            "DELETE FROM users WHERE org_id IN (
+                SELECT id FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+            )"
+        );
         self::$db->query("DELETE FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')");
 
         self::$db->query("INSERT INTO organisations (name) VALUES (?)", ['Test Org - KrScoringA']);

@@ -2,6 +2,20 @@ const mysql = require('mysql2/promise');
 const { REGULAR_USER_EMAIL, DB_CONFIG } = require('./test-constants');
 
 async function globalTeardown() {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:8890';
+  let hostname;
+  try {
+    hostname = new URL(baseUrl).hostname;
+  } catch (err) {
+    console.error(`[globalTeardown] Invalid BASE_URL: ${baseUrl}`);
+    return;
+  }
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  if (!isLocal) {
+    console.log('[globalTeardown] staging URL detected - skipping local DB teardown');
+    return;
+  }
+
   let conn;
   try {
     conn = await mysql.createConnection(DB_CONFIG);

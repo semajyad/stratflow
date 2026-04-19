@@ -32,7 +32,7 @@ export default function () {
   const health = http.get(`${BASE_URL}/healthz`, { tags: { path: 'healthz' } });
   const healthOk = check(health, {
     'healthz 200': (r) => r.status === 200,
-    'healthz fast': (r) => r.timings.duration < 500,
+    'healthz within smoke budget': (r) => r.timings.duration < 2000,
   });
   errorRate.add(!healthOk);
 

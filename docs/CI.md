@@ -43,25 +43,29 @@ Authoritative reference for the CI/CD pipeline. If you observe unexpected behavi
 
 ## Required CI Checks (merge gate)
 
-Managed in `.github/auto-merge-required.txt`. Only these checks must pass before auto-merge. Everything else is advisory.
+Managed in `.github/auto-merge-required.txt` and mirrored by the active GitHub
+ruleset `main-protection`. These exact displayed check contexts must pass before
+auto-merge and before main can advance.
 
-| Check | Workflow | Target |
-|-------|----------|--------|
-| `unit` | tests.yml | <45s |
-| `integration` | tests.yml | <2.5 min |
-| `e2e-fast` | e2e.yml | <5 min |
-| `PHPStan` | tests.yml | 0 errors |
-| `test-touch-check` | tests.yml | all src/ changes have tests |
-| `codecov/patch` | codecov | ≥80% on new code |
+| Check context | Workflow | Purpose |
+|---------------|----------|---------|
+| `PHPUnit unit (PHP 8.4)` | tests.yml | PHP unit suite |
+| `PHPUnit integration (PHP 8.4)` | tests.yml | DB/service integration suite |
+| `Test-touch gate` | tests.yml | src changes include matching tests |
+| `Python CI helper tests` | tests.yml | Python helper scripts stay runnable |
+| `Playwright (fast ? Chromium)` | e2e.yml | Fast browser smoke path |
+| `Multi-agent guard` | multi-agent-guard.yml | Branch/claim checks and main push guard |
+| `trufflehog` | secret-scan.yml | Secret scan |
+| `Semgrep (PR)` | semgrep.yml | PHP SAST scan |
+| `Analyze JavaScript` | codeql.yml | CodeQL analysis |
+| `Checkov IaC` | checkov.yml | Infrastructure scan |
 
-**Advisory (not merge-blocking):**
-- `Dependency Review` — GitHub built-in
-- `CodeRabbit Review` — findings auto-fixed by `coderabbit-autofix.yml`
-- All nightly jobs (mutation, perf, security scans)
+Nightly-only jobs (mutation, perf, Dependency Review, CodeRabbit Review) remain
+advisory unless they are promoted into `.github/auto-merge-required.txt` and the
+ruleset.
 
-To add a new required check: add its exact name (as shown in GitHub UI) to `.github/auto-merge-required.txt`.
-
----
+To add a new required check: add its exact name (as shown in GitHub UI) to
+`.github/auto-merge-required.txt`, then update the `main-protection` ruleset.
 
 ## Nightly Schedule (UTC)
 
@@ -161,6 +165,11 @@ Retry budget: 2. Exhaustion → `self-heal-failed` label + ntfy HIGH.
 ---
 
 ## Deploy & Rollback
+
+Automatic deploys wait for the same commit SHA to pass the required main
+workflows before Railway receives a deployment: Tests, E2E Tests, secret scan,
+Semgrep, CodeQL, Checkov, and the multi-agent guard. Manual dispatch remains
+available for controlled overrides.
 
 **Trigger:** Tests pass on main, or `workflow_dispatch` with `confirm: deploy`.
 
