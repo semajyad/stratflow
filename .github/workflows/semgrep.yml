@@ -9,6 +9,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+    branches: [main]
   schedule:
     # Nightly at 13:30 UTC (after mutation testing, before Shannon at 14:00)
     - cron: '30 13 * * *'
@@ -49,6 +51,10 @@ jobs:
               echo "targets=$CHANGED" >> "$GITHUB_OUTPUT"
               echo "no_php_changes=false" >> "$GITHUB_OUTPUT"
             fi
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            # Merge queue: required check must run against the merge-group commit.
+            echo "targets=src/" >> "$GITHUB_OUTPUT"
+            echo "no_php_changes=false" >> "$GITHUB_OUTPUT"
           else
             # Push/nightly: full src/ scan
             echo "targets=src/" >> "$GITHUB_OUTPUT"
@@ -68,8 +74,18 @@ jobs:
             --timeout 300 \
             $SEMGREP_TARGETS
 
+      - name: Run Semgrep (merge queue)
+        if: steps.scope.outputs.no_php_changes != 'true' && github.event_name == 'merge_group'
+        run: |
+          semgrep scan \
+            --config "p/php" \
+            --config "p/owasp-top-ten" \
+            --error \
+            --timeout 300 \
+            src/
+
       - name: Run Semgrep and emit SARIF (nightly / push to main)
-        if: steps.scope.outputs.no_php_changes != 'true' && github.event_name != 'pull_request'
+        if: steps.scope.outputs.no_php_changes != 'true' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
         run: |
           semgrep scan \
             --config "p/php" \
@@ -80,7 +96,7 @@ jobs:
             src/ || true
 
       - name: Upload SARIF to GitHub Security tab
-        if: steps.scope.outputs.no_php_changes != 'true' && github.event_name != 'pull_request' && always()
+        if: steps.scope.outputs.no_php_changes != 'true' && github.event_name != 'pull_request' && github.event_name != 'merge_group' && always()
         uses: github/codeql-action/upload-sarif@5c8a8a642e79153f5d047b10ec1cba1d1cc65699  # v3
         with:
           sarif_file: semgrep-results.sarif

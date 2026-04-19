@@ -59,14 +59,17 @@ auto-merge and before main can advance.
 | `Semgrep (PR)` | semgrep.yml | PHP SAST scan |
 | `Analyze JavaScript` | codeql.yml | CodeQL analysis |
 | `Checkov IaC` | checkov.yml | Infrastructure scan |
+| `dependency-review` | dependency-review.yml | PR dependency vulnerability diff / merge-queue Composer audit |
+| `SBOM (Syft) + Grype CVE scan` | sbom.yml | Installed dependency SBOM and critical CVE scan |
 
 `PHPStan` and coverage are enforced inside the unit job rather than as separate
-required check contexts. Nightly-only jobs (mutation, perf, Dependency Review,
-CodeRabbit Review) remain advisory unless they are promoted into
-`.github/auto-merge-required.txt` and the ruleset.
+required check contexts. Nightly-only jobs (mutation, perf, CodeRabbit Review)
+remain advisory unless they are promoted into `.github/auto-merge-required.txt`
+and the ruleset.
 
 To add a new required check: add its exact name (as shown in GitHub UI) to
-`.github/auto-merge-required.txt`, then update the `main-protection` ruleset.
+`.github/auto-merge-required.txt`, ensure the owning workflow has a
+`merge_group` trigger, then update the `main-protection` ruleset.
 
 ## Nightly Schedule (UTC)
 
@@ -79,7 +82,7 @@ To add a new required check: add its exact name (as shown in GitHub UI) to
 | 14:00 | `security-shannon.yml` | Shannon AI pen test against staging |
 | 15:00 | `snyk.yml` | Snyk PHP dependency CVE scan |
 | 16:00 | `security-zap.yml` | OWASP ZAP authenticated baseline scan |
-| 16:30 | `e2e-full-nightly.yml` | Playwright full matrix against staging |
+| 16:30 | `e2e-full-nightly.yml` | Playwright full matrix against staging and disposable DB |
 | Sun 20:00 | `performance-load.yml` | k6 50-VU peak load (weekly) |
 | 17:00 | `nightly-triage.yml` | Aggregate, open issues, ntfy on NEW failures |
 | 17:30 | `morning-summary.yml` | Single ntfy (SILENT if all green) |
@@ -97,6 +100,11 @@ To add a new required check: add its exact name (as shown in GitHub UI) to
 4. PR is not a draft.
 
 **Dependabot:** auto-approved and merged when required checks pass.
+
+**CodeRabbit:** if the latest CodeRabbit review is `COMMENTED` with no approval
+and no active `CHANGES_REQUESTED`, auto-merge posts a one-time
+`@coderabbitai approve` nudge so the required review gate can clear when no
+blocking findings remain.
 
 **Audit trail:** Every run posts a PR comment explaining why it did or didn't merge.
 

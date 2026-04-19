@@ -97,7 +97,12 @@ jobs:
              | group_by(.user.login)[] | max_by(.id)
              | select(.state == "APPROVED") | .user.login' -r | wc -l | tr -d ' ')
 
+          CODERABBIT_STATE=$(echo "$REVIEWS_RAW" | jq -r \
+            '[.[] | select(.user.login == "coderabbitai[bot]" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "COMMENTED" or .state == "DISMISSED"))]
+             | sort_by(.id) | last | .state // ""')
+
           echo "Reviews: $APPROVED approved, $CHANGES_REQUESTED requesting changes"
+          echo "Latest CodeRabbit state: ${CODERABBIT_STATE:-none}"
 
           # ── CHANGES_REQUESTED: disable auto-merge ────────────────────────────
           if [ "$CHANGES_REQUESTED" -gt 0 ]; then
@@ -111,7 +116,24 @@ jobs:
 
           # ── No approval yet ───────────────────────────────────────────────────
           if [ "$APPROVED" -eq 0 ]; then
-            echo "No approval yet — nothing to do"
+            if [ "$CODERABBIT_STATE" = "COMMENTED" ]; then
+              COMMENTS_RAW=$(gh api repos/$REPO/issues/$PR/comments --paginate)
+              APPROVE_NUDGE_EXISTS=$(echo "$COMMENTS_RAW" | jq \
+                '[.[] | select(.body | contains("<!-- coderabbit-approve-nudge -->"))] | length')
+              if [ "$APPROVE_NUDGE_EXISTS" -eq 0 ]; then
+                printf '%s\n' \
+                  '<!-- coderabbit-approve-nudge -->' \
+                  '@coderabbitai approve' \
+                  '' \
+                  'All actionable CodeRabbit findings appear resolved, and the latest CodeRabbit review is COMMENTED rather than APPROVED. Please approve this PR if no blocking findings remain so the required review gate can clear.' \
+                  > /tmp/coderabbit-approve-nudge.md
+                gh pr comment $PR --repo $REPO --body-file /tmp/coderabbit-approve-nudge.md
+                echo "Requested explicit CodeRabbit approval after COMMENTED-only review"
+              else
+                echo "CodeRabbit approval nudge already exists - not posting again"
+              fi
+            fi
+            echo "No approval yet - nothing to do"
             exit 0
           fi
 

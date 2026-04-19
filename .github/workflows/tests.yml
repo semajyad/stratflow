@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+    branches: [main]
   workflow_dispatch:
     inputs:
       reason:
@@ -310,15 +312,8 @@ jobs:
           echo "GROWTHBOOK_API_HOST=" >> .env
           echo "GROWTHBOOK_CLIENT_KEY=" >> .env
 
-      - name: Initialize database
-        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
-
-      - name: Run migrations
-        run: |
-          for f in database/migrations/*.sql; do
-            echo "Running $f..."
-            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
-          done
+      - name: Initialize database and migrations
+        run: php scripts/init-db.php
 
       - name: Run integration tests
         run: |
@@ -468,15 +463,8 @@ jobs:
           echo "UPLOAD_MAX_SIZE=52428800" >> .env
           echo "SESSION_DRIVER=file" >> .env
 
-      - name: Initialize database
-        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
-
-      - name: Run migrations
-        run: |
-          for f in database/migrations/*.sql; do
-            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" \
-              || echo "::warning::Migration $f failed (may be already applied)"
-          done
+      - name: Initialize database and migrations
+        run: php scripts/init-db.php
 
       - name: Seed database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/seed.sql

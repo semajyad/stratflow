@@ -44,9 +44,59 @@ jobs:
             fi
           done
 
+          UNEXPECTED=()
+          while IFS= read -r check; do
+            [ -z "$check" ] && continue
+            if ! printf '%s\n' "${REQUIRED_CHECKS[@]}" | grep -Fxq "$check"; then
+              UNEXPECTED+=("$check")
+            fi
+          done <<< "$CONFIGURED"
+
           if [ ${#MISSING[@]} -gt 0 ]; then
             echo "::error::main-protection ruleset is missing required checks: ${MISSING[*]}"
             echo "Update Settings -> Rules -> Rulesets -> main-protection."
+            exit 1
+          fi
+
+          if [ ${#UNEXPECTED[@]} -gt 0 ]; then
+            echo "::error::main-protection ruleset has required checks not listed in .github/auto-merge-required.txt: ${UNEXPECTED[*]}"
+            echo "Update .github/auto-merge-required.txt or remove the unexpected ruleset checks."
+            exit 1
+          fi
+
+          declare -A REQUIRED_WORKFLOWS=(
+            ["PHPUnit unit (PHP 8.4)"]=".github/workflows/tests.yml"
+            ["PHPUnit integration (PHP 8.4)"]=".github/workflows/tests.yml"
+            ["Test-touch gate"]=".github/workflows/tests.yml"
+            ["Python CI helper tests"]=".github/workflows/tests.yml"
+            ["Playwright (fast — Chromium)"]=".github/workflows/e2e.yml"
+            ["Multi-agent guard"]=".github/workflows/multi-agent-guard.yml"
+            ["trufflehog"]=".github/workflows/secret-scan.yml"
+            ["Semgrep (PR)"]=".github/workflows/semgrep.yml"
+            ["Analyze JavaScript"]=".github/workflows/codeql.yml"
+            ["Checkov IaC"]=".github/workflows/checkov.yml"
+            ["dependency-review"]=".github/workflows/dependency-review.yml"
+            ["SBOM (Syft) + Grype CVE scan"]=".github/workflows/sbom.yml"
+          )
+
+          MERGE_GROUP_MISSING=()
+          MISSING_WORKFLOW_MAPPINGS=()
+          for check in "${REQUIRED_CHECKS[@]}"; do
+            wf="${REQUIRED_WORKFLOWS[$check]:-}"
+            if [ -z "$wf" ]; then
+              MISSING_WORKFLOW_MAPPINGS+=("$check -> MISSING_MAPPING")
+            elif ! grep -q 'merge_group:' "$wf"; then
+              MERGE_GROUP_MISSING+=("$check -> $wf")
+            fi
+          done
+
+          if [ ${#MISSING_WORKFLOW_MAPPINGS[@]} -gt 0 ]; then
+            echo "::error::Required check(s) missing REQUIRED_WORKFLOWS mapping: ${MISSING_WORKFLOW_MAPPINGS[*]}"
+            exit 1
+          fi
+
+          if [ ${#MERGE_GROUP_MISSING[@]} -gt 0 ]; then
+            echo "::error::Required check workflow(s) missing merge_group trigger: ${MERGE_GROUP_MISSING[*]}"
             exit 1
           fi
 
