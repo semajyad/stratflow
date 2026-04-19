@@ -24,7 +24,7 @@ from pathlib import Path
 
 # === Constants ===
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / ".github" / "agent-ledger.json"
 HANDOFFS_DIR = REPO_ROOT / "docs" / "agent-handoffs"
 STALE_HOURS = 4
@@ -87,6 +87,38 @@ def save_ledger(ledger: dict) -> None:
     with open(LEDGER_PATH, "w", encoding="utf-8") as f:
         json.dump(ledger, f, indent=2)
         f.write("\n")
+
+
+def install_hooks() -> None:
+    """Install git hooks using sh/Git Bash when available."""
+    install_script = REPO_ROOT / "scripts" / "install-hooks.sh"
+    if not install_script.exists():
+        return
+
+    candidates = ["sh"]
+    if os.name == "nt":
+        candidates.extend([
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files (x86)\Git\bin\bash.exe",
+        ])
+
+    for shell in candidates:
+        try:
+            result = subprocess.run(
+                [shell, str(install_script), "--quiet"],
+                cwd=str(REPO_ROOT),
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            continue
+        if result.returncode == 0:
+            print("Git hooks installed.")
+            return
+        print(f"Warning: install-hooks.sh failed with {shell}: {result.stderr.strip()}", file=sys.stderr)
+        return
+
+    print("Warning: no sh/Git Bash found; git hooks were not installed.", file=sys.stderr)
 
 
 # === Recovery scan ===
@@ -280,18 +312,7 @@ def main() -> None:
     print("=== StratFlow Agent Session Start ===")
 
     # 0. Install/refresh git hooks from scripts/hooks/
-    install_script = REPO_ROOT / "scripts" / "install-hooks.sh"
-    if install_script.exists():
-        result = subprocess.run(
-            ["sh", str(install_script), "--quiet"],
-            cwd=str(REPO_ROOT),
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            print("Git hooks installed.")
-        else:
-            print(f"Warning: install-hooks.sh failed: {result.stderr.strip()}", file=sys.stderr)
+    install_hooks()
 
     # 1. Fetch origin/main
     print("\nFetching origin/main...")

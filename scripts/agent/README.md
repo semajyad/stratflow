@@ -33,6 +33,33 @@ python scripts/agent/session-start.py \
 
 ---
 
+### `codex-start.py`
+
+**Codex-specific entry point for beginning work on the repo.**
+
+- Sets `--agent-id codex`.
+- Delegates to `session-start.py`.
+- Keeps Codex session IDs and branches consistent.
+
+```sh
+python scripts/agent/codex-start.py \
+    --goal "fix sounding board accordions" \
+    --files "public/assets/js/**,tests/Playwright/**"
+```
+
+---
+
+### `preview-url.py`
+
+**Fetches the Railway PR preview URL posted by GitHub Actions.**
+
+```sh
+python scripts/agent/preview-url.py --pr 123
+python scripts/agent/preview-url.py --fallback
+```
+
+---
+
 ### `safe-commit.py`
 
 **A `git commit` wrapper that refuses broad adds.**

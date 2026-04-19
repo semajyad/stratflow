@@ -14,6 +14,7 @@ C/
 # Playwright
 tests/Playwright/node_modules/
 tests/Playwright/test-results/
+tests/Playwright/playwright-report/
 .playwright-cli/
 
 # Security scan outputs

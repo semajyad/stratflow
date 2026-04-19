@@ -8,12 +8,21 @@ Read this before touching any file. It is short by design — the longer docs ar
 
 ## 1. Before You Start
 
-**Always run session-start first:**
+**Codex should use its wrapper:**
+
+```bash
+python scripts/agent/codex-start.py \
+  --goal "Short description of your goal" \
+  --files "src/**,tests/**"
+```
+
+**Other agents should run session-start directly:**
 
 ```bash
 python scripts/agent/session-start.py \
+  --agent-id "agent-name" \
   --goal "Short description of your goal" \
-  --files "app/Http/Controllers/FooController.php" "tests/Unit/FooTest.php"
+  --files "src/Controllers/FooController.php,tests/Unit/Controllers/FooControllerTest.php"
 ```
 
 What it does:
@@ -211,7 +220,10 @@ Before ending your session, ensure:
 
 1. All changes are committed and pushed.
 2. A PR is open (or your branch is ready for one).
-3. Write a handoff file in `docs/agent-handoffs/`:
+3. Codex must open a PR for any committed code unless the commit was pushed to
+   an existing PR branch.
+4. The repository owner is the only person who merges into `main` after CI.
+5. Write a handoff file in `docs/agent-handoffs/`:
    ```bash
    # File name: YYYY-MM-DD-<slug>.md
    # See docs/agent-handoffs/README.md for the format

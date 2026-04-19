@@ -83,8 +83,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions including opt
 |-----|-------------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | New developer setup guide |
 | [docs/SETUP.md](docs/SETUP.md) | Local development setup (Docker) |
+| [docs/LOCAL_ENV_MINIMAL.md](docs/LOCAL_ENV_MINIMAL.md) | Secrets-free local env for tests and agent browser checks |
 | [docs/SETUP_MACOS.md](docs/SETUP_MACOS.md) | Local development setup (macOS, no Docker) |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment (Railway / cPanel) |
+| [docs/CODEX_WORKFLOW.md](docs/CODEX_WORKFLOW.md) | Codex-specific agent workflow and PR rule |
+| [docs/VALIDATION_MATRIX.md](docs/VALIDATION_MATRIX.md) | Which local checks to run for each change type |
+| [docs/PRODUCT_DOCS_INDEX.md](docs/PRODUCT_DOCS_INDEX.md) | Product intent map for strategy, board review, and planning features |
 | [docs/API.md](docs/API.md) | All application routes (200+) |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema, tables, and relationships |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and request lifecycle |
