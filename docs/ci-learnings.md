@@ -273,3 +273,54 @@ if s["fail"] == 0 and s["warn"] == 0:
 **Follow-up:** None.
 
 **PR/Commit:** N/A
+
+
+---
+
+## [2026-04-19] ci — CodeRabbit APPROVED blocks auto-merge — use @coderabbitai approve when only duplicate findings remain
+
+**Symptom:** PR stays BLOCKED after all CI checks pass and all CHANGES_REQUESTED are dismissed. mergeStateStatus never becomes CLEAN. CodeRabbit posts COMMENTED state (not CHANGES_REQUESTED) but never APPROVEs.
+
+**Root cause:** Branch ruleset requires 1 approving review from CodeRabbit (code owner). CodeRabbit posts CHANGES_REQUESTED on every push (dismiss_stale_reviews_on_push:true resets approval). When all findings are duplicates/resolved, CR posts COMMENTED not APPROVED — leaving the required-review count at 0. auto-merge cannot fire without an APPROVED review.
+
+**Fix applied:** Post '@coderabbitai approve' with context explaining that all actionable findings have been addressed and remaining duplicates were previously declined. If CR still does not approve, a human must approve the PR manually.
+
+**Prevention:** In the watch-pr skill: after dismissing stale reviews and requesting @coderabbitai review, also check if only COMMENTED (not APPROVED) state remains after the review — if so, post @coderabbitai approve immediately rather than waiting.
+
+**Follow-up:** None.
+
+**PR/Commit:** #76
+
+
+---
+
+## [2026-04-19] ci — auto-merge-required.txt: use exact CI check name with em-dash, not question mark
+
+**Symptom:** auto-merge workflow never matched 'Playwright (fast — Chromium)' required check — PR could never auto-merge regardless of CI state.
+
+**Root cause:** The file .github/auto-merge-required.txt contained 'Playwright (fast ? Chromium)' with a question mark instead of the em-dash '—' used in the actual CI check name. String comparison never matched.
+
+**Fix applied:** Replaced ? with — (em-dash U+2014) in auto-merge-required.txt and docs/CI.md.
+
+**Prevention:** When adding a new required check name to auto-merge-required.txt, copy-paste the exact name from a passing CI run output, never type it manually.
+
+**Follow-up:** None.
+
+**PR/Commit:** #76
+
+
+---
+
+## [2026-04-19] ci — Rebase after squash-merge: git rebase --skip drops already-merged commits
+
+**Symptom:** git rebase origin/main failed with conflict on a commit whose content was already squash-merged to main via a previous PR.
+
+**Root cause:** Squash-merge rewrites history: the individual commit on the feature branch has a different SHA from the squash commit on main, so git cannot auto-skip it. rebase --skip is needed to explicitly drop it.
+
+**Fix applied:** Run git rebase --skip to drop commits whose patch content is already upstream. Git reports 'patch contents already upstream' for skipped commits.
+
+**Prevention:** After a PR is squash-merged, any branches that shared commits with it must be rebased with --skip for the duplicate commits rather than using regular rebase continue.
+
+**Follow-up:** None.
+
+**PR/Commit:** #76
