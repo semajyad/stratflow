@@ -26,7 +26,8 @@ final class MigrationRunner
     public function __construct(
         private readonly \PDO $pdo,
         private readonly string $migrationDir,
-    ) {}
+    ) {
+    }
 
     public function run(): void
     {

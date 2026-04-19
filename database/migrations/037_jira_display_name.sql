@@ -3,6 +3,6 @@
 -- show a human-readable label without a live Jira API call.
 
 ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS jira_display_name VARCHAR(255) NULL DEFAULT NULL
+    ADD COLUMN jira_display_name VARCHAR(255) NULL DEFAULT NULL
         COMMENT 'Cached display name of the linked Jira user'
         AFTER jira_account_id;

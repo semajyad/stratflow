@@ -23,4 +23,4 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add password_changed_at for tracking password age (PCI-DSS 90-day rotation)
-ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME NULL;
+ALTER TABLE users ADD COLUMN password_changed_at DATETIME NULL;

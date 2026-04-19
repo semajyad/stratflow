@@ -851,3 +851,14 @@ docker compose up -d --build
 ```
 
 This destroys and recreates the MySQL volume, so all data is lost. Use only in development.
+
+## Migration Ledger
+
+As of sprint2 (2026-04-19), migrations are tracked by `MigrationRunner` in a
+`schema_migrations` table (filename + SHA-256 checksum + applied_at). Each
+migration runs exactly once. A checksum mismatch on a previously-applied file
+throws `RuntimeException` at startup.
+
+Migrations 007 and 037 previously used `ADD COLUMN IF NOT EXISTS`, which is
+invalid MySQL 8.0 syntax (error 1064). Both have been corrected to `ADD COLUMN`;
+the duplicate-column backfill path (error 1060) handles existing deployments.
