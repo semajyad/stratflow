@@ -838,6 +838,35 @@ class SuperadminControllerTest extends ControllerTestCase
     }
 
     #[Test]
+    public function testExportAuditLogsSanitizesFormulaCells(): void
+    {
+        $logRow = [
+            'created_at'   => '+cmd|/c calc',
+            'event_type'   => '=HYPERLINK("http://evil.com","click")',
+            'full_name'    => '-1+1',
+            'email'        => '@SUM(A1:Z1)',
+            'ip_address'   => '127.0.0.1',
+            'details_json' => '{"safe":"value"}',
+        ];
+        $this->queueStmts(
+            $this->makeStmt(false, [$logRow]),
+            $this->makeStmt(false, [])
+        );
+
+        $this->ctrl()->exportAuditLogs();
+
+        $content = (string) $this->response->downloadContent;
+        $rows    = array_values(array_filter(explode("\n", trim($content))));
+        $this->assertGreaterThanOrEqual(2, count($rows));
+        $data = str_getcsv($rows[1], ',', '"', '');
+
+        $this->assertSame("'+cmd|/c calc", $data[0]);
+        $this->assertSame("'=HYPERLINK(\"http://evil.com\",\"click\")", $data[1]);
+        $this->assertSame("'-1+1", $data[2]);
+        $this->assertSame("'@SUM(A1:Z1)", $data[3]);
+    }
+
+    #[Test]
     public function testExportAuditLogsWithDateFilter(): void
     {
         $this->setDefault(false, []);

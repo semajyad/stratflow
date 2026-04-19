@@ -1148,12 +1148,16 @@ class AdminControllerTest extends ControllerTestCase
 
         $this->ctrl()->exportAuditLogs();
 
-        $content = $this->response->downloadContent;
-        // Each formula-injection value must be prefixed with a single quote
-        $this->assertStringContainsString("'=HYPERLINK", $content);
-        $this->assertStringContainsString("'+cmd", $content);
-        $this->assertStringContainsString("'-1+1", $content);
-        $this->assertStringContainsString("'@SUM", $content);
+        $content = (string) $this->response->downloadContent;
+        $rows    = array_values(array_filter(explode("\n", trim($content))));
+        $this->assertGreaterThanOrEqual(2, count($rows));
+        $data = str_getcsv($rows[1], ',', '"', '');
+
+        // Timestamp,Event,User,Email,IP Address,Details — verify each sanitized cell
+        $this->assertSame("'+cmd|/c calc", $data[0]);
+        $this->assertSame("'=HYPERLINK(\"http://evil.com\",\"click\")", $data[1]);
+        $this->assertSame("'-1+1", $data[2]);
+        $this->assertSame("'@SUM(A1:Z1)", $data[3]);
     }
 
     // =========================================================================

@@ -135,9 +135,10 @@ jobs:
             CMD+=(--service "$RAILWAY_SERVICE")
           fi
           MAX_DEPLOY_ATTEMPTS=3
+          DEPLOY_ATTEMPT_TIMEOUT_SECONDS=180
           for attempt in $(seq 1 $MAX_DEPLOY_ATTEMPTS); do
             echo "Deploy attempt $attempt of $MAX_DEPLOY_ATTEMPTS..."
-            if "${CMD[@]}"; then
+            if timeout --signal=TERM "$DEPLOY_ATTEMPT_TIMEOUT_SECONDS" "${CMD[@]}"; then
               break
             fi
             if [ "$attempt" -eq "$MAX_DEPLOY_ATTEMPTS" ]; then
@@ -162,7 +163,7 @@ jobs:
           MAX_ATTEMPTS=$((HEALTHCHECK_TIMEOUT_SECONDS / 5))
           echo "Waiting for $PREVIEW_URL/healthz (timeout: ${HEALTHCHECK_TIMEOUT_SECONDS}s)..."
           for i in $(seq 1 "$MAX_ATTEMPTS"); do
-            STATUS=$(curl -sf "$PREVIEW_URL/healthz" \
+            STATUS=$(curl -sf --connect-timeout 5 --max-time 5 "$PREVIEW_URL/healthz" \
               | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
             if [ "$STATUS" = "ok" ]; then
               echo "Preview healthy after $((i * 5))s"
