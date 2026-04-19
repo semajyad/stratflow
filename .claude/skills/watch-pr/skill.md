@@ -69,6 +69,7 @@ Required checks (from branch ruleset — never accept failure in these):
 - `Checkov IaC`
 
 For each failure, get logs:
+
 ```bash
 gh run view <run_id> --repo semajyad/stratflow --log-failed 2>/dev/null | tail -80
 ```
@@ -85,10 +86,12 @@ gh api repos/semajyad/stratflow/pulls/<N>/reviews \
 If count > 0: go to Step 6 (CodeRabbit cycle).
 
 If CI is green AND no CHANGES_REQUESTED but still BLOCKED: check review count:
+
 ```bash
 gh api repos/semajyad/stratflow/pulls/<N>/reviews \
   --jq '[.[] | select(.state == "APPROVED")] | length'
 ```
+
 If 0 approved reviews: post `@coderabbitai review` and wait (Step 7).
 
 ---
@@ -96,6 +99,7 @@ If 0 approved reviews: post `@coderabbitai review` and wait (Step 7).
 ## Step 4 — Wait for CI to complete
 
 **Wait pattern (background):**
+
 ```bash
 until [ "$(gh run list --repo semajyad/stratflow --branch <branch> \
   --json status --jq '[.[] | select(.status=="in_progress" or .status=="queued")] | length')" \
@@ -103,6 +107,7 @@ until [ "$(gh run list --repo semajyad/stratflow --branch <branch> \
 ```
 
 After CI completes, re-check HEAD SHA (it may have changed if a fix was pushed mid-run):
+
 ```bash
 gh pr view <N> --repo semajyad/stratflow --json headRefOid --jq '.headRefOid'
 ```
@@ -112,13 +117,16 @@ gh pr view <N> --repo semajyad/stratflow --json headRefOid --jq '.headRefOid'
 ## Step 5 — Apply a CI fix
 
 - Fix the file(s), then commit **all fixes in one commit** (every push resets the CodeRabbit approval, so minimise pushes):
-  ```bash
-  python scripts/agent/safe-commit.py -m "fix(scope): <description>" <files>
-  ```
+
+```bash
+python scripts/agent/safe-commit.py -m "fix(scope): <description>" <files>
+```
+
 - Push:
-  ```bash
-  git push origin <branch>
-  ```
+
+```bash
+git push origin <branch>
+```
 - Dismiss any stale CHANGES_REQUESTED reviews (they are now stale after the push anyway — Step 6A).
 - Post `@coderabbitai review` to restart the review clock.
 - Return to Step 2.
@@ -166,6 +174,7 @@ For **each finding**, decide:
 - It contradicts a previous decline that CodeRabbit already learned from
 
 Reply declining via PR comment:
+
 ```bash
 gh pr comment <N> --repo semajyad/stratflow \
   --body "Declining [Finding X]: <one sentence reason why the current code is correct>"
@@ -174,6 +183,7 @@ gh pr comment <N> --repo semajyad/stratflow \
 ### 6C — Apply all fixes in ONE commit
 
 Batch every fix into a single commit to minimise review-dismissal cycles:
+
 ```bash
 python scripts/agent/safe-commit.py -m "test(scope): address CodeRabbit round-N findings
 
@@ -185,7 +195,7 @@ git push origin <branch>
 
 ```bash
 for id in $(gh api repos/semajyad/stratflow/pulls/<N>/reviews \
-  --jq '.[] | select(.state == "CHANGES_REQUESTED") | .id'); do
+  --jq '.[] | select(.state == "CHANGES_REQUESTED" and .user.type == "Bot") | .id'); do
   gh api "repos/semajyad/stratflow/pulls/<N>/reviews/${id}/dismissals" \
     --method PUT \
     --field message="All findings addressed or declined with reason in latest commit." \
@@ -229,7 +239,8 @@ Stop watching and report to user **only** when:
 | Wall-clock time exceeds **40 minutes** without progress | Escalate |
 
 **Escalation report format:**
-```
+
+```text
 PR #N watch stopped — human needed.
 Blocker: <CI check name OR "CodeRabbit round N">
 Root cause: <one sentence>
