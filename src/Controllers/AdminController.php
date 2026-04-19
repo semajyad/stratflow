@@ -961,8 +961,8 @@ class AdminController
             ['type' => 'audit_logs', 'count' => count($logs)]
         );
         $sanitizeCsvCell = static function ($value): string {
-            $v = (string) ($value ?? '');
-            return preg_match('/^[=+\-@\t]/', $v) === 1 ? "'" . $v : $v;
+            $normalized = (string) ($value ?? '');
+            return preg_match('/^[=+\-@\t]/', $normalized) === 1 ? "'" . $normalized : $normalized;
         };
         $csv = fopen('php://temp', 'r+');
         fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details'], ',', '"', '');

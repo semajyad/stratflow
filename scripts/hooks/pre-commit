@@ -37,13 +37,14 @@ if command -v php > /dev/null 2>&1; then
     STAGED_PHP=$(git diff --cached --name-only --diff-filter=ACM | grep '\.php$')
     if [ -n "$STAGED_PHP" ]; then
         LINT_FAILED=0
-        for f in $STAGED_PHP; do
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
             php -l "$f" > /dev/null 2>&1 || {
                 echo "[pre-commit] PHP syntax error in: $f"
                 php -l "$f" 2>&1 | grep -v '^$'
                 LINT_FAILED=1
             }
-        done
+        done <<< "$STAGED_PHP"
         if [ $LINT_FAILED -ne 0 ]; then
             echo ""
             echo "Commit blocked: fix PHP syntax errors above."

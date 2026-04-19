@@ -1149,12 +1149,11 @@ class AdminControllerTest extends ControllerTestCase
         $this->ctrl()->exportAuditLogs();
 
         $content = $this->response->downloadContent;
-        $this->assertStringNotContainsString('=HYPERLINK', $content);
-        $this->assertStringNotContainsString('+cmd', $content);
-        $this->assertStringNotContainsString('-1+1', $content);
-        $this->assertStringNotContainsString('@SUM', $content);
-        // Sanitized values should be prefixed with single quote
+        // Each formula-injection value must be prefixed with a single quote
         $this->assertStringContainsString("'=HYPERLINK", $content);
+        $this->assertStringContainsString("'+cmd", $content);
+        $this->assertStringContainsString("'-1+1", $content);
+        $this->assertStringContainsString("'@SUM", $content);
     }
 
     // =========================================================================

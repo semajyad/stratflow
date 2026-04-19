@@ -47,7 +47,7 @@ jobs:
     name: Pre-deploy gate
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      actions: write
       contents: read
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||

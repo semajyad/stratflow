@@ -38,9 +38,9 @@ class KrScoringServiceTest extends TestCase
         );
         self::$db->query(
             "DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'
-             AND story_id IN (
-                 SELECT us.id FROM user_stories us
-                 JOIN hl_work_items wi ON wi.id = us.hl_work_item_id
+             AND local_type = 'hl_work_item'
+             AND local_id IN (
+                 SELECT wi.id FROM hl_work_items wi
                  JOIN projects p ON p.id = wi.project_id
                  JOIN organisations o ON o.id = p.org_id
                  WHERE o.name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
