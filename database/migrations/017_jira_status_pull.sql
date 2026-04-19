@@ -16,7 +16,7 @@ ALTER TABLE sync_log
     MODIFY COLUMN action ENUM('create','update','delete','skip','status_pull') NOT NULL;
 
 -- Index on external_key for fast webhook + bulk-pull lookups.
--- Only add if it does not already exist (safe to run on fresh or existing DBs).
+-- Runs unconditionally; MigrationRunner backfill (error 1061) handles existing deployments.
 -- 009_jira_integration.sql only has idx_external on (integration_id, external_id),
 -- not on external_key, so this is new.
-CREATE INDEX IF NOT EXISTS idx_external_key ON sync_mappings (external_key);
+CREATE INDEX idx_external_key ON sync_mappings (external_key);

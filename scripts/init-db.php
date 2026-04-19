@@ -3,8 +3,10 @@
 /**
  * Database Initialization Script
  *
- * Runs the schema SQL against the configured database.
- * Safe to run multiple times — uses CREATE TABLE IF NOT EXISTS.
+ * Runs the schema SQL against the configured database, then applies any
+ * unapplied migrations via MigrationRunner (ledger-tracked, checksum-verified).
+ *
+ * Safe to run multiple times — the ledger ensures each migration runs once.
  *
  * Usage: php scripts/init-db.php
  */
@@ -22,24 +24,6 @@ $dsn = sprintf(
     $config['db']['database']
 );
 
-function isBenignMigrationError(string $stmt, PDOException $e): bool
-{
-    $driverCode = (int) ($e->errorInfo[1] ?? 0);
-
-    // 1050 = table exists, 1060 = duplicate column, 1061 = duplicate key,
-    // 1826 = duplicate FK name. These are expected when replaying idempotent migrations.
-    if (in_array($driverCode, [1050, 1060, 1061, 1826], true)) {
-        return true;
-    }
-
-    // MySQL images used in CI can reject IF NOT EXISTS on selected ALTER/INDEX
-    // forms even though the statements are intended to be replay-safe.
-    return $driverCode === 1064 && (
-        stripos($stmt, 'ADD COLUMN IF NOT EXISTS') !== false
-        || stripos($stmt, 'CREATE INDEX IF NOT EXISTS') !== false
-    );
-}
-
 try {
     $pdo = new PDO($dsn, $config['db']['username'], $config['db']['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -52,49 +36,12 @@ try {
     $pdo->exec($schema);
     echo "Schema applied successfully.\n";
 
-    // Run migrations (each statement individually, skip known idempotency duplicates)
-    $migrationErrors = [];
+    // Run migrations via the ledger-tracked MigrationRunner.
+    // Each migration runs exactly once; checksums detect post-apply tampering.
     $migrationDir = __DIR__ . '/../database/migrations/';
     if (is_dir($migrationDir)) {
-        $files = glob($migrationDir . '*.sql');
-        sort($files);
-        foreach ($files as $file) {
-            $name = basename($file);
-            echo "Running migration: {$name}\n";
-            $sql = file_get_contents($file);
-            // Split on semicolons, run each statement separately so
-            // "duplicate column" errors don't block subsequent statements
-            // Strip SQL comment lines, then split on semicolons
-            $sql = preg_replace('/^\s*--.*$/m', '', $sql);
-            $statements = array_filter(array_map('trim', explode(';', $sql)));
-            foreach ($statements as $stmt) {
-                if ($stmt === '') continue;
-                try {
-                    // Use query() instead of exec() so we get a PDOStatement
-                    // whose cursor we can close. exec() leaves PREPARE/EXECUTE
-                    // result sets open, causing PDO 2014 errors on the next
-                    // statement in migrations that use dynamic SQL.
-                    $result = $pdo->query($stmt);
-                    if ($result instanceof PDOStatement) {
-                        $result->closeCursor();
-                    }
-                } catch (PDOException $e) {
-                    if (isBenignMigrationError($stmt, $e)) {
-                        echo "  Skipped (already applied or unsupported idempotency syntax): {$e->errorInfo[2]}\n";
-                    } else {
-                        $migrationErrors[] = "{$name}: {$e->getMessage()}";
-                        echo "  Error: {$e->getMessage()}\n";
-                    }
-                }
-            }
-        }
-        if ($migrationErrors !== []) {
-            echo "Migration initialization failed with unexpected error(s):\n";
-            foreach ($migrationErrors as $error) {
-                echo "  - {$error}\n";
-            }
-            exit(1);
-        }
+        $runner = new \StratFlow\Core\MigrationRunner($pdo, $migrationDir);
+        $runner->run();
         echo "All migrations applied.\n";
     }
 
@@ -104,7 +51,7 @@ try {
     echo "Tables present: " . count($tables) . " (" . implode(', ', $tables) . ")\n";
 
     echo "\nDatabase initialization complete.\n";
-} catch (PDOException $e) {
+} catch (\Throwable $e) {
     echo "Database error: " . $e->getMessage() . "\n";
     exit(1);
 }
