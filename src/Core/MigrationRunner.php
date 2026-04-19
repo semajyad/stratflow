@@ -91,9 +91,8 @@ final class MigrationRunner
             } catch (\PDOException $e) {
                 $code = (int) ($e->errorInfo[1] ?? 0);
                 if (in_array($code, self::ALREADY_APPLIED_CODES, true)) {
-                    // Back-fill: migration was applied before the ledger existed.
-                    $this->recordApplied($name, $checksum);
-                    return;
+                    // Back-fill: skip this statement (already applied before ledger); continue with the rest.
+                    continue;
                 }
                 throw new \RuntimeException(
                     "Migration {$name} failed: {$e->getMessage()}",

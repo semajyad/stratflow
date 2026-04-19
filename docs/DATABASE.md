@@ -833,7 +833,7 @@ All other lookups rely on primary keys and foreign key indexes created automatic
 
 ## Applying Schema Changes
 
-There is no migration framework. Schema changes are applied manually:
+Schema changes are tracked by `MigrationRunner` (see below). Write new migrations as numbered SQL files in `database/migrations/` and they will be applied automatically on next deploy. For manual or emergency changes:
 
 1. Write the `ALTER TABLE` or `CREATE TABLE` statement
 2. Test it against a local database first
@@ -854,7 +854,7 @@ This destroys and recreates the MySQL volume, so all data is lost. Use only in d
 
 ## Migration Ledger
 
-As of sprint2 (2026-04-19), migrations are tracked by `MigrationRunner` in a
+As of Sprint 2 (2026-04-19), migrations are tracked by `MigrationRunner` in a
 `schema_migrations` table (filename + SHA-256 checksum + applied_at). Each
 migration runs exactly once. A checksum mismatch on a previously-applied file
 throws `RuntimeException` at startup.

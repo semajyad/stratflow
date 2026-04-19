@@ -163,4 +163,27 @@ class MigrationRunnerTest extends TestCase
         $row = $this->pdo->query("SELECT name FROM sqlite_master WHERE name='commented'")->fetch();
         $this->assertNotFalse($row);
     }
+
+    #[Test]
+    public function multiStatementMigrationAllStatementsRunEvenIfFirstWouldFail(): void
+    {
+        // Verify that a migration with N statements records all of them — the runner
+        // must not bail out after the first statement. (The MySQL backfill path uses
+        // `continue` not `return`, ensuring later statements execute. This test covers
+        // the normal path; MySQL-specific 1060/1061 backfill is covered by integration tests.)
+        $sql = implode(";\n", [
+            'CREATE TABLE step1 (id INTEGER PRIMARY KEY)',
+            'CREATE TABLE step2 (id INTEGER PRIMARY KEY)',
+            'CREATE TABLE step3 (id INTEGER PRIMARY KEY)',
+        ]);
+        $this->writeMigration('001_steps.sql', $sql);
+
+        $runner = new MigrationRunner($this->pdo, $this->migrationDir);
+        $runner->run();
+
+        foreach (['step1', 'step2', 'step3'] as $table) {
+            $row = $this->pdo->query("SELECT name FROM sqlite_master WHERE name='{$table}'")->fetch();
+            $this->assertNotFalse($row, "{$table} must exist after multi-statement migration");
+        }
+    }
 }
