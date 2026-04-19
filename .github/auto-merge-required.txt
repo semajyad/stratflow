@@ -10,7 +10,7 @@ PHPUnit unit (PHP 8.4)
 PHPUnit integration (PHP 8.4)
 Test-touch gate
 Python CI helper tests
-Playwright (fast ? Chromium)
+Playwright (fast — Chromium)
 Multi-agent guard
 trufflehog
 Semgrep (PR)

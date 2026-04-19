@@ -1131,6 +1131,35 @@ class AdminControllerTest extends ControllerTestCase
         $this->assertStringContainsString('Timestamp', $this->response->downloadContent);
     }
 
+    public function testExportAuditLogsSanitizesFormulaCells(): void
+    {
+        $log = [
+            'event_type'   => '=HYPERLINK("http://evil.com","click")',
+            'created_at'   => '+cmd|/c calc',
+            'full_name'    => '-1+1',
+            'email'        => '@SUM(A1:Z1)',
+            'ip_address'   => '127.0.0.1',
+            'details_json' => '{"safe":"value"}',
+        ];
+        $this->stubQuerySequence([
+            $this->stmt(false, [$log]),
+            $this->stmt(false),
+        ]);
+
+        $this->ctrl()->exportAuditLogs();
+
+        $content = (string) $this->response->downloadContent;
+        $rows    = array_values(array_filter(explode("\n", trim($content))));
+        $this->assertGreaterThanOrEqual(2, count($rows));
+        $data = str_getcsv($rows[1], ',', '"', '');
+
+        // Timestamp,Event,User,Email,IP Address,Details — verify each sanitized cell
+        $this->assertSame("'+cmd|/c calc", $data[0]);
+        $this->assertSame("'=HYPERLINK(\"http://evil.com\",\"click\")", $data[1]);
+        $this->assertSame("'-1+1", $data[2]);
+        $this->assertSame("'@SUM(A1:Z1)", $data[3]);
+    }
+
     // =========================================================================
     // settings()
     // =========================================================================

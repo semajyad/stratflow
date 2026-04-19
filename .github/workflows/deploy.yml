@@ -47,7 +47,7 @@ jobs:
     name: Pre-deploy gate
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      actions: write
       contents: read
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
@@ -104,7 +104,8 @@ jobs:
             "Multi-agent guard"
           )
 
-          DEADLINE=$((SECONDS + 1800))
+          START_TIME=$(date +%s)
+          DEADLINE=$((START_TIME + 1800))
 
           while true; do
             PENDING=()
@@ -147,7 +148,7 @@ jobs:
               exit 0
             fi
 
-            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
               printf '::error::Timed out waiting for required workflows: %s\n' "${PENDING[@]}"
               exit 1
             fi

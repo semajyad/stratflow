@@ -11,6 +11,8 @@ on:
   pull_request_review:
     types: [submitted]
 
+permissions: {}
+
 jobs:
   autofix:
     # Only run when CodeRabbit requests changes on a non-Dependabot PR from this repo (not forks)
