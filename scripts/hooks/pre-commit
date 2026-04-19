@@ -31,22 +31,24 @@ fi
 # --- vexp end ---
 
 # --- php-lint start ---
-# Fast syntax check on staged PHP files — no Docker needed.
+# Fast syntax check on staged PHP files — skipped when php binary is not installed.
 # Catches parse errors before the slower coverage gate runs.
-STAGED_PHP=$(git diff --cached --name-only --diff-filter=ACM | grep '\.php$')
-if [ -n "$STAGED_PHP" ]; then
-    LINT_FAILED=0
-    for f in $STAGED_PHP; do
-        php -l "$f" > /dev/null 2>&1 || {
-            echo "[pre-commit] PHP syntax error in: $f"
-            php -l "$f" 2>&1 | grep -v '^$'
-            LINT_FAILED=1
-        }
-    done
-    if [ $LINT_FAILED -ne 0 ]; then
-        echo ""
-        echo "Commit blocked: fix PHP syntax errors above."
-        exit 1
+if command -v php > /dev/null 2>&1; then
+    STAGED_PHP=$(git diff --cached --name-only --diff-filter=ACM | grep '\.php$')
+    if [ -n "$STAGED_PHP" ]; then
+        LINT_FAILED=0
+        for f in $STAGED_PHP; do
+            php -l "$f" > /dev/null 2>&1 || {
+                echo "[pre-commit] PHP syntax error in: $f"
+                php -l "$f" 2>&1 | grep -v '^$'
+                LINT_FAILED=1
+            }
+        done
+        if [ $LINT_FAILED -ne 0 ]; then
+            echo ""
+            echo "Commit blocked: fix PHP syntax errors above."
+            exit 1
+        fi
     fi
 fi
 # --- php-lint end ---

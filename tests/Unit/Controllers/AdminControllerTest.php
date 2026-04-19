@@ -1131,6 +1131,32 @@ class AdminControllerTest extends ControllerTestCase
         $this->assertStringContainsString('Timestamp', $this->response->downloadContent);
     }
 
+    public function testExportAuditLogsSanitizesFormulaCells(): void
+    {
+        $log = [
+            'event_type'   => '=HYPERLINK("http://evil.com","click")',
+            'created_at'   => '+cmd|/c calc',
+            'full_name'    => '-1+1',
+            'email'        => '@SUM(A1:Z1)',
+            'ip_address'   => '127.0.0.1',
+            'details_json' => '{"safe":"value"}',
+        ];
+        $this->stubQuerySequence([
+            $this->stmt(false, [$log]),
+            $this->stmt(false),
+        ]);
+
+        $this->ctrl()->exportAuditLogs();
+
+        $content = $this->response->downloadContent;
+        $this->assertStringNotContainsString('=HYPERLINK', $content);
+        $this->assertStringNotContainsString('+cmd', $content);
+        $this->assertStringNotContainsString('-1+1', $content);
+        $this->assertStringNotContainsString('@SUM', $content);
+        // Sanitized values should be prefixed with single quote
+        $this->assertStringContainsString("'=HYPERLINK", $content);
+    }
+
     // =========================================================================
     // settings()
     // =========================================================================

@@ -40,7 +40,7 @@ jobs:
           BASE_URL: ${{ secrets.STAGING_URL }}
           E2E_EMAIL: ${{ secrets.ZAP_SMOKE_EMAIL }}
           E2E_PASSWORD: ${{ secrets.ZAP_SMOKE_PASSWORD }}
-        run: npx playwright test --project=fast fast/healthz.spec.js fast/smoke.spec.js
+        run: npx playwright test --project=fast fast/
 
       - name: Upload artifacts on failure
         if: failure()

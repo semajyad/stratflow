@@ -960,16 +960,20 @@ class AdminController
             $_SERVER['HTTP_USER_AGENT'] ?? '',
             ['type' => 'audit_logs', 'count' => count($logs)]
         );
+        $sanitizeCsvCell = static function ($value): string {
+            $v = (string) ($value ?? '');
+            return preg_match('/^[=+\-@\t]/', $v) === 1 ? "'" . $v : $v;
+        };
         $csv = fopen('php://temp', 'r+');
         fputcsv($csv, ['Timestamp', 'Event', 'User', 'Email', 'IP Address', 'Details'], ',', '"', '');
         foreach ($logs as $log) {
             fputcsv($csv, [
-                $log['created_at'],
-                $log['event_type'],
-                $log['full_name'] ?? 'System',
-                $log['email'] ?? '',
-                $log['ip_address'],
-                $log['details_json'] ?? '',
+                $sanitizeCsvCell($log['created_at']),
+                $sanitizeCsvCell($log['event_type']),
+                $sanitizeCsvCell($log['full_name'] ?? 'System'),
+                $sanitizeCsvCell($log['email'] ?? ''),
+                $sanitizeCsvCell($log['ip_address']),
+                $sanitizeCsvCell($log['details_json'] ?? ''),
             ], ',', '"', '');
         }
         rewind($csv);

@@ -134,7 +134,18 @@ jobs:
           if [ -n "${RAILWAY_SERVICE:-}" ]; then
             CMD+=(--service "$RAILWAY_SERVICE")
           fi
-          "${CMD[@]}"
+          MAX_DEPLOY_ATTEMPTS=3
+          for attempt in $(seq 1 $MAX_DEPLOY_ATTEMPTS); do
+            echo "Deploy attempt $attempt of $MAX_DEPLOY_ATTEMPTS..."
+            if "${CMD[@]}"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_DEPLOY_ATTEMPTS" ]; then
+              echo "::error::railway up failed after $MAX_DEPLOY_ATTEMPTS attempts"
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
 
           # Construct preview URL (Railway naming convention)
           SLUG=$(echo "$PR_HEAD_REF" | sed 's/[^a-z0-9-]/-/gi' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
@@ -147,8 +158,10 @@ jobs:
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         run: |
-          echo "Waiting for $PREVIEW_URL/healthz..."
-          for i in $(seq 1 24); do
+          PREVIEW_HEALTHCHECK_TIMEOUT_SECONDS="${PREVIEW_HEALTHCHECK_TIMEOUT_SECONDS:-300}"
+          MAX_ATTEMPTS=$((PREVIEW_HEALTHCHECK_TIMEOUT_SECONDS / 5))
+          echo "Waiting for $PREVIEW_URL/healthz (timeout: ${PREVIEW_HEALTHCHECK_TIMEOUT_SECONDS}s)..."
+          for i in $(seq 1 "$MAX_ATTEMPTS"); do
             STATUS=$(curl -sf "$PREVIEW_URL/healthz" \
               | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
             if [ "$STATUS" = "ok" ]; then
@@ -157,7 +170,7 @@ jobs:
             fi
             sleep 5
           done
-          echo "::error::Preview did not become healthy within 120s"
+          echo "::error::Preview did not become healthy within ${PREVIEW_HEALTHCHECK_TIMEOUT_SECONDS}s"
           exit 1
 
       - name: Post preview URL to PR

@@ -36,7 +36,16 @@ class KrScoringServiceTest extends TestCase
                 SELECT id FROM organisations WHERE name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
             )"
         );
-        self::$db->query("DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'");
+        self::$db->query(
+            "DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'
+             AND story_id IN (
+                 SELECT us.id FROM user_stories us
+                 JOIN hl_work_items wi ON wi.id = us.hl_work_item_id
+                 JOIN projects p ON p.id = wi.project_id
+                 JOIN organisations o ON o.id = p.org_id
+                 WHERE o.name IN ('Test Org - KrScoringA', 'Test Org - KrScoringB')
+             )"
+        );
         self::$db->query(
             "DELETE FROM hl_work_items WHERE project_id IN (
                 SELECT p.id
@@ -103,7 +112,15 @@ class KrScoringServiceTest extends TestCase
     {
         self::$db->query("DELETE FROM key_result_contributions WHERE org_id IN (?, ?)", [self::$orgId, self::$orgBId]);
         self::$db->query("DELETE FROM key_results WHERE org_id = ?", [self::$orgId]);
-        self::$db->query("DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'");
+        self::$db->query(
+            "DELETE FROM story_git_links WHERE ref_url LIKE 'https://github.com/test-score/%'
+             AND story_id IN (
+                 SELECT us.id FROM user_stories us
+                 JOIN hl_work_items wi ON wi.id = us.hl_work_item_id
+                 WHERE wi.project_id = ?
+             )",
+            [self::$projectId]
+        );
         self::$db->query("DELETE FROM hl_work_items WHERE project_id = ?", [self::$projectId]);
         self::$db->query("DELETE FROM projects WHERE id = ?", [self::$projectId]);
         self::$db->query("DELETE FROM users WHERE org_id = ?", [self::$orgId]);

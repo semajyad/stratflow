@@ -53,7 +53,7 @@ auto-merge and before main can advance.
 | `PHPUnit integration (PHP 8.4)` | tests.yml | MySQL-backed PHPUnit integration tests |
 | `Test-touch gate` | tests.yml | src changes include matching tests |
 | `Python CI helper tests` | tests.yml | Python helper scripts stay runnable |
-| `Playwright (fast ? Chromium)` | e2e.yml | Fast browser smoke path |
+| `Playwright (fast — Chromium)` | e2e.yml | Fast browser smoke path |
 | `Multi-agent guard` | multi-agent-guard.yml | Branch/claim checks and main push guard |
 | `trufflehog` | secret-scan.yml | Secret scan |
 | `Semgrep (PR)` | semgrep.yml | PHP SAST scan |
