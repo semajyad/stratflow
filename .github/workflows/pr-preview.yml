@@ -160,13 +160,13 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         run: |
           HEALTHCHECK_TIMEOUT_SECONDS=300
-          MAX_ATTEMPTS=$((HEALTHCHECK_TIMEOUT_SECONDS / 5))
+          DEADLINE=$(( $(date +%s) + HEALTHCHECK_TIMEOUT_SECONDS ))
           echo "Waiting for $PREVIEW_URL/healthz (timeout: ${HEALTHCHECK_TIMEOUT_SECONDS}s)..."
-          for i in $(seq 1 "$MAX_ATTEMPTS"); do
+          while [ "$(date +%s)" -le "$DEADLINE" ]; do
             STATUS=$(curl -sf --connect-timeout 5 --max-time 5 "$PREVIEW_URL/healthz" \
               | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
             if [ "$STATUS" = "ok" ]; then
-              echo "Preview healthy after $((i * 5))s"
+              echo "Preview healthy"
               exit 0
             fi
             sleep 5
