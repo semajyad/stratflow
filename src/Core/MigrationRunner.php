@@ -40,7 +40,10 @@ final class MigrationRunner
 
         foreach ($files as $file) {
             $name     = basename($file);
-            $content  = (string) file_get_contents($file);
+            $content = file_get_contents($file);
+            if ($content === false) {
+                throw new \RuntimeException("Failed to read migration file: {$file}");
+            }
             $checksum = hash('sha256', $content);
 
             if (isset($applied[$name])) {
