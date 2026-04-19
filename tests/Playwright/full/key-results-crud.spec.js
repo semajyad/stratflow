@@ -2,7 +2,7 @@
 /**
  * Key Results CRUD — create, verify, update, delete.
  *
- * Assumes seed data provides at least one HL work item (project_id=1, id=1).
+ * Uses seed project_id=1 and creates a temporary HL work item when none exists.
  * Each test creates uniquely-named data to avoid cross-test pollution.
  */
 const { test, expect } = require('@playwright/test');
@@ -114,9 +114,10 @@ test.describe('Key Results CRUD', () => {
       expect(createJson).toHaveProperty('id');
       krId = createJson.id;
 
-      // Verify page loads without error (KR should now be in DB)
+      // Verify page loads without error and KR is present
       await page.goto(`${BASE}/app/key-results`);
       await expect(page.locator('body')).not.toContainText(/500|Fatal error|Uncaught/i);
+      await expect(page.locator('body')).toContainText(uniqueTitle);
 
       // Delete (assertion step — proves endpoint works)
       await page.goto(`${BASE}/app/key-results`);
@@ -189,21 +190,28 @@ test.describe('Key Results CRUD', () => {
           unit: 'pts',
         },
       });
-      krId = (await createRes.json()).id;
+      expect(createRes.status()).toBeLessThan(400);
+      const createJson = await createRes.json();
+      expect(createJson).toHaveProperty('id');
+      krId = createJson.id;
 
       // Update
       await page.goto(`${BASE}/app/key-results`);
       const updateCsrf = await getCsrfToken(page);
+      const updatedTitle = `PW KR Update ${krId}`;
       const updateRes = await page.request.post(`${BASE}/app/key-results/${krId}`, {
         form: {
           _csrf_token: updateCsrf,
           hl_work_item_id: String(workItemId),
-          title: `PW KR Update ${krId}`,
+          title: updatedTitle,
           current_value: '25',
           target_value: '50',
         },
       });
       expect(updateRes.status()).toBeLessThan(400);
+      expect(await updateRes.json()).toEqual(expect.objectContaining({ ok: true }));
+      await page.goto(`${BASE}/app/key-results`);
+      await expect(page.locator('body')).toContainText(updatedTitle);
     } finally {
       if (krId) await deleteKr(page, krId);
       await cleanupWorkItem();
