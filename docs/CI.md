@@ -47,12 +47,12 @@ Managed in `.github/auto-merge-required.txt`. Only these checks must pass before
 
 | Check | Workflow | Target |
 |-------|----------|--------|
-| `unit` | tests.yml | <45s |
-| `integration` | tests.yml | <2.5 min |
-| `e2e-fast` | e2e.yml | <5 min |
-| `PHPStan` | tests.yml | 0 errors |
-| `test-touch-check` | tests.yml | all src/ changes have tests |
-| `codecov/patch` | codecov | ≥80% on new code |
+| `PHPUnit unit (PHP 8.4)` | tests.yml | PHP lint, Hadolint, Composer audit, PHPStan, PHPCS, PHPUnit unit tests, coverage >= `.github/coverage-threshold.txt` |
+| `PHPUnit integration (PHP 8.4)` | tests.yml | MySQL-backed PHPUnit integration tests |
+| `Playwright (fast — Chromium)` | e2e.yml | Chromium fast suite |
+| `Test-touch gate` | tests.yml | all mapped `src/**/*.php` changes have matching test changes |
+
+`PHPStan` and coverage are enforced inside the unit job rather than as separate required check contexts. Codecov remains advisory unless branch protection is separately configured to require it.
 
 **Advisory (not merge-blocking):**
 - `Dependency Review` — GitHub built-in

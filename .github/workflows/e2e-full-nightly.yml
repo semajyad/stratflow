@@ -75,8 +75,6 @@ jobs:
           --project=firefox
           --project=webkit
           --project=mobile-chrome
-        continue-on-error: true
-
       - name: Write nightly status
         if: always()
         run: |
