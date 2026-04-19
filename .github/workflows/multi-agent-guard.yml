@@ -58,6 +58,28 @@ jobs:
           echo "::error::Commit: $HEAD_SHA | Message: $SUBJECT"
           exit 1
 
+      - name: Merge queue guard
+        if: github.event_name == 'merge_group'
+        env:
+          BASE_REF: ${{ github.event.merge_group.base_ref }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          if [ "$BASE_REF" != "refs/heads/main" ]; then
+            echo "::error::Unexpected merge-group base ref: $BASE_REF"
+            exit 1
+          fi
+
+          if [ -z "$HEAD_SHA" ]; then
+            echo "::error::Merge-group event did not provide a head SHA"
+            exit 1
+          fi
+
+          if [ -f ".github/agent-claims.json" ]; then
+            python3 -m json.tool .github/agent-claims.json >/dev/null
+          fi
+
+          echo "Merge queue guard passed for $HEAD_SHA"
+
       - name: Branch naming convention
         if: github.event_name == 'pull_request'
         env:

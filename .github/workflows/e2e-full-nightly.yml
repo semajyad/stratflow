@@ -202,7 +202,16 @@ jobs:
       - name: Start PHP dev server
         run: |
           php -S 0.0.0.0:8890 -t public public/index.php &
-          sleep 2
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8890/healthz >/dev/null; then
+              echo "Dev server is ready"
+              exit 0
+            fi
+            echo "Waiting for dev server ($i/30)..."
+            sleep 2
+          done
+          echo "::error::Dev server did not become ready at /healthz"
+          exit 1
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4

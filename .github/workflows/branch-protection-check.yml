@@ -80,12 +80,20 @@ jobs:
           )
 
           MERGE_GROUP_MISSING=()
+          MISSING_WORKFLOW_MAPPINGS=()
           for check in "${REQUIRED_CHECKS[@]}"; do
             wf="${REQUIRED_WORKFLOWS[$check]:-}"
-            if [ -n "$wf" ] && ! grep -q 'merge_group:' "$wf"; then
+            if [ -z "$wf" ]; then
+              MISSING_WORKFLOW_MAPPINGS+=("$check -> MISSING_MAPPING")
+            elif ! grep -q 'merge_group:' "$wf"; then
               MERGE_GROUP_MISSING+=("$check -> $wf")
             fi
           done
+
+          if [ ${#MISSING_WORKFLOW_MAPPINGS[@]} -gt 0 ]; then
+            echo "::error::Required check(s) missing REQUIRED_WORKFLOWS mapping: ${MISSING_WORKFLOW_MAPPINGS[*]}"
+            exit 1
+          fi
 
           if [ ${#MERGE_GROUP_MISSING[@]} -gt 0 ]; then
             echo "::error::Required check workflow(s) missing merge_group trigger: ${MERGE_GROUP_MISSING[*]}"
