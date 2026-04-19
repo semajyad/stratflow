@@ -1,8 +1,7 @@
 # Required CI checks for auto-merge
 # One check name per line (exact match as shown in GitHub UI).
 # These checks must pass to unblock auto-merge and branch ruleset assertions.
-# Nightly-only jobs (mutation, perf, Dependency Review, CodeRabbit Review)
-# remain advisory.
+# Nightly-only jobs (mutation, perf, CodeRabbit Review) remain advisory.
 #
 # When a new required check is added, add its exact displayed check context here.
 
@@ -16,3 +15,5 @@ trufflehog
 Semgrep (PR)
 Analyze JavaScript
 Checkov IaC
+dependency-review
+SBOM (Syft) + Grype CVE scan

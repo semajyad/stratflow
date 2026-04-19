@@ -22,6 +22,24 @@ $dsn = sprintf(
     $config['db']['database']
 );
 
+function isBenignMigrationError(string $stmt, PDOException $e): bool
+{
+    $driverCode = (int) ($e->errorInfo[1] ?? 0);
+
+    // 1050 = table exists, 1060 = duplicate column, 1061 = duplicate key,
+    // 1826 = duplicate FK name. These are expected when replaying idempotent migrations.
+    if (in_array($driverCode, [1050, 1060, 1061, 1826], true)) {
+        return true;
+    }
+
+    // MySQL images used in CI can reject IF NOT EXISTS on selected ALTER/INDEX
+    // forms even though the statements are intended to be replay-safe.
+    return $driverCode === 1064 && (
+        stripos($stmt, 'ADD COLUMN IF NOT EXISTS') !== false
+        || stripos($stmt, 'CREATE INDEX IF NOT EXISTS') !== false
+    );
+}
+
 try {
     $pdo = new PDO($dsn, $config['db']['username'], $config['db']['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -34,7 +52,8 @@ try {
     $pdo->exec($schema);
     echo "Schema applied successfully.\n";
 
-    // Run migrations (each statement individually, skip duplicates)
+    // Run migrations (each statement individually, skip known idempotency duplicates)
+    $migrationErrors = [];
     $migrationDir = __DIR__ . '/../database/migrations/';
     if (is_dir($migrationDir)) {
         $files = glob($migrationDir . '*.sql');
@@ -60,14 +79,21 @@ try {
                         $result->closeCursor();
                     }
                 } catch (PDOException $e) {
-                    // 1060 = Duplicate column, 1061 = Duplicate key, 1826 = Duplicate FK name — safe to skip
-                    if (in_array($e->errorInfo[1] ?? 0, [1060, 1061, 1826])) {
-                        echo "  Skipped (already applied): {$e->errorInfo[2]}\n";
+                    if (isBenignMigrationError($stmt, $e)) {
+                        echo "  Skipped (already applied or unsupported idempotency syntax): {$e->errorInfo[2]}\n";
                     } else {
-                        echo "  Warning: {$e->getMessage()}\n";
+                        $migrationErrors[] = "{$name}: {$e->getMessage()}";
+                        echo "  Error: {$e->getMessage()}\n";
                     }
                 }
             }
+        }
+        if ($migrationErrors !== []) {
+            echo "Migration initialization failed with unexpected error(s):\n";
+            foreach ($migrationErrors as $error) {
+                echo "  - {$error}\n";
+            }
+            exit(1);
         }
         echo "All migrations applied.\n";
     }

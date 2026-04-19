@@ -13,6 +13,8 @@ name: Multi-agent guard
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  merge_group:
+    branches: [main]
   push:
     branches: [main]
 

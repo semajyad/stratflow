@@ -17,18 +17,10 @@ on:
     - cron: '30 14 * * *'
   push:
     branches: [main]
-    paths:
-      - 'composer.lock'
-      - 'composer.json'
-      - 'tests/security/baseline-grype.json'
-      - '.github/workflows/sbom.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'composer.lock'
-      - 'composer.json'
-      - 'tests/security/baseline-grype.json'
-      - '.github/workflows/sbom.yml'
+  merge_group:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
