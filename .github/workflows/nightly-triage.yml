@@ -136,7 +136,7 @@ jobs:
             echo "No history changes"
           else
             git commit -m "chore: nightly CI history ${DATE}"
-            git push
+            git push || echo "::warning::Could not push history to main (branch protection). History preserved in triage-report artifact."
           fi
 
       - name: Notify on any failures

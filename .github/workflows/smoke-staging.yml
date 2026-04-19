@@ -16,9 +16,23 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - name: Check STAGING_URL configured
+        id: precheck
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: |
+          if [ -z "$STAGING_URL" ]; then
+            echo "::warning::STAGING_URL secret not set — skipping smoke suite"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        if: steps.precheck.outputs.skip == 'false'
 
       - name: Setup Node
+        if: steps.precheck.outputs.skip == 'false'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
@@ -26,14 +40,17 @@ jobs:
           cache-dependency-path: tests/Playwright/package-lock.json
 
       - name: Install Playwright
+        if: steps.precheck.outputs.skip == 'false'
         working-directory: tests/Playwright
         run: npm ci
 
       - name: Install Chromium browser
+        if: steps.precheck.outputs.skip == 'false'
         working-directory: tests/Playwright
         run: npx playwright install chromium --with-deps
 
       - name: Run fast smoke against staging
+        if: steps.precheck.outputs.skip == 'false'
         working-directory: tests/Playwright
         env:
           CI: 'true'
@@ -43,7 +60,7 @@ jobs:
         run: npx playwright test --project=fast fast/
 
       - name: Upload artifacts on failure
-        if: failure()
+        if: failure() && steps.precheck.outputs.skip == 'false'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: smoke-staging-artifacts
@@ -55,7 +72,11 @@ jobs:
         run: |
           python3 - <<'PYEOF'
           import json, os
-          status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
+          skip = os.environ.get("SKIP") == "true"
+          if skip:
+              status = "skip"
+          else:
+              status = "fail" if os.environ.get("JOB_STATUS") != "success" else "pass"
           payload = {
               "job": "smoke",
               "status": status,
@@ -68,6 +89,7 @@ jobs:
           PYEOF
         env:
           JOB_STATUS: ${{ job.status }}
+          SKIP: ${{ steps.precheck.outputs.skip }}
 
       - name: Upload nightly status artifact
         if: always()
