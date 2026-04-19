@@ -42,7 +42,7 @@ async function getOrCreateWorkItemId(page) {
 
   // No existing item — create one and return a cleanup fn
   const csrf = await getCsrfToken(page);
-  await page.request.post(`${BASE}/app/work-items/store`, {
+  const createRes = await page.request.post(`${BASE}/app/work-items/store`, {
     form: {
       _csrf_token: csrf,
       project_id: String(PROJECT_ID),
@@ -51,22 +51,28 @@ async function getOrCreateWorkItemId(page) {
       estimated_sprints: '1',
     },
   });
+  expect(createRes.status()).toBeLessThan(400);
 
   await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
   const form = page.locator('form[action*="/app/work-items/"][action*="/delete"]').first();
   const action = await form.getAttribute('action') ?? '';
   const match = action.match(/\/work-items\/(\d+)\/delete/);
-  const id = match ? parseInt(match[1], 10) : 0;
+  if (!match) {
+    throw new Error(`Failed to recover fallback work item id after creation; action="${action}"`);
+  }
+  const id = parseInt(match[1], 10);
 
   return {
     id,
     cleanup: async () => {
-      if (!id) return;
-      await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
-      const delCsrf = await getCsrfToken(page);
-      await page.request.post(`${BASE}/app/work-items/${id}/delete`, {
-        form: { _csrf_token: delCsrf },
-      }).catch(() => {});
+      try {
+        if (!id) return;
+        await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
+        const delCsrf = await getCsrfToken(page);
+        await page.request.post(`${BASE}/app/work-items/${id}/delete`, {
+          form: { _csrf_token: delCsrf },
+        }).catch(() => {});
+      } catch (_) { /* best-effort cleanup */ }
     },
   };
 }
