@@ -55,14 +55,17 @@ jobs:
 
           # Count high/critical findings from SARIF
           critical_count = 0
+          sarif_ok = False
+          snyk_failed = os.environ.get("SNYK_OUTCOME") == "failure"
           try:
               sarif = json.load(open("snyk.sarif"))
+              sarif_ok = bool(sarif.get("runs"))
               for run in sarif.get("runs", []):
                   for result in run.get("results", []):
                       if result.get("level") in ("error", "critical"):
                           critical_count += 1
-          except Exception:
-              pass
+          except Exception as exc:
+              print(f"::error::Snyk SARIF could not be read: {exc}")
 
           # Compare against accepted baseline
           baseline_count = 0
@@ -74,7 +77,13 @@ jobs:
 
           new_findings = max(0, critical_count - baseline_count)
 
-          if new_findings > 0:
+          if not sarif_ok:
+              print("::error::Snyk did not produce a usable SARIF report; treating scan as failed.")
+              scan_status = "fail"
+          elif snyk_failed and critical_count == 0:
+              print("::error::Snyk action failed without parsable high/critical findings. Review workflow logs.")
+              scan_status = "fail"
+          elif new_findings > 0:
               print(f"::error::Snyk found {new_findings} new high/critical CVE(s) above accepted baseline ({baseline_count}). "
                     f"Fix them or run: python scripts/ci/update_security_baseline.py snyk")
               scan_status = "fail"
@@ -100,6 +109,7 @@ jobs:
           PYEOF
         env:
           JOB_STATUS: ${{ job.status }}
+          SNYK_OUTCOME: ${{ steps.snyk.outcome }}
 
       - name: Upload nightly status artifact
         if: always()

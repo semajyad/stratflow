@@ -19,18 +19,14 @@ jobs:
       contents: read
 
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
       - name: Check required status checks on main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REQUIRED_CHECKS=(
-            "test"
-            "review"
-            "gitleaks"
-            "dependency-review"
-            # "snyk" removed: snyk.yml runs on schedule only and never posts a PR check
-            # context, so listing it here caused the assertion to report a false gap.
-            # Snyk coverage is maintained by the nightly scheduled run + SARIF upload.
+          mapfile -t REQUIRED_CHECKS < <(
+            grep -vE '^\s*(#|$)' .github/auto-merge-required.txt
           )
 
           PROTECTION=$(gh api repos/${{ github.repository }}/branches/main/protection 2>&1) || FETCH_FAILED=1
@@ -46,22 +42,22 @@ jobs:
             fi
           fi
 
-          CONFIGURED=$(echo "$PROTECTION" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          checks = data.get('required_status_checks', {}).get('checks', [])
-          print(' '.join(c['context'] for c in checks))
-          " 2>/dev/null || echo "")
+          MISSING=$(printf '%s\n' "${REQUIRED_CHECKS[@]}" | PROTECTION_JSON="$PROTECTION" python3 -c "
+          import json, os, sys
+          protection = json.loads(os.environ['PROTECTION_JSON'])
+          configured = {
+              c.get('context', '')
+              for c in protection.get('required_status_checks', {}).get('checks', [])
+          }
+          required = [line.rstrip('\n') for line in sys.stdin if line.strip()]
+          for check in required:
+              if check not in configured:
+                  print(check)
+          " 2>/dev/null || printf '%s\n' "${REQUIRED_CHECKS[@]}")
 
-          MISSING=()
-          for check in "${REQUIRED_CHECKS[@]}"; do
-            if ! echo "$CONFIGURED" | grep -qw "$check"; then
-              MISSING+=("$check")
-            fi
-          done
-
-          if [ ${#MISSING[@]} -gt 0 ]; then
-            echo "::error::Branch protection missing required checks: ${MISSING[*]}"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Branch protection missing required checks:"
+            printf '%s\n' "$MISSING" | sed 's/^/::error::  - /'
             echo "Go to Settings → Branches → main → Edit to add them."
             exit 1
           fi

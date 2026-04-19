@@ -2,10 +2,11 @@
 # One check name per line (exact match as shown in GitHub UI).
 # These are the ONLY checks that must pass to unblock auto-merge.
 # All other checks (security scans, mutation, perf, Dependency Review,
-# CodeRabbit Review) are advisory — their failure does not block merge.
+# CodeRabbit Review) are advisory - their failure does not block merge.
 #
 # When a new required check is added to tests.yml, add its name here too.
 
 PHPUnit unit (PHP 8.4)
 PHPUnit integration (PHP 8.4)
 Playwright (fast — Chromium)
+Test-touch gate

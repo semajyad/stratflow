@@ -1,6 +1,6 @@
 # Testing
 
-StratFlow uses [PHPUnit 11](https://phpunit.de/) for automated testing, with a multi-layer test pyramid running in CI on every PR.
+StratFlow uses [PHPUnit 12](https://phpunit.de/) for automated testing, with a multi-layer test pyramid running in CI on every PR.
 
 ## Running the Test Suite
 
@@ -17,30 +17,30 @@ docker compose exec php composer test:unit
 docker compose exec php composer test:integration
 ```
 
-Coverage measurement requires [pcov](https://github.com/krakjoe/pcov), which is enabled in CI via `shivammathur/setup-php`. It is **not** available in the local Docker image — run coverage in CI or install pcov locally.
+Coverage measurement requires [pcov](https://github.com/krakjoe/pcov), which is enabled in CI via `shivammathur/setup-php`. Local per-file coverage runs through the pre-commit hook when the `stratflow-php-1` container has coverage support available.
 
 ---
 
 ## Test Pyramid
 
-```
-Unit (PHPUnit)     → tests/Unit/
-Integration (PHPUnit) → tests/Integration/
-E2E (Playwright)   → tests/Playwright/
-Performance (k6)   → tests/performance/
-Security (ZAP)     → tests/zap/
+```text
+Unit (PHPUnit)          -> tests/Unit/
+Integration (PHPUnit)   -> tests/Integration/
+E2E (Playwright)        -> tests/Playwright/
+Performance (k6)        -> tests/performance/
+Security (ZAP/Shannon)  -> tests/security/ and tests/zap/
 ```
 
 ### Coverage Targets (line coverage, enforced in CI)
 
 | Layer | Wave 1 floor | Wave 2 target | Wave 5 target |
 |---|---|---|---|
-| Unit — Services | measured in CI | 75% | 85% |
-| Unit — Models | measured in CI | 85% | 90% |
-| Unit — Controllers | measured in CI | 60% | 80% |
-| Overall (whitelisted `src/`) | ≥ 60% (current gate) | ≥ 75% | ≥ 85% |
+| Unit - Services | measured in CI | 75% | 85% |
+| Unit - Models | measured in CI | 85% | 90% |
+| Unit - Controllers | measured in CI | 60% | 80% |
+| Overall (whitelisted `src/`) | >= 65% (current gate) | >= 75% | >= 85% |
 
-> **Note:** The pre-Wave 1 coverage gate counted all pcov-detected files, including vendor-adjacent paths. From Wave 1 onward, coverage is measured against the `src/` whitelist only (excluding `src/Services/Prompts/` and `src/Config/`). The gate was kept at 60% pending the first CI run with the new whitelist. Update this table after that run with the true per-layer baseline.
+> **Note:** The coverage gate value lives in `.github/coverage-threshold.txt` so threshold increases do not conflict with unrelated workflow edits. Never lower it; raise it when the CI baseline supports the next ratchet.
 
 ---
 
@@ -59,7 +59,7 @@ This ensures coverage numbers reflect the application logic only.
 
 ### `tests/Support/DatabaseTestCase.php`
 
-Base class for integration tests that need a real database. Extends `TestCase`, opens a connection in `setUp()`, starts a transaction, and rolls back in `tearDown()`. Each test runs in isolation — no manual DELETE statements needed.
+Base class for integration tests that need a real database. Extends `TestCase`, opens a connection in `setUp()`, starts a transaction, and rolls back in `tearDown()`. Each test runs in isolation, so no manual DELETE statements are needed in normal integration tests.
 
 ```php
 use StratFlow\Tests\Support\DatabaseTestCase;
@@ -68,15 +68,15 @@ class MyIntegrationTest extends DatabaseTestCase
 {
     public function testSomething(): void
     {
-        // $this->db is available and connected
-        // any rows inserted are rolled back automatically
+        // $this->db is available and connected.
+        // Rows inserted during the test are rolled back automatically.
     }
 }
 ```
 
 ### `tests/Support/Factory/`
 
-Plain-PHP factory classes that create model rows via the canonical `Model::create($db, $data)` interface:
+Plain-PHP factory classes create model rows via the canonical `Model::create($db, $data)` interface:
 
 | Factory | Model | Notable defaults |
 |---|---|---|
@@ -137,23 +137,25 @@ class <ClassUnderTest>Test extends TestCase
 }
 ```
 
-Place unit test files in `tests/Unit/<Namespace>/` mirroring the `src/` structure.
+Place unit test files in `tests/Unit/<Namespace>/` mirroring the `src/` structure. Shared smoke coverage can live in grouped tests, but direct source-to-test mappings should exist for source files that the test-touch gate expects.
 
 ### Mocking notes
 
-- `$this->createMock()` — fully stubbed, call assertions available
-- `$this->createStub()` — return-value stubs only, no call assertions
-- `$this->getMockBuilder()->onlyMethods([])` — partial mocks
+- `$this->createMock()` - fully stubbed, call assertions available
+- `$this->createStub()` - return-value stubs only, no call assertions
+- `$this->getMockBuilder()->onlyMethods([])` - partial mocks
 
 ---
 
 ## Continuous Integration
 
-CI runs on every push/PR to `main` via `.github/workflows/tests.yml` against PHP 8.3 and 8.4:
+CI runs on every push/PR to `main` via `.github/workflows/tests.yml` against PHP 8.4:
 
-1. Lint (`php -l`) → PHPStan level 6 → PHPCS PSR-12
-2. PHPUnit full suite with pcov coverage
-3. Coverage gate: overall line coverage ≥ **60%** against the whitelisted `src/` (ratchets up each wave — never decreases)
-4. Mutation testing (Infection) — nightly, `minMsi=70`, scoped via `infection.json`
+1. Unit job: PHP syntax lint, Hadolint, Composer audit, PHPStan, PHPCS, PHPUnit unit suite, coverage report, and the overall line coverage gate.
+2. Integration job: MySQL-backed PHPUnit integration suite.
+3. Test-touch gate: every modified `src/**/*.php` file must have the mapped unit test touched, unless the PR carries the documented `no-test-required` exemption.
+4. E2E fast: Playwright Chromium fast suite in `.github/workflows/e2e.yml`.
+5. k6 smoke: 30-second public-path performance smoke on PRs.
+6. Mutation testing (Infection): nightly, `minMsi=70`, `minCoveredMsi=80`, scoped via `infection.json`.
 
 See `.github/workflows/tests.yml` for the full configuration.
