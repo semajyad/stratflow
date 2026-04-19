@@ -24,6 +24,23 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../src/Config/config.php';
 
+// === Production environment guard ===
+// Fails hard if security-critical env vars are absent in production.
+// No-op in dev/test so local work functions without secrets configured.
+try {
+    \StratFlow\Core\EnvGuard::assertProductionRequirements($config['app']['env']);
+} catch (\RuntimeException $e) {
+    error_log('[StratFlow][FATAL] ' . $e->getMessage());
+    \StratFlow\Core\Response::applySecurityHeaders();
+    http_response_code(500);
+    if (file_exists(__DIR__ . '/../templates/errors/500.php')) {
+        include __DIR__ . '/../templates/errors/500.php';
+    } else {
+        echo 'Service temporarily unavailable.';
+    }
+    exit(1);
+}
+
 // Asset cache-buster: opaque string, never a timestamp (prevents ZAP-10096 disclosure).
 define('ASSET_VERSION', $config['app']['asset_version']);
 
