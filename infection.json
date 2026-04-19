@@ -21,6 +21,6 @@
     "phpUnit": {
         "configDir": "tests"
     },
-    "testFrameworkOptions": "--configuration tests/phpunit.xml",
+    "testFrameworkOptions": "--configuration=tests/phpunit.xml",
     "threads": 2
 }

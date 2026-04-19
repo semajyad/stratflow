@@ -183,5 +183,5 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: k6 performance history ${DATE}"
-            git push
+            git push || echo "::warning::Could not push performance history to main (branch protection). Results preserved in artifacts."
           fi
