@@ -862,3 +862,8 @@ throws `RuntimeException` at startup.
 Migrations 007 and 037 previously used `ADD COLUMN IF NOT EXISTS`, which is
 invalid MySQL 8.0 syntax (error 1064). Both have been corrected to `ADD COLUMN`;
 the duplicate-column backfill path (error 1060) handles existing deployments.
+
+Migrations 008 and 017 also used `CREATE INDEX IF NOT EXISTS`, which is
+likewise invalid in MySQL 8.0. All 10 occurrences have been corrected to
+plain `CREATE INDEX`; the duplicate-key backfill path (error 1061) handles
+existing deployments.

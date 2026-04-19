@@ -19,4 +19,4 @@ ALTER TABLE sync_log
 -- Only add if it does not already exist (safe to run on fresh or existing DBs).
 -- 009_jira_integration.sql only has idx_external on (integration_id, external_id),
 -- not on external_key, so this is new.
-CREATE INDEX IF NOT EXISTS idx_external_key ON sync_mappings (external_key);
+CREATE INDEX idx_external_key ON sync_mappings (external_key);
