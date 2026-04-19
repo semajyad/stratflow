@@ -2974,6 +2974,7 @@ function renderSoundingBoardResults(data) {
         conclusionHeader.setAttribute('aria-expanded', String(conclusionItem.open));
     });
 }
+window.renderSoundingBoardResults = renderSoundingBoardResults;
 
 /**
  * Accept or reject a single persona's evaluation response.
