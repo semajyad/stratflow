@@ -132,6 +132,9 @@ test.describe('Key Results CRUD', () => {
         form: { _csrf_token: delCsrf },
       });
       expect(deleteRes.status()).toBeLessThan(400);
+      expect(await deleteRes.json()).toEqual(expect.objectContaining({ ok: true }));
+      await page.goto(`${BASE}/app/key-results`);
+      await expect(page.locator('body')).not.toContainText(uniqueTitle);
       krId = null; // deleted — skip finally cleanup
     } finally {
       if (krId) await deleteKr(page, krId);
@@ -171,6 +174,8 @@ test.describe('Key Results CRUD', () => {
         },
       });
       expect(res.status()).toBe(400);
+      const json = await res.json();
+      expect(json).toHaveProperty('error');
     } finally {
       await cleanupWorkItem();
     }
@@ -218,6 +223,7 @@ test.describe('Key Results CRUD', () => {
       expect(await updateRes.json()).toEqual(expect.objectContaining({ ok: true }));
       await page.goto(`${BASE}/app/key-results`);
       await expect(page.locator('body')).toContainText(updatedTitle);
+      await expect(page.locator('body')).toContainText('25');
     } finally {
       if (krId) await deleteKr(page, krId);
       await cleanupWorkItem();
