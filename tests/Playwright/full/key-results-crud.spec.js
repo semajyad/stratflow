@@ -29,7 +29,7 @@ async function getCsrfToken(page) {
  * this helper created it. Callers must await cleanup() after their test.
  */
 async function getOrCreateWorkItemId(page) {
-  await page.goto(`${BASE}/app/work-items`);
+  await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
   const deleteForm = page.locator('form[action*="/app/work-items/"][action*="/delete"]').first();
   if (await deleteForm.count() > 0) {
     const action = await deleteForm.getAttribute('action') ?? '';
@@ -52,7 +52,7 @@ async function getOrCreateWorkItemId(page) {
     },
   });
 
-  await page.goto(`${BASE}/app/work-items`);
+  await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
   const form = page.locator('form[action*="/app/work-items/"][action*="/delete"]').first();
   const action = await form.getAttribute('action') ?? '';
   const match = action.match(/\/work-items\/(\d+)\/delete/);
@@ -62,13 +62,23 @@ async function getOrCreateWorkItemId(page) {
     id,
     cleanup: async () => {
       if (!id) return;
-      await page.goto(`${BASE}/app/work-items`);
+      await page.goto(`${BASE}/app/work-items?project_id=${PROJECT_ID}`);
       const delCsrf = await getCsrfToken(page);
       await page.request.post(`${BASE}/app/work-items/${id}/delete`, {
         form: { _csrf_token: delCsrf },
       }).catch(() => {});
     },
   };
+}
+
+async function deleteKr(page, krId) {
+  try {
+    await page.goto(`${BASE}/app/key-results`);
+    const delCsrf = await getCsrfToken(page);
+    await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
+      form: { _csrf_token: delCsrf },
+    }).catch(() => {});
+  } catch (_) { /* best-effort cleanup */ }
 }
 
 test.describe('Key Results CRUD', () => {
@@ -78,43 +88,46 @@ test.describe('Key Results CRUD', () => {
 
     const { id: workItemId, cleanup: cleanupWorkItem } = await getOrCreateWorkItemId(page);
     expect(workItemId).toBeGreaterThan(0);
+
+    let krId = null;
     try {
+      await page.goto(`${BASE}/app/key-results`);
+      const csrf = await getCsrfToken(page);
 
-    await page.goto(`${BASE}/app/key-results`);
-    const csrf = await getCsrfToken(page);
+      const uniqueTitle = `PW Key Result ${Date.now()}`;
 
-    const uniqueTitle = `PW Key Result ${Date.now()}`;
+      // Create
+      const createRes = await page.request.post(`${BASE}/app/key-results`, {
+        form: {
+          _csrf_token: csrf,
+          hl_work_item_id: String(workItemId),
+          title: uniqueTitle,
+          metric_description: 'Automated test metric',
+          baseline_value: '0',
+          target_value: '100',
+          current_value: '10',
+          unit: '%',
+        },
+      });
+      expect(createRes.status()).toBeLessThan(400);
+      const createJson = await createRes.json();
+      expect(createJson).toHaveProperty('id');
+      krId = createJson.id;
 
-    // Create
-    const createRes = await page.request.post(`${BASE}/app/key-results`, {
-      form: {
-        _csrf_token: csrf,
-        hl_work_item_id: String(workItemId),
-        title: uniqueTitle,
-        metric_description: 'Automated test metric',
-        baseline_value: '0',
-        target_value: '100',
-        current_value: '10',
-        unit: '%',
-      },
-    });
-    expect(createRes.status()).toBeLessThan(400);
-    const createJson = await createRes.json();
-    expect(createJson).toHaveProperty('id');
-    const krId = createJson.id;
+      // Verify page loads without error (KR should now be in DB)
+      await page.goto(`${BASE}/app/key-results`);
+      await expect(page.locator('body')).not.toContainText(/500|Fatal error|Uncaught/i);
 
-    // Verify page loads without error (KR should now be in DB)
-    await page.goto(`${BASE}/app/key-results`);
-    await expect(page.locator('body')).not.toContainText(/500|Fatal error|Uncaught/i);
-
-    // Delete
-    await page.goto(`${BASE}/app/key-results`);
-    const delCsrf = await getCsrfToken(page);
-    const deleteRes = await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
-      form: { _csrf_token: delCsrf },
-    });
-    expect(deleteRes.status()).toBeLessThan(400);
+      // Delete (assertion step — proves endpoint works)
+      await page.goto(`${BASE}/app/key-results`);
+      const delCsrf = await getCsrfToken(page);
+      const deleteRes = await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
+        form: { _csrf_token: delCsrf },
+      });
+      expect(deleteRes.status()).toBeLessThan(400);
+      krId = null; // deleted — skip finally cleanup
     } finally {
+      if (krId) await deleteKr(page, krId);
       await cleanupWorkItem();
     }
   });
@@ -139,61 +152,62 @@ test.describe('Key Results CRUD', () => {
   test('create returns 400 when title is empty', async ({ page }) => {
     await loginAsAdmin(page);
     const { id: workItemId, cleanup: cleanupWorkItem } = await getOrCreateWorkItemId(page);
-    await page.goto(`${BASE}/app/key-results`);
-    const csrf = await getCsrfToken(page);
+    try {
+      await page.goto(`${BASE}/app/key-results`);
+      const csrf = await getCsrfToken(page);
 
-    const res = await page.request.post(`${BASE}/app/key-results`, {
-      form: {
-        _csrf_token: csrf,
-        hl_work_item_id: String(workItemId),
-        title: '',
-      },
-    });
-    expect(res.status()).toBe(400);
-    await cleanupWorkItem();
+      const res = await page.request.post(`${BASE}/app/key-results`, {
+        form: {
+          _csrf_token: csrf,
+          hl_work_item_id: String(workItemId),
+          title: '',
+        },
+      });
+      expect(res.status()).toBe(400);
+    } finally {
+      await cleanupWorkItem();
+    }
   });
 
   test('update changes current_value and returns ok', async ({ page }) => {
     await loginAsAdmin(page);
     const { id: workItemId, cleanup: cleanupWorkItem } = await getOrCreateWorkItemId(page);
-    await page.goto(`${BASE}/app/key-results`);
-    const csrf = await getCsrfToken(page);
+    let krId = null;
+    try {
+      await page.goto(`${BASE}/app/key-results`);
+      const csrf = await getCsrfToken(page);
 
-    // Create
-    const createRes = await page.request.post(`${BASE}/app/key-results`, {
-      form: {
-        _csrf_token: csrf,
-        hl_work_item_id: String(workItemId),
-        title: `PW KR Update ${Date.now()}`,
-        baseline_value: '0',
-        target_value: '50',
-        current_value: '5',
-        unit: 'pts',
-      },
-    });
-    const krId = (await createRes.json()).id;
+      // Create
+      const createRes = await page.request.post(`${BASE}/app/key-results`, {
+        form: {
+          _csrf_token: csrf,
+          hl_work_item_id: String(workItemId),
+          title: `PW KR Update ${Date.now()}`,
+          baseline_value: '0',
+          target_value: '50',
+          current_value: '5',
+          unit: 'pts',
+        },
+      });
+      krId = (await createRes.json()).id;
 
-    // Update
-    await page.goto(`${BASE}/app/key-results`);
-    const updateCsrf = await getCsrfToken(page);
-    const updateRes = await page.request.post(`${BASE}/app/key-results/${krId}`, {
-      form: {
-        _csrf_token: updateCsrf,
-        hl_work_item_id: String(workItemId),
-        title: `PW KR Update ${krId}`,
-        current_value: '25',
-        target_value: '50',
-      },
-    });
-    expect(updateRes.status()).toBeLessThan(400);
-
-    // Cleanup KR then work item
-    await page.goto(`${BASE}/app/key-results`);
-    const delCsrf = await getCsrfToken(page);
-    await page.request.post(`${BASE}/app/key-results/${krId}/delete`, {
-      form: { _csrf_token: delCsrf },
-    });
-    await cleanupWorkItem();
+      // Update
+      await page.goto(`${BASE}/app/key-results`);
+      const updateCsrf = await getCsrfToken(page);
+      const updateRes = await page.request.post(`${BASE}/app/key-results/${krId}`, {
+        form: {
+          _csrf_token: updateCsrf,
+          hl_work_item_id: String(workItemId),
+          title: `PW KR Update ${krId}`,
+          current_value: '25',
+          target_value: '50',
+        },
+      });
+      expect(updateRes.status()).toBeLessThan(400);
+    } finally {
+      if (krId) await deleteKr(page, krId);
+      await cleanupWorkItem();
+    }
   });
 
 });
