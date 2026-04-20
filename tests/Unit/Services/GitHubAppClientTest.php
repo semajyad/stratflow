@@ -590,4 +590,19 @@ class GitHubAppClientTest extends TestCase
         $this->assertSame('Test commit', $commit['message']);
         $this->assertSame('https://github.com/org/repo/commit/commit1', $commit['url']);
     }
+
+    #[Test]
+    public function testMintAppJwtDoesNotEmitWarningOnMissingFile(): void
+    {
+        // file_get_contents on missing path must throw, not emit E_WARNING
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Cannot read private key/');
+
+        $_ENV['GITHUB_APP_PRIVATE_KEY']      = '';
+        $_ENV['GITHUB_APP_PRIVATE_KEY_PATH'] = '/nonexistent/path/key.pem';
+        $_ENV['GITHUB_APP_ID']               = '12345';
+
+        $client = new GitHubAppClient();
+        $client->mintAppJwt();
+    }
 }

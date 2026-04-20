@@ -92,8 +92,8 @@ class StripeService
     public function validPriceIds(): array
     {
         return array_filter([
-            $this->config['price_product'],
-            $this->config['price_consultancy'],
+            $this->config['price_product'] ?? '',
+            $this->config['price_consultancy'] ?? '',
             $this->config['price_user_pack'] ?? '',
             $this->config['price_evaluation_board'] ?? '',
         ]);

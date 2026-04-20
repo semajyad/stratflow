@@ -352,4 +352,13 @@ class SessionTest extends TestCase
 
         $this->assertSame('Second', $_SESSION['_flash']['status']);
     }
+
+    #[Test]
+    public function testDestroyIsSafeWhenSessionNotStarted(): void
+    {
+        $session = $this->makeSession();
+        // Must not emit "Trying to destroy uninitialized session"
+        $session->destroy();
+        $this->assertTrue(true);
+    }
 }

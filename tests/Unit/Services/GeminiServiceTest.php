@@ -62,6 +62,13 @@ class GeminiServiceTest extends TestCase
     // ===========================
 
     #[Test]
+    public function testConstructorDoesNotWarnWhenGeminiKeyMissing(): void
+    {
+        $service = new GeminiService([]);
+        $this->assertInstanceOf(GeminiService::class, $service);
+    }
+
+    #[Test]
     #[Group('external')]
     public function testGenerateThrowsOnInvalidApiKey(): void
     {

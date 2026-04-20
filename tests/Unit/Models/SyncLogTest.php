@@ -86,4 +86,13 @@ class SyncLogTest extends TestCase {
         $result = SyncLog::findAllByIntegration($this->db, 1, "push", "success");
         $this->assertCount(1, $result);
     }
+    public function testPaginatedByIntegrationHandlesFetchReturningFalse(): void {
+        $countStmt = $this->createMock(\PDOStatement::class);
+        $rowsStmt  = $this->createMock(\PDOStatement::class);
+        $countStmt->method("fetch")->willReturn(false);
+        $rowsStmt->method("fetchAll")->willReturn([]);
+        $this->db->method("query")->willReturnOnConsecutiveCalls($countStmt, $rowsStmt);
+        $result = SyncLog::paginatedByIntegration($this->db, 1);
+        $this->assertSame(0, $result['total']);
+    }
 }

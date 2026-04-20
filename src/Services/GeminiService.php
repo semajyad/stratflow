@@ -33,8 +33,9 @@ class GeminiService
 
     public function __construct(array $config)
     {
-        $this->apiKey    = $config['gemini']['api_key'];
-        $this->model     = $config['gemini']['model'];
+        $geminiCfg       = $config['gemini'] ?? [];
+        $this->apiKey    = $geminiCfg['api_key'] ?? '';
+        $this->model     = $geminiCfg['model'] ?? '';
         $this->openaiKey = $config['openai']['api_key'] ?? '';
     }
 
