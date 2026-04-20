@@ -258,7 +258,8 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function findByLocalItemsBulkReturnsEmptyWhenNoIds(): void
     {
-        $db   = $this->makeDb();
+        $db = $this->createMock(Database::class);
+        $db->expects($this->never())->method('query');
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', []);
         $this->assertSame([], $result);
     }
@@ -272,9 +273,7 @@ class StoryGitLinkTest extends TestCase
         $db = $this->createMock(Database::class);
         $db->expects($this->once())->method('query')->willReturnCallback(
             function (string $sql, array $params) use ($stmt): \PDOStatement {
-                $this->assertSame('user_story', $params[0]);
-                $this->assertContains(42, $params);
-                $this->assertContains(43, $params);
+                $this->assertSame(['user_story', 42, 43], $params);
                 return $stmt;
             }
         );
@@ -314,7 +313,8 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function countsByLocalIdsReturnsEmptyWhenNoIds(): void
     {
-        $db   = $this->makeDb();
+        $db = $this->createMock(Database::class);
+        $db->expects($this->never())->method('query');
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', []);
         $this->assertSame([], $result);
     }
@@ -331,9 +331,7 @@ class StoryGitLinkTest extends TestCase
         $db = $this->createMock(Database::class);
         $db->expects($this->once())->method('query')->willReturnCallback(
             function (string $sql, array $params) use ($stmt): \PDOStatement {
-                $this->assertSame('user_story', $params[0]);
-                $this->assertContains(42, $params);
-                $this->assertContains(43, $params);
+                $this->assertSame(['user_story', 42, 43], $params);
                 return $stmt;
             }
         );
