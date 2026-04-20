@@ -701,7 +701,7 @@ class JiraSyncService
                         'local_type'     => $mapping['local_type'],
                         'local_id'       => (int) $mapping['local_id'],
                         'external_id'    => $issue['key'] ?? $externalId,
-                        'details_json'   => json_encode(['title' => $newTitle]),
+                        'details_json'   => json_encode(['title' => $updateData['title'] ?? ($localItem['title'] ?? '')]),
                         'status'         => 'success',
                     ]);
                     $counts['updated']++;

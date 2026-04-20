@@ -173,4 +173,12 @@ class StripeServiceTest extends TestCase
         $mode = $svc->modeForProductType($type);
         $this->assertSame('payment', $mode);
     }
+
+    #[Test]
+    public function validPriceIdsDoesNotWarnWhenOptionalKeysAbsent(): void
+    {
+        $svc = $this->makeService(['price_product' => '', 'price_consultancy' => '']);
+        $ids = $svc->validPriceIds();
+        $this->assertIsArray($ids);
+    }
 }

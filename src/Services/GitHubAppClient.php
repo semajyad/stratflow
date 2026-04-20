@@ -58,7 +58,7 @@ class GitHubAppClient
             if ($keyPath === '') {
                 throw new \RuntimeException('[GitHubAppClient] Neither GITHUB_APP_PRIVATE_KEY nor GITHUB_APP_PRIVATE_KEY_PATH is configured');
             }
-            $pem = file_get_contents($keyPath);
+            $pem = @file_get_contents($keyPath);
             if ($pem === false) {
                 throw new \RuntimeException('[GitHubAppClient] Cannot read private key at: ' . $keyPath);
             }

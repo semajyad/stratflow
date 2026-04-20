@@ -103,7 +103,7 @@ class SyncLog
 
         // Total count for pagination
         $countStmt = $db->query("SELECT COUNT(*) AS cnt FROM sync_log {$where}", $params);
-        $total = (int) $countStmt->fetch()['cnt'];
+        $total = (int) (($countStmt->fetch(\PDO::FETCH_ASSOC) ?: [])['cnt'] ?? 0);
 // Paginated rows
         $offset = ($page - 1) * $perPage;
         $params[':lim']    = $perPage;
