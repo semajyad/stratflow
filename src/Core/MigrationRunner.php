@@ -13,15 +13,17 @@ namespace StratFlow\Core;
  * prevent silent drift between the migration history and the schema.
  *
  * On first deploy against a database that was previously managed without a
- * ledger, a migration that fails with MySQL error 1060 (duplicate column),
- * 1061 (duplicate key), or 1826 (duplicate FK) is treated as already applied
- * and back-filled into the ledger. This allows a one-time safe transition for
- * existing databases.
+ * ledger, migrations that fail with duplicate-object errors are treated as
+ * already applied and back-filled into the ledger. This allows a one-time safe
+ * transition for existing databases.
  */
 final class MigrationRunner
 {
     /** MySQL error codes that indicate a migration was already applied. */
-    private const ALREADY_APPLIED_CODES = [1060, 1061, 1826];
+    private const ALREADY_APPLIED_CODES = [1050, 1060, 1061, 1826];
+
+    /** MySQL syntax error for legacy IF NOT EXISTS DDL on older engines. */
+    private const SYNTAX_ERROR_CODE = 1064;
 
     public function __construct(
         private readonly \PDO $pdo,
@@ -93,7 +95,7 @@ final class MigrationRunner
                 }
             } catch (\PDOException $e) {
                 $code = (int) ($e->errorInfo[1] ?? 0);
-                if (in_array($code, self::ALREADY_APPLIED_CODES, true)) {
+                if ($this->isAlreadyAppliedError($code, $stmt)) {
                     // Back-fill: skip this statement (already applied before ledger); continue with the rest.
                     continue;
                 }
@@ -106,6 +108,22 @@ final class MigrationRunner
         }
 
         $this->recordApplied($name, $checksum);
+    }
+
+    private function isAlreadyAppliedError(int $code, string $statement): bool
+    {
+        if (in_array($code, self::ALREADY_APPLIED_CODES, true)) {
+            return true;
+        }
+
+        if ($code !== self::SYNTAX_ERROR_CODE) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/\b(?:ADD\s+COLUMN|CREATE\s+(?:UNIQUE\s+)?INDEX)\s+IF\s+NOT\s+EXISTS\b/i',
+            $statement
+        );
     }
 
     private function recordApplied(string $name, string $checksum): void

@@ -51,6 +51,8 @@ class WorkItemLifecycleTest extends TestCase
         self::$db = new Database(getTestDbConfig());
         self::seedPermissionCapabilities();
 
+        self::seedCapabilityFixtures();
+
         // Clean up any leftovers from a previous failed run (FK-safe order)
         foreach (['Test Org - WorkItemLifecycleTest A', 'Test Org - WorkItemLifecycleTest B'] as $orgName) {
             self::$db->query(
@@ -175,6 +177,39 @@ class WorkItemLifecycleTest extends TestCase
         $auth->method('orgId')->willReturn(self::$orgIdB);
 
         return new WorkItemController($request, $response, $auth, self::$db, self::$config);
+    }
+
+    private static function seedCapabilityFixtures(): void
+    {
+        self::$db->query(
+            "INSERT IGNORE INTO capabilities (`key`, description) VALUES
+             ('workflow.view', 'View workflow'),
+             ('workflow.edit', 'Edit workflow'),
+             ('project.view_all', 'View all projects'),
+             ('project.create', 'Create project'),
+             ('project.edit_settings', 'Edit project settings'),
+             ('project.manage_access', 'Manage project access'),
+             ('project.delete', 'Delete project'),
+             ('admin.access', 'Admin access'),
+             ('users.manage', 'Manage users'),
+             ('teams.manage', 'Manage teams'),
+             ('settings.manage', 'Manage settings'),
+             ('integrations.manage', 'Manage integrations'),
+             ('audit_logs.view', 'View audit logs'),
+             ('tokens.manage_own', 'Manage own tokens'),
+             ('api.use_own_tokens', 'Use own API tokens')"
+        );
+
+        self::$db->query(
+            "INSERT IGNORE INTO account_type_capabilities (account_type, capability_id)
+             SELECT 'org_admin', id FROM capabilities
+             WHERE `key` IN (
+                 'workflow.view','workflow.edit','project.view_all','project.create',
+                 'project.edit_settings','project.manage_access','project.delete',
+                 'admin.access','users.manage','teams.manage','settings.manage',
+                 'integrations.manage','audit_logs.view','tokens.manage_own','api.use_own_tokens'
+             )"
+        );
     }
 
     // ===========================

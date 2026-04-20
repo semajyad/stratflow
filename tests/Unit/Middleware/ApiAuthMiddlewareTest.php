@@ -14,14 +14,7 @@ use StratFlow\Middleware\ApiAuthMiddleware;
 /**
  * ApiAuthMiddlewareTest (unit)
  *
- * Unit tests for the happy path of ApiAuthMiddleware using mocked DB + Auth.
- *
- * Failure paths (missing/invalid header, revoked token, cross-org) call `exit`
- * which cannot be intercepted in a PHPUnit process without refactoring the
- * middleware. Those six scenarios are fully covered by:
- *   tests/Integration/ApiAuthMiddlewareTest.php
- *
- * This file therefore focuses on the positive path and scope-extraction logic.
+ * Unit tests for ApiAuthMiddleware using mocked DB + Auth.
  */
 class ApiAuthMiddlewareTest extends TestCase
 {
@@ -39,7 +32,7 @@ class ApiAuthMiddlewareTest extends TestCase
         return $auth;
     }
 
-    private function makeDb(mixed $tokenRow, mixed $userRow): Database
+    private function makeDb(mixed $tokenRow, mixed $userRow, bool $hasAccountType = false): Database
     {
         $db = $this->getMockBuilder(Database::class)
             ->disableOriginalConstructor()
@@ -51,7 +44,7 @@ class ApiAuthMiddlewareTest extends TestCase
 
         // account_type column check
         $infoStmt = $this->createMock(\PDOStatement::class);
-        $infoStmt->method('fetch')->willReturn(false);
+        $infoStmt->method('fetch')->willReturn($hasAccountType ? ['1' => 1] : false);
 
         $userStmt = $this->createMock(\PDOStatement::class);
         $userStmt->method('fetch')->willReturn($userRow);
@@ -70,6 +63,29 @@ class ApiAuthMiddlewareTest extends TestCase
         return $this->getMockBuilder(Response::class)
             ->disableOriginalConstructor()
             ->getMock();
+    }
+
+    private function captureMiddlewareResult(callable $callback): array
+    {
+        ob_start();
+        try {
+            $result = $callback();
+            $output = ob_get_clean();
+            return [$result, $output];
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            throw $e;
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        unset(
+            $_SERVER['HTTP_AUTHORIZATION'],
+            $_SERVER['REMOTE_ADDR'],
+            $_SERVER['REQUEST_URI'],
+            $_SERVER['REQUEST_METHOD']
+        );
     }
 
     // ===========================
@@ -109,8 +125,6 @@ class ApiAuthMiddlewareTest extends TestCase
             $this->makeResponse()
         );
 
-        unset($_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REMOTE_ADDR'], $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
-
         $this->assertTrue($result);
     }
 
@@ -136,7 +150,142 @@ class ApiAuthMiddlewareTest extends TestCase
             $this->makeResponse()
         );
 
-        unset($_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REMOTE_ADDR'], $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function missingBearerTokenReturnsFalseWithUnauthorizedJson(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = '';
+
+        [$result, $output] = $this->captureMiddlewareResult(fn() => (new ApiAuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeDb(null, null),
+            $this->makeResponse()
+        ));
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('unauthorized', $output);
+        $this->assertStringContainsString('Authorization header', $output);
+    }
+
+    #[Test]
+    public function unknownTokenReturnsFalseWithUnauthorizedJson(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer sf_pat_unknown';
+
+        [$result, $output] = $this->captureMiddlewareResult(fn() => (new ApiAuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeDb(null, null),
+            $this->makeResponse()
+        ));
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('unauthorized', $output);
+        $this->assertStringContainsString('Token not found', $output);
+    }
+
+    #[Test]
+    public function missingTokenOwnerReturnsFalseWithUnauthorizedJson(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer sf_pat_known';
+
+        $tokenRow = [
+            'id' => 3,
+            'user_id' => 42,
+            'org_id' => 5,
+            'scopes' => null,
+        ];
+
+        [$result, $output] = $this->captureMiddlewareResult(fn() => (new ApiAuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeDb($tokenRow, false),
+            $this->makeResponse()
+        ));
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('unauthorized', $output);
+        $this->assertStringContainsString('Token owner not found', $output);
+    }
+
+    #[Test]
+    public function disallowedScopeReturnsFalseWithForbiddenJson(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer sf_pat_limited';
+        $_SERVER['REQUEST_URI'] = '/api/v1/stories/99/status';
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+
+        $tokenRow = [
+            'id' => 4,
+            'user_id' => 42,
+            'org_id' => 5,
+            'scopes' => json_encode(['profile:read'], JSON_UNESCAPED_SLASHES),
+        ];
+        $userRow = [
+            'id' => 42,
+            'org_id' => 5,
+            'full_name' => 'Test User',
+            'email' => 'u@test.invalid',
+            'role' => 'user',
+            'has_billing_access' => 0,
+            'has_executive_access' => 0,
+            'is_project_admin' => 0,
+            'jira_account_id' => null,
+            'team' => null,
+        ];
+
+        [$result, $output] = $this->captureMiddlewareResult(fn() => (new ApiAuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeDb($tokenRow, $userRow),
+            $this->makeResponse()
+        ));
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('forbidden', $output);
+        $this->assertStringContainsString('scope', $output);
+    }
+
+    #[Test]
+    public function validTokenIncludesAccountTypeWhenColumnExists(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer sf_pat_with_account_type';
+        $_SERVER['REQUEST_URI'] = '/api/v1/me';
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+
+        $tokenRow = [
+            'id' => 5,
+            'user_id' => 42,
+            'org_id' => 5,
+            'scopes' => json_encode(['profile:read'], JSON_UNESCAPED_SLASHES),
+        ];
+        $userRow = [
+            'id' => 42,
+            'org_id' => 5,
+            'full_name' => 'Test User',
+            'email' => 'u@test.invalid',
+            'role' => 'user',
+            'account_type' => 'member',
+            'has_billing_access' => 0,
+            'has_executive_access' => 0,
+            'is_project_admin' => 0,
+            'jira_account_id' => null,
+            'team' => null,
+        ];
+
+        $auth = $this->getMockBuilder(Auth::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['loginAsPrincipal'])
+            ->getMock();
+        $auth->expects($this->once())
+            ->method('loginAsPrincipal')
+            ->with($this->callback(fn(array $principal): bool => ($principal['account_type'] ?? null) === 'member'));
+
+        $result = (new ApiAuthMiddleware())->handle(
+            $auth,
+            $this->makeDb($tokenRow, $userRow, true),
+            $this->makeResponse()
+        );
 
         $this->assertTrue($result);
     }

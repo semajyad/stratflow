@@ -186,4 +186,27 @@ class MigrationRunnerTest extends TestCase
             $this->assertNotFalse($row, "{$table} must exist after multi-statement migration");
         }
     }
+
+    #[Test]
+    public function treatsLegacyMysqlIfNotExistsSyntaxErrorsAsAlreadyApplied(): void
+    {
+        $runner = new MigrationRunner($this->pdo, $this->migrationDir);
+        $method = new \ReflectionMethod($runner, 'isAlreadyAppliedError');
+
+        $this->assertTrue($method->invoke(
+            $runner,
+            1064,
+            'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at DATETIME'
+        ));
+        $this->assertTrue($method->invoke(
+            $runner,
+            1064,
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)'
+        ));
+        $this->assertFalse($method->invoke(
+            $runner,
+            1064,
+            'INSERT INTO missing_table VALUES (1)'
+        ));
+    }
 }

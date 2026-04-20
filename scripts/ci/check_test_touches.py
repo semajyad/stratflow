@@ -266,15 +266,31 @@ def check_bug_test_rule(base: str, head: str) -> list[tuple[str, str]]:
     return violations
 
 
-def get_staged_files() -> list[str]:
+def get_staged_changed_files() -> list[str]:
     """Return list of staged (non-deleted) files for pre-commit use."""
     result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        ["git", "diff", "--cached", "--name-status"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
         return []
-    return [f for f in result.stdout.strip().splitlines() if f]
+
+    files = []
+    for line in result.stdout.strip().splitlines():
+        if not line:
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        status, path = parts
+        if not status.startswith("D"):
+            files.append(path.strip())
+    return files
+
+
+def get_staged_files() -> list[str]:
+    """Backward-compatible alias for older hook code."""
+    return get_staged_changed_files()
 
 
 def main():

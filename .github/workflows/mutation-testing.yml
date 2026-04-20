@@ -65,11 +65,7 @@ jobs:
           echo "GEMINI_API_KEY=test-key" >> .env
 
       - name: Initialize database
-        run: |
-          mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
-          for f in database/migrations/*.sql; do
-            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
-          done
+        run: php scripts/init-db.php
 
       - name: Run Infection mutation testing (full src/)
         id: infection
