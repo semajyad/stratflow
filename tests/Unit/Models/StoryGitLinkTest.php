@@ -267,7 +267,17 @@ class StoryGitLinkTest extends TestCase
     public function findByLocalItemsBulkReturnsMappedRows(): void
     {
         $rows = [$this->gitLinkRow(), $this->gitLinkRow2()];
-        $db   = $this->makeDb(null, $rows);
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetchAll')->willReturn($rows);
+        $db = $this->createMock(Database::class);
+        $db->expects($this->once())->method('query')->willReturnCallback(
+            function (string $sql, array $params) use ($stmt): \PDOStatement {
+                $this->assertSame('user_story', $params[0]);
+                $this->assertContains(42, $params);
+                $this->assertContains(43, $params);
+                return $stmt;
+            }
+        );
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', [42, 43]);
         $this->assertIsArray($result);
         $this->assertArrayHasKey(42, $result);
@@ -316,7 +326,17 @@ class StoryGitLinkTest extends TestCase
             ['local_id' => '42', 'cnt' => '3'],
             ['local_id' => '43', 'cnt' => '1'],
         ];
-        $db   = $this->makeDb(null, $rows);
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetchAll')->willReturn($rows);
+        $db = $this->createMock(Database::class);
+        $db->expects($this->once())->method('query')->willReturnCallback(
+            function (string $sql, array $params) use ($stmt): \PDOStatement {
+                $this->assertSame('user_story', $params[0]);
+                $this->assertContains(42, $params);
+                $this->assertContains(43, $params);
+                return $stmt;
+            }
+        );
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', [42, 43]);
         $this->assertIsArray($result);
         $this->assertSame(3, $result[42]);
