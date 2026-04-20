@@ -6,6 +6,7 @@ namespace StratFlow\Tests\Unit\Core;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use ReflectionProperty;
 use StratFlow\Core\CSRF;
 use StratFlow\Core\Response;
@@ -270,10 +271,19 @@ class ResponseTest extends TestCase
     }
 
     #[Test]
+    public function testGetNonceChangesAfterReset(): void
+    {
+        $first = Response::getNonce();
+        (new ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
+        $second = Response::getNonce();
+        $this->assertNotSame($first, $second);
+    }
+
+    #[Test]
     public function testGetNonceAppearsInCspHeader(): void
     {
         $nonce  = Response::getNonce();
-        $method = new \ReflectionMethod(Response::class, 'buildContentSecurityPolicy');
+        $method = new ReflectionMethod(Response::class, 'buildContentSecurityPolicy');
         $csp    = $method->invoke(null, 'app', $nonce);
         $this->assertStringContainsString("'nonce-{$nonce}'", $csp);
     }

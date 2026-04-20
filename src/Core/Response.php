@@ -29,6 +29,12 @@ class Response
         return self::$nonce;
     }
 
+    /** Reset the nonce — call once per request in long-running SAPI (FPM) to prevent reuse. */
+    public static function resetNonce(): void
+    {
+        self::$nonce = '';
+    }
+
     public function __construct(CSRF $csrf)
     {
         $this->csrf = $csrf;
@@ -215,13 +221,13 @@ class Response
 
     private static function buildContentSecurityPolicy(string $profile, string $nonce): string
     {
-        $n = "'nonce-{$nonce}'";
+        $nonceSrc = "'nonce-{$nonce}'";
 
         if ($profile === 'public') {
-            return "default-src 'self'; script-src 'self' {$n}; style-src 'self' {$n}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+            return "default-src 'self'; script-src 'self' {$nonceSrc}; style-src 'self' {$nonceSrc}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
         }
 
         // style-src keeps 'unsafe-inline' until all style= HTML attributes are migrated to classes.
-        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net {$n}; style-src 'self' 'unsafe-inline' {$n}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net {$nonceSrc}; style-src 'self' 'unsafe-inline' {$nonceSrc}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
     }
 }

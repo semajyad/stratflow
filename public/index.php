@@ -22,6 +22,8 @@ header_remove('X-Powered-By');
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+\StratFlow\Core\Response::resetNonce();
+
 $config = require __DIR__ . '/../src/Config/config.php';
 
 // === Production environment guard ===
