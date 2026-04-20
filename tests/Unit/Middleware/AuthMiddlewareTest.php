@@ -38,6 +38,7 @@ class AuthMiddlewareTest extends TestCase
     #[Test]
     public function unauthenticatedUserIsRedirectedToLogin(): void
     {
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = '';
         $redirectedTo = null;
         $result = (new AuthMiddleware())->handle(
             $this->makeAuth(false),
@@ -45,6 +46,29 @@ class AuthMiddlewareTest extends TestCase
         );
         $this->assertFalse($result);
         $this->assertSame('/login', $redirectedTo);
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
+    }
+
+    #[Test]
+    public function unauthenticatedAjaxRequestReceivesJson401(): void
+    {
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
+        $redirectedTo = null;
+
+        ob_start();
+        $result = (new AuthMiddleware())->handle(
+            $this->makeAuth(false),
+            $this->makeResponse($redirectedTo)
+        );
+        $body = ob_get_clean();
+
+        $this->assertFalse($result);
+        $this->assertNull($redirectedTo, 'Should not redirect on AJAX request');
+        $decoded = json_decode($body, true);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('error', $decoded);
+
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
     }
 
     #[Test]

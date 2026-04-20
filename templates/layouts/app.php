@@ -42,7 +42,6 @@ elseif (str_starts_with($_uri, '/app/admin/') || $_uri === '/app/admin') { $_bod
         </div>
     </div>
     <?php include __DIR__ . '/../partials/sounding-board-modal.php'; ?>
-    <?php include __DIR__ . '/../partials/board-review-modal.php'; ?>
     <?php include __DIR__ . '/../partials/onboarding-wizard.php'; ?>
     <script src="/assets/js/app.js?v=<?= ASSET_VERSION ?>"></script>
 </body>

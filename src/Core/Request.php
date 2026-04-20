@@ -80,6 +80,16 @@ class Request
         return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
     }
 
+    /** True when the request expects a JSON response (AJAX or Content-Type: application/json). */
+    public static function expectsJson(): bool
+    {
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+            return true;
+        }
+        $ct = strtolower($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+        return str_starts_with($ct, 'application/json');
+    }
+
     /**
      * Return the raw request body.
      */

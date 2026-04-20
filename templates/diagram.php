@@ -30,7 +30,7 @@ $hasSummary = !empty($document_summary);
         <?php if ($hasDiagram): ?>
             <button type="button" id="generate-diagram-btn" class="btn btn-ai btn-sm js-generate-diagram">Regenerate</button>
         <?php endif; ?>
-        <?php $board_review_screen = 'roadmap'; include __DIR__ . '/partials/board-review-button.php'; ?>
+        <?php $active_page = 'roadmap'; include __DIR__ . '/partials/sounding-board-button.php'; ?>
     </div>
 </div>
 
@@ -239,4 +239,4 @@ $hasSummary = !empty($document_summary);
 </div>
 <?php endif; ?>
 
-<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.min.js" integrity="sha384-/wpvwpx/82U/rD5MBk1sSp5IpBRhvzoZNsocF4/AIyIn1G8kobtnIsjaqd06GUO8" crossorigin="anonymous"></script>
