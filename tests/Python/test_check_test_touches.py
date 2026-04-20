@@ -67,3 +67,17 @@ def test_get_staged_changed_files_excludes_deleted_files():
             "src/Core/Request.php",
             "tests/Unit/Core/RequestTest.php",
         ]
+
+
+def test_get_staged_changed_files_uses_new_path_for_renames():
+    result = type("Result", (), {
+        "returncode": 0,
+        "stdout": "R100\tsrc/Old.php\tsrc/New.php\nC100\tsrc/Base.php\tsrc/Copy.php\n",
+        "stderr": "",
+    })()
+
+    with patch("scripts.ci.check_test_touches.subprocess.run", return_value=result):
+        assert get_staged_changed_files() == [
+            "src/New.php",
+            "src/Copy.php",
+        ]

@@ -1,4 +1,4 @@
-﻿# Required CI checks for auto-merge
+# Required CI checks for auto-merge
 # One check name per line (exact match as shown in GitHub UI).
 # These checks must pass to unblock auto-merge and branch ruleset assertions.
 # Nightly-only jobs (mutation, perf, CodeRabbit Review) remain advisory.

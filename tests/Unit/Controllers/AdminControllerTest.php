@@ -25,7 +25,7 @@ class FakeStripeHttpClient implements \Stripe\HttpClient\ClientInterface
     }
 
     /** @phpcsSuppress SlevomatCodingStandard.TypeHints.ParameterTypeHint */
-    public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1'): array
+    public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
     {
         foreach ($this->responses as $pattern => $response) {
             if (str_contains($absUrl, $pattern)) {

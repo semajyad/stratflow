@@ -203,6 +203,11 @@ class MigrationRunnerTest extends TestCase
             1064,
             'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)'
         ));
+        $this->assertTrue($method->invoke(
+            $runner,
+            1050,
+            'CREATE TABLE IF NOT EXISTS users (id INT)'
+        ));
         $this->assertFalse($method->invoke(
             $runner,
             1064,

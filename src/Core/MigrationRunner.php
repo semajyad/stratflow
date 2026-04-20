@@ -121,7 +121,7 @@ final class MigrationRunner
         }
 
         return (bool) preg_match(
-            '/\b(?:ADD\s+COLUMN|CREATE\s+(?:UNIQUE\s+)?INDEX)\s+IF\s+NOT\s+EXISTS\b/i',
+            '/\b(?:ADD\s+COLUMN|CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX))\s+IF\s+NOT\s+EXISTS\b/i',
             $statement
         );
     }

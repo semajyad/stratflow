@@ -16,6 +16,7 @@ on:
       - 'views/**'
       - 'resources/**'
       - 'tests/Lighthouse/**'
+      - 'scripts/init-db.php'
       - 'database/schema.sql'
       - 'database/migrations/**'
       - '.github/workflows/lighthouse.yml'

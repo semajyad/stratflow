@@ -279,10 +279,11 @@ def get_staged_changed_files() -> list[str]:
     for line in result.stdout.strip().splitlines():
         if not line:
             continue
-        parts = line.split("\t", 1)
-        if len(parts) != 2:
+        parts = line.split("\t")
+        if len(parts) < 2:
             continue
-        status, path = parts
+        status = parts[0]
+        path = parts[-1] if status.startswith(("R", "C")) else parts[1]
         if not status.startswith("D"):
             files.append(path.strip())
     return files

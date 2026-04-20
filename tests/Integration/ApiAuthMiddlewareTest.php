@@ -76,9 +76,12 @@ class ApiAuthMiddlewareTest extends TestCase
 
     private function runMiddleware(string $authHeader): bool
     {
-        // Set the header in $_SERVER
+        $originalServer = $_SERVER;
+
         $_SERVER['HTTP_AUTHORIZATION'] = $authHeader;
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $_SERVER['REQUEST_URI'] = '/api/v1/me';
+        $_SERVER['REQUEST_METHOD'] = 'GET';
 
         $session  = $this->createMock(Session::class);
         $auth     = new Auth($session, self::$db);
@@ -86,12 +89,15 @@ class ApiAuthMiddlewareTest extends TestCase
 
         $middleware = new \StratFlow\Middleware\ApiAuthMiddleware();
 
-        // Capture output buffering to prevent JSON from polluting test output
         ob_start();
-        $result = $middleware->handle($auth, self::$db, $response);
-        ob_end_clean();
-
-        return $result;
+        try {
+            return $middleware->handle($auth, self::$db, $response);
+        } finally {
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            $_SERVER = $originalServer;
+        }
     }
 
     // ===========================
@@ -198,9 +204,11 @@ class ApiAuthMiddlewareTest extends TestCase
         PersonalAccessToken::create(self::$db, self::$userId, self::$orgId, 'inactive', $gen['raw'], $gen['prefix']);
         self::$db->query("UPDATE users SET is_active = 0 WHERE id = ?", [self::$userId]);
 
-        $result = $this->runMiddleware('Bearer ' . $gen['raw']);
-
-        self::$db->query("UPDATE users SET is_active = 1 WHERE id = ?", [self::$userId]);
-        $this->assertFalse($result);
+        try {
+            $result = $this->runMiddleware('Bearer ' . $gen['raw']);
+            $this->assertFalse($result);
+        } finally {
+            self::$db->query("UPDATE users SET is_active = 1 WHERE id = ?", [self::$userId]);
+        }
     }
 }
