@@ -6,6 +6,8 @@ namespace StratFlow\Tests\Unit\Core;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
+use ReflectionProperty;
 use StratFlow\Core\CSRF;
 use StratFlow\Core\Response;
 
@@ -25,6 +27,8 @@ class ResponseTest extends TestCase
         $this->csrf = $this->createMock(CSRF::class);
         $this->csrf->method('getToken')->willReturn('test-csrf-token');
         $this->response = new Response($this->csrf);
+        // Reset static nonce so each test starts clean
+        (new ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
     }
 
     // ===========================
@@ -244,5 +248,43 @@ class ResponseTest extends TestCase
         ob_end_clean();
 
         $this->assertTrue(true);
+    }
+
+    // ===========================
+    // getNonce (CSP nonce)
+    // ===========================
+
+    #[Test]
+    public function testGetNonceReturnsValidBase64(): void
+    {
+        $nonce = Response::getNonce();
+        $this->assertNotEmpty($nonce);
+        $decoded = base64_decode($nonce, true);
+        $this->assertNotFalse($decoded);
+        $this->assertSame(16, strlen($decoded));
+    }
+
+    #[Test]
+    public function testGetNonceIsStableWithinRequest(): void
+    {
+        $this->assertSame(Response::getNonce(), Response::getNonce());
+    }
+
+    #[Test]
+    public function testGetNonceChangesAfterReset(): void
+    {
+        $first = Response::getNonce();
+        (new ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
+        $second = Response::getNonce();
+        $this->assertNotSame($first, $second);
+    }
+
+    #[Test]
+    public function testGetNonceAppearsInCspHeader(): void
+    {
+        $nonce  = Response::getNonce();
+        $method = new ReflectionMethod(Response::class, 'buildContentSecurityPolicy');
+        $csp    = $method->invoke(null, 'app', $nonce);
+        $this->assertStringContainsString("'nonce-{$nonce}'", $csp);
     }
 }

@@ -130,7 +130,7 @@
 </section>
 
 <?php if ($jira_connected ?? false): ?>
-<script>
+<script nonce="<?= htmlspecialchars(\StratFlow\Core\Response::getNonce(), ENT_QUOTES, 'UTF-8') ?>">
 (function () {
     const input   = document.getElementById('jira-identity-search');
     const list    = document.getElementById('jira-identity-suggestions');
@@ -190,7 +190,7 @@
             li.style.cssText = 'padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;';
             li.dataset.accountId = u.accountId;
             li.dataset.displayName = u.displayName;
-            li.innerHTML = (u.avatar ? `<img src="${u.avatar}" style="width:20px;height:20px;border-radius:50%;" alt="">` : '')
+            li.innerHTML = (u.avatar ? `<img src="${esc(u.avatar)}" style="width:20px;height:20px;border-radius:50%;" alt="">` : '')
                 + `<span style="font-size:.9em;font-weight:500;">${esc(u.displayName)}</span>`
                 + (u.email ? `<span style="font-size:.8em;color:var(--text-muted,#888);margin-left:4px;">${esc(u.email)}</span>` : '');
             li.addEventListener('mouseenter', () => { list.querySelectorAll('li').forEach(i => i.classList.remove('jip-active')); li.classList.add('jip-active'); });
@@ -205,7 +205,7 @@
         list.style.display = 'none';
     }
 
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 })();
 </script>
 <?php endif; ?>
