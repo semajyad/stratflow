@@ -272,8 +272,9 @@ class ResponseTest extends TestCase
     #[Test]
     public function testGetNonceAppearsInCspHeader(): void
     {
-        $nonce = Response::getNonce();
-        $csp   = Response::buildContentSecurityPolicy('app', $nonce);
+        $nonce  = Response::getNonce();
+        $method = new \ReflectionMethod(Response::class, 'buildContentSecurityPolicy');
+        $csp    = $method->invoke(null, 'app', $nonce);
         $this->assertStringContainsString("'nonce-{$nonce}'", $csp);
     }
 }

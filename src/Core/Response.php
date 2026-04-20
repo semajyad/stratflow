@@ -213,7 +213,7 @@ class Response
         return str_starts_with($appUrl, 'https://');
     }
 
-    public static function buildContentSecurityPolicy(string $profile, string $nonce): string
+    private static function buildContentSecurityPolicy(string $profile, string $nonce): string
     {
         $n = "'nonce-{$nonce}'";
 
