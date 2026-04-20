@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace StratFlow\Middleware;
 
 use StratFlow\Core\Auth;
+use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 use StratFlow\Security\PermissionService;
 
@@ -17,9 +18,10 @@ class WorkflowWriteMiddleware
     {
         $user = $auth->user();
         if (!$user || !PermissionService::can($user, PermissionService::WORKFLOW_EDIT)) {
-            if (self::isAjaxRequest()) {
+            if (Request::expectsJson()) {
                 Response::applySecurityHeaders('app');
                 http_response_code(403);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Insufficient permissions']);
             } else {
                 $response->redirect('/app/home');
@@ -28,14 +30,5 @@ class WorkflowWriteMiddleware
         }
 
         return true;
-    }
-
-    private static function isAjaxRequest(): bool
-    {
-        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
-            return true;
-        }
-        $ct = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
-        return str_starts_with($ct, 'application/json');
     }
 }

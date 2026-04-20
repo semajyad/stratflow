@@ -229,4 +229,20 @@ class RequestTest extends TestCase {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $this->assertSame([], $this->makeRequestWithBody('"string-value"')->json());
     }
+
+    public function testExpectsJsonReturnsTrueForXmlHttpRequest(): void {
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
+        $this->assertTrue(Request::expectsJson());
+    }
+
+    public function testExpectsJsonReturnsTrueForJsonContentType(): void {
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
+        $_SERVER['CONTENT_TYPE'] = 'application/json';
+        $this->assertTrue(Request::expectsJson());
+    }
+
+    public function testExpectsJsonReturnsFalseForBrowserRequest(): void {
+        unset($_SERVER['HTTP_X_REQUESTED_WITH'], $_SERVER['CONTENT_TYPE'], $_SERVER['HTTP_CONTENT_TYPE']);
+        $this->assertFalse(Request::expectsJson());
+    }
 }

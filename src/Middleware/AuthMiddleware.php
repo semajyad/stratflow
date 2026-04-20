@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace StratFlow\Middleware;
 
 use StratFlow\Core\Auth;
+use StratFlow\Core\Request;
 use StratFlow\Core\Response;
 
 /**
@@ -25,9 +26,10 @@ class AuthMiddleware
     public function handle(Auth $auth, Response $response): bool
     {
         if (!$auth->check()) {
-            if ($this->isAjaxRequest()) {
+            if (Request::expectsJson()) {
                 Response::applySecurityHeaders('app');
                 http_response_code(401);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Session expired — please reload the page']);
                 return false;
             }
@@ -51,14 +53,5 @@ class AuthMiddleware
         }
 
         return true;
-    }
-
-    private function isAjaxRequest(): bool
-    {
-        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
-            return true;
-        }
-        $ct = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
-        return str_starts_with($ct, 'application/json');
     }
 }
