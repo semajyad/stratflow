@@ -72,7 +72,7 @@
             }
         }
         ?>
-        <a href="<?= htmlspecialchars($backUrl) ?>" class="error-link"><?= htmlspecialchars($backLabel) ?></a>
+        <a href="<?= htmlspecialchars($backUrl, ENT_QUOTES, 'UTF-8') ?>" class="error-link"><?= htmlspecialchars($backLabel, ENT_QUOTES, 'UTF-8') ?></a>
     </div>
 </body>
 </html>
