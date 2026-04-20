@@ -338,7 +338,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
     </form>
 </section>
 
-<style nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
+<style nonce="<?= htmlspecialchars(\StratFlow\Core\Response::getNonce(), ENT_QUOTES, 'UTF-8') ?>">
 .jira-user-picker { position: relative; }
 .jira-suggestions {
     position: absolute; z-index: 200; background: var(--bg-card, #fff);
@@ -354,7 +354,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
 .hidden { display: none !important; }
 </style>
 
-<script nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
+<script nonce="<?= htmlspecialchars(\StratFlow\Core\Response::getNonce(), ENT_QUOTES, 'UTF-8') ?>">
 (function () {
     const SEARCH_URL = '/app/admin/integrations/jira/users';
     let debounceTimer;
@@ -406,7 +406,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
                         const li = document.createElement('li');
                         li.dataset.accountId = u.accountId;
                         li.dataset.displayName = u.displayName;
-                        li.innerHTML = (u.avatar ? `<img src="${u.avatar}" alt="">` : '')
+                        li.innerHTML = (u.avatar ? `<img src="${escHtml(u.avatar)}" alt="">` : '')
                             + `<span class="js-name">${escHtml(u.displayName)}</span>`
                             + (u.email ? `<span class="js-email">${escHtml(u.email)}</span>` : '');
                         li.addEventListener('click', () => selectUser(li.dataset));

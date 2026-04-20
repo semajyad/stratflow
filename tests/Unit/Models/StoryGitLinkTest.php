@@ -258,7 +258,7 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function findByLocalItemsBulkReturnsEmptyWhenNoIds(): void
     {
-        $db   = $this->makePdoDb();
+        $db   = $this->makeDb();
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', []);
         $this->assertSame([], $result);
     }
@@ -267,7 +267,7 @@ class StoryGitLinkTest extends TestCase
     public function findByLocalItemsBulkReturnsMappedRows(): void
     {
         $rows = [$this->gitLinkRow(), $this->gitLinkRow2()];
-        $db   = $this->makePdoDb(null, $rows);
+        $db   = $this->makeDb(null, $rows);
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', [42, 43]);
         $this->assertIsArray($result);
         $this->assertArrayHasKey(42, $result);
@@ -281,7 +281,7 @@ class StoryGitLinkTest extends TestCase
             array_merge($this->gitLinkRow(), ['local_id' => 10]),
             array_merge($this->gitLinkRow2(), ['local_id' => 20]),
         ];
-        $db   = $this->makePdoDb(null, $rows);
+        $db   = $this->makeDb(null, $rows);
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', [10, 20]);
         $this->assertArrayHasKey(10, $result);
         $this->assertArrayHasKey(20, $result);
@@ -292,7 +292,7 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function findByLocalItemsBulkReturnsEmptyMapWhenNoMatches(): void
     {
-        $db   = $this->makePdoDb(null, []);
+        $db   = $this->makeDb(null, []);
         $result = StoryGitLink::findByLocalItemsBulk($db, 'user_story', [999, 1000]);
         $this->assertSame([], $result);
     }
@@ -304,7 +304,7 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function countsByLocalIdsReturnsEmptyWhenNoIds(): void
     {
-        $db   = $this->makePdoDb();
+        $db   = $this->makeDb();
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', []);
         $this->assertSame([], $result);
     }
@@ -316,7 +316,7 @@ class StoryGitLinkTest extends TestCase
             ['local_id' => '42', 'cnt' => '3'],
             ['local_id' => '43', 'cnt' => '1'],
         ];
-        $db   = $this->makePdoDb(null, $rows);
+        $db   = $this->makeDb(null, $rows);
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', [42, 43]);
         $this->assertIsArray($result);
         $this->assertSame(3, $result[42]);
@@ -329,7 +329,7 @@ class StoryGitLinkTest extends TestCase
         $rows = [
             ['local_id' => '42', 'cnt' => '5'],
         ];
-        $db   = $this->makePdoDb(null, $rows);
+        $db   = $this->makeDb(null, $rows);
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', [42, 43]);
         $this->assertArrayHasKey(42, $result);
         $this->assertSame(5, $result[42]);
@@ -339,7 +339,7 @@ class StoryGitLinkTest extends TestCase
     #[Test]
     public function countsByLocalIdsReturnsEmptyMapWhenNoMatches(): void
     {
-        $db   = $this->makePdoDb(null, []);
+        $db   = $this->makeDb(null, []);
         $result = StoryGitLink::countsByLocalIds($db, 'user_story', [999, 1000]);
         $this->assertSame([], $result);
     }

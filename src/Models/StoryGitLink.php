@@ -113,11 +113,10 @@ class StoryGitLink
         }
 
         $placeholders = implode(',', array_fill(0, count($localIds), '?'));
-        $stmt = $db->getPdo()->prepare("SELECT * FROM story_git_links
-             WHERE local_type = ? AND local_id IN ({$placeholders})
-             ORDER BY created_at DESC");
         $params = array_merge([$localType], array_values($localIds));
-        $stmt->execute($params);
+        $stmt = $db->query("SELECT * FROM story_git_links
+             WHERE local_type = ? AND local_id IN ({$placeholders})
+             ORDER BY created_at DESC", $params);
         $map = [];
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $map[(int) $row['local_id']][] = $row;
@@ -144,12 +143,11 @@ class StoryGitLink
         }
 
         $placeholders = implode(',', array_fill(0, count($localIds), '?'));
-        $stmt = $db->getPdo()->prepare("SELECT local_id, COUNT(*) AS cnt
+        $params = array_merge([$localType], array_values($localIds));
+        $stmt = $db->query("SELECT local_id, COUNT(*) AS cnt
              FROM story_git_links
              WHERE local_type = ? AND local_id IN ({$placeholders})
-             GROUP BY local_id");
-        $params = array_merge([$localType], array_values($localIds));
-        $stmt->execute($params);
+             GROUP BY local_id", $params);
         $counts = [];
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $counts[(int) $row['local_id']] = (int) $row['cnt'];

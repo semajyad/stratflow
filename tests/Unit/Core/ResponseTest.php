@@ -6,6 +6,7 @@ namespace StratFlow\Tests\Unit\Core;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use StratFlow\Core\CSRF;
 use StratFlow\Core\Response;
 
@@ -26,7 +27,7 @@ class ResponseTest extends TestCase
         $this->csrf->method('getToken')->willReturn('test-csrf-token');
         $this->response = new Response($this->csrf);
         // Reset static nonce so each test starts clean
-        (new \ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
+        (new ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
     }
 
     // ===========================

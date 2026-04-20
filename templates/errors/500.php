@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Error - StratFlow</title>
-    <style nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
+    <style nonce="<?= htmlspecialchars(\StratFlow\Core\Response::getNonce(), ENT_QUOTES, 'UTF-8') ?>">
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
