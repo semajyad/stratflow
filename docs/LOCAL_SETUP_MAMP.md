@@ -156,17 +156,21 @@ automatically assigned the `org_admin` role.
 ## Troubleshooting
 
 ### "Access denied for user 'stratflow'@'localhost'"
+
 MAMP's MySQL socket path differs from the system default. Use `127.0.0.1`
 (not `localhost`) as `DB_HOST`. PHP resolves `localhost` to a Unix socket
 that MAMP does not listen on.
 
 ### "Connection refused" on port 3306
+
 MAMP free uses port **8889**. Set `DB_PORT=8889` in `.env`.
 
 ### PHP version mismatch
+
 Confirm `php -v` matches the MAMP PHP version. If not, update your PATH (step 0).
 
 ### Composer not found
+
 Install via Homebrew: `brew install composer`. If Homebrew is not installed:
 `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 
