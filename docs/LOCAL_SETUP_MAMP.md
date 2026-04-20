@@ -107,13 +107,13 @@ DB_DATABASE=stratflow
 DB_USERNAME=stratflow
 DB_PASSWORD=stratflow_secret
 
-TOKEN_ENCRYPTION_KEY=<random 32-byte hex>   # see below
+TOKEN_ENCRYPTION_KEY=<base64-encoded 32-byte key>   # see below
 ```
 
 Generate a secure key:
 
 ```bash
-php -r "echo bin2hex(random_bytes(32)) . PHP_EOL;"
+php -r "echo base64_encode(random_bytes(32)) . PHP_EOL;"
 ```
 
 Paste the output as `TOKEN_ENCRYPTION_KEY`.
@@ -134,7 +134,8 @@ pending migrations from `database/migrations/`. It is safe to run multiple
 times — already-applied migrations are skipped.
 
 Expected output:
-```
+
+```text
 Connected to database: stratflow@127.0.0.1
 Schema applied successfully.
 All migrations applied.
@@ -167,7 +168,7 @@ MAMP free uses port **8889**. Set `DB_PORT=8889` in `.env`.
 
 ### PHP version mismatch
 
-Confirm `php -v` matches the MAMP PHP version. If not, update your PATH (step 0).
+Confirm `php -v` matches the MAMP PHP version. If not, update your PATH (see Prerequisites above).
 
 ### Composer not found
 
@@ -176,7 +177,7 @@ Install via Homebrew: `brew install composer`. If Homebrew is not installed:
 
 ---
 
-## Namespace note — renaming the project
+## Namespace note: renaming the project
 
 StratFlow uses the PHP namespace `StratFlow\` throughout the codebase.
 **This namespace is not tied to the directory name** — it is registered in

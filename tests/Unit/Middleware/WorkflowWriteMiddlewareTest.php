@@ -53,6 +53,7 @@ class WorkflowWriteMiddlewareTest extends TestCase
 
         $this->assertFalse($result);
         $this->assertSame('/app/home', $redirectedTo);
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
     }
 
     #[Test]
