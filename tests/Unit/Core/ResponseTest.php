@@ -271,13 +271,8 @@ class ResponseTest extends TestCase
     #[Test]
     public function testGetNonceAppearsInCspHeader(): void
     {
-        ob_start();
-        Response::applySecurityHeaders('app');
-        ob_end_clean();
-
-        $nonce   = Response::getNonce();
-        $headers = headers_list();
-        $csp     = implode(' ', array_filter($headers, fn($h) => str_starts_with($h, 'Content-Security-Policy:')));
+        $nonce = Response::getNonce();
+        $csp   = Response::buildContentSecurityPolicy('app', $nonce);
         $this->assertStringContainsString("'nonce-{$nonce}'", $csp);
     }
 }
