@@ -81,3 +81,18 @@ def test_get_staged_changed_files_uses_new_path_for_renames():
             "src/New.php",
             "src/Copy.php",
         ]
+
+
+def test_get_staged_changed_files_exits_when_git_diff_fails(capsys):
+    result = type("Result", (), {
+        "returncode": 128,
+        "stdout": "",
+        "stderr": "fatal: not a git repository",
+    })()
+
+    with patch("scripts.ci.check_test_touches.subprocess.run", return_value=result):
+        with pytest.raises(SystemExit) as exc_info:
+            get_staged_changed_files()
+
+    assert exc_info.value.code == 2
+    assert "git diff --cached failed" in capsys.readouterr().err

@@ -273,7 +273,8 @@ def get_staged_changed_files() -> list[str]:
         capture_output=True, text=True
     )
     if result.returncode != 0:
-        return []
+        print(f"::error::git diff --cached failed: {result.stderr}", file=sys.stderr)
+        sys.exit(2)
 
     files = []
     for line in result.stdout.strip().splitlines():
