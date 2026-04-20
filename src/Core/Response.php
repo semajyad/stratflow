@@ -14,6 +14,21 @@ class Response
 {
     private CSRF $csrf;
 
+    /** Per-request CSP nonce — generated once on first call to getNonce(). */
+    private static string $nonce = '';
+
+    /**
+     * Return the per-request CSP nonce, generating it on first call.
+     * Use this to set nonce= on any inline <script> or <style> block.
+     */
+    public static function getNonce(): string
+    {
+        if (self::$nonce === '') {
+            self::$nonce = base64_encode(random_bytes(16));
+        }
+        return self::$nonce;
+    }
+
     public function __construct(CSRF $csrf)
     {
         $this->csrf = $csrf;
@@ -130,7 +145,7 @@ class Response
         if (self::isSecureTransport() || str_starts_with($appUrl, 'https://')) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         }
-        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy($profile));
+        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy($profile, self::getNonce()));
         header('Cross-Origin-Embedder-Policy: require-corp');
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
@@ -151,7 +166,7 @@ class Response
         header('X-Content-Type-Options: nosniff');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
-        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy('app')); // Default to app profile for static assets to be safe or maybe a restricted one. Actually, static assets don't need inline scripts/styles allowed.
+        header('Content-Security-Policy: ' . self::buildContentSecurityPolicy('app', self::getNonce()));
         header('Cross-Origin-Embedder-Policy: require-corp');
         header('Cross-Origin-Opener-Policy: same-origin');
         header('Cross-Origin-Resource-Policy: same-origin');
@@ -198,12 +213,15 @@ class Response
         return str_starts_with($appUrl, 'https://');
     }
 
-    private static function buildContentSecurityPolicy(string $profile): string
+    private static function buildContentSecurityPolicy(string $profile, string $nonce): string
     {
+        $n = "'nonce-{$nonce}'";
+
         if ($profile === 'public') {
-            return "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+            return "default-src 'self'; script-src 'self' {$n}; style-src 'self' {$n}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
         }
 
-        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+        // style-src keeps 'unsafe-inline' until all style= HTML attributes are migrated to classes.
+        return "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net {$n}; style-src 'self' 'unsafe-inline' {$n}; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'self'; frame-src https://checkout.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
     }
 }

@@ -130,7 +130,7 @@
 </section>
 
 <?php if ($jira_connected ?? false): ?>
-<script>
+<script nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
 (function () {
     const input   = document.getElementById('jira-identity-search');
     const list    = document.getElementById('jira-identity-suggestions');

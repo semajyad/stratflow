@@ -338,7 +338,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
     </form>
 </section>
 
-<style>
+<style nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
 .jira-user-picker { position: relative; }
 .jira-suggestions {
     position: absolute; z-index: 200; background: var(--bg-card, #fff);
@@ -354,7 +354,7 @@ $accessFlagsHelpText = 'Project admin: can create, update, and manage projects. 
 .hidden { display: none !important; }
 </style>
 
-<script>
+<script nonce="<?= \StratFlow\Core\Response::getNonce() ?>">
 (function () {
     const SEARCH_URL = '/app/admin/integrations/jira/users';
     let debounceTimer;

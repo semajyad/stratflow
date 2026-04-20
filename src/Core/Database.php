@@ -18,6 +18,7 @@ class Database
 {
     private static ?Database $instance = null;
     private PDO $pdo;
+    private int $queryCount = 0;
 
     /** @var float Slow query threshold in seconds */
     private const SLOW_QUERY_THRESHOLD = 2.0;
@@ -88,6 +89,7 @@ class Database
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
+        $this->queryCount++;
 
         $elapsed = microtime(true) - $start;
         if ($elapsed > self::SLOW_QUERY_THRESHOLD) {
@@ -107,6 +109,18 @@ class Database
     public function lastInsertId(): string
     {
         return $this->pdo->lastInsertId();
+    }
+
+    /** Return the number of queries executed on this instance since last reset. */
+    public function getQueryCount(): int
+    {
+        return $this->queryCount;
+    }
+
+    /** Reset the query counter — call between request phases or in test setUp. */
+    public function resetQueryCount(): void
+    {
+        $this->queryCount = 0;
     }
 
     public function beginTransaction(): bool
