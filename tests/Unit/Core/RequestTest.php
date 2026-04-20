@@ -245,4 +245,16 @@ class RequestTest extends TestCase {
         unset($_SERVER['HTTP_X_REQUESTED_WITH'], $_SERVER['CONTENT_TYPE'], $_SERVER['HTTP_CONTENT_TYPE']);
         $this->assertFalse(Request::expectsJson());
     }
+
+    public function testExpectsJsonReturnsTrueForHttpContentTypeFallback(): void {
+        unset($_SERVER['HTTP_X_REQUESTED_WITH'], $_SERVER['CONTENT_TYPE']);
+        $_SERVER['HTTP_CONTENT_TYPE'] = 'application/json';
+        $this->assertTrue(Request::expectsJson());
+    }
+
+    public function testExpectsJsonReturnsTrueForMixedCaseContentType(): void {
+        unset($_SERVER['HTTP_X_REQUESTED_WITH'], $_SERVER['HTTP_CONTENT_TYPE']);
+        $_SERVER['CONTENT_TYPE'] = 'Application/JSON';
+        $this->assertTrue(Request::expectsJson());
+    }
 }
