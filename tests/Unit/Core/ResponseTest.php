@@ -25,6 +25,8 @@ class ResponseTest extends TestCase
         $this->csrf = $this->createMock(CSRF::class);
         $this->csrf->method('getToken')->willReturn('test-csrf-token');
         $this->response = new Response($this->csrf);
+        // Reset static nonce so each test starts clean
+        (new \ReflectionProperty(Response::class, 'nonce'))->setValue(null, '');
     }
 
     // ===========================
@@ -244,5 +246,38 @@ class ResponseTest extends TestCase
         ob_end_clean();
 
         $this->assertTrue(true);
+    }
+
+    // ===========================
+    // getNonce (CSP nonce)
+    // ===========================
+
+    #[Test]
+    public function testGetNonceReturnsValidBase64(): void
+    {
+        $nonce = Response::getNonce();
+        $this->assertNotEmpty($nonce);
+        $decoded = base64_decode($nonce, true);
+        $this->assertNotFalse($decoded);
+        $this->assertSame(16, strlen($decoded));
+    }
+
+    #[Test]
+    public function testGetNonceIsStableWithinRequest(): void
+    {
+        $this->assertSame(Response::getNonce(), Response::getNonce());
+    }
+
+    #[Test]
+    public function testGetNonceAppearsInCspHeader(): void
+    {
+        ob_start();
+        Response::applySecurityHeaders('app');
+        ob_end_clean();
+
+        $nonce   = Response::getNonce();
+        $headers = headers_list();
+        $csp     = implode(' ', array_filter($headers, fn($h) => str_starts_with($h, 'Content-Security-Policy:')));
+        $this->assertStringContainsString("'nonce-{$nonce}'", $csp);
     }
 }
