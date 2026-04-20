@@ -269,7 +269,7 @@ class StoryGitLinkTest extends TestCase
     {
         $rows = [$this->gitLinkRow(), $this->gitLinkRow2()];
         $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('fetchAll')->willReturn($rows);
+        $stmt->expects($this->once())->method('fetchAll')->with(\PDO::FETCH_ASSOC)->willReturn($rows);
         $db = $this->createMock(Database::class);
         $db->expects($this->once())->method('query')->willReturnCallback(
             function (string $sql, array $params) use ($stmt): \PDOStatement {
@@ -327,7 +327,7 @@ class StoryGitLinkTest extends TestCase
             ['local_id' => '43', 'cnt' => '1'],
         ];
         $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('fetchAll')->willReturn($rows);
+        $stmt->expects($this->once())->method('fetchAll')->with(\PDO::FETCH_ASSOC)->willReturn($rows);
         $db = $this->createMock(Database::class);
         $db->expects($this->once())->method('query')->willReturnCallback(
             function (string $sql, array $params) use ($stmt): \PDOStatement {
