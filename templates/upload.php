@@ -32,7 +32,7 @@ function formatFileSize(int $bytes): string {
                 Continue to Strategy Roadmap &rarr;
             </a>
         <?php endif; ?>
-        <?php $board_review_screen = 'summary'; include __DIR__ . '/partials/board-review-button.php'; ?>
+        <?php $active_page = 'summary'; include __DIR__ . '/partials/sounding-board-button.php'; ?>
     </div>
 </div>
 

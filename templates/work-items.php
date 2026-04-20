@@ -25,8 +25,7 @@
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'work_items'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
-        <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <?php $board_review_screen = 'work_items'; include __DIR__ . '/partials/board-review-button.php'; ?>
+        <?php $active_page = 'work_items'; include __DIR__ . '/partials/sounding-board-button.php'; ?>
     </div>
 </div>
 
@@ -167,9 +166,9 @@
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
-<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-mEnM5jz8H3hOHW8GhoOZzLiXEkoSCjXRgNyFQ3h18h8wY2m0YniNncC3EFs1QMKR" crossorigin="anonymous"></script>
 
 <!-- Mermaid.js CDN for thumbnail -->
 <?php if (!empty($diagram)): ?>
-<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" integrity="sha384-/wpvwpx/82U/rD5MBk1sSp5IpBRhvzoZNsocF4/AIyIn1G8kobtnIsjaqd06GUO8" crossorigin="anonymous"></script>
 <?php endif; ?>

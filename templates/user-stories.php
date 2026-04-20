@@ -33,8 +33,7 @@ $unlinkedStories = $storiesByItem[0] ?? [];
     </h1>
     <div class="flex items-center gap-2">
         <?php $sync_type = 'user_stories'; include __DIR__ . '/partials/jira-sync-button.php'; ?>
-        <?php include __DIR__ . '/partials/sounding-board-button.php'; ?>
-        <?php $board_review_screen = 'user_stories'; include __DIR__ . '/partials/board-review-button.php'; ?>
+        <?php $active_page = 'user_stories'; include __DIR__ . '/partials/sounding-board-button.php'; ?>
         <?php if (!empty($stories)): ?>
         <form method="POST" action="/app/user-stories/delete-all" class="inline-form">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -220,4 +219,4 @@ $unlinkedStories = $storiesByItem[0] ?? [];
 <?php require __DIR__ . '/partials/workflow-nav.php'; ?>
 
 <!-- SortableJS CDN -->
-<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-mEnM5jz8H3hOHW8GhoOZzLiXEkoSCjXRgNyFQ3h18h8wY2m0YniNncC3EFs1QMKR" crossorigin="anonymous"></script>
