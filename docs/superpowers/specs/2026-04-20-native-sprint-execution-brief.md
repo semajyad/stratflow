@@ -35,9 +35,7 @@ The feature is deliberately constrained — it is **not** a replacement for Jira
 
 ## Who Gets Access?
 
-All users with project access. No new subscription gate proposed for v1 — this closes a gap in the core product for non-integrated teams.
-
-**MR — should native sprint execution be part of the base plan or gated?**
+All users with project access. Included in the base plan — no subscription gate. *(Confirmed by PM and PO.)*
 
 ---
 
