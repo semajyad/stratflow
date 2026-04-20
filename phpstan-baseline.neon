@@ -73,12 +73,6 @@ parameters:
 			path: src/Controllers/UserStoryController.php
 
 		-
-			message: '#^Access to an undefined property Stripe\\StripeObject\:\:\$object\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Controllers/WebhookController.php
-
-		-
 			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 2
@@ -138,12 +132,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: src/Services/KrScoringService.php
-
-		-
-			message: '#^Access to an undefined property Stripe\\StripeObject\:\:\$interval\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Services/StripeService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>interval" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'

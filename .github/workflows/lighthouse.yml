@@ -16,6 +16,7 @@ on:
       - 'views/**'
       - 'resources/**'
       - 'tests/Lighthouse/**'
+      - 'scripts/init-db.php'
       - 'database/schema.sql'
       - 'database/migrations/**'
       - '.github/workflows/lighthouse.yml'
@@ -98,13 +99,7 @@ jobs:
           echo "SESSION_DRIVER=file" >> .env
 
       - name: Initialize database
-        run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/schema.sql
-
-      - name: Run migrations
-        run: |
-          for f in database/migrations/*.sql; do
-            mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < "$f" 2>/dev/null || true
-          done
+        run: php scripts/init-db.php
 
       - name: Seed database
         run: mysql -h 127.0.0.1 -u stratflow -pstratflow_secret stratflow < database/seed.sql

@@ -35,12 +35,14 @@ tests/.phpunit.result.cache
 
 # Logs
 logs/
-storage/logs/*.jsonl
+storage/logs/
 
 # Claude Code — ephemeral markers and AI tooling state
 .claude/.security-audit-ok
 .claude/.review-ok
 .claude/.playwright-ok
+.claude/.last-nightly-audit
+.claude/session-log.md
 .claude/hooks/__pycache__/
 .claude/bin/__pycache__/
 .claude/.vexp/

@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from scripts.ci.check_test_touches import source_to_test_path
+from scripts.ci.check_test_touches import get_staged_changed_files, source_to_test_path
 
 
 class TestSourceToTestPath:
@@ -53,3 +53,46 @@ class TestSourceToTestPath:
     def test_nested_controller(self):
         assert source_to_test_path("src/Controllers/Api/StoryController.php") == \
             "tests/Unit/Controllers/Api/StoryControllerTest.php"
+
+
+def test_get_staged_changed_files_excludes_deleted_files():
+    result = type("Result", (), {
+        "returncode": 0,
+        "stdout": "M\tsrc/Core/Request.php\nD\tsrc/Old.php\nA\ttests/Unit/Core/RequestTest.php\n",
+        "stderr": "",
+    })()
+
+    with patch("scripts.ci.check_test_touches.subprocess.run", return_value=result):
+        assert get_staged_changed_files() == [
+            "src/Core/Request.php",
+            "tests/Unit/Core/RequestTest.php",
+        ]
+
+
+def test_get_staged_changed_files_uses_new_path_for_renames():
+    result = type("Result", (), {
+        "returncode": 0,
+        "stdout": "R100\tsrc/Old.php\tsrc/New.php\nC100\tsrc/Base.php\tsrc/Copy.php\n",
+        "stderr": "",
+    })()
+
+    with patch("scripts.ci.check_test_touches.subprocess.run", return_value=result):
+        assert get_staged_changed_files() == [
+            "src/New.php",
+            "src/Copy.php",
+        ]
+
+
+def test_get_staged_changed_files_exits_when_git_diff_fails(capsys):
+    result = type("Result", (), {
+        "returncode": 128,
+        "stdout": "",
+        "stderr": "fatal: not a git repository",
+    })()
+
+    with patch("scripts.ci.check_test_touches.subprocess.run", return_value=result):
+        with pytest.raises(SystemExit) as exc_info:
+            get_staged_changed_files()
+
+    assert exc_info.value.code == 2
+    assert "git diff --cached failed" in capsys.readouterr().err

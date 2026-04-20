@@ -198,8 +198,8 @@ class StripeService
             $out[] = [
                 'id'                   => $sub->id,
                 'status'               => $sub->status,
-                'current_period_start' => date('j M Y', $sub->current_period_start),
-                'current_period_end'   => date('j M Y', $sub->current_period_end),
+                'current_period_start' => $this->formatSubscriptionItemPeriod($item, 'current_period_start', 'j M Y'),
+                'current_period_end'   => $this->formatSubscriptionItemPeriod($item, 'current_period_end', 'j M Y'),
                 'cancel_at_period_end' => $sub->cancel_at_period_end,
                 'quantity'             => $item?->quantity ?? 1,
                 'unit_amount'          => $item?->price->unit_amount ?? 0,
@@ -269,17 +269,42 @@ class StripeService
     {
         \Stripe\Stripe::setApiKey($this->config['secret_key']);
         $sub = \Stripe\Subscription::retrieve($subscriptionId);
+        $item = $sub->items->data[0] ?? null;
+        $quantity = 1;
+        $priceId = '';
+        $unitAmount = 0;
+        $currency = 'usd';
+        $interval = 'month';
+
+        if ($item instanceof \Stripe\SubscriptionItem) {
+            $price = $item->price;
+            $quantity = $item->quantity ?? 1;
+            $priceId = $price->id ?? '';
+            $unitAmount = $price->unit_amount ?? 0;
+            $currency = $price->currency ?? 'usd';
+            $intervalValue = $price->recurring?->interval;
+            $interval = is_string($intervalValue) && $intervalValue !== ''
+                ? $intervalValue
+                : 'month';
+        }
+
         return [
             'id'              => $sub->id,
             'status'          => $sub->status,
-            'current_period_start' => date('Y-m-d', $sub->current_period_start),
-            'current_period_end'   => date('Y-m-d', $sub->current_period_end),
+            'current_period_start' => $this->formatSubscriptionItemPeriod($item, 'current_period_start', 'Y-m-d'),
+            'current_period_end'   => $this->formatSubscriptionItemPeriod($item, 'current_period_end', 'Y-m-d'),
             'cancel_at_period_end' => $sub->cancel_at_period_end,
-            'quantity'        => $sub->items->data[0]->quantity ?? 1,
-            'price_id'        => $sub->items->data[0]->price->id ?? '',
-            'unit_amount'     => $sub->items->data[0]->price->unit_amount ?? 0,
-            'currency'        => $sub->items->data[0]->price->currency ?? 'usd',
-            'interval'        => $sub->items->data[0]->price->recurring->interval ?? 'month',
+            'quantity'        => $quantity,
+            'price_id'        => $priceId,
+            'unit_amount'     => $unitAmount,
+            'currency'        => $currency,
+            'interval'        => $interval,
         ];
+    }
+
+    private function formatSubscriptionItemPeriod(?\Stripe\SubscriptionItem $item, string $field, string $format): string
+    {
+        $timestamp = $item?->{$field};
+        return is_int($timestamp) ? gmdate($format, $timestamp) : '';
     }
 }

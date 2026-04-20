@@ -2,17 +2,17 @@
     "name": "threepoints/stratflow",
     "description": "AI-powered strategy to work items platform",
     "type": "project",
+    "license": "proprietary",
     "require": {
         "php": ">=8.4",
         "growthbook/growthbook": "^2.0",
         "sentry/sentry": "^4.0",
         "smalot/pdfparser": "^2.0",
-        "stripe/stripe-php": "^16.0",
-        "vlucas/phpdotenv": "^5.6",
-        "growthbook/growthbook": "^2.0"
+        "stripe/stripe-php": "^20.0",
+        "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
-        "phpunit/phpunit": "^12.5",
+        "phpunit/phpunit": "^13.0",
         "phpstan/phpstan": "^2.0",
         "squizlabs/php_codesniffer": "^4.0",
         "infection/infection": "^0.32"

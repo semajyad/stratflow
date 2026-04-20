@@ -6,6 +6,7 @@ namespace StratFlow\Tests\Unit\Services;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Stripe\SubscriptionItem;
 use StratFlow\Services\StripeService;
 
 /**
@@ -172,5 +173,18 @@ class StripeServiceTest extends TestCase
         $type = $svc->planTypeForPrice('price_eval_board_ghi');
         $mode = $svc->modeForProductType($type);
         $this->assertSame('payment', $mode);
+    }
+
+    #[Test]
+    public function formatsSubscriptionItemPeriodFromStripeV20ItemFields(): void
+    {
+        $svc = $this->makeService();
+        $item = new SubscriptionItem('si_test');
+        $item->current_period_start = 1714521600;
+
+        $method = new \ReflectionMethod($svc, 'formatSubscriptionItemPeriod');
+
+        $this->assertSame('2024-05-01', $method->invoke($svc, $item, 'current_period_start', 'Y-m-d'));
+        $this->assertSame('', $method->invoke($svc, null, 'current_period_start', 'Y-m-d'));
     }
 }
