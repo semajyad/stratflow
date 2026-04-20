@@ -42,6 +42,7 @@ class WorkflowWriteMiddlewareTest extends TestCase
     #[Test]
     public function viewerIsBlockedFromWorkflowWrites(): void
     {
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = '';
         $redirectedTo = null;
         $middleware = new WorkflowWriteMiddleware();
 
@@ -52,6 +53,29 @@ class WorkflowWriteMiddlewareTest extends TestCase
 
         $this->assertFalse($result);
         $this->assertSame('/app/home', $redirectedTo);
+    }
+
+    #[Test]
+    public function viewerReceivesJsonForbiddenOnAjaxRequest(): void
+    {
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
+        $redirectedTo = null;
+        $middleware = new WorkflowWriteMiddleware();
+
+        ob_start();
+        $result = $middleware->handle(
+            $this->makeAuthWithUser(['role' => 'viewer']),
+            $this->makeResponseCapturingRedirect($redirectedTo)
+        );
+        $body = ob_get_clean();
+
+        $this->assertFalse($result);
+        $this->assertNull($redirectedTo, 'Should not redirect on AJAX request');
+        $decoded = json_decode($body, true);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('error', $decoded);
+
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
     }
 
     #[Test]

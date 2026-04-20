@@ -17,10 +17,25 @@ class WorkflowWriteMiddleware
     {
         $user = $auth->user();
         if (!$user || !PermissionService::can($user, PermissionService::WORKFLOW_EDIT)) {
-            $response->redirect('/app/home');
+            if (self::isAjaxRequest()) {
+                Response::applySecurityHeaders('app');
+                http_response_code(403);
+                echo json_encode(['error' => 'Insufficient permissions']);
+            } else {
+                $response->redirect('/app/home');
+            }
             return false;
         }
 
         return true;
+    }
+
+    private static function isAjaxRequest(): bool
+    {
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+            return true;
+        }
+        $ct = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        return str_starts_with($ct, 'application/json');
     }
 }
