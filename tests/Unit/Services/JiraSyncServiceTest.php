@@ -2242,11 +2242,12 @@ class JiraSyncServiceTest extends TestCase
         $localItem = ['id' => 10, 'title' => 'Old title', 'description' => '', 'status' => 'backlog', 'owner' => '', 'size' => 0, 'team_assigned' => ''];
         $issue = ['key' => 'TEST-1', 'fields' => ['summary' => 'New title', 'description' => null, 'status' => ['name' => 'To Do'], 'assignee' => null, 'story_points' => null, 'customfield_10016' => null, 'issuetype' => ['name' => 'Story'], 'parent' => null]];
 
-        $db = $this->createMock(\StratFlow\Core\Database::class);
+        $db   = $this->createMock(\StratFlow\Core\Database::class);
+        $jira = $this->createMock(\StratFlow\Services\JiraService::class);
         $db->method('query')->willReturn($this->stmt());
         $db->method('lastInsertId')->willReturn('99');
 
-        $sync = $this->makeSync($db);
+        $sync = $this->makeSync($db, $jira);
         // resolveJiraIssue returns: mappings, localItem, jiraData — call indirectly
         // via pullChanges. Since we can't easily mock internals, just assert no error
         // is raised when $updateData contains 'title' and $newTitle is no longer referenced.
